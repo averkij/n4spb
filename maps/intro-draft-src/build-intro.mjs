@@ -262,23 +262,42 @@ for (const pl of placeNodes) {
   const k = lab[y * GW + x]; if (k >= 0) mos[k].contains.push(pl);
 }
 
-// ---------- the live areas (P Palace-Liteyny, S Smolninskoye; docs/AREAS.md section 13) in lon/lat from the registry (the parked strip and North are no longer drawn; 'area B' elsewhere on the page stays the size REFERENCE, the old North, 3.95 km2)
+// ---------- the live areas (P Palace-Liteyny, S Smolninskoye, A Admiralty-Haymarket, V Vladimirsky-Ligovka; docs/AREAS.md sections 13-15) in lon/lat from the registry (the parked strip and North are no longer drawn; 'area B' elsewhere on the page stays the size REFERENCE, the old North, 3.95 km2)
 const REG = await import(new URL('../../src/areas/registry.js', import.meta.url).href);
 const OR = { lon: 30.351279, lat: 59.932421 };
 const KX0 = 111412.84 * Math.cos(OR.lat * Math.PI / 180) - 93.5 * Math.cos(3 * OR.lat * Math.PI / 180) + 0.118 * Math.cos(5 * OR.lat * Math.PI / 180);
 const lat0 = OR.lat * Math.PI / 180;
 const KY0 = 111132.954 - 559.822 * Math.cos(2 * lat0) + 1.175 * Math.cos(4 * lat0);
 const unproj = (x, z) => [OR.lon + x / KX0, OR.lat - z / KY0];
+// The live list comes from the registry: every row with a mapId that is not parked (docs/AREAS.md 13 / 15): palace P (98), smolny S (96), admiralty A (46), vladimirsky V (97). The letter is the badge on the page.
+const LIVE_LETTER = { palace: 'P', smolny: 'S', admiralty: 'A', vladimirsky: 'V' };
+const liveKeys = Object.keys(REG.REGISTRY).filter((k) => REG.REGISTRY[k].mapId != null && !REG.REGISTRY[k].parked);
+liveKeys.sort((a, b) => Object.keys(LIVE_LETTER).indexOf(a) - Object.keys(LIVE_LETTER).indexOf(b));
+for (const k of liveKeys) if (!LIVE_LETTER[k]) throw new Error('registry row ' + k + ' has a mapId but no letter in LIVE_LETTER (build-intro.mjs)');
+// union area of axis-aligned rectangles (the ST station rectangle overlaps the rows of its neighbours), km2
+const unionKm2 = (rs) => {
+  const xs = [...new Set(rs.flatMap((r) => [r.x0, r.x1]))].sort((a, b) => a - b); let s = 0;
+  for (let i = 0; i + 1 < xs.length; i++) {
+    const iv = rs.filter((r) => r.x0 <= xs[i] && r.x1 >= xs[i + 1]).map((r) => [r.z0, r.z1]).sort((a, b) => a[0] - b[0]);
+    let end = -Infinity, len = 0; for (const [a, b] of iv) { if (b > end) { len += b - Math.max(a, end); end = b; } }
+    s += len * (xs[i + 1] - xs[i]);
+  }
+  return s / 1e6;
+};
 const existing = [];
-for (const [key, letter, st] of [['palace', 'P', 'Live'], ['smolny', 'S', 'Live']]) {
+for (const key of liveKeys) {
+  const letter = LIVE_LETTER[key], st = 'Live';
   const row = REG.REGISTRY[key];
   const rects = row.play.map((r) => [unproj(r.x0, r.z0), unproj(r.x1, r.z0), unproj(r.x1, r.z1), unproj(r.x0, r.z1)].map(rpt));
   const mark = new Uint8Array(GW * GH);
   for (const r of rects) fillRings([r], (x, y) => { mark[y * GW + x] = 1; });
-  const km2 = row.play.reduce((s, r) => s + (r.x1 - r.x0) * (r.z1 - r.z0), 0) / 1e6;
+  const km2 = unionKm2(row.play);
   const overlap = new Float64Array(mos.length);
   for (let i = 0; i < mark.length; i++) if (mark[i] && lab[i] >= 0 && !water[i]) overlap[lab[i]]++;
-  existing.push({ id: letter, key, page: row.page, title: row.title, titleEn: row.titleEn, status: st, km2: Math.round(km2 * 100) / 100, rects, overlap });
+  // the edge gates of this area (the four-area graph, registry GATES): the letters of the live areas one walks into
+  const edges = REG.GATES.filter((g) => g.kind === 'edge' && g.from === key && LIVE_LETTER[g.to]).map((g) => LIVE_LETTER[g.to]);
+  existing.push({ id: letter, key, page: row.page, title: row.title, titleEn: row.titleEn, status: st, km2: Math.round(km2 * 100) / 100, rects, overlap,
+    mapId: row.mapId, approxMB: row.approxMB, sights: row.sights, rectN: row.play.length, edges });
 }
 
 // ---------- the source project's coverage (the playable rectangles of D:/git2/agi-fun-tests/102_3d_piter, same frame) and its authored sights
@@ -377,7 +396,9 @@ for (const a of [...out.areas].sort((p, q) => q.nb.length - p.nb.length)) {
 }
 out.rayons = rayNames.map((r, i) => ({ id: i, ru: r.replace(' район', ''), ruFull: r, en: RAY_EN[r] || translit(r), hue: HUES[i % HUES.length], n: out.areas.filter((a) => a.rayon === r).length, km2: Math.round(out.areas.filter((a) => a.rayon === r).reduce((s, a) => s + a.km2, 0) * 10) / 10 }));
 out.source = { rects: srcRects, km2: srcKm2, regions: srcRects.length, sights: srcCov ? srcCov.sights.length : 0 };
-out.existing = existing.map((e) => ({ id: e.id, key: e.key, page: e.page, title: e.title, titleEn: e.titleEn, status: e.status, km2: e.km2, rects: e.rects }));
+out.existing = existing.map((e) => ({ id: e.id, key: e.key, page: e.page, title: e.title, titleEn: e.titleEn, status: e.status, km2: e.km2, rects: e.rects, mapId: e.mapId, approxMB: e.approxMB, sights: e.sights, rectN: e.rectN, edges: e.edges }));
+// the map areas that ARE a live scene (the card and the list show the badge); k of out.areas is the district index = the registry's mapId
+for (const e of existing) { const a = out.areas.find((x) => x.k === e.mapId); if (!a) throw new Error('mapId ' + e.mapId + ' is not an area of the map'); a.live = e.id; }
 
 // ---------- base layers (simplified)
 const q = (pts) => pts.map(rpt);

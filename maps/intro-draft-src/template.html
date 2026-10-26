@@ -53,7 +53,12 @@ aside { background: var(--panel-solid); border-right: 1px solid var(--line); dis
 .item .km { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .tag { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: var(--chip); color: var(--chipink); white-space: nowrap; }
 .tag.b { background: #2e8b57; color: #fff; } .tag.large { background: #c58a00; color: #fff; } .tag.big { background: #c0392b; color: #fff; } .tag.small { background: #5b6bd6; color: #fff; }
-.tag.A, .tag.B, .tag.P, .tag.S { background: var(--ink); color: var(--bg); }
+.tag.A, .tag.B, .tag.P, .tag.S, .tag.V { background: var(--ink); color: var(--bg); }
+.tag.live { background: #e8590c; color: #fff; letter-spacing: .3px; }
+.item.isLive .nm { font-weight: 650; }
+#card .liveBox { margin: 8px 0 2px; padding: 8px 10px; border: 1.5px solid #e8590c; border-radius: 10px; background: rgba(232,89,12,.08); font-size: 13px; }
+#card .liveBox h3 { margin: 0 0 4px; }
+#card .liveBox .row2 { color: var(--muted); margin-top: 3px; }
 #stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg); touch-action: none; cursor: grab; }
 #stage.drag { cursor: grabbing; }
 svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -158,9 +163,9 @@ const T = {
     city: 'Весь город', center: 'Центр', rayon: 'По районам', size: 'По размеру', search: 'Поиск района…', areas: 'районов', km2: 'км²', total: 'всего',
     cls: { b: '≈ B', large: 'чуть больше', big: 'разделить', small: 'объединить' },
     clsLong: { b: 'Размер как у района B (±20 %)', large: 'Немного больше B (до 1,5 × B): можно оставить', big: 'Слишком большой: разделить', small: 'Слишком мал: объединить с соседом' },
-    layers: 'Слои', lRoads: 'Главные улицы', lRayon: 'Границы городских районов', lPlan: 'Размеры: штриховка', lLabels: 'Названия', lParks: 'Парки (центр)', lExist: 'Уже в игре (A, B)', lSq: 'Квадрат = район B',
+    layers: 'Слои', lRoads: 'Главные улицы', lRayon: 'Границы городских районов', lPlan: 'Размеры: штриховка', lLabels: 'Названия', lParks: 'Парки (центр)', lExist: 'Уже в игре (P, S, A, V)', lSq: 'Квадрат = район B',
     legend: 'Размер района', rayonH: 'Район города', area: 'Территория', land: 'Суша', vsB: 'к району B', exist: 'В игре', plan: 'План', isolated: 'рядом нет малых районов: оставить как отдельный малый район', bestEffort: 'пока лучший вариант, обсудим', mergeOk: 'получится ≈ B', mergeNear: 'близко к B', splitInto: (n) => 'Разделить примерно на ' + n + ' (по ~' , mergeWith: 'Объединить с', contains: 'Что внутри', neighbours: 'Соседи', open: 'Открыть сцену',
-    live: 'работает', wip: 'в разработке', none: 'сцены пока нет', bname: 'район B ≈ 3,95 км²', sq: '= район B · 3,95 км²', gulf: 'Финский залив', bay: 'Невская губа', neva: 'Нева', ladoga: '',
+    live: 'работает', liveBadge: 'В игре', liveN: 'в игре', liveH: 'Сцена в игре', liveSights: 'Что в сцене', liveSize: 'Размер загрузки', liveWalk: 'Территория для прогулок сцены', liveEdges: 'Бесшовные переходы в', liveRects: 'прямоугольников', liveLegend: 'оранжевый контур: район, который уже сцена; пунктир: её территория', wip: 'в разработке', none: 'сцены пока нет', bname: 'район B ≈ 3,95 км²', sq: '= район B · 3,95 км²', gulf: 'Финский залив', bay: 'Невская губа', neva: 'Нева', ladoga: '',
     pickA: 'Нажмите на район, чтобы увидеть сведения', ofB: '× B', cover: 'покрыто' },
   en: { title: 'Choose a part of Saint Petersburg', draft: 'DRAFT', sub: 'Areas = the real municipal districts of the city. Borders follow streets, rivers and canals. Size is compared with area B (North).',
     rulesBtn: 'Rules', rulesTitle: 'Area border rules (draft)', lOvl: 'Overlap zones of all areas', lJunc: 'Shared junctions', lBrg: 'Bridges between areas', hoverRed: 'red line: the territory a visitor can walk in this area', playable: 'Walkable territory', ofWhichOvl: 'of which overlaps', waterZone: 'Water of the area', takes: 'Takes from neighbours', junctionsH: 'Shared junctions (the block belongs to all areas)', bridgesH: 'Bridges (belong to both areas)', junctionT: 'Shared block', junctionAreas: 'areas', rulesList: ['Area = municipal district: the core territory. Sizes are compared with area B by the core territory.', 'Border streets belong to both areas, and each area reaches ONE block (at most 320 m deep) across the border street into its neighbour.', 'A junction, square or station where 3 or more areas meet: the surrounding blocks belong to ALL of those areas (the visitor is not thrown into another scene at the station).', 'Bridges between areas belong to both areas.', 'Water is reachable (later: water transport): the water up to 2 km from a shore belongs to the shore area; a river between two areas belongs to both (when its middle is within 320 m of the other bank); open water beyond is its own set of water zones (later).', 'The red line on hover shows everything a visitor can walk in that area: core + overlaps + bridges; dashed: water.'],
@@ -169,9 +174,9 @@ const T = {
     city: 'Whole city', center: 'Centre', rayon: 'By district', size: 'By size', search: 'Search areas…', areas: 'areas', km2: 'km²', total: 'total',
     cls: { b: '≈ B', large: 'slightly large', big: 'split', small: 'merge' },
     clsLong: { b: 'About the size of area B (±20 %)', large: 'A little larger than B (up to 1.5 × B): can stay as is', big: 'Too large: split', small: 'Too small: merge with a neighbour' },
-    layers: 'Layers', lRoads: 'Main streets', lRayon: 'City district borders', lPlan: 'Size plan: hatching', lLabels: 'Names', lParks: 'Parks (centre)', lExist: 'Already in the game (A, B)', lSq: 'Square = area B',
+    layers: 'Layers', lRoads: 'Main streets', lRayon: 'City district borders', lPlan: 'Size plan: hatching', lLabels: 'Names', lParks: 'Parks (centre)', lExist: 'Already in the game (P, S, A, V)', lSq: 'Square = area B',
     legend: 'Area size', rayonH: 'City district', area: 'Territory', land: 'Land', vsB: 'vs area B', exist: 'In the game', plan: 'Plan', isolated: 'no small neighbour: keep as a separate small area', bestEffort: 'best option so far, to discuss', mergeOk: 'gives about B', mergeNear: 'close to B', splitInto: (n) => 'Split into about ' + n + ' (about ', mergeWith: 'Merge with', contains: 'Inside', neighbours: 'Neighbours', open: 'Open the scene',
-    live: 'live', wip: 'in development', none: 'no scene yet', bname: 'area B ≈ 3.95 km²', sq: '= area B · 3.95 km²', gulf: 'Gulf of Finland', bay: 'Neva Bay', neva: 'Neva', ladoga: '',
+    live: 'live', liveBadge: 'Live', liveN: 'live', liveH: 'Live scene', liveSights: 'Sights', liveSize: 'Download size', liveWalk: 'Walkable territory of the scene', liveEdges: 'Seamless crossings to', liveRects: 'rectangles', liveLegend: 'orange outline: the district that is a live scene; dashed: its walkable territory', wip: 'in development', none: 'no scene yet', bname: 'area B ≈ 3.95 km²', sq: '= area B · 3.95 km²', gulf: 'Gulf of Finland', bay: 'Neva Bay', neva: 'Neva', ladoga: '',
     pickA: 'Click an area to see details', ofB: '× B', cover: 'covered' },
 };
 let lang = 'ru';
@@ -251,7 +256,9 @@ for (const a of D.areas) {
   if (a.kind === 'big' || a.kind === 'large') planOf.set(a.k, el('path', { d, 'fill-rule': 'evenodd', fill: a.kind === 'big' ? 'url(#hatch)' : 'url(#hatchL)', stroke: 'none' }, gPlan));
   else if (a.kind === 'small') planOf.set(a.k, el('path', { d, 'fill-rule': 'evenodd', fill: 'none', stroke: '#4a58c8', 'stroke-width': 2.6, 'stroke-dasharray': '1.5 5', 'stroke-linecap': 'round' }, gPlan));
 }
-// the areas that exist today: P (Palace-Liteyny) and S (Smolninskoye) as dashed rectangles
+// the live areas (D.existing, from the registry: P Palace-Liteyny, S Smolninskoye, A Admiralty-Haymarket, V Vladimirsky-Ligovka): the district itself gets a solid orange outline,
+// the walkable territory of the scene (the registry's play rectangles) a dashed ink outline
+for (const a of D.areas) if (a.live) el('path', { d: a.d, fill: 'rgba(232,89,12,.10)', stroke: '#e8590c', 'stroke-width': 3.4, 'stroke-linejoin': 'round', 'fill-rule': 'evenodd' }, gEx);
 for (const e of D.existing) {
   const d = e.rects.map((r) => ringD(r)).join('');
   el('path', { d, fill: 'rgba(255,255,255,.0)', stroke: 'var(--ink)', 'stroke-width': 2.2, 'stroke-dasharray': '7 4' }, gEx);
@@ -514,8 +521,14 @@ function renderCard(a) {
     plan = `<div class="plan"><b>${s.cls.small}</b> · ${s.clsLong.small}${ms.length ? `<br>${s.mergeWith}: ${links}<br>${a.mergeLone ? '' : fmt(a.mergeSum) + ' ' + s.km2 + ' · '}${note}` : ''}</div>`; }
   const ex = a.exist.map((e) => { const x = D.existing.find((q) => q.id === e.id); return `<span class="tag ${e.id}">${e.id}</span> ${lang === 'ru' ? x.title : x.titleEn} ${e.pct}% ${s.cover} · ${x.status === 'Live' ? s.live : s.wip}`; });
   const goLinks = a.exist.map((e) => { const x = D.existing.find((q) => q.id === e.id); return `<a class="go" href="../${x.page || 'index.html'}">${s.open} ${e.id} →</a>`; }).join(' ');
-  card.innerHTML = `<button class="x" aria-label="close">×</button><h2>${nm(a)}</h2><div class="en">${other !== nm(a) ? other + ' · ' : ''}${rayName(ray)}${lang === 'ru' ? ' район' : ' district'}</div>
+  const lv = a.live ? D.existing.find((q) => q.id === a.live) : null;
+  const liveBox = lv ? `<div class="liveBox"><h3><span class="tag live">${s.liveBadge}</span> <span class="tag ${lv.id}">${lv.id}</span> ${lang === 'ru' ? lv.title : lv.titleEn}</h3>
+    <div><b>${s.liveSights}:</b> ${lv.sights.join(' · ')}</div>
+    <div class="row2">${s.liveSize}: ≈ ${lv.approxMB} MB · ${s.liveWalk}: ${fmt(lv.km2)} ${s.km2} (${lv.rectN} ${s.liveRects})</div>
+    ${lv.edges.length ? `<div class="row2">${s.liveEdges}: ${lv.edges.map((l) => { const t = D.existing.find((q) => q.id === l); return `<span class="tag ${l}">${l}</span> ${lang === 'ru' ? t.title : t.titleEn}`; }).join(' · ')}</div>` : `<div class="row2">${s.liveEdges}: —</div>`}</div>` : '';
+  card.innerHTML = `<button class="x" aria-label="close">×</button><h2>${nm(a)}${a.live ? ` <span class="tag live">${s.liveBadge}</span>` : ''}</h2><div class="en">${other !== nm(a) ? other + ' · ' : ''}${rayName(ray)}${lang === 'ru' ? ' район' : ' district'}</div>
   <dl><dt>${s.land}</dt><dd>${fmt(a.km2)} ${s.km2} · ${fmt(a.x)} ${s.ofB}</dd><dt>${s.playable}</dt><dd>${fmt(a.fpKm2)} ${s.km2} (${s.ofWhichOvl} ${fmt(a.extKm2)})${a.wzKm2 ? ` · ${s.waterZone.toLowerCase()} ${fmt(a.wzKm2)} ${s.km2}` : ''}</dd><dt>${s.srcRow}</dt><dd>${a.src}% · ${({ ready: s.srcReady, part: s.srcPart, low: s.srcLow, none: s.srcNone })[srcClass(a)]}${a.sights ? ` · ${a.sights} ${s.sightsN}` : ''}</dd>${ex.length ? `<dt>${s.exist}</dt><dd>${ex.join('<br>')}</dd>` : `<dt>${s.exist}</dt><dd style="color:var(--muted)">${s.none}</dd>`}</dl>
+  ${liveBox}
   ${plan}
   ${a.sightList && a.sightList.length ? `<h3>${s.sightsN} (${s.srcSumm})</h3><div class="chips">${a.sightList.map((c) => `<span style="font-size:12.5px">${c}</span>`).join(' · ')}${a.sights > a.sightList.length ? ' · …' : ''}</div>` : ''}
   ${a.contains.length ? `<h3>${s.contains}</h3><div class="chips">${a.contains.map((c) => `<span style="font-size:12.5px">${lang === 'ru' ? c.ru : c.en}</span>`).join(' · ')}</div>` : ''}
@@ -542,8 +555,8 @@ function buildList() {
     sum.innerHTML = `<span class="dot" style="background:${dark() ? `hsl(${ray.hue} 40% 46%)` : `hsl(${ray.hue} 60% 62%)`}"></span>${rayName(ray)}<span class="cnt">${items.length} · ${fmt(ray.km2)} ${s.km2}</span>`;
     det.appendChild(sum);
     for (const a of items) {
-      const d = document.createElement('div'); d.className = 'item'; d.dataset.k = a.k; d.tabIndex = 0;
-      d.innerHTML = `<span class="nm">${nm(a)}</span><span class="km">${fmt(a.km2)}</span><span class="tag ${a.kind}">${a.kind === 'big' ? '÷' + a.split : a.kind === 'small' ? '+' : '≈B'}</span>${a.src >= 90 ? '<span class="tag" style="background:#2b7a49;color:#fff" title="' + s.srcReady + '">✓</span>' : a.src >= 30 ? '<span class="tag" style="background:#6f974a;color:#fff">◐</span>' : ''}`;
+      const d = document.createElement('div'); d.className = 'item' + (a.live ? ' isLive' : ''); d.dataset.k = a.k; d.tabIndex = 0;
+      d.innerHTML = `<span class="nm">${nm(a)}</span>${a.live ? `<span class="tag live" title="${s.liveBadge}">${s.liveBadge} ${a.live}</span>` : ''}<span class="km">${fmt(a.km2)}</span><span class="tag ${a.kind}">${a.kind === 'big' ? '÷' + a.split : a.kind === 'small' ? '+' : '≈B'}</span>${a.src >= 90 ? '<span class="tag" style="background:#2b7a49;color:#fff" title="' + s.srcReady + '">✓</span>' : a.src >= 30 ? '<span class="tag" style="background:#6f974a;color:#fff">◐</span>' : ''}`;
       d.onmouseenter = () => setHover(a.k); d.onmouseleave = () => setHover(null);
       d.onclick = () => { select(a.k); document.getElementById('side').classList.remove('open'); };
       d.onkeydown = (e) => { if (e.key === 'Enter') d.click(); };
@@ -553,7 +566,7 @@ function buildList() {
   }
   const cls = D.areas.reduce((m, a) => (m[a.kind] = (m[a.kind] || 0) + 1, m), {});
   const tot = D.areas.reduce((x, a) => x + a.km2, 0);
-  $('stats').innerHTML = `<span><b>${D.areas.length}</b> ${s.areas} · ${fmt(tot)} ${s.km2}</span><span class="tag b">≈B ${cls.b || 0}</span><span class="tag large">${s.cls.large} ${cls.large || 0}</span><span class="tag big">${s.cls.big} ${cls.big || 0}</span><span class="tag small">${s.cls.small} ${cls.small || 0}</span><span class="tag" style="background:#2b7a49;color:#fff">✓ ${D.areas.filter((a) => a.src >= 90).length}</span>`;
+  $('stats').innerHTML = `<span><b>${D.areas.length}</b> ${s.areas} · ${fmt(tot)} ${s.km2}</span><span class="tag b">≈B ${cls.b || 0}</span><span class="tag large">${s.cls.large} ${cls.large || 0}</span><span class="tag big">${s.cls.big} ${cls.big || 0}</span><span class="tag small">${s.cls.small} ${cls.small || 0}</span><span class="tag" style="background:#2b7a49;color:#fff">✓ ${D.areas.filter((a) => a.src >= 90).length}</span><span class="tag live">${s.liveBadge} ${D.existing.length}</span>`;
   if (selected != null) document.querySelectorAll('.item').forEach((i) => i.classList.toggle('on', Number(i.dataset.k) === selected));
 }
 
@@ -589,7 +602,7 @@ function buildLayers() {
     <div class="row"><span class="sw dots"></span><span><b>${s.cls.small}</b> &lt; ${fmt(D.meta.B_LO)} (+)</span></div>
     <div class="row"><span class="sw" style="border:2px solid #d62a1e;background:rgba(214,40,30,.12)"></span><span><b>${s.hoverRed}</b></span></div>
     <div class="row"><span class="sw" style="background:repeating-linear-gradient(-45deg, rgba(20,120,60,.65) 0 3px, transparent 3px 8px)"></span><span>${s.srcHatch} (${fmt(D.source.km2)} ${s.km2})</span></div>
-    <div class="row"><span class="tag A">A</span><span class="tag B">B</span><span>${lang === 'ru' ? 'уже в игре (пунктир)' : 'already in the game (dashed)'}</span></div>`;
+    <div class="row"><span style="display:inline-flex;gap:3px;flex:none">${D.existing.map((e) => `<span class="tag ${e.id}">${e.id}</span>`).join('')}</span><span><b>${s.liveBadge}</b>: ${s.liveLegend}</span></div>`;
 }
 function applyLayers() {
   gStr.forEach((g, c) => { g.style.display = layerOn.roads && (c < 3 || (c === 3 && view.k > 0.008) || (c === 4 && view.k > 0.02)) ? '' : 'none'; });
