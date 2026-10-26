@@ -69,6 +69,36 @@ const SEAM_TOL = 0.8;
 /** strips that OSM leaves out of the water polygons: the WATER.plugs of the area (the strip: under the Palace Bridge, between the west polygon edge and the east polygon edge of the Neva) */
 const PLUGS = AREA_WATER.plugs;
 
+// ---- HAND-OVER TO A LANDMARK MODULE (docs/AREAS.md 15.z; the source project's owners.js, reduced to what an n4spb area lists in WATER.ownerRings / WATER.keepOut):
+//   * OWNER_WATER: ground that a sight turns into its own descent to the water (Admiralty-Haymarket: the stair pit of the Academy sphinx pier): the ring counts as water of its key (a hole in the ground, the water surface
+//     under it, layout.inRiver / heightAt), NONE of its edges is a bank and the quay opens exactly there (quay.js ownerWaterAt): the owner draws the walls, steps, parapets and colliders. An area that lists none is unchanged.
+//   * KEEP_OUT: no generated descent, landing stage or boat here.
+const _flat = (r) => (Array.isArray(r[0]) ? r.flat() : r.slice());
+const OWNER_WATER = AREA_WATER.ownerRings.map((w) => ({ id: w.id, key: w.key || 'neva', o: _flat(w.ring || w.o || []) })).filter((w) => w.o.length >= 6 && w.o.every(Number.isFinite));
+const KEEP_OUT = AREA_WATER.keepOut.filter((k) => k && Array.isArray(k.c) && k.c.length === 2 && (k.r || (Array.isArray(k.ax) && k.hl && k.hw)));
+const _owBox = OWNER_WATER.map((w) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (let i = 0; i < w.o.length; i += 2) { x0 = Math.min(x0, w.o[i]); x1 = Math.max(x1, w.o[i]); z0 = Math.min(z0, w.o[i + 1]); z1 = Math.max(z1, w.o[i + 1]); } return [x0, x1, z0, z1]; });
+/** the owner rings [{ id, o }] (streets keeps its pavements off them) */
+export const ownerWater = () => OWNER_WATER.map((w) => ({ id: w.id, o: w.o }));
+/** true inside an owner ring or within m metres of its outline (the quay opens there: no coping, parapet or collider; ring + 6 cm: no wall face either, see quay.js segOpen) */
+export function ownerWaterAt(x, z, m = 0.5) {
+  for (let k = 0; k < OWNER_WATER.length; k++) {
+    const b = _owBox[k]; if (x < b[0] - m || x > b[1] + m || z < b[2] - m || z > b[3] + m) continue;
+    const o = OWNER_WATER[k].o; if (pointInFlat(x, z, o)) return true;
+    if (m > 0) for (let i = 0, j = o.length - 2; i < o.length; j = i, i += 2) { const dx = o[i] - o[j], dz = o[i + 1] - o[j + 1], l2 = dx * dx + dz * dz || 1e-9, t = Math.max(0, Math.min(1, ((x - o[j]) * dx + (z - o[j + 1]) * dz) / l2)); if (Math.hypot(o[j] + dx * t - x, o[j + 1] + dz * t - z) < m) return true; }
+  }
+  return false;
+}
+export const ownerWaterBoxes = () => _owBox;
+/** true where no generated descent, landing stage or boat may be (m = extra margin) */
+export function keepOut(x, z, m = 0) {
+  for (const k of KEEP_OUT) {
+    if (k.r) { if (Math.hypot(x - k.c[0], z - k.c[1]) < k.r + m) return true; continue; }
+    const dx = x - k.c[0], dz = z - k.c[1], u = dx * k.ax[0] + dz * k.ax[1], v = -dx * k.ax[1] + dz * k.ax[0];
+    if (Math.abs(u) < k.hl + m && Math.abs(v) < k.hw + m) return true;
+  }
+  return false;
+}
+
 /** Bridge crossings of the quay. c: centre, axis: bearing (deg) of the deck axis (direction of travel across the water), w: width of the deck measured ALONG the water (= the gap in the
  *  parapet / collider), len: length of the span (the abutments reach 8 m beyond it). Dimensions: docs/research/west-canals-bridges.md section 4 + the OSM bridge ways. `own`: a bridge
  *  the bridges module draws (the quay leaves the parapet / collider open and publishes the zone); the others get an invisible fallback deck (walk box + parapet boxes). */
@@ -173,6 +203,7 @@ function build() {
   });
   for (const dw of AREA_WATER.dataWater) WATER.forEach((w) => { if (w.id === dw.id) w.polys.forEach((p, i) => rings.push({ key: dw.key, o: p.o, id: dw.key + i, kind: 'data' })); });      // WATER.dataWater of the area (the strip: the castle moat r15750440, which the data keeps as a plain pond; ids 'moat0', 'moat1' ...)
   PLUGS.forEach((p, i) => rings.push({ key: p.key, o: p.o, id: 'plug' + i, kind: 'plug' }));
+  OWNER_WATER.forEach((p) => rings.push({ key: p.key, o: p.o, id: p.id, kind: 'data', owner: true }));      // (a landmark's own pit: water for the ground / the surface / inRiver, no bank of ours: flags below)
   for (const g of rings) { g.area = ringArea(g.o); g.waterLeft = g.area > 0; g.n = g.o.length / 2; g.box = boxOf(g.o); }
   const CELL = 64, grid = new Map(), cellsOf = (ax, az, bx, bz, f) => { for (let i = Math.floor(Math.min(ax, bx) / CELL); i <= Math.floor(Math.max(ax, bx) / CELL); i++) for (let j = Math.floor(Math.min(az, bz) / CELL); j <= Math.floor(Math.max(az, bz) / CELL); j++) f(i * 8192 + j); };
   rings.forEach((g, gi) => { for (let i = 0; i < g.n; i++) { const j = (i + 1) % g.n, ax = g.o[i * 2], az = g.o[i * 2 + 1], bx = g.o[j * 2], bz = g.o[j * 2 + 1]; cellsOf(ax, az, bx, bz, (k) => { let a = grid.get(k); if (!a) grid.set(k, (a = [])); a.push([gi, ax, az, bx, bz]); }); } });
@@ -223,7 +254,7 @@ function build() {
   const chains = [];
   for (let gi = 0; gi < rings.length; gi++) {
     const g = rings[gi], { o, n } = g, flags = [];
-    for (let i = 0; i < n; i++) { const j = (i + 1) % n; const ax = o[i * 2], az = o[i * 2 + 1], bx = o[j * 2], bz = o[j * 2 + 1]; flags.push(isForcedBank(ax, az, bx, bz) || (Math.hypot(bx - ax, bz - az) > 0.05 && !onClipLine(ax, az, bx, bz) && !(g.key === 'neva' && (onDataLine(ax, az, bx, bz) || onFarJoin(ax, az, bx, bz))) && !coincides(gi, ax, az, bx, bz) && !isOpenMouth(ax, az, bx, bz) && !insideSame(gi, ax, az, bx, bz))); }
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; const ax = o[i * 2], az = o[i * 2 + 1], bx = o[j * 2], bz = o[j * 2 + 1]; flags.push(isForcedBank(ax, az, bx, bz) || (!g.owner && Math.hypot(bx - ax, bz - az) > 0.05 && !onClipLine(ax, az, bx, bz) && !(g.key === 'neva' && (onDataLine(ax, az, bx, bz) || onFarJoin(ax, az, bx, bz))) && !coincides(gi, ax, az, bx, bz) && !isOpenMouth(ax, az, bx, bz) && !insideSame(gi, ax, az, bx, bz))); }
     if (flags.every(Boolean)) {
       const pts = []; for (let i = 0; i < n; i++) pts.push([o[i * 2], o[i * 2 + 1]]); pts.push(pts[0]);
       chains.push({ key: g.key, pts: g.waterLeft ? pts : pts.reverse(), closed: true });

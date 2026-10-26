@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import * as L from '../layout.js';
 import { PIERS } from '../data/city.js';
-import { WATERWAYS } from './waterways.js';
+import { WATERWAYS, keepOut } from './waterways.js';
 import { Acc, hash2 } from './util.js';
 
 const C = (h) => new THREE.Color(h);
@@ -103,7 +103,7 @@ export function pierRects() {
     const key = L.waterwayAt(r.cx, r.cz);
     if (!key || key === 'fontanka') return;       // (the Fontanka stages are landmarksC's)
     if (!L.inPlay(r.cx, r.cz, -30)) return;
-    if (L.claimedBy(p.id)) return;                // a landing stage that a sight module draws itself
+    if (L.claimedBy(p.id) || keepOut(r.cx, r.cz)) return;                // a landing stage that a sight module draws itself / its berth (waterways.js KEEP_OUT: a landmark's own pier)
     out.push({ ...r, key, y: WATERWAYS[key].water, id: p.id + '#' + pi });
   });
   return out;
@@ -182,7 +182,7 @@ export function buildBoats(ctx, root, quay) {
       if (u + G.len > p.len / 2 + 6) break;
       const cu = u + G.len / 2, cv = outer * (Math.max(2.2, p.wid) / 2 + G.wid / 2 + 0.3), x = p.cx + p.ax * cu - p.az * cv, z = p.cz + p.az * cu + p.ax * cv;
       const ends = [-G.len / 2, G.len / 2].map((e) => [x + p.ax * e, z + p.az * e]);
-      if (wet(x, z) && ends.every(([ex, ez]) => wet(ex, ez))) list.push({ type, key: p.key, y: p.y, x, z, yaw: p.ax >= 0 || hash2(pi, n, 3) < 0.5 ? yaw : yaw + Math.PI, moored: true });
+      if (wet(x, z) && !keepOut(x, z, 8) && ends.every(([ex, ez]) => wet(ex, ez))) list.push({ type, key: p.key, y: p.y, x, z, yaw: p.ax >= 0 || hash2(pi, n, 3) < 0.5 ? yaw : yaw + Math.PI, moored: true });
       u += G.len + 1.0;
     }
   });
@@ -208,7 +208,7 @@ export function buildBoats(ctx, root, quay) {
     for (let i = 0; i + 1 < pts.length; i++) { const l = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); seg.push(l); tot.push(s); s += l; }
     const Lr = s, G = types[R.type], sz = R.size || 1;
     // validate: the reach must be water and the offset lane too
-    let ok = true; for (let q = 0; q <= 20; q++) { const a = at(q / 20 * Lr); if (!wet(a.x + a.nx * R.off, a.z + a.nz * R.off)) { ok = false; break; } }
+    let ok = true; for (let q = 0; q <= 20; q++) { const a = at(q / 20 * Lr); if (!wet(a.x + a.nx * R.off, a.z + a.nz * R.off) || keepOut(a.x + a.nx * R.off, a.z + a.nz * R.off, 6)) { ok = false; break; } }
     if (!ok) continue;
     function at(sv) {
       sv = Math.max(0, Math.min(Lr, sv)); let i = 0; while (i + 1 < seg.length && tot[i] + seg[i] < sv) i++;

@@ -35,7 +35,7 @@ import * as L from '../layout.js';
 import { MeshBuilder } from '../lib/massing.js';
 import { PIERS, STEPS } from '../data/city.js';
 import { deckPoly, bridgeZones, floorZones, waterBanks } from './river.js';
-import { WATERWAYS, waterGeo, farBanks, slopeRuns } from './waterways.js';
+import { WATERWAYS, waterGeo, farBanks, slopeRuns, keepOut, ownerWaterAt, ownerWaterBoxes } from './waterways.js';
 import { pointInRing, distToRing, hash2 } from './util.js';
 import { pierRects } from './boats.js';
 import { BANK_INDEX } from './bank-index.js';
@@ -264,7 +264,7 @@ function culvertTexture(ctx) {
 /** densified bank with per-vertex landward mitre normal (mx, mz), mitre scale k, arclength s and the segment's normal (nx, nz) / tangent (tx, tz) per segment.
  *  Anichkov keeps its original polygon-based gaps; explicit bridge sites insert
  *  their edge splits, including Belinsky on the Fontanka. */
-function frames(bank, splits) {
+function frames(bank, splits, tests) {
   const pts = [];
   for (let i = 0; i < bank.pts.length; i++) {
     const p = bank.pts[i];
@@ -280,6 +280,18 @@ function frames(bank, splits) {
       for (const [px, pz, nx, nz] of splits) { const da = (a[0] - px) * nx + (a[1] - pz) * nz, db = (b[0] - px) * nx + (b[1] - pz) * nz; if ((da > 0.02 && db < -0.02) || (da < -0.02 && db > 0.02)) ts.push(da / (da - db)); }
       ts.sort((u, v) => u - v);
       for (const t of ts) out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      out.push(b);
+    }
+    P = out;
+  }
+  if (tests && tests.length) {                                    // cut where a zone test changes along a piece (bisection; a zone narrower than a piece is found through the midpoint; the source project's frames())
+    const out = [P[0]];
+    const cut = (a, b, ta, tb, f) => { let lo = a, hi = b; for (let k = 0; k < 18; k++) { const m = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2]; if (f(m[0], m[1]) === ta) lo = m; else hi = m; } void tb; return [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2]; };
+    for (let i = 0; i + 1 < P.length; i++) {
+      const a = P[i], b = P[i + 1], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], add = [];
+      for (const f of tests) { const ta = f(a[0], a[1]), tm = f(m[0], m[1]), tb = f(b[0], b[1]); if (ta !== tm) add.push(cut(a, m, ta, tm, f)); if (tm !== tb) add.push(cut(m, b, tm, tb, f)); }
+      add.sort((p, q) => Math.hypot(p[0] - a[0], p[1] - a[1]) - Math.hypot(q[0] - a[0], q[1] - a[1]));
+      for (const q of add) if (Math.hypot(q[0] - out[out.length - 1][0], q[1] - out[out.length - 1][1]) > 0.05 && Math.hypot(q[0] - b[0], q[1] - b[1]) > 0.05) out.push(q);
       out.push(b);
     }
     P = out;
@@ -478,6 +490,7 @@ export function buildQuay(ctx, root) {
   for (const zn of zones) { if (zn.id === 'anichkov') continue; const R = zn.w / 2 + zn.len / 2 + 60 + 1; for (let i = Math.floor((zn.c[0] - R) / ZC); i <= Math.floor((zn.c[0] + R) / ZC); i++) for (let j = Math.floor((zn.c[1] - R) / ZC); j <= Math.floor((zn.c[1] + R) / ZC); j++) { const k = zkey(i, j); let l = zoneGrid.get(k); if (!l) zoneGrid.set(k, (l = [])); l.push(zn); } }
   const NOZ = [], zonesAt = (x, z) => zoneGrid.get(zkey(Math.floor(x / ZC), Math.floor(z / ZC))) || NOZ;
   const gapAt = (key, x, z) => {
+    if (ownerWaterAt(x, z, 0.5)) return true;                       // a landmark module's own descent (waterways.js OWNER_WATER, WATER.ownerRings): open, and no wall face either (segOpen)
     if (key === 'fontanka' && inAnichkov(x, z)) return true;
     if (key === 'neva' && inPalaceDeck(x, z)) return true;
     const zl = zonesAt(x, z);
@@ -496,12 +509,12 @@ export function buildQuay(ctx, root) {
   const bankNear = (banks, x, z, lim) => { for (const b of banks) { const pts = b.pts; for (let i = 0; i + 1 < pts.length; i++) { const a = pts[i], c = pts[i + 1]; if ((a[0] - x >= lim && c[0] - x >= lim) || (x - a[0] >= lim && x - c[0] >= lim) || (a[1] - z >= lim && c[1] - z >= lim) || (z - a[1] >= lim && z - c[1] >= lim)) continue; const dx = c[0] - a[0], dz = c[1] - a[1], l2 = dx * dx + dz * dz || 1e-9, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2)); if (Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z) < lim) return true; } } return false; };
   const sitesOf = {};
   for (const k of keys) sitesOf[k] = [];
-  for (const p of PIERS) for (const poly of p.polys) { const n = poly.o.length / 2; let cx = 0, cz = 0; for (let i = 0; i < n; i++) { cx += poly.o[i * 2]; cz += poly.o[i * 2 + 1]; } cx /= n; cz /= n; if (L.claimedBy(p.id)) continue; for (const k of keys) if (bankNear(waterBanks(k), cx, cz, 28)) { sitesOf[k].push({ x: cx, z: cz, w: 1.7, src: 'pier' }); break; } }
+  for (const p of PIERS) for (const poly of p.polys) { const n = poly.o.length / 2; let cx = 0, cz = 0; for (let i = 0; i < n; i++) { cx += poly.o[i * 2]; cz += poly.o[i * 2 + 1]; } cx /= n; cz /= n; if (L.claimedBy(p.id) || keepOut(cx, cz)) continue; for (const k of keys) if (bankNear(waterBanks(k), cx, cz, 28)) { sitesOf[k].push({ x: cx, z: cz, w: 1.7, src: 'pier' }); break; } }
   sitesOf.fontanka.push({ x: -420, z: -5, w: 1.7, src: 'research' });
   for (const s of STEPS) {
     const p = s.pts; if (p.length < 4) continue;
     const mx = (p[0] + p[p.length - 2]) / 2, mz = (p[1] + p[p.length - 1]) / 2;
-    if (!L.inExtent(mx, mz, 4)) continue;                  
+    if (!L.inExtent(mx, mz, 4) || keepOut(mx, mz)) continue;                  // (a landmark module's own descent / berth: waterways.js keepOut)
     for (const k of keys) {
       if (k === 'fontanka') continue;
       const bs = waterBanks(k);
@@ -630,7 +643,11 @@ export function buildQuay(ctx, root) {
     void bi;
     // Split at explicit deck edges so a 9 m quay collider cannot cover a sidewalk.
     // Anichkov retains its established polygon-based gap and densification.
-    const splits = [];
+    const splits = [], splitTests = [];
+    if (ownerWaterBoxes().some((b) => bank.pts.some((p) => p[0] > b[0] - 40 && p[0] < b[1] + 40 && p[1] > b[2] - 40 && p[1] < b[3] + 40))) {      // the pieces are cut at the margin of a landmark's pit and at the ring itself (no 6 cm hairline between the wall face and the owner's cheek)
+      splitTests.push((x, z) => ownerWaterAt(x, z, 0.5));
+      splitTests.push((x, z) => ownerWaterAt(x, z, 0.06));
+    }
     // the box of the chain: a zone whose centre is R or more from the box has no chain point within R (the point tests below are the ones of before)
     let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9; for (const p of bank.pts) { if (p[0] < bx0) bx0 = p[0]; if (p[0] > bx1) bx1 = p[0]; if (p[1] < bz0) bz0 = p[1]; if (p[1] > bz1) bz1 = p[1]; }
     const boxFar = (cx, cz, R) => Math.max(bx0 - cx, cx - bx1, 0) >= R || Math.max(bz0 - cz, cz - bz1, 0) >= R;
@@ -680,7 +697,7 @@ export function buildQuay(ctx, root) {
           if (chosen) break;
           const s0 = best.s + sh, sA = dir > 0 ? s0 - DS.gateA - 0.5 : s0 - end - 0.5, sB = dir > 0 ? s0 + end + 0.5 : s0 + DS.gateA + 0.5;
           if (sA < 0 || sB > ptotal) { why.range = (why.range || 0) + 1; continue; }
-          const p0 = at(pf, ps, s0); if (!isNear(p0.x, p0.z)) { why.near = (why.near || 0) + 1; continue; }
+          const p0 = at(pf, ps, s0); if (!isNear(p0.x, p0.z) || keepOut(p0.x, p0.z)) { why.near = (why.near || 0) + 1; continue; }
           let ok = true;
           for (let u = -DS.gateA - 0.4; u <= end + 0.4 && ok; u += 1.2) { const q = at(pf, ps, s0 + dir * u); if (gapAt(key, q.x, q.z) || nearBridge(key, q.x, q.z, 9) || q.tx * p0.tx + q.tz * p0.tz < 0.985 || inRunS(s0 + dir * u)) ok = false; }
           if (!ok) why.axis = (why.axis || 0) + 1;
@@ -698,7 +715,7 @@ export function buildQuay(ctx, root) {
       }
       for (const d of mine) for (const u of [-DS.gateA, DS.gateB, d.end]) splits.push([d.p0.x + d.t[0] * u, d.p0.z + d.t[1] * u, d.t[0], d.t[1]]);
     }
-    const { fr, seg } = frames(bank, splits), total = fr[fr.length - 1].s;
+    const { fr, seg } = frames(bank, splits, splitTests), total = fr[fr.length - 1].s;
     // position of a point in a descent's frame: u along the flight (gate = [-gateA, gateB]), v out from the wall face
     const dUV = (d, x, z) => ({ u: (x - d.p0.x) * d.t[0] + (z - d.p0.z) * d.t[1], v: -((x - d.p0.x) * d.n[0] + (z - d.p0.z) * d.n[1]) });
     const inOpenGate = (x, z) => { for (const o of openStairs) { const q = dUV({ p0: o, t: [o.tx, o.tz], n: [o.nx, o.nz] }, x, z); if (Math.abs(q.u) <= o.gate && Math.abs(q.v) < 1.6) return true; } return false; };
@@ -714,6 +731,9 @@ export function buildQuay(ctx, root) {
     });
     const segDeck = seg.map((sg, i) => { const mx = (fr[i].x + fr[i + 1].x) / 2, mz = (fr[i].z + fr[i + 1].z) / 2; return gapAt(key, mx, mz) || (key === 'fontanka' && inAnichkov(fr[i].x, fr[i].z) && inAnichkov(fr[i + 1].x, fr[i + 1].z)); });
     const segNear = seg.map((sg, i) => isNear(fr[i].x, fr[i].z));
+    const segOwner = seg.map((sg, i) => ownerWaterAt((fr[i].x + fr[i + 1].x) / 2, (fr[i].z + fr[i + 1].z) / 2, 0.5));      // the front of a landmark's descent + 0.5 m round it: no coping, parapet, collider (segGap)
+    // the ring itself + 6 cm: nothing of the quay, not even the wall face (the 0.5 m margin round the ring keeps its wall FACE, drawn like a bridge gap's face, so no slit shows beside the owner's cheek wall)
+    const segOpen = seg.map((sg, i) => ownerWaterAt((fr[i].x + fr[i + 1].x) / 2, (fr[i].z + fr[i + 1].z) / 2, 0.06));
     const segSlope = seg.map((sg, i) => { const r = sRuns.find((q) => fr[i].s >= q.s0 - 0.06 && fr[i + 1].s <= q.s1 + 0.06); return r ? r.reach : null; });      // the slope reach of a piece, or null
     const segIn = seg.map((sg, i) => !!bank.far && L.inExtent((fr[i].x + fr[i + 1].x) / 2, (fr[i].z + fr[i + 1].z) / 2, 3));      // scenery banks: the data banks rule inside the extent
     const segPlay = seg.map((sg, i) => L.inPlay(fr[i].x, fr[i].z, -150));
@@ -755,7 +775,7 @@ export function buildQuay(ctx, root) {
     const batter = key === 'neva' ? 0.3 : key === 'fontanka' ? 0 : 0.08;                 // the foot of the wall leans toward the water
     const wallProf = [[-batter, YB], [0, COP_BOT]];
     sweep(face[key], wallProf, (i) => segDeck[i] || segIn[i] || segSlope[i], u0, vWall);
-    sweep(faceDeck[key], wallProf, (i) => !segDeck[i] || segIn[i], u0, vWall);
+    sweep(faceDeck[key], wallProf, (i) => !segDeck[i] || segIn[i] || segOpen[i], u0, vWall);
     // ---- grass-slope banks: low granite banquette (kerb) at the water, a short lip, the grass slope up to street level, granite end caps where the slope meets a bridge / the wall
     for (const reach of new Set(sRuns.map((r) => r.reach))) {
       const KT = lvl(key) + reach.kerb, y0 = KT + reach.lip, run = reach.run, other = (i) => segSlope[i] !== reach, flat0 = () => 0;
@@ -919,7 +939,7 @@ export function buildQuay(ctx, root) {
       if (Math.floor(s / ringStep) % (key === 'fontanka' ? 4 : 5) === 1 && !onRoad(p.x, p.z)) signs.push({ x: p.x - p.nx * 0.03, z: p.z - p.nz * 0.03, nx: -p.nx, nz: -p.nz, y: signY });
     }
     // the gap ends: plates and drain culverts on the quay walls just beside the deck zone
-    for (let i = 1; i + 1 < segDeck.length && !bank.far; i++) if (segDeck[i] !== segDeck[i - 1]) {
+    for (let i = 1; i + 1 < segDeck.length && !bank.far; i++) if (segDeck[i] !== segDeck[i - 1] && !segOwner[i] && !segOwner[i - 1]) {
       const a = fr[i], sg = seg[segDeck[i] ? i - 1 : i], off = segDeck[i] ? -1.5 : 1.5, p = { x: a.x + sg.tx * off, z: a.z + sg.tz * off };
       if (!onRoad(p.x, p.z)) signs.push({ x: p.x - sg.nx * 0.03, z: p.z - sg.nz * 0.03, nx: -sg.nx, nz: -sg.nz, y: key === 'fontanka' ? -1.25 : lvl(key) + 1.85 });
       if (key !== 'fontanka' && segNear[i]) { const c = { x: a.x + sg.tx * (off * 2.2), z: a.z + sg.tz * (off * 2.2) }; if (!onRoad(c.x, c.z, 0.9)) culverts.push({ x: c.x - sg.nx * 0.03, z: c.z - sg.nz * 0.03, nx: -sg.nx, nz: -sg.nz, y: lvl(key) + 0.3 }); }
