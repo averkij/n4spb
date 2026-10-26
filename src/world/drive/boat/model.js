@@ -90,7 +90,7 @@ export function hullGeometries() {
 
 export function createBoatModel(ctx) {
   const { mat } = ctx, S = SPEC_BOAT;
-  const V = new VB(0), G = new VB(0), LAMP = new VB(0), DR = new VB(0), OB = new VB(0), WH = new VB(0);
+  const V = new VB(0), G = new VB(0), LAMP = new VB(0), DR = new VB(0), OB = new VB(0), LEG = new VB(0), PR = new VB(0), WH = new VB(0);
   const H = hullGeometries();
   const add = (f, col) => { const g = f.geo(); V.add(g, col); g.dispose(); };
   add(H.bottom, NAVY_DK); add(H.lower, NAVY); add(H.pin, RED); add(H.side, WHITE); add(H.deck, CREAM); add(H.coam, WHITE); add(H.floor, TEAK); add(H.inner, CREAM); add(H.trans, WHITE);
@@ -148,9 +148,12 @@ export function createBoatModel(ctx) {
   OB.rbox(0.40, 0.62, 0.52, 0.09, WHITE, [0, 0.20, -0.20], null, 1);                      // the cowling
   OB.box(0.42, 0.10, 0.54, NAVY, [0, 0.28, -0.20]);                                        // the stripe
   OB.box(0.16, 0.20, 0.10, BLACK, [0, 0.12, 0.08]);                                        // the clamp bracket on the transom
-  OB.box(0.17, 0.90, 0.34, GREY, [0, -0.46, -0.26]);                                       // the leg
-  OB.cyl(0.095, 0.095, 0.56, GREY, [0, -0.88, -0.30], [Math.PI / 2, 0, 0], 8);            // the gearcase torpedo
-  OB.box(0.03, 0.30, 0.10, '#555b63', [0, -0.88, -0.62]); OB.box(0.30, 0.03, 0.10, '#555b63', [0, -0.88, -0.62]);        // the propeller (a cross; under the water)
+  // The SUBMERGED part (the leg from the cowling down, the gearcase torpedo, the propeller; the waterline is y = -0.58 in this pivot) is NOT part of the outlined mesh: the cel outline pass sees the depth / normals of
+  // everything below the surface and drew it through the water as a static dark line drawing that did not move with the wake. It is its own mesh on the no-outline layer (colour pass only: plain grey shapes under
+  // the water, no contour), and the propeller is a separate spinning mesh (turns with the speed).
+  LEG.box(0.17, 0.90, 0.34, GREY, [0, -0.46, -0.26]);                                      // the leg
+  LEG.cyl(0.095, 0.095, 0.56, GREY, [0, -0.88, -0.30], [Math.PI / 2, 0, 0], 8);            // the gearcase torpedo
+  PR.box(0.03, 0.30, 0.10, '#555b63', [0, 0, 0]); PR.box(0.30, 0.03, 0.10, '#555b63', [0, 0, 0]);        // the propeller (a cross, centred on its axis)
 
   const mk = (vb, opts) => new THREE.Mesh(vb.build(), mat.toon('#ffffff', { vertexColors: true, paint: 0.02, ...opts }));
   const body = mk(V, { name: 'boat-body', side: 'double' }); body.name = 'boat-body'; body.castShadow = true; body.receiveShadow = true;
@@ -164,7 +167,10 @@ export function createBoatModel(ctx) {
   const lampMat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, name: 'boat-lamps' });
   const lamps = new THREE.Mesh(LAMP.build(), lampMat); lamps.name = 'boat-lamps'; lampMat.color.setScalar(0.55);
 
-  const motor = new THREE.Group(); motor.position.set(0, 0.58, -2.63); motor.add(outboard);
+  const leg = mk(LEG, { name: 'boat-motor-leg' }); leg.name = 'boat-motor-leg';
+  const prop = mk(PR, { name: 'boat-motor-prop', side: 'double' }); prop.name = 'boat-motor-prop'; prop.position.set(0, -0.88, -0.62);
+  ctx.noOutline(leg); ctx.noOutline(prop);                                                    // below the waterline: no outline pass (see above)
+  const motor = new THREE.Group(); motor.position.set(0, 0.58, -2.63); motor.add(outboard, leg, prop);
   const root = new THREE.Group(); root.name = 'drive-boat'; root.rotation.order = 'YXZ';
   root.add(body, glass, lamps, driver, steerWheel, motor);
   root.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
@@ -176,13 +182,14 @@ export function createBoatModel(ctx) {
   const night = ctx.shared ? ctx.shared.uNight : null;
   const phase = Math.random() * 6.28;
   const api = {
-    root, wheels: [], steerWheel, driver, flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, spec: S, boat: true,
+    root, wheels: [], steerWheel, driver, flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, propeller: prop, spec: S, boat: true,
     /** pose: x y z yaw pitch roll, steerAngle; kmh. The hull rocks on the water by itself (a slow heave, roll and pitch that grow a little with the speed) */
     set(p) {
       const t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000, k = 1 + Math.min(1, (p.kmh || 0) / 40) * 0.6;
       const heave = 0.028 * Math.sin(t * 1.7 + phase) * k, roll = 0.016 * Math.sin(t * 1.25 + phase * 1.7) * k, pitch = 0.010 * Math.sin(t * 1.05 + phase * 0.6) * k;
       root.position.set(p.x, p.y + heave, p.z); root.rotation.set(-(p.pitch + pitch), p.yaw, p.roll + roll);
       motor.rotation.y = -(p.steerAngle || 0) * 0.9;
+      prop.rotation.z += (p.dt || 0.016) * (p.driven ? 5 + (p.kmh || 0) * 1.1 : 0.4);        // the propeller turns with the speed (a lazy drift at rest)
       steerWheel.rotation.z = -(p.steer || 0) * 2.0;
       if (p.driven !== undefined && !!p.driven !== driven) { driven = !!p.driven; showDriver(); }
       const n = night ? night.value : 0;

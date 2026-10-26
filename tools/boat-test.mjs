@@ -358,6 +358,23 @@ check('10 the hull shell: every triangle winds the same way across its edges (no
   assert.equal(back, 0, `${back} rays see a back face first (the panel is culled: see-through)`); assert.equal(esc, 0, `${esc} rays pass through the hull`);
   assert.ok(M.body.material.side === THREE.DoubleSide, 'the hull body is double sided as a second line of defence');
 });
+check('10 the outboard: nothing of the engine below the waterline is outlined (the submerged leg / gearcase / propeller are on the no-outline layer), the cowling above the water is, the propeller spins with the speed, the motor swings with the wheel', () => {
+  const motor = M.outboard, WL = -motor.position.y;      // the waterline (y = 0 of the boat frame) in the motor pivot
+  const meshes = []; motor.traverse((o) => { if (o.isMesh) meshes.push(o); });
+  assert.ok(meshes.length >= 3, `the motor has ${meshes.length} meshes`);
+  let outlined = 0, wet = 0;
+  for (const m of meshes) {
+    m.geometry.computeBoundingBox(); const bb = m.geometry.boundingBox, lo = bb.min.y + m.position.y, outl = (m.layers.mask & 1) !== 0;
+    if (outl) { outlined++; assert.ok(lo > WL + 0.02, `the outlined mesh ${m.name} reaches y ${lo.toFixed(2)} below / at the waterline ${WL.toFixed(2)}: its contour shows through the water`); }
+    if (lo < WL) { wet++; assert.ok(!outl && (m.layers.mask & (1 << ctx.LAYER_NO_OUTLINE)) !== 0, `the submerged mesh ${m.name} (down to y ${lo.toFixed(2)}) is on the outline layer`); }
+  }
+  assert.ok(outlined >= 1 && wet >= 2, `${outlined} outlined / ${wet} submerged meshes`);
+  assert.ok(M.outboard.getObjectByName('boat-motor') && M.outboard.getObjectByName('boat-motor-leg') && M.outboard.getObjectByName('boat-motor-prop'), 'the cowling, the leg and the propeller exist');
+  const a0 = M.propeller.rotation.z; M.set({ x: 10, y: 0, z: 10, yaw: 0, pitch: 0, roll: 0, kmh: 45, dt: 0.05, driven: true, steerAngle: 0.3 }); const a1 = M.propeller.rotation.z; M.set({ x: 10, y: 0, z: 10, yaw: 0, pitch: 0, roll: 0, kmh: 0, dt: 0.05, driven: true, steerAngle: 0.3 });
+  assert.ok(a1 - a0 > 0.3, `the propeller turned ${(a1 - a0).toFixed(2)} rad in 0.05 s at 45 km/h`); assert.ok(M.propeller.rotation.z - a1 < a1 - a0, 'it is slower at rest');
+  assert.ok(Math.abs(motor.rotation.y + 0.3 * 0.9) < 1e-9, 'the motor swings with the wheel');
+  M.set({ x: 10, y: 0, z: 10, yaw: 0, pitch: 0, roll: 0, kmh: 0, steerAngle: 0, driven: false });
+});
 check('9 the module errors are empty', () => { assert.deepEqual(errors, []); });
 
 console.log(fails ? `\n${fails} FAILED of ${checks + fails}` : `\nALL ${checks} PASSED`);
