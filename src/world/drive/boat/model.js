@@ -12,7 +12,7 @@ const WHITE = '#f3f4f1', CREAM = '#ece5d1', NAVY = '#1c3a73', NAVY_DK = '#142a55
 const lerp = (a, b, t) => a + (b - a) * t;
 
 // ---- the hull stations, stern to bow: z, half width of the gunwale / the chine, height of the gunwale / the chine / the keel
-const ST = {
+export const ST = {
   z:  [-2.60, -2.30, -1.60, -0.80, 0.10, 0.95, 1.70, 2.30, 2.72, 3.00],
   gw: [0.93, 0.96, 0.97, 0.97, 0.95, 0.86, 0.66, 0.40, 0.14, 0.0],
   cw: [0.64, 0.70, 0.77, 0.79, 0.76, 0.64, 0.44, 0.22, 0.07, 0.0],
@@ -37,7 +37,9 @@ function Flat() {
   return { tri, quad, geo };
 }
 const UP = () => [0, 1, 0];
-const OUT = (c) => [c[0], c[1] - 0.3, 0];                    // away from the hull's axis (sides and bottom)
+const OUT = (c) => [c[0], 0, 0];                              // away from the hull's axis (the sides: they are never horizontal)
+const DECK_L = () => [0.3, 1, 0], DECK_R = () => [-0.3, 1, 0];     // up and a little outward (the foredeck strips at the stem are near-vertical slivers in the plane x = 0)
+const DOWN = () => [0, -1, 0];                               // the bottom (a hint on the height would turn the near-flat bow strips upside down)
 const IN = (c) => [-c[0], 0.3 - c[1], 0];                    // toward the axis (the inner walls of the cockpit)
 
 /** a point on the right side of station i: row 0 keel, 1 chine, 2 gunwale; t between the chine and the gunwale for the side strips */
@@ -45,10 +47,10 @@ const sidePt = (i, t, s) => [s * lerp(ST.cw[i], ST.gw[i], t), lerp(ST.cy[i], ST.
 const keelPt = (i) => [0, ST.ky[i], ST.z[i]];
 const chinePt = (i, s) => [s * ST.cw[i], ST.cy[i], ST.z[i]];
 
-function hullGeometries() {
+export function hullGeometries() {
   const bottom = Flat(), lower = Flat(), pin = Flat(), side = Flat(), deck = Flat(), coam = Flat(), floor = Flat(), inner = Flat(), trans = Flat();
   for (let i = 0; i + 1 < NS; i++) for (const s of [1, -1]) {
-    bottom.quad(keelPt(i), keelPt(i + 1), chinePt(i + 1, s), chinePt(i, s), OUT);
+    bottom.quad(keelPt(i), keelPt(i + 1), chinePt(i + 1, s), chinePt(i, s), DOWN);
     lower.quad(sidePt(i, 0, s), sidePt(i + 1, 0, s), sidePt(i + 1, 0.30, s), sidePt(i, 0.30, s), OUT);          // the blue boot-top band above the chine
     pin.quad(sidePt(i, 0.30, s), sidePt(i + 1, 0.30, s), sidePt(i + 1, 0.37, s), sidePt(i, 0.37, s), OUT);      // the red pinstripe
     side.quad(sidePt(i, 0.37, s), sidePt(i + 1, 0.37, s), sidePt(i + 1, 1, s), sidePt(i, 1, s), OUT);           // the white topsides
@@ -56,19 +58,30 @@ function hullGeometries() {
   // the foredeck: from the front of the cockpit to the stem, a shallow ridge down the middle
   for (let i = COCKPIT_END; i + 1 < NS; i++) {
     const L0 = sidePt(i, 1, 1), L1 = sidePt(i + 1, 1, 1), R0 = sidePt(i, 1, -1), R1 = sidePt(i + 1, 1, -1), c0 = [0, ST.gy[i] + 0.05, ST.z[i]], c1 = [0, ST.gy[i + 1] + 0.05, ST.z[i + 1]];
-    deck.quad(L0, L1, c1, c0, UP); deck.quad(c0, c1, R1, R0, UP);
+    deck.quad(L0, L1, c1, c0, DECK_L); deck.quad(c0, c1, R1, R0, DECK_R);
   }
   // the cockpit: the teak floor, the inner walls (inset 7 cm), the coaming on top of the gunwale, the front wall under the foredeck and the rear wall above the transom
+  // The liner is a SHELL inside the outer hull, parallel to it: at the floor height its half width is the outer half width there minus the inset (it used to be the gunwale width minus the inset, which poked out
+  // of the hull at the stern and made the teak corners show beside the transom), and it runs over EVERY cockpit station 0..COCKPIT_END (the loop used to stop at station 4, which left the side of the hull open
+  // between z 0.10 and 0.95, beside the seats and the console: from inside the single-sided outer side was culled and the water showed through).
   const FL = 0.10, IN_W = 0.07;
-  for (let i = 0; i + 1 < COCKPIT_END; i++) for (const s of [1, -1]) {
-    const a = [s * (ST.gw[i] - IN_W), ST.gy[i], ST.z[i]], b = [s * (ST.gw[i + 1] - IN_W), ST.gy[i + 1], ST.z[i + 1]];
-    inner.quad([a[0], FL, a[2]], [b[0], FL, b[2]], b, a, IN);
-    coam.quad(sidePt(i, 1, s), sidePt(i + 1, 1, s), b, a, UP);
-  }
+  const outerHalf = (i, y) => lerp(ST.cw[i], ST.gw[i], (y - ST.cy[i]) / (ST.gy[i] - ST.cy[i]));      // the outer half width of the hull at height y (above the chine) on station i
+  const xf = (i) => outerHalf(i, FL) - IN_W;                                                             // the liner's half width at the floor
   const zS = ST.z[0] + 0.08, zF = ST.z[COCKPIT_END], wS = ST.gw[0] - IN_W, wF = ST.gw[COCKPIT_END] - IN_W;
-  floor.quad([-wS, FL, zS], [wS, FL, zS], [wF, FL, zF], [-wF, FL, zF], UP);
-  inner.quad([-wS, FL, zS], [wS, FL, zS], [wS, ST.gy[0], zS], [-wS, ST.gy[0], zS], () => [0, 0, 1]);          // the rear wall, facing the bow
-  inner.quad([-wF, FL, zF], [wF, FL, zF], [wF, ST.gy[COCKPIT_END], zF], [-wF, ST.gy[COCKPIT_END], zF], () => [0, 0, -1]);   // the front wall, facing the stern
+  const zi = (i) => (i === 0 ? zS : ST.z[i]);                                                            // the first liner station stands at the rear wall, 8 cm in front of the transom
+  for (let i = 0; i < COCKPIT_END; i++) for (const s of [1, -1]) {
+    const a = [s * (ST.gw[i] - IN_W), ST.gy[i], zi(i)], b = [s * (ST.gw[i + 1] - IN_W), ST.gy[i + 1], zi(i + 1)];
+    inner.quad([s * xf(i), FL, a[2]], [s * xf(i + 1), FL, b[2]], b, a, IN);
+    coam.quad(sidePt(i, 1, s), sidePt(i + 1, 1, s), b, a, UP);
+    floor.quad([s * xf(i), FL, a[2]], [0, FL, a[2]], [0, FL, b[2]], [s * xf(i + 1), FL, b[2]], UP);
+  }
+  coam.quad(sidePt(0, 1, -1), sidePt(0, 1, 1), [wS, ST.gy[0], zS], [-wS, ST.gy[0], zS], UP);                 // the cap on top of the transom (it used to be an open slit)
+  const rear = (s) => [s * xf(0), FL, zS];
+  inner.quad(rear(-1), rear(1), [wS, ST.gy[0], zS], [-wS, ST.gy[0], zS], () => [0, 0, 1]);                      // the rear wall, facing the bow
+  // the front wall, facing the stern: its top follows the ridge of the foredeck (a 5 cm rise in the middle), so no slit is left under the deck
+  const topF = ST.gy[COCKPIT_END] + 0.05 * (1 - wF / ST.gw[COCKPIT_END]), apexF = ST.gy[COCKPIT_END] + 0.05;
+  const fw = [[-xf(COCKPIT_END), FL], [xf(COCKPIT_END), FL], [wF, topF], [0, apexF], [-wF, topF]];
+  for (let k = 1; k + 1 < fw.length; k++) inner.tri([fw[0][0], fw[0][1], zF], [fw[k][0], fw[k][1], zF], [fw[k + 1][0], fw[k + 1][1], zF], () => [0, 0, -1]);
   // the transom (outside): the cross-section of station 0 as a fan
   const T0 = [keelPt(0), chinePt(0, 1), sidePt(0, 1, 1), sidePt(0, 1, -1), chinePt(0, -1)];
   for (let k = 1; k + 1 < T0.length; k++) trans.tri(T0[0], T0[k], T0[k + 1], () => [0, 0, -1]);
@@ -140,13 +153,13 @@ export function createBoatModel(ctx) {
   OB.box(0.03, 0.30, 0.10, '#555b63', [0, -0.88, -0.62]); OB.box(0.30, 0.03, 0.10, '#555b63', [0, -0.88, -0.62]);        // the propeller (a cross; under the water)
 
   const mk = (vb, opts) => new THREE.Mesh(vb.build(), mat.toon('#ffffff', { vertexColors: true, paint: 0.02, ...opts }));
-  const body = mk(V, { name: 'boat-body' }); body.name = 'boat-body'; body.castShadow = true; body.receiveShadow = true;
+  const body = mk(V, { name: 'boat-body', side: 'double' }); body.name = 'boat-body'; body.castShadow = true; body.receiveShadow = true;
   const driver = mk(DR, { name: 'boat-driver' }); driver.name = 'boat-driver';
   const outboard = mk(OB, { name: 'boat-motor' }); outboard.name = 'boat-motor'; outboard.castShadow = true;
   const steerWheel = new THREE.Group(); steerWheel.position.set(0.34, 0.99, 0.50); steerWheel.rotation.x = -0.52;
   steerWheel.add(mk(WH, { name: 'boat-wheel', paint: 0 }));
-  const glassMat = mat.glass({ tint: '#13222e', opacity: 0.55, streaks: true }).clone();
-  if (ctx.shared && ctx.shared.uSkyMid && glassMat.uniforms && glassMat.uniforms.uSkyTop) { glassMat.uniforms.uSkyTop = ctx.shared.uSkyMid; glassMat.uniforms.uSkyLow = ctx.shared.uSkyLow; }
+  // The windshield is a CALM pane: a flat tinted unlit plane of constant opacity. No sky reflection, no fresnel, no scrolling highlight streaks (the shared mat.glass has them and they raced across the pane as the boat moved).
+  const glassMat = new THREE.MeshBasicMaterial({ color: '#7f9bb0', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, fog: true, name: 'boat-glass' });
   const glass = new THREE.Mesh(G.build(), glassMat); glass.name = 'boat-glass'; glass.renderOrder = 2;
   const lampMat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, name: 'boat-lamps' });
   const lamps = new THREE.Mesh(LAMP.build(), lampMat); lamps.name = 'boat-lamps'; lampMat.color.setScalar(0.55);
@@ -156,6 +169,10 @@ export function createBoatModel(ctx) {
   root.add(body, glass, lamps, driver, steerWheel, motor);
   root.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
 
+  // The helmsman exists only while the player drives the boat: a parked / moored / respawned boat is empty. `driven` (set by drive.js: enter / exit / every pose) and the cockpit view (the eye is the helmsman's) decide.
+  let driven = false, inside = false;
+  const showDriver = () => { driver.visible = driven && !inside; };
+  driver.visible = false;
   const night = ctx.shared ? ctx.shared.uNight : null;
   const phase = Math.random() * 6.28;
   const api = {
@@ -167,11 +184,14 @@ export function createBoatModel(ctx) {
       root.position.set(p.x, p.y + heave, p.z); root.rotation.set(-(p.pitch + pitch), p.yaw, p.roll + roll);
       motor.rotation.y = -(p.steerAngle || 0) * 0.9;
       steerWheel.rotation.z = -(p.steer || 0) * 2.0;
+      if (p.driven !== undefined && !!p.driven !== driven) { driven = !!p.driven; showDriver(); }
       const n = night ? night.value : 0;
       lampMat.color.setScalar(p.lights ? 0.9 + 1.6 * n : 0.45 + 0.9 * n);
     },
     /** the cockpit view (camera mode 2): the helmsman is hidden, the boat has no roof to take away */
-    setView(v) { driver.visible = !v; },
+    setView(v) { inside = !!v; showDriver(); },
+    /** the player gets in (true) / out (false): the painted helmsman is shown only while the boat is in use */
+    setDriven(v) { driven = !!v; showDriver(); },
   };
   return api;
 }

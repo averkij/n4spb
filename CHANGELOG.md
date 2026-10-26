@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **2.2.2** (2026-10-26, patch): motor boat: quieter engine, no helmsman figure while it is unused, the hull is closed from every side, a calm windshield without moving glints
 - **2.2.1** (2026-10-26, patch): a car driven across an edge gate arrives with the player in every area (the station-less Admiralty used to drop every car but its Zhiguli)
 - **2.2.0** (2026-10-26, minor): Admiralty gets the Egyptian sphinx pier on Universitetskaya Embankment (stairs into the Neva, griffins, breakable railing and lamps) and the Academy of Arts as scenery
 - **2.1.1** (2026-10-26, patch): the committed bake of all four live areas (revision 007dfbc53b72c45b8ab2); download-size estimates updated

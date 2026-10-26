@@ -82,8 +82,9 @@ export function createCarSound(audio, profile = null) {
       const sp = Math.min(1, c.speed / 220);
       if (P.wash) {      // the boat: the wash of the water along the hull grows with the speed (not its square: it is loud already at 20 km/h), a low rush with a brighter top; now and then the bow slaps a wave
         const ws = Math.min(1, c.speed / 55);
-        g(E.wind.gain, 0.025 + P.wash * ws, 0.10); E.wlp.frequency.setTargetAtTime(450 + ws * 1700, t, 0.10);
-        if (P.splash && ws > 0.35 && Math.random() < 0.018 * ws) burst(1100 + Math.random() * 600, 0.16, 0.05 + 0.05 * ws, 'bandpass');
+        const wl = P.washLp || [450, 1700], sh = P.splashHz || [1100, 600];      // (the boat's profile sets a darker wash and lower, softer bow slaps)
+        g(E.wind.gain, 0.025 * (P.splashVol ?? 1) + P.wash * ws, 0.10); E.wlp.frequency.setTargetAtTime(wl[0] + ws * wl[1], t, 0.10);
+        if (P.splash && ws > 0.35 && Math.random() < 0.018 * ws) burst(sh[0] + Math.random() * sh[1], 0.16, (0.05 + 0.05 * ws) * (P.splashVol ?? 1), 'bandpass');
       } else { g(E.wind.gain, (0.02 + 0.28 * sp * sp) * (P.wind ?? 1), 0.12); E.wlp.frequency.setTargetAtTime(350 + sp * 1500, t, 0.12); }
       const J = P.jet;
       g(E.whoosh.gain, c.boosting ? (J ? J.gain : 0.09) : 0, c.boosting ? (J ? J.attack : 0.08) : (J ? J.release : 0.25));
