@@ -89,7 +89,7 @@ const inside = (it, x, z, r = 0) => {
 check('1 no collider stands inside the hull at the dock (nor within 0.5 m of it)', () => {
   const S = boat.spec, sy = Math.sin(DOCK.yaw), cy = Math.cos(DOCK.yaw), y = boat.parked.y;
   for (const it of ph.querySolids(DOCK.x, DOCK.z, 10)) {
-    if (it === boat.box || it.type === 'hole') continue;
+    if (it === boat.box || it.type === 'hole' || it.boatPass) continue;      // (boatPass: a walker's floor that a floating boat passes - the steppable quay stair, drive/collision.js)
     const hi = it.type === 'walk' ? it.top : it.type === 'ramp' ? Math.max(it.yA, it.yB) : it.y1; if (hi <= y + 0.45 || it.y0 >= y + S.hgt) continue;
     for (let a = S.rear; a <= S.front; a += 0.4) for (const b of [-S.W / 2, 0, S.W / 2]) assert.ok(!inside(it, DOCK.x + sy * a + cy * b, DOCK.z + cy * a - sy * b, 0.5), `a solid ${it.type} at ${it.cx.toFixed(1)}, ${it.cz.toFixed(1)} stands in the hull`);
   }

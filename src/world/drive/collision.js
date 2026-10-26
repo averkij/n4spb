@@ -10,6 +10,7 @@ export function carContact(car, spec, b, out = {}) {
   const cx = car.x + s * spec.centerZ, cz = car.z + c * spec.centerZ;
   const hw = spec.W / 2 + 0.06, hd = spec.len / 2 + 0.06;
   if (b.type === 'hole') return null;
+  if (b.boatPass && car.floats) return null;      // a walker's floor over the water (the steppable quay stair, its landings and the pontoon deck, environment/quay.js): a floating boat is not stopped by it
   let top = b.y1;
   if (b.type === 'walk') top = b.top;
   if (b.type === 'ramp') {

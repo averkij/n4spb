@@ -837,10 +837,10 @@ export function buildQuay(ctx, root) {
       placed.push(p0); info.allStairs.push(st); if (key === 'fontanka') info.stairs.push(st);
       if (OPEN_FONTANKA_STAIRS.some((o) => Math.hypot(o.x - p0.x, o.z - p0.z) < o.r) && L.inPlay(p0.x, p0.z, -5)) {      // a steppable flight (owner 2026-10-26): a gap in the railing, walk boxes for the landing / treads / pontoon deck
         const rot = Math.atan2(-tz, tx), Pq = (u, v) => [p0.x + tx * u - nx * v, p0.z + tz * u - nz * v], lowY = wl + 0.22, uL = 1.6 + steps * run;
-        const walk = (u0, u1, v0, v1, top) => { const c = Pq((u0 + u1) / 2, (v0 + v1) / 2); ctx.physics.addWalkBox(c[0], c[1], u1 - u0, v1 - v0, rot, top, -8); info.colliders++; };
+        const walk = (u0, u1, v0, v1, top) => { const c = Pq((u0 + u1) / 2, (v0 + v1) / 2); ctx.physics.addWalkBox(c[0], c[1], u1 - u0, v1 - v0, rot, top, -8).boatPass = true; info.colliders++; };       // boatPass: a FLOOR for the walker only, a floating boat passes it (drive/collision.js)
         walk(-1.6, 1.6, -0.02, Wd + 0.1, y0);                                  // the top landing (0.5 m under the pavement)
         walk(-1.2, 1.2, -0.75, 0.45, y0 + 0.25);                               // a hidden sill under the pavement edge: the climb back from the landing (0.5 m) is two 0.25 m steps
-        { const c = Pq(1.6 + (steps * run) / 2, Wd / 2 + 0.02); ctx.physics.addStairs(c[0], c[1], Wd, steps * run, Math.atan2(tx, tz), y0, lowY, steps); info.colliders += steps; }
+        { const c = Pq(1.6 + (steps * run) / 2, Wd / 2 + 0.02); for (const t of ctx.physics.addStairs(c[0], c[1], Wd, steps * run, Math.atan2(tx, tz), y0, lowY, steps)) t.boatPass = true; info.colliders += steps; }
         walk(uL, uL + 3.0, -0.02, Wd + 0.1, lowY);                             // the lower landing
         walk(uL + 3.0 - 0.05, uL + 3.0 + PONTOON.len, 0.1, PONTOON.wid, PONTOON.top);      // the deck of the landing-stage pontoon of landmarksC/boats.js (it starts 9 m from the flight origin; its deck is 0.26 m above the landing)
         openStairs.push({ x: p0.x, z: p0.z, tx, tz, nx, nz, gate: OPEN_GATE });
