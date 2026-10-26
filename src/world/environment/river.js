@@ -53,6 +53,8 @@ const SITE_OF = { belinsky: 'belinsky', kazansky: 'kazansky', green: 'green', pe
   // the Mars Field / Summer Garden reach inside the extent margin
   'swan-lower': 'swan-lower', panteleymonovsky: 'panteleymonovsky', eng1: 'eng1', garden1: 'garden1', garden2: 'garden2', 'bolshoy-konyushenny': 'bolsh-konyushenny', teatralny: 'teatralny', 'malo-konyushenny': 'malo-konyushenny',
   kamenny: 'kamenny', pochtamtsky: 'pochtamtsky', fonarny: 'fonarny',
+  // the three small OSM-deck bridges of Palace-Liteyny (bridges/sites-pal.js, docs/AREAS.md 15.z): inert in the areas that do not list them
+  prachechny: 'prachechny', 'swan-upper': 'swan-upper', eng2: 'eng2',
   // the south-west reach (Admiralty-Haymarket; zone id = site id, bridges/sites-sw.js): the sites of an area that does not list these zones are filtered out by sites.js siteInArea, so the rows are inert elsewhere
   demidov: 'demidov', sennoy: 'sennoy', kokushkin: 'kokushkin', voznesensky: 'voznesensky', podyachesky: 'podyachesky', lviny: 'lviny', kharlamov: 'kharlamov', 'novo-nikolsky': 'novo-nikolsky', pikalov: 'pikalov', krasnogvardeysky: 'krasnogvardeysky',
   'staro-nikolsky': 'staro-nikolsky', mogilevsky: 'mogilevsky', kashin: 'kashin', torgovy: 'torgovy', dekabristov: 'dekabristov', matveev: 'matveev', krasnoflotsky: 'krasnoflotsky', potseluev: 'potseluev', khrapovitsky: 'khrapovitsky',

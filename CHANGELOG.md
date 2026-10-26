@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **2.3.0** (2026-10-26, minor): the Prachechny, Upper Swan and 2nd Engineer bridges are drawn as granite arch bridges with breakable parapets (they were bare slabs)
 - **2.2.2** (2026-10-26, patch): motor boat: quieter engine, no helmsman figure while it is unused, the hull is closed from every side, a calm windshield without moving glints
 - **2.2.1** (2026-10-26, patch): a car driven across an edge gate arrives with the player in every area (the station-less Admiralty used to drop every car but its Zhiguli)
 - **2.2.0** (2026-10-26, minor): Admiralty gets the Egyptian sphinx pier on Universitetskaya Embankment (stairs into the Neva, griffins, breakable railing and lamps) and the Academy of Arts as scenery
