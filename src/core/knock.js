@@ -19,6 +19,10 @@
 //   Each part keeps its rest offset from the record origin (x, y + originY, z), so a traffic head or a lens instance sits where it stood and flies with the pole; a `hide` part
 //   (a glow, a light pool, a halo) is zero-scaled at the knock. Parts are normalised once at register(); a frame writes matrices only (no allocation).
 //      ghost: true = a record with no parts at all (a collider that stands where nothing is drawn: it breaks silently; docs/AREAS.md 13.7)
+//      beam: { ax, az (the unit axis of the piece, hinge end -> free end), hinge } = a long thin PIECE, the half of a barrier boom (docs/AREAS.md 15.x): w = its length, the record stands at its CENTRE, originY = its axis above the
+//        foot. It does not topple about the foot: a HINGED piece (the post half) swings about its post end like a gate that is pushed open (it yaws toward the throw and droops until its free end lies on the ground), a free piece
+//        (the outer half) is thrown along the hit, falls flat, spins a little about the vertical and lies. The rest collider is a thin box (<= 0.42 m) along the lying piece. ctx.knock.snap(record, dx, dz, speed) breaks a
+//        standing record as if a car hit it (the other half of a boom that snapped: onKnock of one half snaps the other).
 // API  ctx.knock.register({ kind, x, z, y (the base), originY (the instance origin above the base: 0 for base-origin geometry, h/2 for a centred box), rotY, mass, h, r | w, d,
 //      anchored, hitK, metal, minDv, parts: [...], item | items: [...], onKnock }) -> record { kind, x, y, z, rotY, state: 'stand' | 'fly' | 'rest' | 'lost', wobble, parts, ... } | null (never throws);
 //      ctx.knock.listen(fn(record, body))  after every knock (seated people, perched crows); ctx.knock.update(dt) (self-registered); ctx.knock.list (records);
@@ -29,7 +33,7 @@ const G = 12, HALF_PI = Math.PI / 2, UP = new THREE.Vector3(0, 1, 0), ONE = new 
 const REACH = 30;                                                           // m added once to the bounding sphere of a knock mesh: a thrown instance must not be culled with its mesh
 const CLANK_GAP = 0.15;
 const LEVEL = 0.03;                                                         // m: the level the car drives at on the road (handling.js groundAt); the pavement the furniture stands on is drawn 0.1 m higher                                                     // s between two steel clanks
-const _m = new THREE.Matrix4(), _b = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _p = new THREE.Vector3(), _ax = new THREE.Vector3();
+const _m = new THREE.Matrix4(), _b = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _p = new THREE.Vector3(), _ax = new THREE.Vector3(), _sh = new THREE.Vector3();
 const _surf = { y: -Infinity, kind: null, item: null };
 const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -81,7 +85,7 @@ export function createKnock(ctx) {
       const it = {
         kind: o.kind || 'thing', x: o.x, z: o.z, y, rotY: o.rotY || 0, mass: o.mass || 20, h: o.h || 1, r: o.r || (o.w && o.d ? hyp(o.w, o.d) / 2 : 0.3), w: o.w || (o.r ? o.r * 2 : 0.6), d: o.d || (o.r ? o.r * 2 : 0.6),
         originY, anchored: o.anchored || 0, hitK: o.hitK ?? 0.3, metal: !!o.metal, minDv: o.minDv ?? (o.anchored ? 0 : 0.5), onKnock: o.onKnock || null,
-        parts, item: items[0] || null, items, state: 'stand', body: null, wobble: null, armed: false, src: null,
+        parts, item: items[0] || null, items, state: 'stand', body: null, wobble: null, armed: false, src: null, beam: o.beam && Number.isFinite(o.beam.ax) && Number.isFinite(o.beam.az) ? { ax: o.beam.ax, az: o.beam.az, hinge: !!o.beam.hinge } : null,
       };
       for (const p of parts) {
         if (p.obj) { p.obj.userData.knock = true; continue; }
@@ -121,14 +125,21 @@ export function createKnock(ctx) {
     const b = {
       it, x: it.x, y: it.y, z: it.z, vx: dvx * k, vz: dvz * k, vy: it.anchored ? 0 : Math.min(6, 0.22 * sp * k + 0.9), dx, dz,
       tilt: 0, tiltV: it.anchored ? clamp(sp * 0.25, 0.35, 1.6) : clamp(sp * 0.8 / Math.max(0.4, it.h), 1, 7) * (lever < 0 ? -1 : 1) * (it.h > it.r * 2 ? 1 : 0.4),
-      spin: 0, spinV: it.anchored ? 0 : clamp(-lever * sp * 0.5 / Math.max(0.2, it.r * it.r), -5, 5), ground: it.y, splash: false, lost: false, t: 0, onGround: false, done: false, wobble: false,
+      spin: 0, spinV: it.anchored ? 0 : clamp(-lever * sp * 0.5 / Math.max(0.2, it.r * it.r), -5, 5), ground: it.y, splash: false, lost: false, t: 0, onGround: false, done: false, wobble: false, sp, beam: false, swing: 0, sgn: 1,
     };
+    if (it.beam) {                                                                    // a boom half: swings about its post (hinge) or is thrown flat (free); see the header
+      const bm = it.beam, ang = Math.acos(clamp(bm.ax * dx + bm.az * dz, -1, 1));
+      b.beam = true; b.sgn = Math.sign(bm.az * dx - bm.ax * dz) || 1; b.swing = clamp(ang, 0.45, 1.7);       // (the yaw turns the axis toward the throw, at most until it lies along it)
+      b.tilt = 0; b.tiltV = 0.3; b.vy = 0;
+      if (bm.hinge) { b.vx = b.vz = 0; b.spinV = b.sgn * clamp(sp * 0.9, 1.0, 3.5); }
+      else { const kk = Math.min(1, 6 / sp) * 0.5; b.vx = dvx * kk; b.vz = dvz * kk; b.vy = Math.min(3, 0.8 + 0.12 * sp); b.spinV = b.sgn * clamp(sp * 0.4, 0.5, 1.6); }
+    }
     for (const c of it.items) ctx.physics.remove(c);
     it.items = []; it.item = null;
     it.state = 'fly'; it.body = b; it.wobble = null; live.push(b); knocked++;
     const drive = ctx.drive;
     if (it.metal) {
-      if (drive && drive.fx) try { drive.fx.sparks(hx, it.y + 0.55, hz, dx, dz, 14, 5); } catch (e) { /* no fx */ }
+      if (drive && drive.fx) try { drive.fx.sparks(hx, it.y + (it.beam ? it.originY : 0.55), hz, dx, dz, 14, 5); } catch (e) { /* no fx */ }
       if (ctx.audio && ctx.audio.play && clock - lastClank >= CLANK_GAP) {
         lastClank = clock;
         try { ctx.audio.play('clank', { position: { x: it.x, y: it.y + 0.5, z: it.z }, volume: clamp(sp / 12, 0.2, 1) }); } catch (e) { /* silent */ }
@@ -167,8 +178,60 @@ export function createKnock(ctx) {
     if (L && L.waterLevelAt) { const w = L.waterLevelAt(x, z); if (w != null) { b.splash = true; return w - 1.2; } }
     return it.y > 0.05 ? it.y : 0;
   }
+  /** the instance matrices of a BEAM piece: the hinged piece turns about its post end (the droop first, in its own frame, then the yaw), the free piece about its centre at the body's position */
+  function writeBeam(it, b) {
+    const bm = it.beam, half = it.w / 2;
+    if (bm.hinge) { _p.set(it.x - bm.ax * half, it.y + it.originY, it.z - bm.az * half); _sh.set(bm.ax * half, 0, bm.az * half); }
+    else { _p.set(b.x, b.y + it.originY, b.z); _sh.set(0, 0, 0); }
+    _q.setFromAxisAngle(UP, b.spin);
+    if (b.tilt) { _ax.set(bm.az, 0, -bm.ax); _q2.setFromAxisAngle(_ax, b.tilt); _q.multiply(_q2); }
+    _b.compose(_p, _q, ONE);
+    for (let i = 0; i < it.parts.length; i++) {
+      const p = it.parts[i];
+      _p.copy(p.off).add(_sh);
+      _m.compose(_p, p.q, p.s).premultiply(_b);
+      put(p, _m);
+    }
+  }
+  function restBeam(it, b) {
+    const bm = it.beam, ca = Math.cos(b.spin), sa = Math.sin(b.spin), th = 0.3;
+    const rx = bm.ax * ca + bm.az * sa, rz = -bm.ax * sa + bm.az * ca;                // the axis after the yaw (rotation about +y)
+    let len = it.w, cx = b.x, cz = b.z;
+    if (bm.hinge) { len = it.w * Math.cos(b.tilt); cx = it.x - bm.ax * it.w / 2 + rx * len / 2; cz = it.z - bm.az * it.w / 2 + rz * len / 2; }
+    it.item = ctx.physics.addBox(cx, cz, th, len, Math.atan2(rx, rz), b.ground - 0.05, Math.min(b.ground + th, b.level + 0.42));
+    it.items = [it.item];
+  }
+  function stepBeam(b, dt) {
+    const it = b.it, bm = it.beam, L = it.w;
+    b.ground = floor(b.x, b.z, it, b);
+    if (bm.hinge) {                                                                     // the post half: swings open about its post and droops until its free end lies on the ground
+      const psiMax = Math.asin(Math.min(0.6, Math.max(0.04, it.y + it.originY - b.ground - 0.06) / L));
+      b.tiltV += 1.5 * G / L * Math.cos(b.tilt) * dt; b.tilt = Math.min(psiMax, b.tilt + b.tiltV * dt); if (b.tilt >= psiMax) b.tiltV = 0;
+      b.spinV *= Math.exp(-1.4 * dt); b.spin += b.spinV * dt;
+      if (Math.abs(b.spin) >= b.swing) { b.spin = b.sgn * b.swing; b.spinV = 0; }
+      if (b.splash) { b.lost = true; settle(b); return; }
+      if ((b.tilt >= psiMax && Math.abs(b.spinV) < 0.15) || b.t > 3) { settle(b); return; }
+      writeBeam(it, b); return;
+    }
+    b.vy -= G * dt; b.y += b.vy * dt; b.x += b.vx * dt; b.z += b.vz * dt;             // the outer half: thrown along the hit, falls flat
+    b.spin += b.spinV * dt; if (Math.abs(b.spin) >= b.swing) { b.spin = b.sgn * b.swing; b.spinV = 0; }
+    if (b.y < -420) { b.lost = true; settle(b); return; }
+    if (b.y + it.originY - 0.06 <= b.ground) {
+      if (b.splash) { b.lost = true; settle(b); return; }
+      b.y = b.ground - it.originY + 0.06;
+      if (b.vy < -1.5) { b.vy = -b.vy * 0.25; b.vx *= 0.72; b.vz *= 0.72; b.spinV *= 0.55; }
+      else {
+        b.vy = 0; b.onGround = true;
+        const v = hyp(b.vx, b.vz), nv = Math.max(0, v - 7 * dt); if (v > 0) { b.vx *= nv / v; b.vz *= nv / v; }
+        b.spinV *= Math.exp(-4 * dt);
+        if (nv < 0.25 && Math.abs(b.spinV) < 0.3) { settle(b); return; }
+      }
+    } else b.onGround = false;
+    writeBeam(it, b);
+  }
   function restCollider(it, b) {
     const ph = ctx.physics;
+    if (it.beam) { restBeam(it, b); return; }
     if (it.anchored) {                                                                // lying along the throw, the foot where it stood
       const len = it.h, cx = b.x + b.dx * len / 2, cz = b.z + b.dz * len / 2, th = Math.min(0.42, Math.max(0.3, it.r * 2));
       it.item = ph.addBox(cx, cz, th, len, Math.atan2(b.dx, b.dz), b.ground - 0.05, Math.min(b.ground + th, b.level + 0.42));
@@ -179,13 +242,14 @@ export function createKnock(ctx) {
     const it = b.it;
     b.done = true; it.state = b.lost ? 'lost' : 'rest'; it.body = null;
     if (b.lost) { for (let i = 0; i < it.parts.length; i++) { it.parts[i].hidden = true; put(it.parts[i], ZERO_M); } return; }
-    write(it, b.x, b.y, b.z, b.tilt, b.dx, b.dz, b.spin, true);
+    if (it.beam) writeBeam(it, b); else write(it, b.x, b.y, b.z, b.tilt, b.dx, b.dz, b.spin, true);
     restCollider(it, b);
   }
 
   function step(b, dt) {
     const it = b.it;
     b.t += dt;
+    if (it.beam) { stepBeam(b, dt); return; }
     const ground = floor(b.x, b.z, it, b);
     b.ground = ground;
     if (it.anchored) {
@@ -239,7 +303,13 @@ export function createKnock(ctx) {
   }
   ctx.onUpdate(update);
 
-  const api = { register, listen, update, restore, list,
+  /** break a STANDING record as if a car at `speed` m/s hit it toward (dx, dz): the partner half of a snapped boom (its onKnock calls this for the other half). false when it does not stand */
+  function snap(it, dx, dz, speed, hx = it ? it.x : 0, hz = it ? it.z : 0) {
+    if (!it || it.state !== 'stand') return false;
+    const l = hyp(dx, dz) || 1; knock(it, speed * dx / l, speed * dz / l, hx, hz); return true;
+  }
+
+  const api = { register, listen, update, restore, snap, list,
     get stats() {
       stats.registered = list.length; stats.knocked = knocked; stats.live = live.length;
       let mx = 0; for (let i = 0; i < Math.min(busyN, busy.length); i++) if (busy[i] > mx) mx = busy[i];

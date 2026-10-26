@@ -3,12 +3,14 @@
 // (a) a car at 25 m/s up a leaf held at 20 .. 30 degrees leaves the tip, flies across the gap and LANDS on the far side (the other leaf's tilted deck on the Palace Bridge, the fixed deck beyond on the Troitsky Bridge) with finite damage;
 // (b) a car at 8 m/s that leaves the tip cannot clear the gap: it falls into the Neva (or meets the far leaf), with damage;
 // (c) the airborne path matches the analytic ballistic arc (y0 + vy0 t - g t^2 / 2, x0 + vh t) of the take-off numbers within a centimetre-level tolerance, the horizontal speed is kept, no tunnelling through the moving deck;
-// (d) a car at speed breaks a LOWERED barrier arm (and the arm stays broken until the next cycle starts, when the module restores it), a car at 5 km/h is stopped by it; a RAISED arm is no obstacle;
+// (d) the booms are LIGHT and BREAK IN HALF (docs/AREAS.md 15.x): a car at 5 / 15 / 25 / 45 km/h drives through a LOWERED boom hardly slowed, the boom ends as two pieces (rest boxes) and stays broken until the next cycle starts, when the module restores it; a RAISED arm is no obstacle;
 // (e) a car standing on a CLOSING leaf is carried without launch; a car that is still on the ground below the climb limit never leaves the surface by itself (the leaf throws nothing);
 // (f) the slope rule: a leaf steeper than 45 degrees cannot be climbed (the car slides back), a coasting car at 8 m/s stalls on a 25 degree leaf and rolls back.
 // Nothing here uses the GPU. The old rule "a car slips beyond 25 degrees" is replaced by 45 degrees (tools/palacebridge-test.mjs and troitsky-test.mjs were updated, they say so).
 import { createDamageState, recordDamage } from '../src/world/drive/damage.js';
 import { SPEC } from '../src/world/drive/model.js';
+import { ARM_Y } from '../src/world/lib/bascule-gates.js';
+import * as THREE from 'three';
 
 const DEG = Math.PI / 180, QUIET = process.argv.includes('--quiet');
 let checks = 0; const fails = [];
@@ -188,35 +190,59 @@ for (const kind of ['palace', 'troitsky']) {
   {
     const bars = T.barriers.barriers, g = T.gates[0], lane = -5.7;
     const run1 = (kmh, label) => {
-      settle(); T.setMode('open'); T.advance(7, 0); T.leaf.set(T.theta); R.update(0, 1);                  // the warning: the arms are down, the leaves have not moved
+      settle(); T.setMode('open'); R.update(0.1, 1); R.update(0.1, 1); T.advance(7, 0); T.leaf.set(T.theta); R.update(0, 1);                  // the warning: the booms stand again (the event 'warn' restores the broken ones), the arms are down, the leaves have not moved
       const arms = bars.arms.filter((a) => Math.abs(a.u - g.u) < 1e-6 && !a.ped && Math.sign(a.v) === Math.sign(lane));
       const dir = g.dir, uStart = g.u - dir * 14, w = R.W(uStart, lane);
       const cctx = { L: eng.L, physics: ph, services: ctx.services }, car = createHandling(cctx, null);
       car.reset(w.x, w.z, R.yawN + (dir > 0 ? 0 : Math.PI)); car.y = R.deckAny(w.x, w.z) + 0.03; car.vx = Math.sin(car.yaw) * kmh / 3.6; car.vz = Math.cos(car.yaw) * kmh / 3.6;
       ctx.drive = { active: true, car, fx: { sparks() {} } }; ctx.player.position.set(w.x, 0, w.z);
-      const state0 = arms.map((a) => a.rec && a.rec.state); let maxProg = -99; const ev = [];
-      for (let t = 0; t < 16; t += DT) { ph.refreshDynamic(); car.step(DT, { thr: car.vF < kmh / 3.6 ? 1 : 0, brk: 0, steer: 0, hand: false, nitro: false, jump: false, flip: false }); ctx.knock.update(DT); for (const e of car.events) ev.push(e.type + ' ' + fmt(e.v, 1)); maxProg = Math.max(maxProg, dir * (R.F.toUV(car.x, car.z, {}).u - g.u)); }
+      const state0 = arms.map((a) => a.state); let maxProg = -99, vIn = 0, vMin = 1e9, maxPitch = 0, maxRoll = 0, vAfter = 0, prog0 = null; const ev = [];
+      for (let t = 0; t < 16; t += DT) {
+        ph.refreshDynamic(); car.step(DT, { thr: car.vF < kmh / 3.6 ? 1 : 0, brk: 0, steer: 0, hand: false, nitro: false, jump: false, flip: false }); ctx.knock.update(DT);
+        for (const e of car.events) ev.push(e.type + ' ' + fmt(e.v, 1));
+        const prog = dir * (R.F.toUV(car.x, car.z, {}).u - g.u); maxProg = Math.max(maxProg, prog);
+        if (prog < -2.5) vIn = car.vF * 3.6; else if (prog < 2) vMin = Math.min(vMin, car.vF * 3.6); else if (prog0 === null && prog > 4) { prog0 = prog; vAfter = car.vF * 3.6; }      // (the speed on the way through the boom: from 2.5 m before the line to 2 m past it)
+        maxPitch = Math.max(maxPitch, Math.abs(car.pitch || 0)); maxRoll = Math.max(maxRoll, Math.abs(car.roll || 0));
+      }
       ctx.drive = null;
-      say(`  ${label}: arm states ${state0} -> ${arms.map((a) => a.rec && a.rec.state)}, the car got ${fmt(maxProg)} m past the gate line, events ${ev.slice(0, 6).join(', ')}`);
-      return { arms, maxProg, car };
+      say(`  ${label}: arm states ${state0} -> ${arms.map((a) => a.state)} (halves ${arms.map((a) => a.pieces.map((p) => p.rec && p.rec.state))}), the car got ${fmt(maxProg)} m past the gate line, speed before ${fmt(vIn, 1)} km/h, minimum in the boom ${fmt(vMin, 1)}, 4 m past ${fmt(vAfter, 1)}, pitch ${fmt(maxPitch, 2)} roll ${fmt(maxRoll, 2)}, events ${ev.slice(0, 6).join(', ')}`);
+      return { arms, maxProg, car, vIn, vMin, vAfter, maxPitch, maxRoll, state0 };
     };
-    const slow = run1(5, '5 km/h into the lowered road arm');
-    ok(slow.maxProg < 0.3 && slow.arms.every((a) => !a.rec || a.rec.state === 'stand'), `(d) a car at 5 km/h is stopped by the lowered arm (it got ${fmt(slow.maxProg)} m past the line) and the arm stands`);
-    const fast = run1(45, '45 km/h into the lowered road arm');
-    ok(fast.arms.some((a) => a.rec && a.rec.state !== 'stand') && fast.maxProg > 3, `(d) a car at 45 km/h breaks the arm (${fast.arms.map((a) => a.rec && a.rec.state)}) and drives on (${fmt(fast.maxProg)} m past the line)`);
-    const broken = fast.arms.filter((a) => a.rec && a.rec.state !== 'stand'), box0 = broken[0].box;
-    ok(!bars.boxes().includes(box0), '(d) a broken arm gave its collider box up');
-    // the broken arm stays broken until the next cycle starts
+    // the owner's request (2026-10-26): the booms are light and give way to a car at any speed, and they break IN HALF (they stopped a car below 15 km/h and were heavy to drive through)
+    const pcs = (a) => a.pieces.filter((p) => p.rec);
+    for (const kmh of [5, 15, 25, 45]) {
+      const r = run1(kmh, `${kmh} km/h into the lowered road arm`);
+      ok(r.state0.length >= 1 && r.state0.every((s) => s === 'stand'), `(d) ${kmh} km/h: the booms stand when the run starts (${r.state0})`);
+      ok(r.maxProg > 3 && r.arms.length >= 1 && r.arms.every((a) => a.state === 'broken'), `(d) a car at ${kmh} km/h drives through the lowered boom (${fmt(r.maxProg)} m past the line) and the boom is broken (${r.arms.map((a) => a.state)})`);
+      ok(r.vMin >= r.vIn * 0.9 - 0.3 && r.vAfter >= r.vIn * 0.9 - 0.3, `(d) ${kmh} km/h: the boom hardly slows the car (${fmt(r.vIn, 1)} km/h before, ${fmt(r.vMin, 1)} at the slowest, ${fmt(r.vAfter, 1)} past it)`);
+      ok(r.maxPitch < 0.12 && r.maxRoll < 0.08, `(d) ${kmh} km/h: the car neither pitches nor rolls over it (pitch ${fmt(r.maxPitch, 2)}, roll ${fmt(r.maxRoll, 2)})`);
+      // IN HALF: both halves broke, each lies as its own thin rest box, they are apart, nothing flew off to infinity
+      for (const a of r.arms) {
+        const [h0, h1] = a.pieces, i0 = h0.rec.item, i1 = h1.rec.item;
+        ok(h0.rec.state === 'rest' && h1.rec.state === 'rest' && i0 && i1 && i0 !== i1, `(d) ${kmh} km/h: the boom is in TWO pieces, each a rest box of its own (${h0.rec.state}, ${h1.rec.state})`);
+        const lowest = (it) => (it.y1 ?? it.top) - (it.y0 ?? 0);
+        ok(i0.y1 - i0.y0 <= 0.5 && i1.y1 - i1.y0 <= 0.5, `(d) ${kmh} km/h: the rest boxes are thin (${fmt(i0.y1 - i0.y0)} and ${fmt(i1.y1 - i1.y0)} m) so a car drives over them`);
+        const ends = pcs(a).map((p) => { const m = new THREE.Matrix4(); p.refs[0].mesh.getMatrixAt(p.refs[0].index, m); return [new THREE.Vector3(p.half ? 0.5 : 0, 0, 0).applyMatrix4(m), new THREE.Vector3(p.half ? 1 : 0.5, 0, 0).applyMatrix4(m)]; });
+        const moved = Math.hypot(ends[0][1].x - (a.px + a.dx * a.len / 2), ends[0][1].z - (a.pz + a.dz * a.len / 2));
+        ok(moved > 2.0 && ends[0][1].y < a.y0 + 0.5 && ends[1][0].y < a.y0 + 0.5 && ends[1][1].y < a.y0 + 0.5 && lowest(i0) >= 0, `(d) ${kmh} km/h: the post half swung away (its free end ${fmt(moved)} m from where it hung) and lies on the road (free end ${fmt(ends[0][1].y - a.y0)} m above the foot), the outer half lies on the road too`);
+      }
+    }
+    const fast = run1(45, '45 km/h into the lowered road arm (again)');
+    const broken = fast.arms.filter((a) => a.state !== 'stand'), box0 = broken[0].pieces[0].box, box1 = broken[0].pieces[1].box;
+    ok(!bars.boxes().includes(box0) && !bars.boxes().includes(box1), '(d) a broken boom gave both collider boxes up');
+    // the broken boom stays broken until the next cycle starts
     settle(); R.update(0.1, 2);
-    ok(broken.every((a) => a.rec.state !== 'stand'), '(d) the arm is still broken after the cycle ended (nothing in the world repairs itself)');
+    ok(broken.every((a) => a.state !== 'stand'), '(d) the boom is still broken after the cycle ended (nothing in the world repairs itself)');
     T.setMode('open'); R.update(0.1, 3); R.update(0.1, 4);                                                // the next cycle starts: the event "warn" -> the module restores the arms
-    ok(T.state().stage === 'warn' && broken.every((a) => a.rec.state === 'stand'), `(d) when the next cycle starts the module restores the arms (${broken.map((a) => a.rec.state)})`);
+    ok(T.state().stage === 'warn' && broken.every((a) => a.state === 'stand' && a.pieces.every((p) => p.rec.state === 'stand' && !p.rec.item)), `(d) when the next cycle starts the module restores the booms (${broken.map((a) => a.state)}), the rest boxes are gone`);
     T.advance(7, 0); R.update(0, 5);
-    ok(bars.boxes().includes(box0), '(d) the restored arm is solid again (its box is back)');
+    ok(bars.boxes().includes(box0) && bars.boxes().includes(box1), '(d) the restored boom is solid again (both halves have their boxes back)');
+    // the restored halves stand where they hung (the instances were re-posed)
+    { const a = broken[0], tip = bars.tip(bars.arms.indexOf(a)), want = R.W(g.u, a.to); ok(Math.hypot(tip.x - want.x, tip.z - want.z) < 0.05 && Math.abs(tip.y - (a.y0 + ARM_Y)) < 0.05, `(d) the restored boom hangs again with its tip at the old place (${fmt(Math.hypot(tip.x - want.x, tip.z - want.z), 3)} m off)`); }
     // raised arms are no obstacle
     settle(); R.update(0, 6);
-    ok(!bars.boxes().some((b) => bars.arms.some((a) => a.box === b)) || true, '(d) raised: no box');
-    { let n = 0; ph.refreshDynamic(); for (const it of ph._dynItems) if (bars.arms.some((a) => a.box === it.source)) n++; ok(n === 0, `(d) with the arms up none of them is a collider (${n} boxes)`); }
+    ok(!bars.boxes().some((b) => bars.pieces.some((p) => p.box === b)), '(d) raised: no box');
+    { let n = 0; ph.refreshDynamic(); for (const it of ph._dynItems) if (bars.pieces.some((p) => p.box === it.source)) n++; ok(n === 0, `(d) with the arms up none of them is a collider (${n} boxes)`); }
     T.setMode('closed'); settle();
   }
   R.release();
