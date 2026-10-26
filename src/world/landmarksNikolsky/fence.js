@@ -8,6 +8,7 @@ import { BARRIERS, BARRIER_NODES } from '../data/city.js';
 import * as G from './geo.js';
 import * as S from './stucco.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
+import { knockBays, splitBays, unitPanel } from '../lib/fence-bays.js';
 
 const PYLON_RUNS = ['w123944613', 'w123944616', 'w762486705'];
 const LATTICE_RUNS = ['w762486706', 'w1106632795', 'w1106632797'];
@@ -51,6 +52,7 @@ export function build(K) {
   const stats = { pylons: 0, piers: 0, panels: 0, posts: 0, lattice: 0 };
   const pyl = [], pier = [], posts = [];
   const fences = [];
+  const pylBays = [], latBays = [];      // the panels between the pylons / posts are BREAKABLE bays (lib/fence-bays.js, docs/AREAS.md 13.7 / 15.2): one bay per ~3 texture tiles, the pylons and posts stay instanced
 
   // ------------------------------------------------------------------------------------------ pylon runs
   for (const id of PYLON_RUNS) {
@@ -66,8 +68,7 @@ export function build(K) {
         const a = at(info, n.s + 0.45), c = at(info, m.s - 0.45);
         const la = Math.hypot(c.x - a.x, c.z - a.z);
         if (la > 0.3) {
-          panel(P, M.bars, a, c, 0.25, 2.3, 1.12);
-          ph.addBox((a.x + c.x) / 2, (a.z + c.z) / 2, la, 0.14, Math.atan2(-(c.z - a.z), c.x - a.x), 0, 2.3);
+          pylBays.push(...splitBays(a.x, a.z, c.x, c.z, 3.36, { y: 0.25 }));
           stats.panels++;
         }
       }
@@ -103,13 +104,21 @@ export function build(K) {
         if (plan.inOpen((n.s + m.s) / 2)) continue;
         const a = at(info, n.s + 0.1), c = at(info, m.s - 0.1), la = Math.hypot(c.x - a.x, c.z - a.z);
         if (onRoad(a.x, a.z) || onRoad(c.x, c.z) || onRoad((a.x + c.x) / 2, (a.z + c.z) / 2)) continue;
-        if (la > 0.3) { panel(P, M.lattice, a, c, 0.15, 1.75, 1.0); ph.addBox((a.x + c.x) / 2, (a.z + c.z) / 2, la, 0.12, Math.atan2(-(c.z - a.z), c.x - a.x), 0, 1.8); stats.lattice++; }
+        if (la > 0.3) { latBays.push(...splitBays(a.x, a.z, c.x, c.z, 3.0, { y: 0.15 })); stats.lattice++; }
       }
     }
     for (const o of plan.open) { const g = at(info, o.s); fences.push({ x: g.x, z: g.z, rot: Math.atan2(-g.dz, g.dx), kind: 'gate', half: o.half }); }
     fences.push({ id, pts: pairs(b.pts), h: 1.8, kind: 'lattice' });
   }
   K.extraTris += addInstanced(ctx, K.root, 'lmN-posts', postG, posts).tris;
+  knockBays(ctx, { name: 'lmN-pylon-fence', bays: pylBays, far: 320,
+    parts: [{ geo: unitPanel(0, 2.05, { u1: 3 }), mat: M.bars, name: 'panel', stretch: true, shadow: false, receive: false }],
+    collider: { y0: 0, y1: 2.3, thick: 0.14, e0: 0, e1: 0 },
+    rec: () => ({ kind: 'fence', mass: 500, h: 2.3, anchored: 24, hitK: 0.5, metal: true, minDv: 0 }) });
+  knockBays(ctx, { name: 'lmN-lattice-fence', bays: latBays, far: 300,
+    parts: [{ geo: unitPanel(0, 1.6, { u1: 3 }), mat: M.lattice, name: 'panel', stretch: true, shadow: false, receive: false }],
+    collider: { y0: 0, y1: 1.8, thick: 0.12, e0: 0, e1: 0 },
+    rec: () => ({ kind: 'fence', mass: 250, h: 1.8, anchored: 18, hitK: 0.4, metal: true, minDv: 0 }) });
   K.svc.fences = (K.svc.fences || []).concat(fences);
   K.svc.fenceStats = stats;
 }

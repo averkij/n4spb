@@ -10,6 +10,8 @@ import { RING, inRing, ARCH, toArch, WATER_DEEP, pairs } from './frame.js';
 import { fillPolyFine, wall3D, ribbon, inflate } from './surfaces.js';
 import { addInstanced } from './inst.js';
 import * as G from './geo.js';
+import * as THREE_ from 'three';
+import { knockBays, splitBays, unitPanel } from '../lib/fence-bays.js';
 
 const IDS = { kovsh: 'r1648982', south: 'r1648986', east: 'r1648987' };
 export const PIER = [[-3384.1, 318.8], [-3377.2, 338.2], [-3413.5, 351.1], [-3412.6, 353.7], [-3372.4, 378.9], [-3374.3, 382], [-3396.3, 368.2], [-3406.6, 361.8], [-3415.5, 356.2], [-3420.1, 343.3], [-3417, 342.2], [-3415.8, 345.6], [-3393.7, 337.7], [-3398.6, 324]];
@@ -102,23 +104,26 @@ export async function build(K) {
     for (const bk of banks) for (const pc of pieces(bk.a, bk.b)) wall3D(P, [pc.a, pc.b], { hw: 0.24, h: 0.14, side: M.quay, top: M.quayCoping, tile: 2.5 });
   }
   // ---------------------------------------------------------------- the black looped railing on every coped bank (1.1 m, posts every 2.4 m)
-  let railTris = 0;
+  // WATER IS REACHABLE (docs/AREAS.md 13.7, the owner's world rule of 2026-10-25): the railing is a row of BREAKABLE bays (lib/fence-bays.js): one bay per 2.4 m panel between two posts (the texture tile of the loops), its own
+  // thin collider (-6 .. 1.6, 0.5 m) and ONE knock record (a car above 22 km/h breaks the bay off at the foot, the gap is passable). The geometry is the same as before.
   const railTop = mode === 'flush' ? 0.3 : 0.17;                            // the quay coping top of the environment is +0.17
+  const railBays = [];
   for (const bk of banks) for (const pc of pieces(bk.a, bk.b)) {
-    const a = pc.a, b = pc.b, dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz);
+    const a = pc.a, b = pc.b, l = Math.hypot(b[0] - a[0], b[1] - a[1]);
     if (l < 0.5) continue;
-    const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
-    const nx = dz / l, nz = -dx / l, h = 1.1, ln = l / 2.4;
-    P.quad(railMat, [a[0], railTop, a[1]], [b[0], railTop, b[1]], [b[0], railTop + h, b[1]], [a[0], railTop + h, a[1]], [nx, 0, nz], [[0, 0], [ln, 0], [ln, 1], [0, 1]]);
-    const np = Math.max(1, Math.round(l / 2.4));
-    for (let i = 0; i <= np; i++) { const t = i / np, x = a[0] + dx * t, z = a[1] + dz * t; P.box(M.iron, x - 0.07, x + 0.07, railTop, railTop + h + 0.08, z - 0.07, z + 0.07, 'b', 1); }
-    ph.addBox(mx, mz, l, 0.5, Math.atan2(-dz, dx), -6, 1.6);
-    railTris += 2 + np * 10;
+    railBays.push(...splitBays(a[0], a[1], b[0], b[1], 2.4, { y: railTop }));
   }
+  const postGeo = new THREE_.BoxGeometry(0.14, 1.18, 0.14).translate(0, 0.59, 0);
+  const railR = knockBays(ctx, { name: 'lmNH-bank-rail', bays: railBays, far: 300,
+    parts: [{ geo: unitPanel(0, 1.1), mat: railMat, name: 'panel', stretch: true, shadow: false, receive: false }, { geo: postGeo, mat: M.iron, name: 'post', ats: (b) => (b.last ? ['start', 'end'] : ['start']) }],
+    collider: { y0: -6, y1: 1.6, thick: 0.5, e0: 0.05, e1: 0.05 },
+    rec: () => ({ kind: 'fence', mass: 400, h: 1.1, anchored: 22, hitK: 0.5, metal: true, minDv: 0 }) });
+  const railTris = railBays.length * (2 + 10 + 2);
+  void railR;
   svc.fences.push({ kind: 'kovsh-rail', count: banks.length });
   // ---------------------------------------------------------------- the timber pier: deck (flush with the street at 0.1 in flush mode), edge board, black railing on the water edge, two wooden stair flights
   {
-    const pier = PIER, n = pier.length;
+    const pier = PIER, n = pier.length, pierBays = [];
     P.cap(M.deck, pier, DECK, true, 1.4);
     for (let i = 0; i < n; i++) {
       const a = pier[i], b = pier[(i + 1) % n], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz); if (l < 0.3) continue;
@@ -127,11 +132,13 @@ export async function build(K) {
       // the pier edge railing (skip the short joints and where the pier meets the stairs / the quay)
       const nearStair = STAIRS.some((q) => dseg(a[0], a[1], q.b, q.b) < 3.2 || dseg(b[0], b[1], q.b, q.b) < 3.2);
       if (l > 2.2 && !nearStair) {
-        ph.addBox(mx, mz, l, 0.3, Math.atan2(-dz, dx), DECK - 0.5, Math.max(DECK + 1.2, 1.3));
-        const ln = l / 2.4;
-        P.quad(railMat, [a[0], DECK, a[1]], [b[0], DECK, b[1]], [b[0], DECK + 1.0, b[1]], [a[0], DECK + 1.0, a[1]], [nx * out, 0, nz * out], [[0, 0], [ln, 0], [ln, 1], [0, 1]]);
+        pierBays.push(...splitBays(a[0], a[1], b[0], b[1], 2.4, { y: DECK }));      // breakable bays (lib/fence-bays.js): the same panel and collider as before, one bay per 2.4 m
       }
     }
+    knockBays(ctx, { name: 'lmNH-pier-rail', bays: pierBays, far: 260,
+      parts: [{ geo: unitPanel(0, 1.0), mat: railMat, name: 'panel', stretch: true, shadow: false, receive: false }],
+      collider: { y0: DECK - 0.5, y1: Math.max(DECK + 1.2, 1.3), thick: 0.3, e0: 0.05, e1: 0.05 },
+      rec: () => ({ kind: 'fence', mass: 300, h: 1.0, anchored: 22, hitK: 0.5, metal: true, minDv: 0 }) });
     // stairs: n steps from the quay down to the deck (the OSM way a -> b)
     for (const s of STAIRS) {
       const dx = s.b[0] - s.a[0], dz = s.b[1] - s.a[1], l = Math.hypot(dx, dz), ux = dx / l, uz = dz / l, w = 2.2;
@@ -154,7 +161,7 @@ export async function build(K) {
     svc.crowd.push({ x: -3398, z: 346, r: 8, n: 12, kind: 'pier', y: DECK });
   }
   // ---------------------------------------------------------------- the footbridges
-  const bridgeTris0 = P.tris;
+  const bridgeTris0 = P.tris, footBays = [];
   for (const b of myBridges) {
     const dx = b.b[0] - b.a[0], dz = b.b[1] - b.a[1], l = Math.hypot(dx, dz) + 0.6, ux = dx / (l - 0.6), uz = dz / (l - 0.6), cx = (b.a[0] + b.b[0]) / 2, cz = (b.a[1] + b.b[1]) / 2, rot = Math.atan2(-dz, dx);
     const w = b.w, timber = b.kind === 'timber', span = l;
@@ -166,19 +173,20 @@ export async function build(K) {
       for (const sd of [-1, 1]) P.box(M.quay, -span / 2, span / 2, mode === 'flush' ? -0.45 : -1.1, 0.05, sd * w / 2 - 0.2, sd * w / 2 + 0.2, '', 2.5);
       P.box(M.quay, -span / 2, span / 2, mode === 'flush' ? -0.45 : -1.1, -0.35, -w / 2, w / 2, '', 2.5);
     }
-    // parapet railing: black looped panels on both sides + posts
-    for (const sd of [-1, 1]) {
-      const z = sd * (w / 2 + (timber ? 0.0 : 0.2)), ln = span / 2.4;
-      P.quad(railMat, [-span / 2, 0.05, z], [span / 2, 0.05, z], [span / 2, 1.15, z], [-span / 2, 1.15, z], [0, 0, sd], [[0, 0], [ln, 0], [ln, 1], [0, 1]]);
-      const np = Math.max(1, Math.round(span / 2.4));
-      for (let i = 0; i <= np; i++) { const x = -span / 2 + span * i / np; P.box(M.iron, x - 0.07, x + 0.07, 0.04, 1.22, z - 0.07, z + 0.07, 'b', 1); }
-    }
+    // parapet railing: black looped panels on both sides + posts: breakable bays below (lib/fence-bays.js), drawn in world coordinates
     P.pop();
     // walkable deck (the ground below the bridge is the canal bed in deep mode)
     ph.addWalkBox(cx, cz, span, w, rot, 0.04, -6);
-    for (const sd of [-1, 1]) { const ox = -uz * sd * (w / 2 + 0.05), oz = ux * sd * (w / 2 + 0.05); ph.addBox(cx + ox, cz + oz, span, 0.2, rot, 0, 1.3); }
+    for (const sd of [-1, 1]) {      // the parapet bays: the line of a side is the bridge centre line moved by zl across (left of the travel a -> b = (-uz, ux))
+      const zl = sd * (w / 2 + (timber ? 0.0 : 0.2)), ox = -uz * zl, oz = ux * zl;
+      footBays.push(...splitBays(cx - ux * span / 2 + ox, cz - uz * span / 2 + oz, cx + ux * span / 2 + ox, cz + uz * span / 2 + oz, 2.4, { y: 0.05, off: sd * (w / 2 + 0.05) - zl }));
+    }
     svc.bridges.push({ id: b.id, x: cx, z: cz, rot, w: b.w, len: span, kind: b.kind });
   }
+  knockBays(ctx, { name: 'lmNH-bridge-rail', bays: footBays, far: 260,
+    parts: [{ geo: unitPanel(0, 1.1), mat: railMat, name: 'panel', stretch: true, shadow: false, receive: false }, { geo: new THREE_.BoxGeometry(0.14, 1.18, 0.14).translate(0, 0.59 - 0.01, 0), mat: M.iron, name: 'post', ats: (b) => (b.last ? ['start', 'end'] : ['start']) }],
+    collider: (b) => ({ y0: 0, y1: 1.3, thick: 0.2, off: b.off, e0: 0.05, e1: 0.05 }),
+    rec: () => ({ kind: 'fence', mass: 250, h: 1.1, anchored: 22, hitK: 0.5, metal: true, minDv: 0 }) });
   svc.bridgeTris = P.tris - bridgeTris0;
   // ---------------------------------------------------------------- the sandy / gravel banks at the Arch (photo 08) and the granite quay slabs in the passage are part of arch.js; the canal under it:
   svc.water = { mode, y: WY, kovsh: kov, east: rings.east, south: rings.south, centre: kc, banks: banks.flatMap((bk) => pieces(bk.a, bk.b).map((pc) => ({ ...bk, a: pc.a, b: pc.b }))) };

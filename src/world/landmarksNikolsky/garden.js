@@ -7,6 +7,7 @@ import * as L from '../layout.js';
 import { ROADS, GREEN, TREES, FURNITURE, FOUNTAINS } from '../data/city.js';
 import { ribbon, pairs, fillPoly, fillPolyFine, inflate, inRing, distToLine, roadTest, coverFn } from './surfaces.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
 import { plantTrees } from './trees.js';
 import * as G from './geo.js';
 import * as S from './stucco.js';
@@ -93,15 +94,15 @@ export function build(K) {
   // ---------------------------------------------------------------------------------------- benches (OSM nodes) and lamps
   const benchGeo = partsGeos((Q) => benchParts(Q, M)), lampGeo = partsGeos((Q) => lampParts(Q, M));
   const benches = FURNITURE.filter((f) => f.kind === 'bench' && f.x > -3000 && f.x < -2770 && f.z > 960 && f.z < 1240 && (inGarden(f.x, f.z) || inKeyhole(f.x, f.z) || inAvenue(f.x, f.z)) && cover(f.x, f.z) < -1.2);
-  const bm = [], bOut = [];
+  const bm = [], bIt = [], bOut = [];      // (knockable since the areas round of 2026-10-26: lib/knock-furniture.js; the colliders are kept as the records' items)
   for (const b of benches) {
     let best = null, bd = 1e9;
     for (const p of paths) { const d = distToLine(p.pts, b.x, b.z); if (d < bd) { bd = d; best = p; } }
     let rot = 0;
     if (best) { const s = nearest(best.pts, b.x, b.z); rot = Math.atan2(s[0] - b.x, s[1] - b.z); } else rot = Math.atan2(C0.x - b.x, C0.z - b.z);
-    bm.push(mat4(b.x, 0, b.z, rot, 1)); ph.addBox(b.x, b.z, 1.8, 0.6, rot, 0, 0.9); bOut.push({ x: b.x, z: b.z, rotY: rot, len: 1.7 });
+    bm.push({ x: b.x, y: 0, z: b.z, rotY: rot }); bIt.push(ph.addBox(b.x, b.z, 1.8, 0.6, rot, 0, 0.9)); bOut.push({ x: b.x, z: b.z, rotY: rot, len: 1.7 });
   }
-  K.extraTris += addInstanced(ctx, K.root, 'lmN-benches', benchGeo, bm).tris;
+  K.extraTris += knockFurniture(ctx, 'lmN-benches', benchGeo, bm, bIt, { ...FURNITURE_REC.bench, w: 1.8 }, 200);
   K.svc.benches = bOut;
   // twin-lantern lamps: along the avenue (both sides, every ~19 m) and along the main garden paths (every ~24 m)
   const lampPts = [];
@@ -112,13 +113,13 @@ export function build(K) {
     let acc = 12;
     for (let i = 0; i + 1 < p.pts.length; i++) { const a = p.pts[i], b = p.pts[i + 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]); acc += l; if (acc > 26 && l > 3) { acc = 0; const t = 0.5, nx = -(b[1] - a[1]) / l, nz = (b[0] - a[0]) / l; lampPts.push([a[0] + (b[0] - a[0]) * t + nx * (p.w / 2 + 0.9), a[1] + (b[1] - a[1]) * t + nz * (p.w / 2 + 0.9)]); } }
   }
-  const lm = [], lOut = [];
+  const lm = [], lIt = [], lOut = [];
   for (const [x, z] of lampPts) {
     if (!(inGarden(x, z) || inKeyhole(x, z) || inAvenue(x, z)) || cover(x, z) > -1.2 || trees.some((t) => Math.hypot(t.x - x, t.z - z) < 1.6) || dC(x, z) < 26) continue;
     if (lOut.some((o) => Math.hypot(o.x - x, o.z - z) < 9)) continue;
-    lm.push(mat4(x, 0, z, rng() * TAU, 1)); ph.addCylinder(x, z, 0.18, 0, 4.4); lOut.push({ x, z, h: 4.4 });
+    lm.push({ x, y: 0, z, rotY: rng() * TAU }); lIt.push(ph.addCylinder(x, z, 0.18, 0, 4.4)); lOut.push({ x, z, h: 4.4 });
   }
-  K.extraTris += addInstanced(ctx, K.root, 'lmN-lamps', lampGeo, lm).tris;
+  K.extraTris += knockFurniture(ctx, 'lmN-lamps', lampGeo, lm, lIt, FURNITURE_REC.lamp(4.4), 300);
   K.svc.lamps = lOut;
 
   // ---------------------------------------------------------------------------------------- fountains and the Tsushima obelisk

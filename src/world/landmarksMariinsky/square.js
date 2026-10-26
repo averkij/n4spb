@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import { BUILDINGS, FURNITURE } from '../data/city.js';
 import { SW, SL, SN, SU } from './frame.js';
-import { ringEdges, onEdge } from './kit.js';
+import { ringEdges, onEdge, Parts } from './kit.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
 import { plantTrees } from './trees.js';
 import { ringFlat } from './geo.js';
 
@@ -103,36 +104,45 @@ export function build(K, M, D, svc) {
     const inN = u > g.u0 - 5 && u < g.u1 + 5 && n > g.n0 - 3 && n < g.n1 + 3, inS = u > s.u0 - 5 && u < s.u1 + 5 && n > s.n0 - 3 && n < s.n1 + 3;
     if (inN || inS) benches.push({ x: f.x, z: f.z, u, n });
   }
+  // KNOCKABLE (lib/knock-furniture.js, docs/AREAS.md 13): benches and lamps are templates at the origin, instanced as knock records with their colliders
+  const tplGeos = (fn) => { const Q = new Parts(), gr = new THREE.Group(); fn(Q); Q.build(gr, { name: 'lmM-furniture' }); return { list: gr.children.map((m) => ({ geo: m.geometry, mat: m.material })) }; };
+  const benchGeo = tplGeos((Q) => {
+    Q.box(M.bench, -0.9, 0.9, 0.42, 0.48, -0.22, 0.22, 'b');                       // seat slats (two)
+    Q.box(M.bench, -0.9, 0.9, 0.46, 0.5, -0.19, 0.19, 'b');
+    Q.box(M.bench, -0.9, 0.9, 0.75, 0.88, -0.2, -0.17, 'b'); Q.box(M.bench, -0.9, 0.9, 0.58, 0.7, -0.2, -0.17, 'b');   // back slats
+    for (const sx of [-0.78, 0.78]) { Q.box(M.benchIron, sx - 0.04, sx + 0.04, 0, 0.45, -0.2, 0.2, 'b'); Q.box(M.benchIron, sx - 0.04, sx + 0.04, 0.45, 0.92, -0.22, -0.16, 'b'); }
+  });
+  const benchSpots = [], benchItems = [];
   const bench = (x, z, fx, fz) => {
     const rot = Math.atan2(fx, fz);
-    P.push(x, 0, z, rot);
-    P.box(M.bench, -0.9, 0.9, 0.42, 0.48, -0.22, 0.22, 'b');                       // seat slats (two)
-    P.box(M.bench, -0.9, 0.9, 0.46, 0.5, -0.19, 0.19, 'b');
-    P.box(M.bench, -0.9, 0.9, 0.75, 0.88, -0.2, -0.17, 'b'); P.box(M.bench, -0.9, 0.9, 0.58, 0.7, -0.2, -0.17, 'b');   // back slats
-    for (const sx of [-0.78, 0.78]) { P.box(M.benchIron, sx - 0.04, sx + 0.04, 0, 0.45, -0.2, 0.2, 'b'); P.box(M.benchIron, sx - 0.04, sx + 0.04, 0.45, 0.92, -0.22, -0.16, 'b'); }
-    P.pop();
-    ph.addBox(x, z, 1.8, 0.6, rot, 0, 0.9);
+    benchSpots.push({ x, y: 0, z, rotY: rot }); benchItems.push(ph.addBox(x, z, 1.8, 0.6, rot, 0, 0.9));
   };
   for (const b of benches) { const [fx, fz] = benchFace(b.u, b.n); bench(b.x, b.z, fx, fz); svc.benches.push({ x: b.x, z: b.z, rotY: Math.atan2(fx, fz), len: 1.8 }); }
+  K.extraTris = (K.extraTris || 0) + knockFurniture(K.ctx, 'lmM-benches', benchGeo, benchSpots, benchItems, { ...FURNITURE_REC.bench, w: 1.8 }, 200);
   // silver cast-iron lamp posts: fluted column on a round base, a capital ring, three (or two) opal globes (photos 40, 41, 09)
-  const lamp = (x, z, globes = 3) => {
-    P.cyl(M.lampSilver, [x, 0, z], [x, 0.5, z], 0.3, 0.22, 10, true);
-    P.cyl(M.lampSilver, [x, 0.5, z], [x, 4.4, z], 0.13, 0.09, 10, false);
-    P.cyl(M.lampSilver, [x, 1.0, z], [x, 1.25, z], 0.19, 0.19, 10, true);
-    P.cyl(M.lampSilver, [x, 4.2, z], [x, 4.6, z], 0.16, 0.12, 10, true);
+  const lampGeo = tplGeos((Q) => {      // the three-globe lamp (every lamp of the square has three), at the origin
+    const x = 0, z = 0, globes = 3;
+    Q.cyl(M.lampSilver, [x, 0, z], [x, 0.5, z], 0.3, 0.22, 10, true);
+    Q.cyl(M.lampSilver, [x, 0.5, z], [x, 4.4, z], 0.13, 0.09, 10, false);
+    Q.cyl(M.lampSilver, [x, 1.0, z], [x, 1.25, z], 0.19, 0.19, 10, true);
+    Q.cyl(M.lampSilver, [x, 4.2, z], [x, 4.6, z], 0.16, 0.12, 10, true);
     for (let i = 0; i < globes; i++) {
-      const a = (globes === 2 ? i * Math.PI : i * 2 * Math.PI / 3) + 0.6, bx = x + Math.cos(a) * 0.62, bz = z + Math.sin(a) * 0.62;
-      P.cyl(M.lampSilver, [x, 4.6, z], [bx, 4.95, bz], 0.035, 0.03, 5, false);
-      P.geo(M.lampGlobe, new THREE.SphereGeometry(0.27, 10, 8), bx, 5.3, bz);
-      P.cyl(M.lampSilver, [bx, 4.95, bz], [bx, 5.05, bz], 0.1, 0.04, 6, true);
+      const a = i * 2 * Math.PI / 3 + 0.6, bx = x + Math.cos(a) * 0.62, bz = z + Math.sin(a) * 0.62;
+      Q.cyl(M.lampSilver, [x, 4.6, z], [bx, 4.95, bz], 0.035, 0.03, 5, false);
+      Q.geo(M.lampGlobe, new THREE.SphereGeometry(0.27, 10, 8), bx, 5.3, bz);
+      Q.cyl(M.lampSilver, [bx, 4.95, bz], [bx, 5.05, bz], 0.1, 0.04, 6, true);
     }
-    P.cyl(M.lampSilver, [x, 4.6, z], [x, 5.45, z], 0.045, 0.02, 5, false);
-    P.geo(M.lampGlobe, new THREE.SphereGeometry(0.3, 10, 8), x, 5.75, z);
-    ph.addCylinder(x, z, 0.28, 0, 5);
+    Q.cyl(M.lampSilver, [x, 4.6, z], [x, 5.45, z], 0.045, 0.02, 5, false);
+    Q.geo(M.lampGlobe, new THREE.SphereGeometry(0.3, 10, 8), x, 5.75, z);
+  });
+  const lampSpots = [], lampItems = [];
+  const lamp = (x, z) => {
+    lampSpots.push({ x, y: 0, z, rotY: 0 }); lampItems.push(ph.addCylinder(x, z, 0.28, 0, 5));
     svc.lamps.push({ x, z, h: 5.9 });
   };
-  for (const [u, n] of [[-34, g.a1 + 1.9], [-20, g.a1 - 1.9], [-4, g.a1 + 1.9], [-34, g.a2 - 1.9], [-4, g.a2 - 1.9], [g.link, g.a2 + 3.0], [-30.5, 31.4], [g.ax - 2.0, 22]]) { const [x, z] = w(u, n); lamp(x, z, 3); }
-  for (const [u, n] of [[-30, s.ay + 1.9], [-4, s.ay - 1.9], [24, s.ay + 1.9], [40, s.ay - 1.9]]) { const [x, z] = w(u, n); lamp(x, z, 3); }
+  for (const [u, n] of [[-34, g.a1 + 1.9], [-20, g.a1 - 1.9], [-4, g.a1 + 1.9], [-34, g.a2 - 1.9], [-4, g.a2 - 1.9], [g.link, g.a2 + 3.0], [-30.5, 31.4], [g.ax - 2.0, 22]]) { const [x, z] = w(u, n); lamp(x, z); }
+  for (const [u, n] of [[-30, s.ay + 1.9], [-4, s.ay - 1.9], [24, s.ay + 1.9], [40, s.ay - 1.9]]) { const [x, z] = w(u, n); lamp(x, z); }
+  K.extraTris = (K.extraTris || 0) + knockFurniture(K.ctx, 'lmM-lamps', lampGeo, lampSpots, lampItems, FURNITURE_REC.lamp(5.9), 300);
 
   // ------------------------------------------------------------------ the two Art Nouveau pavilions (Театральная пл. 5 and 7)
   const pav = (id) => {

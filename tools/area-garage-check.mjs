@@ -128,7 +128,12 @@ for (let i = 0; i < real.length; i++) for (let j = i + 1; j < real.length; j++) 
   const a = real[i], b = real[j], gap = carGap(a, b);
   if (gap < 0.6) fail(`${a.id}-${b.id}: the cars are ${gap.toFixed(2)} m apart (>= 0.6 expected)`);
 }
-if (real.map((v) => v.id).join() !== 'coupe,truck,lada,roadster') fail(`the garage must hold coupe, truck, lada, roadster (got ${real.map((v) => v.id)})`);
+// docs/AREAS.md 13.4: the four cars stand ONLY at the central station; an area whose territory does not contain the station (no ST rectangle in its registry row) holds ONE car, the purple Zhiguli
+{
+  const { REGISTRY } = await import(pathToFileURL(path.join(root, 'src/areas/registry.js')).href), row = REGISTRY[process.env.AREA || 'strip'], hasStation = !row || !row.play || row.play.some((r) => r.name === 'ST') || process.env.AREA === 'north';
+  const want = hasStation ? 'coupe,truck,lada,roadster' : 'lada';
+  if (real.map((v) => v.id).join() !== want) fail(`the garage must hold ${want.replaceAll(',', ', ')} (got ${real.map((v) => v.id)})`);
+}
 for (const r of res) console.log(JSON.stringify(r));
 
 // ---------------------------------------------------------------- the ASCII map

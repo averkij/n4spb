@@ -11,6 +11,7 @@ import { plantTrees } from './trees.js';
 import { strip3D, sampleLine, lerp2, dist, frameAngle, lineLen } from './lines.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { spearFence } from './fences.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
 
 const PATH_IDS = new Set(['w123243372', 'w134519662', 'w123099605', 'w123246597', 'w123099608', 'w123246598', 'w123099604', 'w108952917', 'w108952919']);
 const PARK_ID = 'w108952921';
@@ -113,16 +114,17 @@ export function build(K) {
       lampsAt.push({ x, z });
     }
   }
-  const lm = lampsAt.map((q) => mat4(q.x, 0, q.z, 0, 1));
-  addInstanced(ctx, root, 'lmY-lamps', lampGeo, lm);
-  for (const q of lampsAt) { ph.addCylinder(q.x, q.z, 0.18, 0, 4.4); svc.lamps.push({ x: q.x, z: q.z, h: 4.3 }); }
+  // knockable (lib/knock-furniture.js, docs/AREAS.md 13): the lamps are knock records with their colliders
+  K.extraTris += knockFurniture(ctx, 'lmY-lamps', lampGeo, lampsAt.map((q) => ({ x: q.x, y: 0, z: q.z, rotY: 0 })), lampsAt.map((q) => ph.addCylinder(q.x, q.z, 0.18, 0, 4.4)), FURNITURE_REC.lamp(4.4), 300);
+  for (const q of lampsAt) svc.lamps.push({ x: q.x, z: q.z, h: 4.3 });
   // benches (2 at the stairs, 4 along the main path): boards on iron ends, facing the path
-  const bench = (x, z, rot) => {
-    P.push(x, 0, z, rot);
+  const benchGeo = partsGeos((P) => {      // (at the origin: the placements below are knock records)
     for (const sx of [-0.75, 0.75]) { P.box(M.iron, sx - 0.04, sx + 0.04, 0, 0.45, -0.22, 0.22, 'b'); P.box(M.iron, sx - 0.04, sx + 0.04, 0.45, 0.95, 0.18, 0.24, 'b'); }
     P.box(M.bench, -0.85, 0.85, 0.45, 0.5, -0.24, 0.2, 'b'); P.box(M.bench, -0.85, 0.85, 0.62, 0.7, 0.2, 0.24, 'b'); P.box(M.bench, -0.85, 0.85, 0.78, 0.86, 0.2, 0.24, 'b');
-    P.pop();
-    ph.addBox(x, z, 1.8, 0.6, rot, 0, 0.6); svc.benches.push({ x, z, rotY: rot, len: 1.8 });
+  });
+  const benchSpots = [], benchItems = [];
+  const bench = (x, z, rot) => {
+    benchSpots.push({ x, y: 0, z, rotY: rot }); benchItems.push(ph.addBox(x, z, 1.8, 0.6, rot, 0, 0.6)); svc.benches.push({ x, z, rotY: rot, len: 1.8 });
   };
   const spots = [];
   for (const p of mainPaths) for (const s of sampleLine(p, 32, 14, 14)) {
@@ -132,6 +134,7 @@ export function build(K) {
     spots.push({ x, z, rot: Math.atan2(-nx, -nz) });
   }
   for (const s of spots.slice(0, 6)) bench(s.x, s.z, s.rot);
+  K.extraTris += knockFurniture(ctx, 'lmY-benches', benchGeo, benchSpots, benchItems, { ...FURNITURE_REC.bench, w: 1.8 }, 200);
   // urn bins at the stairs
   for (const s of [-1, 1]) { const x = base[0] + across[0] * s * (sw / 2 + 0.9) - up[0] * 0.6, z = base[1] + across[1] * s * (sw / 2 + 0.9) - up[1] * 0.6; P.cyl(M.bin, [x, 0, z], [x, 0.55, z], 0.22, 0.3, 10, true); P.cyl(M.bin, [x, 0.55, z], [x, 0.7, z], 0.32, 0.32, 10, true); ph.addCylinder(x, z, 0.3, 0, 0.7); }
   // ---- trees: scattered inside the park, away from paths, the mound, buildings and each other

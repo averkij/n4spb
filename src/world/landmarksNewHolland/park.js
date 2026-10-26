@@ -13,6 +13,8 @@ import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { plantTrees } from './trees.js';
 import { STAIRS } from './water.js';
 import * as G from './geo.js';
+import { knockBays, splitBays, unitPanel } from '../lib/fence-bays.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
 
 const CLAIM = new Set(GROUPS_LIST.find((g) => g.key === 'nh-park').osm);
 const pointIn = (r, x, z) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) if ((r[i][1] > z) !== (r[j][1] > z) && x < (r[j][0] - r[i][0]) * (z - r[i][1]) / (r[j][1] - r[i][1]) + r[i][0]) c = !c; return c; };
@@ -78,6 +80,7 @@ export function build(K) {
   // ---------------------------------------------------------------- fences (baked BARRIERS inside the island): black pickets 0.8 m, tall black panel fence 1.9 m on the east service strip
   const crossPaths = ROADS.filter((r) => CLAIM.has(r.id) && r.pts && r.pts.length >= 4 && !r.tunnel && (r.hw === 'footway' || r.hw === 'path' || r.hw === 'steps' || r.hw === 'service')).map((r) => ({ pts: pairs(r.pts), w: r.hw === 'service' ? 4 : r.hw === 'steps' ? 2.4 : 2.6 }));
   const TALL = new Set(['w688189750', 'w1165063516']);
+  const fenceBays = [];      // WATER IS REACHABLE / objects breakable (docs/AREAS.md 13.7): every fence piece is a row of breakable bays of one texture tile (lib/fence-bays.js); the corner posts stay in the merged Parts
   for (const b of BARRIERS) {
     if (!CLAIM.has(b.id) || !b.pts) continue;
     const pts = pairs(b.pts), tall = TALL.has(b.id), h = tall ? 1.9 : 0.8, mat = tall ? panelMat : picketMat, n = pts.length, m = b.closed ? n : n - 1;
@@ -99,13 +102,17 @@ export function build(K) {
       for (const [a, c] of keepPc) {
         const dx = c[0] - a[0], dz = c[1] - a[1], l = Math.hypot(dx, dz);
         if (!inRing((a[0] + c[0]) / 2, (a[1] + c[1]) / 2) || inWater((a[0] + c[0]) / 2, (a[1] + c[1]) / 2, 0.2)) continue;
-        P.quad(mat, [a[0], 0.04, a[1]], [c[0], 0.04, c[1]], [c[0], h, c[1]], [a[0], h, a[1]], [-dz / l, 0, dx / l], [[0, 0], [l / (tall ? 2 : 1.6), 0], [l / (tall ? 2 : 1.6), 1], [0, 1]]);
-        ph.addBox((a[0] + c[0]) / 2, (a[1] + c[1]) / 2, l, 0.15, Math.atan2(-dz, dx), 0, h + 0.2);
+        fenceBays.push(...splitBays(a[0], a[1], c[0], c[1], tall ? 2 : 1.6, { y: 0.04, h, tall }));
         svc.fences.push({ id: b.id, pts: [a, c], h });
       }
     }
     for (const p of pts) P.box(M.iron, p[0] - 0.05, p[0] + 0.05, 0, h + 0.05, p[1] - 0.05, p[1] + 0.05, 'b', 1);
   }
+  knockBays(ctx, { name: 'lmNH-fence', bays: fenceBays, far: 300,
+    parts: [{ geo: unitPanel(0, 1), mat: picketMat, name: 'pickets', stretch: true, sy: (b) => b.h - 0.04, shadow: false, receive: false, when: (b) => !b.tall },
+      { geo: unitPanel(0, 1), mat: panelMat, name: 'panels', stretch: true, sy: (b) => b.h - 0.04, shadow: false, receive: false, when: (b) => b.tall }],
+    collider: (b) => ({ y0: 0, y1: b.h + 0.2, thick: 0.15, e0: 0, e1: 0 }),
+    rec: (b) => ({ kind: 'fence', mass: b.tall ? 500 : 120, h: b.h, anchored: b.tall ? 24 : 12, hitK: 0.4, metal: true, minDv: 0 }) });
   // ---------------------------------------------------------------- furniture: instanced benches, litter bins, lamps (+ extra lamps along the sett alleys), bicycle racks
   const allPaths = pathList.filter((p) => p.sett && !p.service);
   const toPath = (x, z) => { let best = null; for (const p of allPaths) { const n = nearestOnLine(p.pts, x, z); if (!best || n.d < best.d) best = n; } return best; };
@@ -139,13 +146,13 @@ export function build(K) {
     const t = 0.5, x = bk.a[0] + (bk.b[0] - bk.a[0]) * t + bk.n[0] * 3.6, z = bk.a[1] + (bk.b[1] - bk.a[1]) * t + bk.n[1] * 3.6;
     if (free(x, z, 0.8)) benches.push({ x, z, rot: Math.atan2(-bk.n[0], -bk.n[1]) });
   }
+  // knockable (docs/AREAS.md 13): the benches and the bins used to have no collider at all, the lamps a plain one; now every piece is a knock record with its collider (lib/knock-furniture.js)
   let it = 0;
-  it += addInstanced(ctx, root, 'lmNH-benches', benchGeo, benches.map((b) => mat4(b.x, 0.05, b.z, b.rot))).tris;
-  it += addInstanced(ctx, root, 'lmNH-bins', binGeo, bins.map((b) => mat4(b.x, 0.05, b.z, 0))).tris;
-  it += addInstanced(ctx, root, 'lmNH-lamps', lampGeo, lamps.map((b) => mat4(b.x, 0.05, b.z, 0))).tris;
+  it += knockFurniture(ctx, 'lmNH-benches', benchGeo, benches.map((b) => ({ x: b.x, y: 0.05, z: b.z, rotY: b.rot })), benches.map((b) => ph.addBox(b.x, b.z, 1.9, 0.6, b.rot, 0, 0.9)), FURNITURE_REC.bench, 200);
+  it += knockFurniture(ctx, 'lmNH-bins', binGeo, bins.map((b) => ({ x: b.x, y: 0.05, z: b.z, rotY: 0 })), bins.map((b) => ph.addCylinder(b.x, b.z, 0.3, 0, 0.9)), FURNITURE_REC.bin, 170);
+  it += knockFurniture(ctx, 'lmNH-lamps', lampGeo, lamps.map((b) => ({ x: b.x, y: 0.05, z: b.z, rotY: 0 })), lamps.map((b) => ph.addCylinder(b.x, b.z, 0.2, 0, 4.8)), FURNITURE_REC.lamp(4.85), 300);
   K.extraTris += it;
   for (const b of benches) { svc.benches.push({ x: b.x, z: b.z, rotY: b.rot, len: 1.8 }); }
-  for (const b of lamps) ph.addCylinder(b.x, b.z, 0.2, 0, 4.8);
   svc.lamps = lamps.map((l) => ({ x: l.x, z: l.z, h: 4.85 })); svc.bins = bins; svc.litter = bins.length;
   // bicycle racks: rows of U-hoops
   for (const [x, z, cap] of RACKS) {
