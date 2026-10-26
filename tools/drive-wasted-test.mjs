@@ -93,7 +93,7 @@ assert.equal(wasted.gate({ thr: 1, steer: 1 }, 0, damage.amount).thr, 1, 'and dr
 const src = fs.readFileSync(new URL('../src/world/drive.js', import.meta.url), 'utf8');
 for (const needle of ["import { createWasted } from './drive/wasted.js'", 'wasted.gate(input, car.vF, damage.amount)', 'wasted.step(dt, damage.amount)', 'wasted.reset(damage.amount)', 'wasted.hide()'])
   assert(src.includes(needle), 'drive.js wires: ' + needle);
-assert(/wasted\.gate\(\{ \.\.\.\(typeof inp === 'function'/.test(src) && src.includes('wasted.step(dt, damage.amount); if (frames)') , 'the sim() test hook runs the same gate and step');
+assert(/wasted\.gate\(\{ \.\.\.\(typeof inp === 'function'/.test(src) && src.includes('wasted.step(dt, damage.amount); if (wake') , 'the sim() test hook runs the same gate and step');
 const r0 = src.indexOf('    repair() {'), r1 = src.indexOf('damage.repair()', r0);
 const rule = src.slice(r0, r1);
 assert(/if \(Math\.hypot\(car\.vx, car\.vz\) > 1\.4\)/.test(rule) && (rule.match(/return false/g) || []).length === 1, 'repair() refuses only a moving car (> 1.4 m/s): a wrecked, stopped car is repairable');
