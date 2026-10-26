@@ -40,10 +40,17 @@ const SHOTS = [
   ['smolny', 'smolny-nursery', [1121.5, -1600.2, 44.2, -21.9, 34.1], '', 0],
   ['smolny', 'smolny-nursery-lane', [1072, -1631.5, 90, 2], '', 0],
   ['smolny', 'smolny-nursery-south', [1045, -1596, 0, 4], '', 0],
+  // Vladimirsky-Ligovka (the VIEWS poses of src/areas/vladimirsky/area.js; the Obvodny canal pose looks along the Predtechensky Bridge)
+  ['vladimirsky', 'vladimirsky-cathedral', [-215, 438, -103.5, 14], '', 2.0],
+  ['vladimirsky', 'vladimirsky-passage', [-217, 432, 119, 10], '', 2.0],
+  ['vladimirsky', 'vladimirsky-tolstoy', [-726, 292, -80, 6], '', 2.0],
+  ['vladimirsky', 'vladimirsky-station', [560, 192, -138.5, 8], '', 2.0],
+  ['vladimirsky', 'vladimirsky-lavra-gate', [1939, 996, -144, 10], '', 2.0],
+  ['vladimirsky', 'vladimirsky-obvodny', [218, 1930, 180, 4], '', 2.0],
 ];
 const only = args.only ? String(args.only).split(',') : null, areaArg = args.area || 'all';
 const jobs = SHOTS.filter(([a, n]) => (areaArg === 'all' || a === areaArg) && (!only || only.includes(n)));
-const PAGE = { palace: 'index.html', smolny: 'smolny.html' };
+const PAGE = { palace: 'index.html', smolny: 'smolny.html', vladimirsky: 'vladimirsky.html' };
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-sandbox', '--no-first-run', '--disable-extensions', '--window-size=1280,720'] });
 const report = [];
 try {
