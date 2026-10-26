@@ -33,9 +33,9 @@ const PRESENTATION = {
 /** the Roadster's THRUST plume as the fx module draws it (fx.js reads def.jetFx): cold white condensate puffs from every nozzle instead of the orange exhaust glow; the other cars have none */
 export const JET_FX = { color: [0.92, 0.95, 1.0], additive: false, rate: 28, s0: 0.22, s1: 2.8, life: [0.9, 1.5], a: 0.5, back: 6, drag: 2.0, ground: true };
 
-function entry(id, spec, makeModel, extra = {}) {
+function entry(id, spec, makeModel, extra = {}, poses = PARKING) {
   const full = { ...spec, mass: MASS[id], durability: DURABILITY[id] };
-  return { id, ...PRESENTATION[id], spec: full, tuning: tuningFor(id, full), parked: { ...PARKING[id] }, sound: SOUND[id], hud: HUD[id], exhaust: [], makeModel, ...extra };
+  return { id, ...PRESENTATION[id], spec: full, tuning: tuningFor(id, full), parked: { ...poses[id] }, sound: SOUND[id], hud: HUD[id], exhaust: [], makeModel, carried: poses !== PARKING && poses[id] !== PARKING[id], ...extra };
 }
 
 /** a plain box car with the model API: tests only (collision lab, node harnesses without a page); named drive-body / drive-head / drive-tail / drive-plate like the real ones */
@@ -78,19 +78,25 @@ async function optional(path, id, names, placeholders) {
   }
 }
 
-/** the registry: coupe first, then whichever of the new cars load (the fleet order: coupe, truck, lada, roadster) */
-export async function loadGarage(ctx, { placeholders = false, paths = {} } = {}) {
+/** the registry: coupe first, then whichever of the new cars load (the fleet order: coupe, truck, lada, roadster).
+ *  carry { id, x, z, yaw }: the car the player DROVE into this page across an edge gate (docs/AREAS.md 15.z): when the area's GARAGE has no pose for it (admiralty keeps ONE purple Zhiguli; the four cars stand only
+ *  at the central station) it is built anyway, parked at the arrival pose, flagged `carried` (drive.js gives it no parked box until it is left somewhere); an area that already keeps that car is not changed. */
+export async function loadGarage(ctx, { placeholders = false, paths = {}, carry = null } = {}) {
+  const poses = { ...PARKING };
+  if (carry && Object.hasOwn(PRESENTATION, carry.id) && ![carry.x, carry.z, carry.yaw].some((v) => !Number.isFinite(v))) {
+    const p = PARKING[carry.id]; if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.z)) poses[carry.id] = { x: carry.x, z: carry.z, yaw: carry.yaw };
+  }
   const garage = [];
   const coupeSpec = { ...COUPE_SPEC, eye: { ...COUPE_EYE }, fovRest: 72 };
-  garage.push(entry('coupe', coupeSpec, (c) => createCarModel(c), { exhaust: [{ x: 0.46, y: 0.28, z: COUPE_SPEC.rear - 0.1 }, { x: -0.46, y: 0.28, z: COUPE_SPEC.rear - 0.1 }] }));
+  garage.push(entry('coupe', coupeSpec, (c) => createCarModel(c), { exhaust: [{ x: 0.46, y: 0.28, z: COUPE_SPEC.rear - 0.1 }, { x: -0.46, y: 0.28, z: COUPE_SPEC.rear - 0.1 }] }, poses));
   const t = await optional(paths.truck || './cybertruck.js', 'truck', ['SPEC_TRUCK', 'createTruckModel'], placeholders);
-  if (t && !t.placeholder) garage.push(entry('truck', t.SPEC_TRUCK, (c) => t.createTruckModel(c), { exhaust: [] }));          // an electric truck: no tail pipes, no flames (a boost glow instead)
-  else if (t) { const s = { W: 2.03, R: 0.43, tw: 0.285, track: 1.76, wb: 3.8, front: 2.63, rear: -3.05, hgt: 1.8, len: 5.68, centerZ: -0.21, eye: { x: 0.37, y: 1.44, z: 0.55 }, fovRest: 72 }; garage.push(entry('truck', s, (c) => createPlaceholderModel(c, s, '#e0b800'), { exhaust: [] })); }
+  if (t && !t.placeholder) garage.push(entry('truck', t.SPEC_TRUCK, (c) => t.createTruckModel(c), { exhaust: [] }, poses));          // an electric truck: no tail pipes, no flames (a boost glow instead)
+  else if (t) { const s = { W: 2.03, R: 0.43, tw: 0.285, track: 1.76, wb: 3.8, front: 2.63, rear: -3.05, hgt: 1.8, len: 5.68, centerZ: -0.21, eye: { x: 0.37, y: 1.44, z: 0.55 }, fovRest: 72 }; garage.push(entry('truck', s, (c) => createPlaceholderModel(c, s, '#e0b800'), { exhaust: [] }, poses)); }
   const l = await optional(paths.lada || './lada2106.js', 'lada', ['SPEC_LADA', 'createLadaModel'], placeholders);
-  if (l && !l.placeholder) garage.push(entry('lada', l.SPEC_LADA, (c) => l.createLadaModel(c), { exhaust: l.SPEC_LADA.exhaust ? l.SPEC_LADA.exhaust.slice(0, 1) : [] }));
-  else if (l) { const s = { W: 1.62, R: 0.285, tw: 0.175, track: 1.35, wb: 2.42, front: 2.09, rear: -2.07, hgt: 1.4, len: 4.16, centerZ: 0.01, eye: { x: 0.35, y: 1.12, z: -0.1 }, fovRest: 72 }; garage.push(entry('lada', s, (c) => createPlaceholderModel(c, s, '#552659'), { exhaust: [{ x: 0.52, y: 0.235, z: -2.19 }] })); }
+  if (l && !l.placeholder) garage.push(entry('lada', l.SPEC_LADA, (c) => l.createLadaModel(c), { exhaust: l.SPEC_LADA.exhaust ? l.SPEC_LADA.exhaust.slice(0, 1) : [] }, poses));
+  else if (l) { const s = { W: 1.62, R: 0.285, tw: 0.175, track: 1.35, wb: 2.42, front: 2.09, rear: -2.07, hgt: 1.4, len: 4.16, centerZ: 0.01, eye: { x: 0.35, y: 1.12, z: -0.1 }, fovRest: 72 }; garage.push(entry('lada', s, (c) => createPlaceholderModel(c, s, '#552659'), { exhaust: [{ x: 0.52, y: 0.235, z: -2.19 }] }, poses)); }
   const r = await optional(paths.roadster || './roadster.js', 'roadster', ['SPEC_ROADSTER', 'createRoadsterModel'], placeholders);
-  if (r && !r.placeholder) garage.push(entry('roadster', r.SPEC_ROADSTER, (c) => r.createRoadsterModel(c), { exhaust: r.SPEC_ROADSTER.exhaust.slice(), jetFx: JET_FX }));          // the four rear nozzles drive the thrust particles
-  else if (r) { const s = { W: 2.0, R: 0.355, tw: 0.31, track: 1.61, wb: 2.96, front: 2.36, rear: -2.26, hgt: 1.22, len: 4.62, centerZ: 0.05, eye: { x: 0.36, y: 0.93, z: 0.2 }, fovRest: 74 }; garage.push(entry('roadster', s, (c) => createPlaceholderModel(c, s, '#e4e6ea'), { exhaust: [0.4, 0.13, -0.13, -0.4].map((x) => ({ x, y: 0.5, z: -2.27 })), jetFx: JET_FX })); }
+  if (r && !r.placeholder) garage.push(entry('roadster', r.SPEC_ROADSTER, (c) => r.createRoadsterModel(c), { exhaust: r.SPEC_ROADSTER.exhaust.slice(), jetFx: JET_FX }, poses));          // the four rear nozzles drive the thrust particles
+  else if (r) { const s = { W: 2.0, R: 0.355, tw: 0.31, track: 1.61, wb: 2.96, front: 2.36, rear: -2.26, hgt: 1.22, len: 4.62, centerZ: 0.05, eye: { x: 0.36, y: 0.93, z: 0.2 }, fovRest: 74 }; garage.push(entry('roadster', s, (c) => createPlaceholderModel(c, s, '#e4e6ea'), { exhaust: [0.4, 0.13, -0.13, -0.4].map((x) => ({ x, y: 0.5, z: -2.27 })), jetFx: JET_FX }, poses)); }
   return garage.filter((g) => Number.isFinite(g.parked.x) && Number.isFinite(g.parked.z));          // a car without a pose in the GARAGE of the area is not built
 }
