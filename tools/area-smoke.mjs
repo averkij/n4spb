@@ -46,8 +46,8 @@ const SHOTS = [
   ['admiralty', 'admiralty-horseman', [-2735, -405, 14.4, 6], '', 2.0],
   ['admiralty', 'admiralty-mariinsky', [-3030, 760, 49.4, 8], '', 2.0],
   ['admiralty', 'admiralty-yusupov', [-2950, 300, -155.3, 8], '', 2.0],
-  ['admiralty', 'admiralty-newholland', [-3420, 442, -113.4, 8], '', 2.0],
-  ['admiralty', 'admiralty-nikolsky', [-2877, 1077, -152.8, 10], '', 2.0],
+  ['admiralty', 'admiralty-newholland', [-3339, 471, 70.6, 8], '', 2.0],
+  ['admiralty', 'admiralty-nikolsky', [-2873, 1040, -170.4, 10], '', 2.0],
   ['admiralty', 'admiralty-blagoveshchensky', [-3376, -100, 25.7, 8], '', 2.0],
 ];
 const only = args.only ? String(args.only).split(',') : null, areaArg = args.area || 'all';
