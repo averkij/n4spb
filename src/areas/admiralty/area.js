@@ -5,7 +5,8 @@
 //  Naval Cathedral, the Haymarket (Sennaya) and the Trinity-Izmailovsky Cathedral. 7.3 km2 of play rectangles (src/areas/registry.js REGISTRY.admiralty.play, cut from the map outline by tools/area-shape.mjs --k 46),
 //  the data cut straight from the source project by tools/area-data-cut.mjs.
 //  It starts from the palace's area module: the landmark modules whose sights lie in the territory are listed in MODULES with their claims in GROUPS (a module that is group-aware draws only what is claimed; the
-//  modules ported for this area, landmarksMariinsky / Nikolsky / NewHolland / Yusupov / CentralSouth, draw their whole group list, and every group of it lies in this territory). This area contains NO railway station:
+//  modules ported for this area, landmarksMariinsky / Nikolsky / NewHolland / Yusupov / CentralSouth, draw their whole group list, and every group of it lies in this territory; landmarksAcademy draws two of its five
+//  sub-groups, the Egyptian sphinx pier on Universitetskaya Embankment and the Academy of Arts behind it, docs/AREAS.md 15.z). This area contains NO railway station:
 //  no `rail`, no landmarksA / B, and ONE purple Zhiguli at the spawn (docs/AREAS.md 13.4). The sights of the neighbours (the Russian Museum, the Saviour on Blood, the castle, the Summer Garden, the Mars Field, the
 //  Tauride Garden) are not built here.
 //  admiralty.html remaps ./src/world/area.js to this file with an import map (tools/area.mjs does the same for the headless tools). PURE DATA: no three.js, no import of layout.js (layout.js imports this

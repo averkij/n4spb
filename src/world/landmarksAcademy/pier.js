@@ -136,7 +136,9 @@ export async function build(K) {
       K.extraTris += bays.length * 122 + 2 * 120;                                                          // (panel 2 + post 24 + ball 96 per bay, the closing post and ball of each stretch)
     }
     // solid masses: the shelves (blocked by the railing), the lamp blocks
-    AF.box(ph, pu(-15.1), (vT + vB) / 2, 8.2, vB - vT, -4, 2); AF.box(ph, pu(12.9), (vT + vB) / 2, 8.2, vB - vT, -4, 2);
+    // n4spb (docs/AREAS.md 13.7): the two shelves (street level, behind the railing) were invisible 2 m walls in the source, so a knocked railing would have left a wall; they are walkable pavement now (a floor at 0.03), the railing bays are the only barrier,
+    // and the 2.3 m drop to the bench recess behind them is an open edge like every quay edge (the east one was also 2.2 m off its slab in the source: centre pu(12.9) instead of pu(15.1))
+    AF.walk(ph, pu(-15.1), (vT + vB) / 2, 8.2, vB - vT, 0.03, -4); AF.walk(ph, pu(15.1), (vT + vB) / 2, 8.2, vB - vT, 0.03, -4);
     // ------------------------------------------------------------------------------------------ walk boxes: the upper flight, the landing, the bench recesses, the lower flight, guards
     for (let j = 0; j < 5; j++) AF.walk(ph, pu(0), (vS(j) + vS(j + 1)) / 2, 22, 0.65, Ltop(j), -3.7);
     AF.walk(ph, pu(0), (vS(5) + 108.7) / 2, 38.4, 108.7 - vS(5) + 0.1, YL, -3.7);
