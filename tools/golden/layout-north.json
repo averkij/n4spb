@@ -541,6 +541,22 @@
     ]
    },
    "WATERWAYS": {
+    "admiralty": {
+     "bay": 2.4,
+     "bed": -4,
+     "key": "admiralty",
+     "name": "Адмиралтейский канал",
+     "post": "moika",
+     "postH": 1,
+     "postW": 0.45,
+     "rail": [
+      "moika"
+     ],
+     "shadeH": 2.8,
+     "wall": "admiralty",
+     "water": -2.8,
+     "width": 10
+    },
     "fontanka": {
      "bay": 3.2,
      "bed": -4.6,
@@ -575,6 +591,22 @@
      "wall": "pink",
      "water": -2.9,
      "width": 19
+    },
+    "kryukov": {
+     "bay": 2.7,
+     "bed": -4.3,
+     "key": "kryukov",
+     "name": "Крюков канал",
+     "post": "twostep",
+     "postH": 1.1,
+     "postW": 0.5,
+     "rail": [
+      "vase"
+     ],
+     "shadeH": 3,
+     "wall": "kryukov",
+     "water": -2.9,
+     "width": 22
     },
     "moat": {
      "bay": 2.4,
@@ -619,6 +651,20 @@
      "wall": "neva",
      "water": -3.4,
      "width": 400
+    },
+    "nh-inner": {
+     "bay": 2.7,
+     "bed": -4,
+     "key": "nh-inner",
+     "name": "Каналы Новой Голландии",
+     "post": "twostep",
+     "postH": 1.1,
+     "postW": 0.5,
+     "rail": [],
+     "shadeH": 2.8,
+     "wall": "admiralty",
+     "water": -2.8,
+     "width": 11
     },
     "swan-canal": {
      "bay": 2,
