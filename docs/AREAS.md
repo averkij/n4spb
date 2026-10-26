@@ -1325,7 +1325,7 @@ The arrival has no rectangle: the player lands at the **same x, z, yaw, pitch**;
 | LIFT_ALPHA, ROLL0 | 3.9 rad/s^2, 0.35 rad/s | handling.js |
 | LAND_PITCH_TOL, LAND_PITCH_K | 0.15 rad, 10 m/s per rad | handling.js |
 | CAR_SLIP_DEG / WALK_SLIP_DEG | 45 / 35 degrees | lib/bascule.js, Troitsky frame.js |
-| boom: break speed, box limit, raised angle | 15 km/h, 20 degrees, 72 degrees | lib/bascule-gates.js |
+| boom: break speed, box limit, raised angle | 3 km/h (15 before 15.1), 20 degrees, 72 degrees | lib/bascule-gates.js |
 
 **What the numbers do (`npm run bridgejump`, 82 checks, ~7 s).** Palace, leaf at 25 degrees: a car at 25 m/s leaves the tip at 14.4 m with vh 25.0 / vy 11.7 m/s, flies 2.7 s, lands 62 m beyond the far leaf's tip projection on the island road with a 20.4 m/s impact and a nose-down error of 23 degrees (damage 0.60 of a zone); at 12.5 m/s from 3 m before the tip it lands ON the far leaf's deck (a downhill slope of -24.9 degrees, 0.00 damage); at 30 degrees and 8 m/s it comes down 2.6 m short and ends in the Neva (damage 0.72). Troitsky (one 43 m leaf, tip 18.6 m up at 25 degrees): 25 m/s lands on the fixed deck beyond the pier; the failing case needs a steep leaf (44 degrees, 4 m/s: 3.7 m short, in the water; the gap of the single leaf is only 4 m at 25 degrees, so a slow car that does reach the tip lands on the fixed deck beyond from 18 m up).
 
