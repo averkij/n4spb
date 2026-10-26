@@ -4,6 +4,7 @@
 //     whose instances (the red stripes, the white stripes, the counterweight stub) live in world-frame knock meshes (lib/knock-inst.js) that `set(barrier)` re-poses while the boom swings down or up;
 //   * a DYNAMIC collider box (the record's own `src`, the protocol of drive/collision.js, as the rail and kerb bays of lib/bascule-bays.js) that exists only while the boom is (nearly) down: `boxes(pool)` appends
 //     the boxes of the STANDING booms whose angle above the road is at most BOX_PSI (20 degrees); a raised boom (72 degrees) is no obstacle.
+// Since 2026-10-26 a boom is TWO knock records, an inner half (with the counterweight stub) and an outer half: a car breaks only the half it hits, the other half stays standing.
 // A broken boom stays broken until the NEXT CYCLE starts: the module calls `restore()` on the 'warn' event, which re-arms every record (core/knock.js restore: the flying body is dropped, the rest box removed) and
 // puts it back at its post. The NPC stop logic (stop lines, the pedestrian gate walls of lib/bascule.js) does not look at any of this and works as it did.
 // Nothing is allocated per frame: `set` writes into module scratch objects and runs only when the barrier value changed (or after a restore).
@@ -13,7 +14,8 @@ import { knockInstances } from './knock-inst.js';
 export const ARM_Y = 0.95;                 // m: the axis of the boom above the foot of its post
 export const ARM_UP = 72 * Math.PI / 180;  // rad: the raised boom
 export const BOX_PSI = 20 * Math.PI / 180; // rad: above this the boom has no collider box
-export const ARM_BREAK = 15;               // km/h of the car at contact: below it the boom holds (the car stops on it), above it the boom breaks off
+export const ARM_BREAK = 3;                // km/h of the car at contact: below it the boom holds (a car that merely creeps up to it), above it the half it hits breaks off (lighter: 15 before the owner's request of 2026-10-26)
+export const ARM_MASS = 10;                // kg of one HALF of a boom (40 kg for the whole boom before): the car loses almost nothing of its speed
 const UPV = new THREE.Vector3(0, 1, 0), AXZ = new THREE.Vector3(0, 0, 1), ONE = new THREE.Vector3(1, 1, 1);
 const qY = new THREE.Quaternion(), qZ = new THREE.Quaternion(), qA = new THREE.Quaternion(), _p = new THREE.Vector3(), _pp = new THREE.Vector3(), _s = new THREE.Vector3(), _qq = new THREE.Quaternion(), M4 = new THREE.Matrix4(), touched = new Set();
 
@@ -34,54 +36,59 @@ export function boxesGeo(list) {
 const stripes = (n, parity) => { const l = []; for (let i = parity; i < n; i += 2) l.push([i / n, (i + 1) / n, -0.05, 0.05, -0.05, 0.05]); return boxesGeo(l); };
 
 /**
- * createBarrierArms(ctx, { name, toWorld, arms, mats: { red, white, post }, near }) -> { count, arms, set(barrier), restore(), boxes(pool), tip(i, out), info }
+ * createBarrierArms(ctx, { name, toWorld, arms, mats: { red, white, post }, near }) -> { count, arms, segs, set(barrier), restore(), boxes(pool), tip(i, out), info }
  *   toWorld(u, v, out) -> { x, z }   the frame of the bridge
  *   arms   [{ u, v (the post), to (the tip, at the lowered pose), y0 (the foot of the post), ped }]
  *   near   optional { x, z, r }: the provider hands out nothing while the player is farther than r from (x, z) (like the leaf bays)
- * Each arm: { u, v, to, y0, len, p (post, world), dx, dz (the direction toward the tip), yaw, box, rec, refs: [{ mesh, index }] x 3, state }.
+ * Each arm: { u, v, to, y0, len, px, pz (post, world), dx, dz (the direction toward the tip), yaw, segs: [inner, outer] }.
+ * Each seg (a HALF of the boom, `bars.segs` is the flat list): { arm, h (0 inner, 1 outer), len (half of the boom), box, rec, refs: [{ mesh, index }] (red, white and, on the inner half, the stub), cls }.
  */
 export function createBarrierArms(ctx, { name, toWorld, arms: specs, mats, near = null }) {
-  const knock = !!ctx.knock, arms = [];
+  const arms = [], segs = [];
   for (const s of specs) {
     const a = toWorld(s.u, s.v, { x: 0, z: 0 }), b = toWorld(s.u, s.to, { x: 0, z: 0 }), len = Math.abs(s.v - s.to), dx = (b.x - a.x) / len, dz = (b.z - a.z) / len;
-    arms.push({ ...s, len, px: a.x, pz: a.z, dx, dz, yaw: Math.atan2(-dz, dx), rec: null, refs: null, box: { cx: 0, cz: 0, w: len, d: 0.3, rotY: 0, y0: 0, y1: 1 }, spotIndex: 0, cls: s.ped ? 'ped' : 'road' });
+    const arm = { ...s, len, px: a.x, pz: a.z, dx, dz, yaw: Math.atan2(-dz, dx), cls: s.ped ? 'ped' : 'road', segs: [] };
+    for (let h = 0; h < 2; h++) { const sg = { arm, u: s.u, v: s.v, ped: !!s.ped, h, len: len / 2, rec: null, refs: null, box: { cx: 0, cz: 0, w: len / 2, d: 0.3, rotY: 0, y0: 0, y1: 1 } }; arm.segs.push(sg); segs.push(sg); }
+    arms.push(arm);
   }
-  const stub = boxesGeo([[-0.45, 0, -0.09, 0.09, -0.09, 0.09]]), geos = { road: { r: stripes(12, 0), w: stripes(12, 1) }, ped: { r: stripes(4, 0), w: stripes(4, 1) } };
-  /** the world matrix of part k (0 red, 1 white, 2 stub) of arm a with the boom raised by psi above the road */
-  const matrix = (a, psi, k, out) => {
-    qY.setFromAxisAngle(UPV, a.yaw); qZ.setFromAxisAngle(AXZ, psi);
-    return out.compose(_p.set(a.px, a.y0 + ARM_Y, a.pz), qA.copy(qY).multiply(qZ), k === 2 ? ONE : _s.set(a.len, 1, 1));
+  const stub = boxesGeo([[-0.45, 0, -0.09, 0.09, -0.09, 0.09]]), geos = { road: { r: stripes(6, 0), w: stripes(6, 1) }, ped: { r: stripes(2, 0), w: stripes(2, 1) } };    // (the stripes of one HALF: 6 / 2, so the colours alternate along the whole boom)
+  /** the world matrix of part k (0 red, 1 white, 2 stub) of half sg with the boom raised by psi above the road */
+  const matrix = (sg, psi, k, out) => {
+    const a = sg.arm;
+    qY.setFromAxisAngle(UPV, a.yaw); qZ.setFromAxisAngle(AXZ, psi); qA.copy(qY).multiply(qZ);
+    if (k === 2) return out.compose(_p.set(a.px, a.y0 + ARM_Y, a.pz), qA, ONE);
+    _s.set(sg.h * sg.len, 0, 0).applyQuaternion(qA);
+    return out.compose(_p.set(a.px + _s.x, a.y0 + ARM_Y + _s.y, a.pz + _s.z), qA, _s.set(sg.len, 1, 1));
   };
-  for (const cls of ['road', 'ped']) {
-    const list = arms.filter((a) => a.cls === cls); if (!list.length) continue;
-    list.forEach((a, i) => { a.spotIndex = i; });
-    const spots = list.map((a) => ({ x: a.px + a.dx * a.len / 2, y: a.y0, z: a.pz + a.dz * a.len / 2, rotY: a.yaw }));      // (the record stands at the middle of the lowered boom: it topples about that)
+  for (const cls of ['road', 'ped']) for (let h = 0; h < 2; h++) {
+    const list = segs.filter((sg) => sg.arm.cls === cls && sg.h === h); if (!list.length) continue;
+    const spots = list.map((sg) => { const a = sg.arm, d = (h + 0.5) * sg.len; return { x: a.px + a.dx * d, y: a.y0, z: a.pz + a.dz * d, rotY: a.yaw }; });      // (the record stands at the middle of the lowered half: it topples about that)
     const place = (k) => (s, i) => matrix(list[i], ARM_UP, k, new THREE.Matrix4());
+    const parts = [{ geo: geos[cls].r, mat: mats.red, name: 'red', noOutline: true, shadow: true, receive: false, place: place(0) }, { geo: geos[cls].w, mat: mats.white, name: 'white', noOutline: true, shadow: true, receive: false, place: place(1) }];
+    if (h === 0) parts.push({ geo: stub, mat: mats.post, name: 'stub', noOutline: true, shadow: true, receive: false, place: place(2) });
     const res = knockInstances(ctx, {
-      name: name + '-' + cls, spots, far: 450,
-      parts: [{ geo: geos[cls].r, mat: mats.red, name: 'red', noOutline: true, shadow: true, receive: false, place: place(0) }, { geo: geos[cls].w, mat: mats.white, name: 'white', noOutline: true, shadow: true, receive: false, place: place(1) },
-        { geo: stub, mat: mats.post, name: 'stub', noOutline: true, shadow: true, receive: false, place: place(2) }],
-      rec: (s, i) => ({ kind: 'fence', mass: 40, h: 1.0, r: 0.06, w: list[i].len, d: 0.3, anchored: ARM_BREAK, hitK: 0.15, metal: true, minDv: 0, originY: ARM_Y }),
+      name: name + '-' + cls + (h ? '-out' : '-in'), spots, far: 450, parts,
+      rec: (s, i) => ({ kind: 'fence', mass: ARM_MASS, h: 1.0, r: 0.06, w: list[i].len, d: 0.3, anchored: ARM_BREAK, hitK: 0.15, metal: true, minDv: 0, originY: ARM_Y }),
     });
-    list.forEach((a, i) => {
-      a.rec = res.records[i] || null;
-      if (a.rec) { a.box = a.rec.src; a.rec.dynamic = true; a.refs = a.rec.parts; }
-      else a.refs = res.meshes.map((mesh) => ({ mesh, index: i }));
+    list.forEach((sg, i) => {
+      sg.rec = res.records[i] || null;
+      if (sg.rec) { sg.box = sg.rec.src; sg.rec.dynamic = true; sg.refs = sg.rec.parts; }
+      else sg.refs = res.meshes.map((mesh) => ({ mesh, index: i }));
     });
   }
   let last = -1, nowBarrier = 0;
-  /** pose every STANDING arm for barrier = 0 (up) .. 1 (down); force = also when the value is the same (after a restore) */
+  /** pose every STANDING half for barrier = 0 (up) .. 1 (down); force = also when the value is the same (after a restore) */
   const set = (barrier, force = false) => {
     if (barrier === last && !force) return;
     last = barrier; nowBarrier = barrier;
     const psi = (1 - barrier) * ARM_UP, c = Math.cos(psi), sn = Math.sin(psi);
-    for (let i = 0; i < arms.length; i++) {
-      const a = arms[i], r = a.rec, bx = a.box;
+    for (let i = 0; i < segs.length; i++) {
+      const sg = segs[i], a = sg.arm, r = sg.rec, bx = sg.box;
       if (r && r.state !== 'stand') continue;
-      const run = a.len * c;
-      bx.cx = a.px + a.dx * run / 2; bx.cz = a.pz + a.dz * run / 2; bx.w = run + 0.1; bx.d = 0.3; bx.rotY = a.yaw; bx.y0 = a.y0 + ARM_Y - 0.15; bx.y1 = a.y0 + ARM_Y + a.len * sn + 0.15;
-      for (let k = 0; k < a.refs.length; k++) {
-        const ref = a.refs[k]; matrix(a, psi, k, M4);
+      const run = sg.len * c, d0 = sg.h * sg.len * c;
+      bx.cx = a.px + a.dx * (d0 + run / 2); bx.cz = a.pz + a.dz * (d0 + run / 2); bx.w = run + 0.1; bx.d = 0.3; bx.rotY = a.yaw; bx.y0 = a.y0 + ARM_Y - 0.15 + sg.h * sg.len * sn; bx.y1 = a.y0 + ARM_Y + (sg.h + 1) * sg.len * sn + 0.15;
+      for (let k = 0; k < sg.refs.length; k++) {
+        const ref = sg.refs[k]; matrix(sg, psi, k, M4);
         if (r) {
           const p = r.parts[k]; M4.decompose(_pp, _qq, _s);
           p.off.set(_pp.x - r.x, _pp.y - (r.y + ARM_Y), _pp.z - r.z); p.q.copy(_qq); p.s.copy(_s);
@@ -93,10 +100,10 @@ export function createBarrierArms(ctx, { name, toWorld, arms: specs, mats, near 
     for (const m of touched) m.instanceMatrix.needsUpdate = true;
     touched.clear();
   };
-  /** re-arm every broken boom (the module calls it when the next cycle starts); returns how many came back */
+  /** re-arm every broken half (the module calls it when the next cycle starts); returns how many came back */
   const restore = () => {
     let n = 0;
-    if (ctx.knock && ctx.knock.restore) for (let i = 0; i < arms.length; i++) { const r = arms[i].rec; if (r && r.state !== 'stand' && ctx.knock.restore(r)) n++; }
+    if (ctx.knock && ctx.knock.restore) for (let i = 0; i < segs.length; i++) { const r = segs[i].rec; if (r && r.state !== 'stand' && ctx.knock.restore(r)) n++; }
     if (n) set(nowBarrier, true);
     return n;
   };
@@ -106,18 +113,17 @@ export function createBarrierArms(ctx, { name, toWorld, arms: specs, mats, near 
     boxes.length = 0;
     if (nowBarrier < lowAt) return boxes;                                                    // (every boom is above BOX_PSI: nothing to collide with)
     if (near) { const pp = ctx.player && ctx.player.position; if (pp) { const dx = pp.x - near.x, dz = pp.z - near.z; if (dx * dx + dz * dz > r2) return boxes; } }
-    for (let i = 0; i < arms.length; i++) { const a = arms[i]; if (!a.rec || a.rec.state === 'stand') boxes.push(a.box); }
+    for (let i = 0; i < segs.length; i++) { const sg = segs[i]; if (!sg.rec || sg.rec.state === 'stand') boxes.push(sg.box); }
     return boxes;
   };
   provide.stableBoxes = true;
   ctx.physics.addDynamic(provide);
   set(0, true);
-  const tipV = new THREE.Vector3();
   return {
-    count: arms.length, arms, set, restore, boxes: provide,
-    /** the world position of the tip of arm i (read back from its instance matrix: what is drawn) */
-    tip(i, out = new THREE.Vector3()) { const a = arms[i], ref = a.refs[0]; ref.mesh.getMatrixAt(ref.index, M4); return out.set(1, 0, 0).applyMatrix4(M4); },
+    count: arms.length, arms, segs, set, restore, boxes: provide,
+    /** the world position of the tip of boom i (read back from the instance matrix of its outer half: what is drawn) */
+    tip(i, out = new THREE.Vector3()) { const ref = arms[i].segs[1].refs[0]; ref.mesh.getMatrixAt(ref.index, M4); return out.set(1, 0, 0).applyMatrix4(M4); },
     get barrier() { return nowBarrier; },
-    info: { arms: arms.length, standing: () => arms.filter((a) => !a.rec || a.rec.state === 'stand').length },
+    info: { arms: arms.length, halves: segs.length, standing: () => segs.filter((s) => !s.rec || s.rec.state === 'stand').length },
   };
 }

@@ -187,9 +187,9 @@ for (const kind of ['palace', 'troitsky']) {
   // ---------------------------------------------------------------- (d) the barrier arms
   {
     const bars = T.barriers.barriers, g = T.gates[0], lane = -5.7;
-    const run1 = (kmh, label) => {
+    const run1 = (kmh, label, lane = -5.7) => {      // (lane = v of the car: the road boom spans v -11.55 .. -0.45, its two halves meet at v -6.0)
       settle(); T.setMode('open'); T.advance(7, 0); T.leaf.set(T.theta); R.update(0, 1);                  // the warning: the arms are down, the leaves have not moved
-      const arms = bars.arms.filter((a) => Math.abs(a.u - g.u) < 1e-6 && !a.ped && Math.sign(a.v) === Math.sign(lane));
+      const arms = bars.segs.filter((a) => Math.abs(a.u - g.u) < 1e-6 && !a.ped && Math.sign(a.v) === Math.sign(lane));      // (the HALVES of the boom: each is its own knock record)
       const dir = g.dir, uStart = g.u - dir * 14, w = R.W(uStart, lane);
       const cctx = { L: eng.L, physics: ph, services: ctx.services }, car = createHandling(cctx, null);
       car.reset(w.x, w.z, R.yawN + (dir > 0 ? 0 : Math.PI)); car.y = R.deckAny(w.x, w.z) + 0.03; car.vx = Math.sin(car.yaw) * kmh / 3.6; car.vz = Math.cos(car.yaw) * kmh / 3.6;
@@ -200,8 +200,12 @@ for (const kind of ['palace', 'troitsky']) {
       say(`  ${label}: arm states ${state0} -> ${arms.map((a) => a.rec && a.rec.state)}, the car got ${fmt(maxProg)} m past the gate line, events ${ev.slice(0, 6).join(', ')}`);
       return { arms, maxProg, car };
     };
-    const slow = run1(5, '5 km/h into the lowered road arm');
-    ok(slow.maxProg < 0.3 && slow.arms.every((a) => !a.rec || a.rec.state === 'stand'), `(d) a car at 5 km/h is stopped by the lowered arm (it got ${fmt(slow.maxProg)} m past the line) and the arm stands`);
+    const slow = run1(2, '2 km/h into the lowered road arm');
+    ok(slow.maxProg < 0.3 && slow.arms.every((a) => !a.rec || a.rec.state === 'stand'), `(d) a car creeping at 2 km/h is stopped by the lowered arm (it got ${fmt(slow.maxProg)} m past the line) and the arm stands`);
+    const light = run1(8, '8 km/h into the lowered road arm at v -3 (the arm is light since 2026-10-26)', -3);
+    ok(light.arms.some((a) => a.rec && a.rec.state !== 'stand') && light.maxProg > 3, `(d) a car at 8 km/h breaks the arm (${light.arms.map((a) => a.rec && a.rec.state)}) and drives on (${fmt(light.maxProg)} m past the line)`);
+    ok(light.arms.filter((a) => a.rec && a.rec.state !== 'stand').length === 1 && light.arms.some((a) => a.rec && a.rec.state === 'stand'), '(d) the boom breaks in HALF: one half is down, the other half still stands');
+    { const bk = light.arms.find((a) => a.rec && a.rec.state !== 'stand'); ok(!bars.boxes().includes(bk.box), '(d) the broken half gave its box up'); }
     const fast = run1(45, '45 km/h into the lowered road arm');
     ok(fast.arms.some((a) => a.rec && a.rec.state !== 'stand') && fast.maxProg > 3, `(d) a car at 45 km/h breaks the arm (${fast.arms.map((a) => a.rec && a.rec.state)}) and drives on (${fmt(fast.maxProg)} m past the line)`);
     const broken = fast.arms.filter((a) => a.rec && a.rec.state !== 'stand'), box0 = broken[0].box;
@@ -215,8 +219,8 @@ for (const kind of ['palace', 'troitsky']) {
     ok(bars.boxes().includes(box0), '(d) the restored arm is solid again (its box is back)');
     // raised arms are no obstacle
     settle(); R.update(0, 6);
-    ok(!bars.boxes().some((b) => bars.arms.some((a) => a.box === b)) || true, '(d) raised: no box');
-    { let n = 0; ph.refreshDynamic(); for (const it of ph._dynItems) if (bars.arms.some((a) => a.box === it.source)) n++; ok(n === 0, `(d) with the arms up none of them is a collider (${n} boxes)`); }
+    ok(!bars.boxes().some((b) => bars.segs.some((a) => a.box === b)) || true, '(d) raised: no box');
+    { let n = 0; ph.refreshDynamic(); for (const it of ph._dynItems) if (bars.segs.some((a) => a.box === it.source)) n++; ok(n === 0, `(d) with the arms up none of them is a collider (${n} boxes)`); }
     T.setMode('closed'); settle();
   }
   R.release();
