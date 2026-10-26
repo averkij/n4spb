@@ -83,9 +83,11 @@ export function buildLeaf(env) {
   P.box(M.steelTroitskyDark, -0.3, 0.05, -girderDepth(0), PAVE, -HW, HW, '', 1.6);
   // ---------------------------------------------------------------- the counterweight: on the BANK side of the hinge (s < 0), under the first span; it swings DOWN into the pit as the leaf rises (the pit is the dark under-span of the bank:
   // everything below the street is hidden by the ground / the quay wall). Two steel lever arms and a concrete block.
-  for (const sg of [-1, 1]) P.box(M.steelTroitskyDark, -10.6, 0.1, -1.55, -0.55, sg * (HW - 1.7) - 0.45, sg * (HW - 1.7) + 0.45, '', 1.6);
-  P.box(M.concreteRust || M.graniteDark, -10.6, -3.4, -3.9, -0.55, -HW + 2.4, HW - 2.4, '', 2.2);
-  P.box(M.steelTroitskyDark, -10.7, -3.3, -4.0, -3.9, -HW + 2.3, HW - 2.3, '', 1.6);
+  // (their own mesh OUT of the outline pass: the weight hangs in the pit under the bank span and swings down into it, below the water; the outline pass has no water, so its contour lines showed through the river beside the hinge pier, docs/AREAS.md 15.z)
+  const PW = new Parts();
+  for (const sg of [-1, 1]) PW.box(M.steelTroitskyDark, -10.6, 0.1, -1.55, -0.55, sg * (HW - 1.7) - 0.45, sg * (HW - 1.7) + 0.45, '', 1.6);
+  PW.box(M.concreteRust || M.graniteDark, -10.6, -3.4, -3.9, -0.55, -HW + 2.4, HW - 2.4, '', 2.2);
+  PW.box(M.steelTroitskyDark, -10.7, -3.3, -4.0, -3.9, -HW + 2.3, HW - 2.3, '', 1.6);
   // ---------------------------------------------------------------- the lamp pair (u 36.7) and the contact-wire pole (u 40.3) that stand on the leaf, fixed to it
   for (const sg of [-1, 1]) lampT(P, M, 36.7 - U_HINGE, PAVE, sg * (ROAD + KERB + 0.28), 0);
   contactPoleT(P, M, 40.3 - U_HINGE, 0.14, 0, Math.PI / 2, 3.4);
@@ -101,6 +103,7 @@ export function buildLeaf(env) {
     }
   }
   const meshes = P.build(body, { name: 'troitsky-leaf' });
+  for (const m of PW.build(body, { name: 'troitsky-leaf-weight' })) ctx.noOutline(m);
   const spec = railSpec('whip'), railM = railMat(ctx, 'whip', RAIL_HEX), nk = Math.ceil(S / KB_LEN), kw = S / nk;
   ctx.add(outer);                                                                                         // the dynamic root: never merged, matrices live
 
@@ -142,7 +145,7 @@ export function buildLeaf(env) {
     rails.forEach((b, i) => { m4.compose(_p.set(b.s0, b.n, b.v), IDQ, _s.set(b.len, b.sy, 1)); im.setMatrixAt(i, m4); });
     im.instanceMatrix.needsUpdate = true; im.castShadow = true; im.receiveShadow = false; im.name = 'troitsky-leaf-rail'; im.frustumCulled = false; ctx.noOutline(im); body.add(im);
   }
-  const tris = P.tris + nb * 4 + (knock ? 2 * nk * 10 : 0);
+  const tris = P.tris + PW.tris + nb * 4 + (knock ? 2 * nk * 10 : 0);
   /** the bays at opening angle th: the dynamic boxes and (with knock) the pose of every STANDING record; the debris that lies on the moving leaf is swept away (see above) */
   const pose = (th) => {
     bodyMatrix(th);

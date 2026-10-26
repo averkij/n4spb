@@ -37,10 +37,10 @@ export async function build(ctx) {
   const QZONES = bridgeZones();                                          // the quay openings as the environment computes them (river.js bridgeZones: test(x, z, grow))
   const ZID = { novo: 'novo-konyushenny', zimny1: 'zimny-1', zimny2: 'zimny-2', 'bolsh-konyushenny': 'bolshoy-konyushenny' };
 
-  const flush = (P, name) => {
+  const flush = (P, name, waterAt = null) => {
     stats.tris += P.tris; (stats.per ||= {})[name] = P.tris;                  // triangles per bridge (services.bridges.stats.per)
     for (const k of P.b.values()) { const bad = k.pos.findIndex((v) => !Number.isFinite(v)); if (bad >= 0) console.warn(`[bridges] ${name}: NaN vertex in ${k.mat.name} at ${bad / 3 | 0}`); }
-    const meshes = P.build(root, { name: 'brg-' + name });
+    const meshes = P.build(root, { name: 'brg-' + name, waterY: waterAt, sub: waterAt === null ? null : (m) => ctx.noOutline(m) });      // waterAt: the piers of a bridge over a big river are cut at the water, the part under it takes no outline (kit.js build, docs/AREAS.md 15.z)
     // Bridge services retain their drawing closures for inspection. The
     // uploaded meshes own copies; construction arrays must not live with them.
     P.b.clear();
@@ -68,7 +68,7 @@ export async function build(ctx) {
   }
   // the bascule span of the Palace Bridge is built by module landmarksPalaceBridge when the page lists it (`leaves`, docs/AREAS.md 13.10); the strip keeps the closed bridge
   try {
-    const P = new Parts(); const info = buildPalace({ ctx, P, M, rails, waterY: waterY('neva'), leaves: Array.isArray(ctx.buildList) && ctx.buildList.includes('landmarksPalaceBridge') }); info.colliders(); flush(P, 'palace'); stats.colliders += info.info.colliders; list.push({ id: 'palace', name: 'Дворцовый мост', nameEn: 'Palace Bridge', x: info.x, z: info.z, at: info.at ? [info.at.x, info.at.z] : [info.x, info.z], B: info });
+    const P = new Parts(); const info = buildPalace({ ctx, P, M, rails, waterY: waterY('neva'), leaves: Array.isArray(ctx.buildList) && ctx.buildList.includes('landmarksPalaceBridge') }); info.colliders(); flush(P, 'palace', waterY('neva')); stats.colliders += info.info.colliders; list.push({ id: 'palace', name: 'Дворцовый мост', nameEn: 'Palace Bridge', x: info.x, z: info.z, at: info.at ? [info.at.x, info.at.z] : [info.x, info.z], B: info });
   } catch (err) { console.error('[bridges] palace failed:', err); failed.push('palace: ' + (err && err.stack || err)); }
   // The environment lays an invisible fallback deck (a walk box at y 0 + two parapet boxes y -2 .. 1.3) into a BRIDGE_ZONES row it believes unbuilt: the parapet boxes fence the pavements of the real deck.
   // Remove a fallback whose walk box centre lies on the Palace Bridge deck (colliders only).

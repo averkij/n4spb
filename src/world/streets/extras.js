@@ -99,7 +99,7 @@ export function buildStopMarks(P, stops) {
 /** Tram rails flush in the asphalt (docs/research/streets.md section 2: two dark grooves with a steel rail head, gauge 1.52 m): decal strips along TRAMWAYS, hidden under buildings;
  *  where a track runs beside the asphalt (a median) a 3.2 m wide setts bed is laid under it (bed: MeshBuilder-compatible MB with the cobble material). Returns the number of ways. */
 const BED_Y = 0.016;
-export function buildTramRails(net, P, Bed) {
+export function buildTramRails(net, P, Bed, isOwned = null) {
   const GROOVE = rgb('#2a2c2f');
   let n = 0;
   // the bed of a tram reservation (net.js tramReservation: Kronverksky pr. along the Alexander Park): ONE ribbon of setts over the whole width of the double track instead of a road
@@ -115,6 +115,7 @@ export function buildTramRails(net, P, Bed) {
   }
   for (const t of TRAMWAYS) {
     if (t.tunnel || t.layer < 0) continue;
+    if (isOwned && isOwned(t.id)) continue;                  // a tram way of a bridge that a module draws (the Troitsky Bridge, the 1st Sadovy Bridge): the module lays its own rails on its deck; here they would hang at ground level (y 0.05) over the river, in the gap of an open leaf, and their setts bed (3.2 m wide) would show as a grey strip across the water
     let pts = pairs(t.pts); if (pts.length < 2) continue;
     if (pts.length > 2) pts = chaikin(pts, 2, 40);
     pts = densify(pts, 2);
