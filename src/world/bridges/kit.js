@@ -150,10 +150,16 @@ export class Parts {
     }
     return this;
   }
-  /** one mesh per bucket (16 bit indices below 65k vertices) added to `parent`; returns the meshes */
+  /** one mesh per bucket (16 bit indices below 65k vertices) added to `parent`; returns the meshes.
+   *  o.waterY + o.sub (docs/AREAS.md 15.z): every bucket is cut at the water plane y = waterY and the part UNDER the water becomes a mesh of its own (name + '-sub', userData.submerged) that o.sub(mesh) may
+   *  take out of the outline pass (ctx.noOutline): the outline pass has no water, so the foot of a pier / a quay under the surface drew its contour lines THROUGH the water (a rectangle on the river) */
   build(parent, o = {}) {
     const meshes = [];
-    for (const k of this.b.values()) {
+    const cut = Number.isFinite(o.waterY) && typeof o.sub === 'function';
+    for (const k0 of this.b.values()) {
+      if (!k0.n) continue;
+      const parts = cut ? splitAtY(k0, o.waterY) : [{ k: k0, sub: false }];
+      for (const { k, sub } of parts) {
       if (!k.n) continue;
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(k.pos, 3));
@@ -163,11 +169,39 @@ export class Parts {
       g.computeBoundingSphere(); g.computeBoundingBox();
       const m = new THREE.Mesh(g, k.mat);
       m.castShadow = o.cast !== false && !k.mat.transparent; m.receiveShadow = o.receive !== false;
-      if (o.name) m.name = o.name;
+      if (o.name) m.name = sub ? o.name + '-sub' : o.name;
+      if (sub) { m.userData.submerged = true; o.sub(m); }
       parent.add(m); meshes.push(m);
+      }
     }
     return meshes;
   }
+}
+
+/** cut a bucket {mat, pos, nrm, uv, idx, n} at the plane y = w: [{ k: above, sub: false }, { k: below, sub: true }] (a triangle that crosses the plane is clipped into both halves; the others are copied once) */
+export function splitAtY(k, w) {
+  const mk = () => ({ mat: k.mat, pos: [], nrm: [], uv: [], idx: [], n: 0, map: new Map() });
+  const up = mk(), lo = mk(), E = 1e-4;
+  const vert = (o, i) => { let j = o.map.get(i); if (j === undefined) { j = o.n++; o.map.set(i, j); o.pos.push(k.pos[3 * i], k.pos[3 * i + 1], k.pos[3 * i + 2]); o.nrm.push(k.nrm[3 * i], k.nrm[3 * i + 1], k.nrm[3 * i + 2]); o.uv.push(k.uv[2 * i], k.uv[2 * i + 1]); } return j; };
+  const raw = (o, v) => { o.pos.push(v[0], v[1], v[2]); o.nrm.push(v[3], v[4], v[5]); o.uv.push(v[6], v[7]); return o.n++; };
+  const get = (i) => [k.pos[3 * i], k.pos[3 * i + 1], k.pos[3 * i + 2], k.nrm[3 * i], k.nrm[3 * i + 1], k.nrm[3 * i + 2], k.uv[2 * i], k.uv[2 * i + 1]];
+  for (let t = 0; t < k.idx.length; t += 3) {
+    const ia = [k.idx[t], k.idx[t + 1], k.idx[t + 2]], y = ia.map((i) => k.pos[3 * i + 1]);
+    if (y[0] >= w - E && y[1] >= w - E && y[2] >= w - E) { up.idx.push(vert(up, ia[0]), vert(up, ia[1]), vert(up, ia[2])); continue; }
+    if (y[0] <= w + E && y[1] <= w + E && y[2] <= w + E) { lo.idx.push(vert(lo, ia[0]), vert(lo, ia[1]), vert(lo, ia[2])); continue; }
+    const V = ia.map(get), above = [], below = [];
+    for (let e = 0; e < 3; e++) {
+      const p = V[e], q = V[(e + 1) % 3], pu = p[1] >= w, qu = q[1] >= w;
+      (pu ? above : below).push(p);
+      if (pu !== qu) { const s = (w - p[1]) / (q[1] - p[1]), m = p.map((x, d) => x + (q[d] - x) * s); m[1] = w; above.push(m); below.push(m); }
+    }
+    for (const [poly, o] of [[above, up], [below, lo]]) {
+      if (poly.length < 3) continue;
+      const ids = poly.map((v) => raw(o, v));
+      for (let i = 1; i + 1 < poly.length; i++) o.idx.push(ids[0], ids[i], ids[i + 1]);
+    }
+  }
+  return [{ k: up, sub: false }, { k: lo, sub: true }];
 }
 
 // ------------------------------------------------------------------------------------------------ 2D shapes in the facade plane

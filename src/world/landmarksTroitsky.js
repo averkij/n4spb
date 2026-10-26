@@ -20,7 +20,7 @@ import { buildTroitsky } from './landmarksTroitsky/bridge.js';
 import { buildLeaf } from './landmarksTroitsky/leaf.js';
 import { buildGates } from './landmarksTroitsky/gates.js';
 import { createService, addStopLines, stepWalker, stepCar, bodyState } from './landmarksTroitsky/service.js';
-import { TROITSKY, toWorld, toUV, FR, LEN, HW, U_HINGE, U_TIP, GATE_S, WALK_SLIP_DEG, slips } from './landmarksTroitsky/frame.js';
+import { TROITSKY, toWorld, toUV, FR, LEN, HW, U_HINGE, U_TIP, leafFoot, GATE_S, WALK_SLIP_DEG, slips } from './landmarksTroitsky/frame.js';
 import { WAY_IDS } from './landmarksTroitsky/groups.js';
 
 const URLQ = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams('');
@@ -35,7 +35,7 @@ export async function build(ctx) {
   // ---- the static bridge (everything but the leaf), its colliders and the knockable lamps
   const B = buildTroitsky({ ctx, P, M, rails, waterY });
   B.colliders();
-  const meshes = P.build(root, { name: 'troitsky' });
+  const meshes = P.build(root, { name: 'troitsky', waterY, sub: (m) => ctx.noOutline(m) });      // (the piers under the water: colour only, no contour lines through the river, docs/AREAS.md 15.z)
   for (const m of meshes) if (M.decalMats.has(m.material)) ctx.noOutline(m);
   rails.flush(root);
   ctx.addStatic(root);
@@ -100,10 +100,17 @@ export async function build(ctx) {
       return null;
     };
   };
+  // the shade the water shader lays under the deck (environment/water.js, zone 'troitsky') is cut where the leaf stands up: the open water between the leaf's foot and the pier it rests on is no longer under a deck (docs/AREAS.md 15.z)
+  const shadeGap = (th) => {
+    const sh = ctx.shared && ctx.shared.bridgeShade; if (!sh || !sh.setGap) return;
+    const far = leafFoot(th, {}).u1;
+    if (th < 0.01 || far >= U_TIP - 0.5) { sh.setGap('troitsky'); return; }
+    const a = toWorld(far, 0), b = toWorld(U_TIP, 0); sh.setGap('troitsky', a.x, a.z, b.x, b.z);
+  };
   ctx.onUpdate((dt, t) => {
     const night = ctx.shared && ctx.shared.uNight ? ctx.shared.uNight.value : 0;
     const r = svc.advance(dt > 0 ? Math.min(dt, 5) : 0, night);
-    if (first || r.th1 !== r.th0) { leaf.set(r.th1); if (wires) wires.set(r.th1); }
+    if (first || r.th1 !== r.th0) { leaf.set(r.th1); if (wires) wires.set(r.th1); shadeGap(r.th1); }
     gv.set(svc.clock.barrier, t);
     for (const ev of r.events) {
       if (ev === 'warn') gv.restore();      // the booms that a car broke in the last cycle stand again (docs/AREAS.md 13.11)

@@ -167,7 +167,7 @@ export async function build(ctx) {
   stats.stopLines = buildStopLines(mkPlan, paint); lap('stopLines');
   stats.manholes = buildManholes(net, paint); lap('manholes');
   stats.paintTris = pmark; lapMs('markings+crossings');
-  stats.tram = buildTramRails(net, paint, cobb);
+  stats.tram = buildTramRails(net, paint, cobb, (id) => isOwned(owned, id));
   const slab = new MB(true), paver = new MB(true), strip = new MB(true), ramp = new MB(), skirt = new MB(true);
   const SPG = new Map();                                                          // stops (9 m) and metro entrances (3.6 m) hashed in 12 m cells: nearStop is asked for every pavement sample
   for (const [x, z, r] of [...stops.map((s) => [s.x, s.z, 9]), ...entr.map((e) => [e[0], e[1], 3.6])]) { const k = Math.floor(x / 12) * 4096 + Math.floor(z / 12); let l = SPG.get(k); if (!l) SPG.set(k, (l = [])); l.push([x, z, r]); }

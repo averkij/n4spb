@@ -51,7 +51,7 @@ export function waterMaterial(ctx, field, opts = {}) {
     uDist: { value: f ? f.dist.texture : null }, uBox: { value: f ? new THREE.Vector4(f.box.x0, f.box.z0, f.box.x1, f.box.z1) : new THREE.Vector4() },
     uDistInv: { value: f ? new THREE.Vector2(1 / (f.dist.W * f.dist.res), 1 / (f.dist.H * f.dist.res)) : new THREE.Vector2() },
     uWallH: { value: opts.wallH ?? 3.4 }, uHasField: { value: f ? 1 : 0 }, uCut: { value: cut.map((p) => new THREE.Vector2(p[0], p[1])) },
-    uBr: { value: br }, uBrS: { value: brS }, uNBr: { value: zones.length },
+    uBr: { value: br }, uBrS: { value: brS }, uBrG: { value: Array.from({ length: 24 }, () => new THREE.Vector2(0, 0)) }, uNBr: { value: zones.length },
     uSkyLow: { value: C('#e6e2e4') }, uSkyMid: { value: C('#86b4e6') }, uSkyHigh: { value: C('#3f7fd2') },
   }]);
   // Share the field's canonical texture objects rather than keeping the texture
@@ -76,7 +76,7 @@ export function waterMaterial(ctx, field, opts = {}) {
       #include <common>
       #include <fog_pars_fragment>
       uniform float uTime, uNight, uWallH, uHasField, uChop, uNBr; uniform vec3 uSunDir, uDeep, uMid, uShallow, uShade, uShadeTeal, uSkyLow, uSkyMid, uSkyHigh, uFoam; uniform vec2 uFlow;
-      uniform sampler2D uDist; uniform vec4 uBox; uniform vec2 uDistInv; uniform vec2 uCut[4]; uniform vec4 uBr[24]; uniform vec2 uBrS[24];
+      uniform sampler2D uDist; uniform vec4 uBox; uniform vec2 uDistInv; uniform vec2 uCut[4]; uniform vec4 uBr[24]; uniform vec2 uBrS[24]; uniform vec2 uBrG[24];
       ${DIST_ATLAS_GLSL}
       varying vec3 vW;
       float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -156,6 +156,8 @@ export function waterMaterial(ctx, field, opts = {}) {
           if (float(bi) >= uNBr) break;
           vec4 B = uBr[bi]; vec2 BS = uBrS[bi]; vec2 p = vW.xz - B.xy;
           float da = abs(dot(p, B.zw)) - BS.y, dp = abs(dot(p, vec2(-B.w, B.z))) - BS.x;
+          // the OPEN GAP of a bascule bridge (uBrG = [from, to] along the deck axis from the zone centre, set by setGap below; (0, 0) = none): no deck over the water there, so no shade: da is pushed to 5 m (the full soft width) 4 m inside the gap
+          float pa = dot(p, B.zw); da = max(da, 5.0 * clamp(min(pa - uBrG[bi].x, uBrG[bi].y - pa) / 4.0, 0.0, 1.0));
           under = max(under, 1.0 - smoothstep(0.0, 5.0, max(max(da, dp), 0.0)));
         }
         col = mix(col, col * vec3(0.16, 0.2, 0.26), under);
@@ -165,6 +167,7 @@ export function waterMaterial(ctx, field, opts = {}) {
       }`,
   });
   m.name = 'env-water-' + (opts.key || 'fontanka');
+  m.userData.zoneIds = zones.map((z) => z.id);      // (the shade zones of this water: setGap below finds a zone by its id)
   return m;
 }
 
@@ -172,6 +175,20 @@ export function buildWater(ctx, root, field) {
   const T = ctx.THREE || THREE;
   const all = waterCuts(), xs = axisFor(field.box.x0, field.box.x1), zs = axisFor(field.box.z0, field.box.z1), nx = xs.length - 1;
   const out = { bodies: 0, triangles: 0, meshes: [] };
+  /** the shade under the deck of a bascule bridge follows its leaves (docs/AREAS.md 15.z): setGap(id, ax, az, bx, bz) opens the stretch of the zone with that id (a BRIDGE_ZONES / BRIDGE_SHADES id) between the two world points a and b on its axis (the open water between the raised leaves); setGap(id) closes it again. Published as ctx.shared.bridgeShade. */
+  const gaps = new Map();
+  out.setGap = (id, ax, az, bx, bz) => {
+    for (const m of out.meshes) {
+      const i = m.material.userData.zoneIds.indexOf(id); if (i < 0) continue;
+      const B = m.material.uniforms.uBr.value[i], G = m.material.uniforms.uBrG.value[i];
+      if (ax === undefined) { G.set(0, 0); continue; }
+      const pa = (x, z) => (x - B.x) * B.z + (z - B.y) * B.w;      // (the shader's dot(p, B.zw), p = world xz - zone centre)
+      const a = pa(ax, az), b = pa(bx, bz);
+      G.set(Math.min(a, b), Math.max(a, b));
+    }
+    gaps.set(id, ax === undefined ? null : [ax, az, bx, bz]);
+  };
+  out.gaps = gaps;
   for (const key of Object.keys(WATERWAYS)) {
     const cutsAll = all.filter((c) => c.key === key && c.kind !== 'slope'); if (!cutsAll.length) continue;
     const buckets = bucketCuts(cutsAll, xs, zs), y = WATERWAYS[key].water, P = [];
@@ -197,6 +214,7 @@ export function buildWater(ctx, root, field) {
     m.name = 'env-water-' + key; m.receiveShadow = false; m.castShadow = false; m.frustumCulled = false; ctx.noBatch(m); ctx.noOutline(m); root.add(m);
     out.bodies++; out.triangles += n; out.meshes.push(m);
   }
+  if (ctx.shared) ctx.shared.bridgeShade = out;
   return out;
 }
 import { clipHalf } from './clip.js';

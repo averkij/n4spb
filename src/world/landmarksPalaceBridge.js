@@ -48,10 +48,17 @@ export async function build(ctx) {
   const walk = bodyState(), car = bodyState(), pp = ctx.player && ctx.player.position;
   let peopleHooked = false, first = true, sweep = 0, swept = 0;
   const hook = () => { const nav = ctx.services.people && ctx.services.people.sim && ctx.services.people.sim.nav; peopleHooked = !!nav && hookPeople(nav, svc, 'palacebridge'); };
+  // the shade the water shader lays under the deck (environment/water.js, zone 'palace-deck') is cut between the two tips while the leaves stand up: no deck over that water (docs/AREAS.md 15.z)
+  const shadeGap = (th) => {
+    const sh = ctx.shared && ctx.shared.bridgeShade; if (!sh || !sh.setGap) return;
+    const A = svc.B.leaves[0], Bl = svc.B.leaves[1], fa = A.foot(th, {}).far, fb = Bl.foot(th, {}).far;
+    if (th < 0.01 || fb - fa < 0.5) { sh.setGap('palace-deck'); return; }
+    const a = toWorld(fa, 0), b = toWorld(fb, 0); sh.setGap('palace-deck', a.x, a.z, b.x, b.z);
+  };
   ctx.onUpdate((dt, t) => {
     const night = ctx.shared && ctx.shared.uNight ? ctx.shared.uNight.value : 0;
     const r = svc.advance(dt > 0 ? Math.min(dt, 5) : 0, night);
-    if (first || r.th1 !== r.th0) { leaf.set(r.th1); if (wires) wires.set(r.th1); }
+    if (first || r.th1 !== r.th0) { leaf.set(r.th1); if (wires) wires.set(r.th1); shadeGap(r.th1); }
     gv.set(svc.clock.barrier, t);
     for (let i = 0; i < r.events.length; i++) {
       const ev = r.events[i];

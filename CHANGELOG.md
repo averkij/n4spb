@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **2.3.2** (2026-10-26, patch): open bascule bridges: no tram rails or dark water rectangle under the raised span, no contour lines of the pier feet through the water
 - **2.3.1** (2026-10-26, patch): motor boat: the submerged outboard leg no longer draws static contours through the water; the propeller spins with speed
 - **2.3.0** (2026-10-26, minor): the Prachechny, Upper Swan and 2nd Engineer bridges are drawn as granite arch bridges with breakable parapets (they were bare slabs)
 - **2.2.2** (2026-10-26, patch): motor boat: quieter engine, no helmsman figure while it is unused, the hull is closed from every side, a calm windshield without moving glints
