@@ -43,7 +43,9 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export async function build(ctx) {
   const { camera, physics: ph, L } = ctx, THREE_ = THREE;
   const player = ctx.playerObj || null;                       // set by main.js before the modules are built
-  const garage = await loadGarage(ctx);                       // drive/cars/index.js: the coupe + whichever of the truck / Lada load
+  // a page reached in a car by an edge gate (docs/AREAS.md 14, 15.z) must put the player into THAT car even when this area's garage does not keep it (admiralty: ONE purple Zhiguli): the carried car is built too, parked at the arrival pose
+  const hoCar = ctx.handoff && ctx.handoff.mode === 'car' && ctx.handoff.ho && ctx.handoff.ho.car && ctx.handoff.pose ? ctx.handoff : null;
+  const garage = await loadGarage(ctx, { carry: hoCar ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // drive/cars/index.js: the coupe + whichever of the truck / Lada load
   if (!garage.length) { console.warn('[drive] the area has no garage (GARAGE.poses): no cars'); return; }      // an area without cars: no drive service (the callers test ctx.drive)
   const wrecks = await getCarWrecks(ctx);
   // ONE VEHICLE PER CAR: its own model, handling state (parked pose included), damage state, parked physics box. V is the car the player drives or last drove; the closure
@@ -86,7 +88,7 @@ export async function build(ctx) {
     v.box = ph.addBox(p.x + sy * spec.centerZ, p.z + cy * spec.centerZ, spec.W + 0.08, spec.len + 0.08, p.yaw, p.y - draft, p.y - 0.03 + spec.hgt);
   };
   const dropBox = (v = V) => { if (v.box) { ph.remove(v.box); v.box = null; } };
-  for (const v of vehicles) addBox(v);
+  for (const v of vehicles) if (!v.def.carried) addBox(v);      // (the carried car of a hand-off has no box until it is left somewhere: the player's own spot is not a wall for him)
   /** make `v` the current car (the closure names follow it); a car parked since its last drive keeps its dents */
   function use(v) {
     if (v === V) return;
