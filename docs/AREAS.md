@@ -1348,3 +1348,10 @@ The arrival has no rectangle: the player lands at the **same x, z, yaw, pitch**;
 * `sessionStorage['n4spb.seam']` = `{ img: <data: URL of the JPEG>, w, h, t: Date.now(), from, to, p }` (`p` = where the origin page left the bar, `SEAM_LEAD` 0.12), written by the origin page, read by the destination's inline script and cleared at `finish()`. Every access is wrapped: a blocked or full storage only costs the picture (plain veil).
 * `?gateprompt=1` (development) restores the old passive chip (#gatechip, key N) and the `ui.confirm` question; `Загрузить` runs the same `go()`. Default: no question, no chip.
 * `?devgates=1` keeps g0 (the strip loops back to the same page), the quickest way to see the whole flow; `?gates=0` / `?gates=1` as before.
+
+## 15.wasted Junked car: the "Потрачено" label
+
+* `src/world/drive/wasted.js` (wired in `drive.js`): the step the player's car reaches 100% body damage (`damage.amount >= 0.999`, the worst zone crushed through) shows a centred red GTA-style label with the exact text "Потрачено" for 5 s of game time (DOM/CSS, `pointer-events: none`, fade-in with a scale-in, grey vignette, fade-out), once per wreck event, plus a toast "Нажмите J — ремонт".
+* From that moment `wasted.gate()` replaces the input with the held-car input (`holdInput`): gas, steering, nitro and hops are ignored, the car brakes to a standstill and never reverses. E (exit), the horn and J / the Repair buttons work as before; `api.repair()` has no rule against a wrecked car (only "stop first"), the repair lifts the hold and removes a running label at once.
+* The label is also removed on exit, on the R respawn (`place`), and is not shown when a wrecked car is entered or arrives through a hand-off (the state is adopted silently, the car stays immobile).
+* Check: `node tools/drive-wasted-test.mjs` (CPU). By hand: drive at full speed into a wall three or four times.
