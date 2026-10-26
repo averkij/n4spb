@@ -109,6 +109,8 @@ const BUDGET = { environment: 500e3, streets: 500e3, city: 600e3, landmarksA: 40
   landmarksPalaceBridge: 5.7e3,
   // the south-west modules ported for Admiralty-Haymarket (measured 2026-10-26: Nikolsky 225,068, Mariinsky 201,843, New Holland 135,150, Yusupov 80,420, Trinity-Izmailovsky + the Technological Institute 164,863) + about 15 %
   landmarksNikolsky: 260e3, landmarksMariinsky: 232e3, landmarksNewHolland: 156e3, landmarksYusupov: 93e3, landmarksCentralSouth: 190e3,
+  // the Academy sphinx pier + the Academy of Arts (Admiralty-Haymarket, docs/AREAS.md 15.z, measured: Academy 62,748 + pier 54,590 = 117,210) + about 15 %
+  landmarksAcademy: 135e3,
   // the Tauride Palace + the Paradny quarter (T1 of docs/TAURIDE-REMAKE.md, measured: 621,713 incl. the courts 29 k and the palace 23 k; the garden is not in it, it comes with the later phases and gets its own allowance)
   landmarksTauride: 835e3 };      // T8b (the garden nursery, a user fix): measured 758,672 = 738,046 + the nursery's 20,626 (floor 20, frames 5,150, glass 3,714, trees 11,224, buildings and details 518); T6 (the Tauride remake): measured 741,242 after the fence, the furniture and the monuments (T5 695,581 + the fence 15.7 k + the furniture 19.1 k + the monuments 10.8 k), the tripwire = the measure + 10 % (T5: 765 k = 695,273 + 10 %); 815 k + the 20.6 k of the nursery = 835 k
 

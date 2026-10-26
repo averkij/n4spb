@@ -72,6 +72,11 @@ export const WATER = {
   riverKeys: obj(W.riverKeys),
   /** [waterway key, ...]: the bridge road pieces (OSM bridge=yes) claimed by eastBridges that cross water of these keys make auto quay openings (environment/river.js); empty = none */
   riverBridgeZones: arr(W.riverBridgeZones),
+  /** [{ id, key?, ring: [[x, z], ...] | [x, z, ...] }]: ground that a landmark module of the area turns into its OWN descent / stair pit (Admiralty-Haymarket: the Academy sphinx pier, landmarksAcademy/groups.js WATER_RINGS): the ring counts
+   *  as water of `key` (default 'neva': a hole in the ground, the water surface under it, layout.inRiver), NONE of its edges is a bank and the quay opens at it (environment/waterways.js ownerWaterAt); the owner draws the walls, steps and colliders. */
+  ownerRings: arr(W.ownerRings),
+  /** [{ id, c: [x, z], r } | { id, c, ax: [ux, uz], hl, hw }]: no generated descent, landing stage or boat here (a sight's own pier / berth; environment/waterways.js keepOut) */
+  keepOut: arr(W.keepOut),
 };
 
 export const ZONES = {

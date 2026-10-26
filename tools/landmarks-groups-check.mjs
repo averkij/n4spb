@@ -12,7 +12,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CITY = await import(pathToFileURL(path.join(root, 'src/world/data/city.js')).href);
 const L = await import(pathToFileURL(path.join(root, 'src/world/layout.js')).href);
 const A = await import(pathToFileURL(path.join(root, 'src/world/area.js')).href);
-const KEPT = resolveTest(A, L).kept;
+const TESTD = resolveTest(A, L), KEPT = TESTD.kept;
+// TEST.extentSlack { group key: metres }: a claimed building may reach that far beyond the data extent. The data cut never cuts a building (it takes it whole when its centroid lies in the extent: docs/AREAS-DATA.md),
+// so a vertex beyond the extent edge is no half-drawn building; the area lists the group and the reason (Admiralty-Haymarket: the Academy of Arts, whose north tip lies 7 m beyond the 120 m margin)
+const SLACK = TESTD.extentSlack || {};
 console.log(`area ${A.ID}: ${KEPT.length} kept modules`);
 
 // every id of every data array (buildings, roads, monuments, POIs, water, green ...)
@@ -20,7 +23,7 @@ const known = new Map();
 for (const [k, v] of Object.entries(CITY)) if (Array.isArray(v)) for (const r of v) if (r && typeof r.id === 'string') known.set(r.id, k);
 const byId = new Map(CITY.BUILDINGS.map((b) => [b.id, b]));
 
-const inRects = (rs, x, z) => rs.some((r) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1);
+const inRects = (rs, x, z, m = 0) => rs.some((r) => x >= r.x0 - m && x <= r.x1 + m && z >= r.z0 - m && z <= r.z1 + m);
 let problems = 0;
 const bad = (m) => { problems++; console.log('PROBLEM', m); };
 for (const mod of KEPT) {
@@ -36,7 +39,7 @@ for (const mod of KEPT) {
     // geometry of the members (ids + parts): vertices inside the play rectangles / the extent
     let n = 0, inPlay = 0, inExt = 0;
     for (const b of L.groupMembers(g.key)) for (const p of b.polys || []) for (let i = 0; i < p.o.length; i += 2) {
-      n++; if (inRects(CITY.PLAY_RECTS, p.o[i], p.o[i + 1])) inPlay++; if (inRects(CITY.EXTENT_RECTS, p.o[i], p.o[i + 1])) inExt++;
+      n++; if (inRects(CITY.PLAY_RECTS, p.o[i], p.o[i + 1])) inPlay++; if (inRects(CITY.EXTENT_RECTS, p.o[i], p.o[i + 1], SLACK[g.key] || 0)) inExt++;
     }
     if (n && inExt < n) bad(`${mod}/${g.key}: ${n - inExt} of ${n} footprint vertices lie outside the data extent`);
     console.log(`${mod.padEnd(20)} ${g.key.padEnd(24)} ids ${g.ids.length - missIds.length}/${g.ids.length} osm ${g.osm.length - missOsm.length}/${g.osm.length} members ${L.groupMembers(g.key).length} verts in play ${n ? Math.round(100 * inPlay / n) : '-'}% extent ${n ? Math.round(100 * inExt / n) : '-'}%`);

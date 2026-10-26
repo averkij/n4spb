@@ -2,7 +2,7 @@
 // distance to the nearest facade. Uses layout.groundFootprints() (ground buildings incl. landmarks), a 16 m edge grid.
 import * as L from '../layout.js';
 import { RIVER } from '../data/city.js';
-import { slopeRings } from '../environment/waterways.js';
+import { slopeRings, ownerWater } from '../environment/waterways.js';
 
 const CELL = 16;
 let G = null;
@@ -19,6 +19,8 @@ function grid() {
   for (const r of RIVER || []) for (const p of r.polys || []) for (const ring of [p.o]) for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) add(ring[j], ring[j + 1], ring[i], ring[i + 1], 1);
   // grass slopes of the canals (Swan Canal, Moika at the Mikhailovsky Garden: environment/waterways.js slopeRings, water edge to slope top + 0.3 m): the pavement stops at the slope like at a quay
   for (const ring of slopeRings()) for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) add(ring[j], ring[j + 1], ring[i], ring[i + 1], 1);
+  // the stair pits that a landmark module cuts into the quay (WATER.ownerRings of the area, waterways.js ownerWater(): the Academy sphinx pier): the pavement stops at the pit like at a quay; none in the other areas
+  for (const w of ownerWater()) for (let i = 0, j = w.o.length - 2; i < w.o.length; j = i, i += 2) add(w.o[j], w.o[j + 1], w.o[i], w.o[i + 1], 1);
   return G;
 }
 

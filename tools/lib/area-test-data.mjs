@@ -48,6 +48,7 @@ export function testShapeProblems(t) {
   if (t.nearestRoad !== undefined && !(pt(t.nearestRoad.at) && Array.isArray(t.nearestRoad.names) && t.nearestRoad.names.length)) p.push('nearestRoad: { at: [x, z], names: [...] }');
   if (t.roadsNear !== undefined && !(pt(t.roadsNear.at) && t.roadsNear.r > 0 && t.roadsNear.min >= 1)) p.push('roadsNear: { at: [x, z], r, min }');
   for (const k of ['riverAny', 'riverBed']) if (t[k] !== undefined && !(Array.isArray(t[k]) && t[k].length && t[k].every(pt))) p.push(`${k}: a list of [x, z]`);
+  if (t.extentSlack !== undefined && !(t.extentSlack && typeof t.extentSlack === 'object' && Object.values(t.extentSlack).every((m) => Number.isFinite(m) && m >= 0))) p.push('extentSlack: { group key: metres >= 0 }');
   if (t.streetLevelAt !== undefined && !pt(t.streetLevelAt)) p.push('streetLevelAt: [x, z]');
   if (t.farPoint !== undefined && !pt(t.farPoint)) p.push('farPoint: [x, z]');
   return p;

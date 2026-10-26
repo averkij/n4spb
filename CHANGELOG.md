@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **2.2.0** (2026-10-26, minor): Admiralty gets the Egyptian sphinx pier on Universitetskaya Embankment (stairs into the Neva, griffins, breakable railing and lamps) and the Academy of Arts as scenery
 - **2.1.1** (2026-10-26, patch): the committed bake of all four live areas (revision 007dfbc53b72c45b8ab2); download-size estimates updated
 - **2.1.0** (2026-10-26, minor): new live area Vladimirsky-Ligovka (Владимирский–Лиговка, vladimirsky.html) with the Obvodny canal and the south Fontanka bridges; edge gates between all five overlapping pairs of the four areas (Admiralty-Haymarket, Palace-Liteyny, Smolninskoye, Vladimirsky-Ligovka); the Lomonosov Bridge deck in Admiralty
 - **2.0.0** (2026-10-26, major): new live area Admiralty-Haymarket (Адмиралтейский–Сенной, admiralty.html): Admiralty, St Isaac's, Mariinsky, New Holland, Yusupov, Nikolsky, Sennaya, the south-west canals and the Blagoveshchensky Bridge

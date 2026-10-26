@@ -5,7 +5,8 @@
 //  Naval Cathedral, the Haymarket (Sennaya) and the Trinity-Izmailovsky Cathedral. 7.3 km2 of play rectangles (src/areas/registry.js REGISTRY.admiralty.play, cut from the map outline by tools/area-shape.mjs --k 46),
 //  the data cut straight from the source project by tools/area-data-cut.mjs.
 //  It starts from the palace's area module: the landmark modules whose sights lie in the territory are listed in MODULES with their claims in GROUPS (a module that is group-aware draws only what is claimed; the
-//  modules ported for this area, landmarksMariinsky / Nikolsky / NewHolland / Yusupov / CentralSouth, draw their whole group list, and every group of it lies in this territory). This area contains NO railway station:
+//  modules ported for this area, landmarksMariinsky / Nikolsky / NewHolland / Yusupov / CentralSouth, draw their whole group list, and every group of it lies in this territory; landmarksAcademy draws two of its five
+//  sub-groups, the Egyptian sphinx pier on Universitetskaya Embankment and the Academy of Arts behind it, docs/AREAS.md 15.z). This area contains NO railway station:
 //  no `rail`, no landmarksA / B, and ONE purple Zhiguli at the spawn (docs/AREAS.md 13.4). The sights of the neighbours (the Russian Museum, the Saviour on Blood, the castle, the Summer Garden, the Mars Field, the
 //  Tauride Garden) are not built here.
 //  admiralty.html remaps ./src/world/area.js to this file with an import map (tools/area.mjs does the same for the headless tools). PURE DATA: no three.js, no import of layout.js (layout.js imports this
@@ -25,6 +26,7 @@ import { GROUPS_LIST as G_NIKOLSKY } from '../../world/landmarksNikolsky/groups.
 import { GROUPS_LIST as G_NEWHOLLAND } from '../../world/landmarksNewHolland/groups.js';
 import { GROUPS_LIST as G_YUSUPOV } from '../../world/landmarksYusupov/groups.js';
 import { GROUPS_LIST as G_CENTRALSOUTH } from '../../world/landmarksCentralSouth/groups.js';
+import * as G_ACADEMY from '../../world/landmarksAcademy/groups.js';
 
 /** Area id: <html data-area> must equal it (main.js refuses to run a page whose area module is another one) and the registry (src/areas/registry.js) lists it. */
 export const ID = 'admiralty';
@@ -52,6 +54,7 @@ export const MODULES = [
   'landmarksNewHolland', // New Holland island
   'landmarksYusupov', // Yusupov Palace on the Moika
   'landmarksCentralSouth', // Trinity-Izmailovsky Cathedral and the Technological Institute
+  'landmarksAcademy', // the Egyptian sphinxes and their pier on Universitetskaya Embankment + the Academy of Arts behind them (docs/AREAS.md 15.z)
   'bridges',      // the bridges of the area: the Moika, Griboedov, Kryukov, Admiralty and Fontanka bridges, Blue, Kazansky, the Palace Bridge ...
   'landmarksPalaceBridge', // the Palace Bridge's two opening bascule leaves (docs/AREAS.md 13.10): `bridges` leaves the central span to it; after streets (the NPC stop lines) and bridges, before traffic / people
   'props',        // benches, bins, kiosks, bus shelters, tourist stalls, billboards, flower baskets
@@ -71,6 +74,7 @@ export const LABELS = {
   landmarksNewHolland: 'Новая Голландия',
   landmarksYusupov: 'Юсуповский дворец',
   landmarksCentralSouth: 'Троице-Измайловский собор, Технологический институт',
+  landmarksAcademy: 'Египетские сфинксы, Академия художеств',
   landmarksPalaceBridge: 'Дворцовый мост · разводные пролёты',
   drive: 'машина на старте',
 };
@@ -129,6 +133,9 @@ GROUPS.bridges = G_BR.filter((b) => BRIDGE_KEYS.has(b.key)).concat(GROUPS_SW, GR
 // (the Vitebsky station lies 200 m outside the data: its sub-group is not claimed)
 GROUPS.landmarksNikolsky = G_NIKOLSKY; GROUPS.landmarksMariinsky = G_MARIINSKY; GROUPS.landmarksNewHolland = G_NEWHOLLAND; GROUPS.landmarksYusupov = G_YUSUPOV;
 GROUPS.landmarksCentralSouth = G_CENTRALSOUTH.filter((g) => g.key !== 'central-vitebsky');
+// the Egyptian sphinx pier (inside the territory) and the Academy of Arts behind it (its whole data, 40 m outside the play rectangles, in the scenery margin); the garden, Trezzini Square and the House of Academicians lie outside the
+// data (their buildings are absent or beyond the margin): not claimed, the module builds only the sub-groups listed here
+GROUPS.landmarksAcademy = G_ACADEMY.GROUPS_LIST.filter((g) => g.key === 'academy-of-arts' || g.key === 'sphinx-pier');
 
 /**
  * The HUD location table (first match wins), built with the layout helpers `h` ({ NAMES, SUBGROUPS, _sqPolys, _groupPolys, _named, _areaPolys, _shoreOf, _deck, inRiver, shoreDist }).
@@ -175,6 +182,10 @@ export function makeAreas(h) {
   { name: 'Троице-Измайловский собор · Trinity-Izmailovsky Cathedral', c: [-2540, 1727], r: 60 },
   ..._groupPolys(SUBGROUPS['central-trinity'], 14).map((r) => ({ name: 'Троице-Измайловский собор · Trinity-Izmailovsky Cathedral', ...r })),
   ..._groupPolys(SUBGROUPS['central-institute'], 10).map((r) => ({ name: 'Технологический институт · Technological Institute', ...r })),
+  // the Academy of Arts (40 m outside the play rectangles: seen from the embankment) and the Egyptian sphinx pier; the embankment road row stands BEFORE the river rows (the Fontanka row would name the Neva quay there)
+  ..._groupPolys(SUBGROUPS['academy-of-arts'], 8).map((r) => ({ name: 'Академия художеств · Academy of Arts', ...r })),
+  { name: 'Египетские сфинксы · Egyptian Sphinxes', c: [-3378.7, -507.7], r: 30 },
+  { name: 'Университетская набережная · Universitetskaya Embankment', road: NAMES.streets.universitetskayaNab },
   ..._areaPolys(/Дворцовая площадь/).map((o) => ({ name: 'Дворцовая площадь · Palace Square', poly: o, margin: 6 })),
   ..._areaPolys(/Исаакиевская площадь/).map((o) => ({ name: 'Исаакиевская площадь · St Isaac\'s Square', poly: o, margin: 6 })),
   ..._areaPolys(/Сенатская площадь|площадь Декабристов/).map((o) => ({ name: 'Сенатская площадь · Senate Square', poly: o, margin: 6 })),
@@ -270,6 +281,8 @@ export function makeViews({ yawToward }) {
     { key: 'Place.library', label: 'Российская национальная библиотека · Фонтанка', x: -372, z: -300, yaw: yawToward(-372, -300, -334, -311), pitch: 8 },
     { key: 'Place.alexandrinsky', label: 'Александринский театр · Екатерининский сад', x: -801, z: -95, yaw: yawToward(-801, -95, -844, 70), pitch: 8 },
     { key: 'Place.hermitage', label: 'Большой Эрмитаж · Дворцовая набережная', x: -2039, z: -1084, yaw: yawToward(-2039, -1084, -1985, -1050), pitch: 10 },
+    // the Egyptian sphinx pier on Universitetskaya Embankment: the west sphinx six metres to the right, the stair pit to the Neva ahead, the Academy of Arts behind the camera
+    { key: 'Place.sphinxes', label: 'Египетские сфинксы · Университетская набережная', x: -3407.5, z: -497.9, yaw: yawToward(-3407.5, -497.9, -3386.8, -504.1), pitch: 6 },
   ];
   return { HERO, VIEWS };
 }
@@ -293,14 +306,18 @@ export const TEST = {
     { id: 'r3164896', by: 'landmarksNewHolland', group: 'nh-warehouses' },
     { id: 'w123243367', by: 'landmarksYusupov', group: 'yusupov-palace' },
     { id: 'r16834195', by: 'landmarksCentralSouth', group: 'central-trinity' },
+    { id: 'r165182', by: 'landmarksAcademy', group: 'academy-of-arts' },
     { id: 'w362796524', by: 'bridges', group: 'palace' }, { id: 'w181173664', by: 'bridges', group: 'kazansky' },
   ],      // one row per landmark module and its main sub-group
   viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'ShiftDigit1', 'ShiftDigit2', 'ShiftDigit3', 'ShiftDigit4', 'ShiftDigit5', 'ShiftDigit6',
-    'ShiftDigit7', 'ShiftDigit8', 'ShiftDigit9', 'Place.library', 'Place.alexandrinsky', 'Place.hermitage'],
+    'ShiftDigit7', 'ShiftDigit8', 'ShiftDigit9', 'Place.library', 'Place.alexandrinsky', 'Place.hermitage', 'Place.sphinxes'],
   mustHaveAreas: [
     { x: -441, z: -93, has: 'аничков' }, { x: -2322, z: -805, has: 'адмиралтейство' }, { x: -2523, z: -216, has: 'исаакиевский' }, { x: -2744, z: -443, has: 'всадник' },
     { x: -1484, z: -200, has: 'казанский' }, { x: -3097, z: 735, has: 'мариинский' }, { x: -1746, z: 718, has: 'сенная' }, { x: -2880, z: 1096, has: 'никольский' }, { x: -2861, z: 412, has: 'юсуповский' },
+    { x: -3378.7, z: -507.7, has: 'сфинкс' }, { x: -3420, z: -502, has: 'университетская' },
   ],
+  // the Academy of Arts lies in the scenery margin: its north tip is 7 m beyond the 120 m margin of the data (the cut takes a building whole by its centroid), 30 m of slack for that group only
+  extentSlack: { 'academy-of-arts': 30 },
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
   roadsNear: { at: [-2330, -300], r: 75, min: 3 },
 };
@@ -396,6 +413,10 @@ export const WATER = {
   slopeReaches: SLOPE_REACHES,
   // the RIVER records whose data key is null: the Kryukov Canal, the Admiralty and Novo-Admiralty canals round New Holland and the inner canals of the island (East, South)
   keyByName: { 'Крюков канал': 'kryukov', 'Адмиралтейский канал': 'admiralty', 'Ново-Адмиралтейский канал': 'admiralty', 'Восточный канал': 'nh-inner', 'Южный канал': 'nh-inner' },
+  // the Egyptian sphinx pier of landmarksAcademy (docs/AREAS.md 15.z): the stair pit in the Neva quay counts as Neva water (a hole in the ground, a descent the module fills with granite steps), the quay opens at it,
+  // and no generated descent / landing stage / boat is made at the pier front (the module's groups.js WATER_RINGS / KEEP_OUT: pure data, the same numbers)
+  ownerRings: G_ACADEMY.WATER_RINGS,
+  keepOut: G_ACADEMY.KEEP_OUT,
 };
 
 // ---------------------------------------------------------------- PEOPLE (people.js DENSITY, people/zones.js)
