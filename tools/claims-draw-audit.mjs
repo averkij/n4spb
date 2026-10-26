@@ -94,6 +94,7 @@ const OWNER_SKIPS = {
   strip: {},
   palace: {},      // checked at 320efb6: every claimed record of the owners that are drawn is drawn; the NOT-drawn ones are warnings (the castle's lines, the Summer Garden's lawns, a point), none is an owner skip
   smolny: {},      // same: only a warning (the station's point n21596808)
+  admiralty: {},      // checked at the first run: every claimed record of the owners that are drawn is drawn; the NOT-drawn ones are warnings (two lawns of the Alexander Garden w1252216144 / w1252216153 in landmarksH, one lawn of the Teatralnaya gardens w1287359790), none is an owner skip
 };
 /** unclaimed buildings a landmark module is known to cover (printed, not red); keyed by area then id: { module, why } */
 const KNOWN_UNCLAIMED = {
@@ -112,6 +113,12 @@ const KNOWN_UNCLAIMED = {
     w30353981: { module: 'landmarksK', why: 'the Winkler fence piers of the Mikhailovsky garden (landmarksK/fence.js winklerRun) run along and through the OSM outline of the Marso Polo restaurant (Griboedov quay 2v, h 3.3), which city draws: a fence, not a second building (same module and data as the strip)' },
     w93445471: { module: 'northBridges', why: 'the Liteyny Bridge (module northBridges, a verbatim port; 36 m wide deck, x -150 .. -114) clips the west corner of Shpalernaya 22 (h 9.9, bbox x -115 .. -87, z -1928 .. -1869) along its ramp edge (centroids y 0.5 .. 2 m and above, up to about 2 m inside the outline): the OSM outline overlaps the modelled carriageway, city draws the house. A real, small clip (docs/AREAS.md 13), not a second building' },
     w93452391: { module: 'northBridges', why: 'the Liteyny Bridge deck clips the east corner of Liteyny 1/20 (h 9.9, bbox x -231 .. -146, z -1916 .. -1862) along its ramp edge (y about 0 .. 2 m and above, up to about 4 m inside the outline): the same overlap of the OSM outline and the modelled carriageway. A real, small clip, not a second building' },
+  },
+  admiralty: {
+    // St Isaac's Square: the same module and the same data as the strip (landmarksJ/houses.js draws its own house walls on the outline of Bolshaya Morskaya 37 and its parts, which city draws too): the strip's finding of M7, unchanged
+    r1251285: { module: 'landmarksJ', why: 'landmarksJ/houses.js draws its own house walls on the outline of Bolshaya Morskaya 37 (r1251285, skip: 1, and its parts w232367033 / w232367034, which city draws): the M7 finding of the strip, the same module and data in Admiralty-Haymarket' },
+    w232367033: { module: 'landmarksJ', why: 'part of r1251285, see above' },
+    w232367034: { module: 'landmarksJ', why: 'part of r1251285, see above' },
   },
   strip: {
     // findings of the first run (M7): pre-existing conditions of the strip, listed here so that the audit prints them as notes; a claim (or a removal) by the owner turns the note off

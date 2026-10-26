@@ -91,6 +91,8 @@ const BUDGET_AREA = {
   north: { landmarksOktyabrsky: 57e3 },
   // the two live areas (measured at 320efb6 with `node tools/area.mjs <id> tools/check.mjs --area-modules`, + about 15 %): their territories are 7.0 and 9.4 km2 against the strip's ~2 km2, so the generic modules build 2 to 2.5 times the strip's triangles
   palace: { environment: 890e3, streets: 1.17e6, city: 1.3e6, props: 410e3 },      // measured: environment 776,743, streets 1,013,573, city 1,128,586, props 353,786 (the Summer Garden 392 k and the Mars Field 270 k have no entry: no other area builds them)
+  // Admiralty-Haymarket (docs/AREAS.md 15.2; measured with `node tools/area.mjs admiralty tools/check.mjs --area-modules`, + about 15 %): 7.3 km2 with the Neva, the Moika, the Griboedov, Kryukov and Admiralty canals and the Fontanka
+  admiralty: { environment: 1.25e6, streets: 1.27e6, city: 1.55e6, props: 380e3 },      // measured: environment 1,084,289, streets 1,104,532, city 1,342,315, props 329,830
   smolny: { streets: 1.25e6, city: 1.42e6, landmarksOktyabrsky: 57e3 },      // measured: streets 1,088,461, city 1,237,047, landmarksOktyabrsky 47,001 (with the Kapodistrias monument, as in the north)
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;
@@ -104,6 +106,8 @@ const BUDGET = { environment: 500e3, streets: 500e3, city: 600e3, landmarksA: 40
   landmarksTroitsky: 120e3,
   // the Palace Bridge's two opening leaves + the barriers (docs/AREAS.md 13.10, measured 2026-10-25: 4,936) + about 15 %
   landmarksPalaceBridge: 5.7e3,
+  // the south-west modules ported for Admiralty-Haymarket (measured 2026-10-26: Nikolsky 225,068, Mariinsky 201,843, New Holland 135,150, Yusupov 80,420, Trinity-Izmailovsky + the Technological Institute 164,863) + about 15 %
+  landmarksNikolsky: 260e3, landmarksMariinsky: 232e3, landmarksNewHolland: 156e3, landmarksYusupov: 93e3, landmarksCentralSouth: 190e3,
   // the Tauride Palace + the Paradny quarter (T1 of docs/TAURIDE-REMAKE.md, measured: 621,713 incl. the courts 29 k and the palace 23 k; the garden is not in it, it comes with the later phases and gets its own allowance)
   landmarksTauride: 835e3 };      // T8b (the garden nursery, a user fix): measured 758,672 = 738,046 + the nursery's 20,626 (floor 20, frames 5,150, glass 3,714, trees 11,224, buildings and details 518); T6 (the Tauride remake): measured 741,242 after the fence, the furniture and the monuments (T5 695,581 + the fence 15.7 k + the furniture 19.1 k + the monuments 10.8 k), the tripwire = the measure + 10 % (T5: 765 k = 695,273 + 10 %); 815 k + the 20.6 k of the nursery = 835 k
 

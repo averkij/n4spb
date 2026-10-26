@@ -54,7 +54,7 @@ const SITE_OF = { belinsky: 'belinsky', kazansky: 'kazansky', green: 'green', pe
   // the south-west reach (Admiralty-Haymarket; zone id = site id, bridges/sites-sw.js): the sites of an area that does not list these zones are filtered out by sites.js siteInArea, so the rows are inert elsewhere
   demidov: 'demidov', sennoy: 'sennoy', kokushkin: 'kokushkin', voznesensky: 'voznesensky', podyachesky: 'podyachesky', lviny: 'lviny', kharlamov: 'kharlamov', 'novo-nikolsky': 'novo-nikolsky', pikalov: 'pikalov', krasnogvardeysky: 'krasnogvardeysky',
   'staro-nikolsky': 'staro-nikolsky', mogilevsky: 'mogilevsky', kashin: 'kashin', torgovy: 'torgovy', dekabristov: 'dekabristov', matveev: 'matveev', krasnoflotsky: 'krasnoflotsky', potseluev: 'potseluev', khrapovitsky: 'khrapovitsky',
-  krushtein1: 'krushtein1', krushtein2: 'krushtein2', admiralteysky: 'admiralteysky', obukhovsky: 'obukhovsky', izmailovsky: 'izmailovsky' };
+  krushtein1: 'krushtein1', krushtein2: 'krushtein2', admiralteysky: 'admiralteysky', obukhovsky: 'obukhovsky', izmailovsky: 'izmailovsky', blagoveshchensky: 'blagoveshchensky' };
 let _zones = null;
 /** Every bridge crossing of the quay: { id, name, key (waterway), c: [x, z] (middle of the deck), axis (compass deg of the road), w (deck width along the water), len, own (a bridge the bridges module draws),
  *  foot, test(x, z, grow) (a point lies in the gap of the quay) }. The bridges module's sites.js (the real decks) wins over the dossier table where both exist. */
@@ -70,6 +70,16 @@ export function bridgeZones() {
     } else {
       const a = z.axis * Math.PI / 180, ux = Math.sin(a), uz = -Math.cos(a), hl = z.len / 2 + 14, hw = z.w / 2;
       out.push({ id: z.id, name: z.name, key: z.key, c: z.c, axis: z.axis, w: z.w, len: z.len, own: z.own && z.id !== 'anichkov', foot: false, test: (x, zz, grow = 0) => { const px = x - z.c[0], pz = zz - z.c[1], u = px * ux + pz * uz, v = -px * uz + pz * ux; return Math.abs(u) <= hl + grow && Math.abs(v) <= hw + grow; } });
+    }
+  }
+  // a record of kind 'zone' in bridges/sites.js (BLAG_ZONE: the south landing of the Blagoveshchensky Bridge, no geometry of its own) makes its quay opening without a BRIDGE_ZONES row: the opening is the owner's deck frame
+  // (|u| <= 30, v0 .. v1 round the origin); the length 90 is the one the source project's row had (the quay's gap radius)
+  { const rows = new Set(BRIDGE_ZONES.map((z) => z.id)), LEN = { blagoveshchensky: 90 };
+    for (const [zid, sid] of Object.entries(SITE_OF)) {
+      if (rows.has(zid)) continue;
+      const site = SITES.find((s) => s.id === sid && s.kind === 'zone'); if (!site) continue;
+      const mid = (site.v0 + site.v1) / 2, c = siteToWorld(site, 0, mid);
+      out.push({ id: zid, name: site.name, key: site.ww, c: [c.x, c.z], axis: site.b, w: site.v1 - site.v0, len: LEN[zid] || 90, own: true, foot: false, site, test: (x, zz, grow = 0) => siteInDeck(site, x, zz, 30, grow) });
     }
   }
   for (const z of moatBridgeZones()) out.push(z);
