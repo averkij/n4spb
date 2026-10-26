@@ -8,8 +8,10 @@
 //   * waterRings()    the water bodies as rings (far.js keeps its blocks off them)
 //   * deckPoly()      the Anichkov Bridge deck polygon r5537267 (claimed by landmarksC): the quay leaves the parapet / collider open there
 //   * bridgeZones()   every bridge crossing of the quay (BRIDGE_ZONES rows + the decks over the castle moat)
-import { BRIDGES, ROADS } from '../data/city.js';
-import { WATERWAYS, BRIDGE_ZONES, DATA_RECTS, FAR_WIN, allBanks, banksOf, waterPieces, slopeQuads } from './waterways.js';
+import { BRIDGES, ROADS, RIVER } from '../data/city.js';
+import { WATERWAYS, BRIDGE_ZONES, DATA_RECTS, FAR_WIN, allBanks, banksOf, waterPieces, slopeQuads, pointInFlat } from './waterways.js';
+import { WATER as AREA_WATER } from '../lib/area-tables.js';
+import { EAST_BRIDGE_ROADS } from '../eastBridges/groups.js';
 import { SITES, toWorld as siteToWorld, inDeck as siteInDeck } from '../bridges/sites.js';
 import { triangulateRing, subtractConvex, clipHalf, ccw, boxOfPoly } from './clip.js';
 
@@ -83,6 +85,7 @@ export function bridgeZones() {
       out.push({ id: zid, name: site.name, key: site.ww, c: [c.x, c.z], axis: site.b, w: site.v1 - site.v0, len: LEN[zid] || 90, own: true, foot: false, site, test: (x, zz, grow = 0) => siteInDeck(site, x, zz, 30, grow) });
     }
   }
+  for (const z of riverBridgeZones()) out.push(z);      // (WATER.riverBridgeZones: the bridge roads of eastBridges over a keyless RIVER canal of the area, below)
   for (const z of moatBridgeZones()) out.push(z);
   for (const z of nhBridgeZones()) out.push(z);
   // the southern Fontanka decks (bridges/sites-south.js, site.south): the opening is the owner's deck frame (|u| <= 30 along the water, 60 m of quay), as in the source project
@@ -95,6 +98,39 @@ export function bridgeZones() {
 
 /** The FLOOR-ONLY rows of BRIDGE_ZONES (floor: true, docs/AREAS.md 15.x): mapped OSM bridges over water that no module draws; the quay lays an invisible walk floor under each (quay.js), nothing else changes: [{ id, name, c, axis, w, len }] */
 export const floorZones = () => BRIDGE_ZONES.filter((z) => z.floor);
+
+/** The bridge roads of eastBridges (street-level slabs with walk ramps: OSM bridge=yes, claimed by eastBridges/groups.js) that cross a waterway the area names in WATER.riverBridgeZones and draws from a keyless RIVER record
+ *  (WATER.riverKeys: the Obvodny canal of Vladimirsky-Ligovka): the quay only leaves its wall / parapet / collider open under them (auto zone, test = distance to the polyline < half the road width + 3 m, as the east branch of
+ *  the source project). The Alexander Nevsky Bridge (it crosses the Neva, which has its own RIVER key) makes none. The other areas list no key: no zone. */
+let _riverZones = null;
+function riverBridgeZones() {
+  if (_riverZones) return _riverZones;
+  const out = (_riverZones = []), keys = AREA_WATER.riverBridgeZones;
+  if (!keys.length) return out;
+  const rings = [];
+  for (const r of RIVER) { const k = !r.key && AREA_WATER.riverKeys[r.name]; if (k && keys.includes(k)) for (const p of r.polys || []) rings.push({ key: k, o: p.o }); }
+  if (!rings.length) return out;
+  for (const r of EAST_BRIDGE_ROADS) {
+    if (!r.bridge || r.tunnel || r.pts.length < 4) continue;
+    const pts = r.pts, n = pts.length / 2;
+    let hit = null;
+    for (let i = 0; i + 1 < n && !hit; i++) {      // a sample every ~4 m along the polyline: the vertices of a bridge are at its abutments, the water lies between them
+      const ax = pts[i * 2], az = pts[i * 2 + 1], bx = pts[i * 2 + 2], bz = pts[i * 2 + 3], m = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 4));
+      for (let k = 0; k <= m && !hit; k++) hit = rings.find((g) => pointInFlat(ax + (bx - ax) * k / m, az + (bz - az) * k / m, g.o)) || null;
+    }
+    if (!hit) continue;
+    let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9;
+    for (let i = 0; i < n; i++) { bx0 = Math.min(bx0, pts[i * 2]); bx1 = Math.max(bx1, pts[i * 2]); bz0 = Math.min(bz0, pts[i * 2 + 1]); bz1 = Math.max(bz1, pts[i * 2 + 1]); }
+    const hw = (r.w || 8) / 2 + 3, cx = (bx0 + bx1) / 2, cz = (bz0 + bz1) / 2, diag = Math.hypot(bx1 - bx0, bz1 - bz0) + 2 * hw;
+    const test = (x, z, grow = 0) => {
+      if (x < bx0 - hw - grow || x > bx1 + hw + grow || z < bz0 - hw - grow || z > bz1 + hw + grow) return false;
+      for (let i = 0; i + 3 < pts.length; i += 2) { const ax = pts[i], az = pts[i + 1], dx = pts[i + 2] - ax, dz = pts[i + 3] - az, l2 = dx * dx + dz * dz || 1e-9, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)); if (Math.hypot(ax + dx * t - x, az + dz * t - z) < hw + grow) return true; }
+      return false;
+    };
+    out.push({ id: 'eb-' + r.id, name: r.name || r.id, key: hit.key, c: [cx, cz], axis: 0, w: diag, len: 0, own: true, foot: false, auto: true, test });
+  }
+  return out;
+}
 
 /** The decks over the castle moat (key 'moat'): every mapped bridge road piece (OSM bridge=yes, 2.4 - 7.2 m wide) inside the moat's window; landmarksCastle (Three-part bridge, footbridges) and the 2nd Engineer bridge draw them: the quay only leaves its
  *  wall / collider open under them (auto zone, test = distance to the polyline < half width + 3 m). No splits, no fallback deck. */

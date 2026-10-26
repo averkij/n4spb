@@ -96,6 +96,15 @@ const OWNER_SKIPS = {
   smolny: {},      // same: only a warning (the station's point n21596808)
   admiralty: {},      // checked at the first run: every claimed record of the owners that are drawn is drawn; the NOT-drawn ones are warnings (two lawns of the Alexander Garden w1252216144 / w1252216153 in landmarksH, one lawn of the Teatralnaya gardens w1287359790), none is an owner skip
 };
+/** posts of a GENERIC module (streets lamps / kerb masts) that stand inside the outline of a claimed building (printed as a note, not red); keyed by area then 'id|module': the reason. These are placements along the kerb
+ *  runs of a way whose arc length starts at the edge of THIS territory (the lamp / mast phase differs per area), so the same building is clean in the other areas; the post stands in the wall mass of the facade the owner draws. */
+const GENERIC_WAIVERS = {
+  vladimirsky: {
+    'r15081493|streets': 'a kerb mast of the Nevsky overhead wire (pt-poles, 9.7 m) stands 4.8 m inside the outline of the Nevsky Atrium at its north-east corner (193.7, 92.5): hidden in the wall mass; the lamp / mast phase along Nevsky differs from Palace-Liteyny, where the same building is clean',
+    'r6147391|streets': 'street lamps (lamps-D) of the Lavra internal roads stand 1 .. 1.3 m inside the outline of the Metropolitan Corps wing (1950, 1188): hidden in the wall mass of the wing landmarksEast draws',
+    'r6147392|streets': 'street lamps (lamps-D) of the Lavra internal roads stand up to 3.4 m inside the outline of the Metropolitan Corps (1904, 1207): the lamp phase of the Lavra roads; hidden in the wall mass of the wing landmarksEast draws (Smolninskoye leaves the wings to the city module)',
+  },
+};
 /** unclaimed buildings a landmark module is known to cover (printed, not red); keyed by area then id: { module, why } */
 const KNOWN_UNCLAIMED = {
   smolny: {
@@ -261,7 +270,7 @@ for (const name of names) {
       if (own && t.claim && name === t.claim.module && undrawIds.has(t.id)) continue;                       // --mutant undraw: the owner's own geometry of this building is left out of the audit's view
       if (own && t.claim && name === t.claim.module && citydrawIds.has(t.id) && names.includes('city')) { bump('city', i, { hi, deep: y > ABOVE && d >= DEEP, overlap: false, own, why }); continue; }          // --mutant citydraw: ... and counted as city's
       bump(name, i, { hi, deep: y > ABOVE && d >= DEEP, overlap: hi && t.claim && inUnclaimed, own, why });
-      if (WHERE.size && WHERE.has(t.id)) { const k = t.id + '|' + name; const s = samples[k] || (samples[k] = []); if (s.length < 10) s.push(`(${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)}) d ${d.toFixed(2)} ${meshNames[owners[q]]}`); }
+      if (WHERE.size && WHERE.has(t.id) && (!argv.includes('--where-high') || hi)) { const k = t.id + '|' + name; const s = samples[k] || (samples[k] = []); if (s.length < 10) s.push(`(${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)}) d ${d.toFixed(2)} ${meshNames[owners[q]]}`); }
     }
   }
   perModule[name] = { meshes, tris, centroids: pts.length / 3, inFootprints: tested, ms: Date.now() - t0 };
@@ -296,7 +305,9 @@ for (let i = 0; i < targets.length; i++) {
   for (const [m, c] of Object.entries(gen)) {
     const n = c.hi - c.overlap;
     const msg = `${m} draws ${n} triangles above ${ABOVE} m and deeper than ${INSET} m inside the claimed building ${t.id} of ${owner} / ${t.claim.key}${t.rec.name ? ' (' + t.rec.name + ')' : ''}${c.overlap ? ` (+ ${c.overlap} in an overlapping unclaimed building, not graded)` : ''}`;
-    if (owned && n >= MIN_GENERIC) { failed = true; problems.push(msg); } else if (owned && n > 0) notes.push(msg + ` (below --min-generic ${MIN_GENERIC}: a corner of a neighbour's cornice or plate, not a blockout)`);
+    const waiver = (GENERIC_WAIVERS[AREA] || {})[t.id + '|' + m];
+    if (owned && n >= MIN_GENERIC && waiver) notes.push(msg + ` (waived: ${waiver})`);
+    else if (owned && n >= MIN_GENERIC) { failed = true; problems.push(msg); } else if (owned && n > 0) notes.push(msg + ` (below --min-generic ${MIN_GENERIC}: a corner of a neighbour's cornice or plate, not a blockout)`);
   }
 }
 // unclaimed buildings drawn by a landmark module (the mutant)

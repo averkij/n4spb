@@ -44,7 +44,7 @@ const FAR_SOURCES = [
   // shore walls; only clipped to FAR_WIN), and the mouth edge, which both rings share, is an open join (no wall on either side)
   { name: 'neva-malaya', rings: [NEVA_MALAYA], box: null, inData: true },
 ].filter((s) => AREA_WATER.farSources.includes(s.name));
-const keyOf = (r) => r.key || AREA_WATER.keyByName[r.name] || null;      // (WATER.keyByName of the area: the canals of the south-west whose data key is null)
+const keyOf = (r) => r.key || AREA_WATER.keyByName[r.name] || AREA_WATER.riverKeys[r.name] || null;      // (WATER.keyByName / WATER.riverKeys of the area: a keyless RIVER record by its name: the canals of the south-west, the Obvodny canal of Vladimirsky-Ligovka; none in the other areas)
 
 /** Cross-section / look parameters per waterway key. water / bed: y of the surface and of the bed (street level = 0). */
 export const WATERWAYS = {

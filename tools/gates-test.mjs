@@ -549,7 +549,7 @@ check('the preloader rule: the bar continues across pages (lead -> entry.p -> ba
   function seamWriteProbe() { const st = fakeStorage(); seamWrite({ sessionStorage: st }, { img: SNAP.img, t: Date.now(), from: 'a', to: 'b', p: SEAM_LEAD }); return st.getItem('n4spb.seam'); }
 });
 check('the preloader rule: every generated page sets html.seam-in in the HEAD (before the first paint), carries the veil as the FIRST thing in the body (before the canvas and the splash), and the watchdog never removes the veil', () => {
-  for (const f of ['strip.html', 'index.html', 'north.html', 'smolny.html']) {
+  for (const f of ['strip.html', 'index.html', 'north.html', 'smolny.html', 'vladimirsky.html']) {
     const h = fs.readFileSync(path.join(root, f), 'utf8'), head = h.slice(0, h.indexOf('<body>')), body = h.slice(h.indexOf('<body>'));
     assert(/classList\.add\('seam-in'\)/.test(head) && /html\.seam-in #intro \{ display: none !important; \}/.test(head) && /html\.seam-in, html\.seam-in body \{ background: #0b1230; \}/.test(head), f + ': the head script + CSS');
     assert(body.startsWith('<body>\n<div id="seam"'), f + ': the veil is the first element of the body');

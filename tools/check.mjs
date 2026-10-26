@@ -93,6 +93,7 @@ const BUDGET_AREA = {
   palace: { environment: 890e3, streets: 1.17e6, city: 1.3e6, props: 410e3 },      // measured: environment 776,743, streets 1,013,573, city 1,128,586, props 353,786 (the Summer Garden 392 k and the Mars Field 270 k have no entry: no other area builds them)
   // Admiralty-Haymarket (docs/AREAS.md 15.2; measured with `node tools/area.mjs admiralty tools/check.mjs --area-modules`, + about 15 %): 7.3 km2 with the Neva, the Moika, the Griboedov, Kryukov and Admiralty canals and the Fontanka
   admiralty: { environment: 1.25e6, streets: 1.27e6, city: 1.55e6, props: 380e3 },      // measured: environment 1,084,289, streets 1,104,532, city 1,342,315, props 329,830
+  vladimirsky: { environment: 770e3, streets: 1.3e6, city: 1.65e6, landmarksD: 345e3 },      // measured (node tools/area.mjs vladimirsky tools/check.mjs --area-modules): environment 662,706, streets 1,133,535, city 1,432,842, landmarksD 300,686 (all four sub-groups: the cathedral and the bell tower, the Tolstoy House, the Passage, the library), + about 15 %
   smolny: { streets: 1.25e6, city: 1.42e6, landmarksOktyabrsky: 57e3 },      // measured: streets 1,088,461, city 1,237,047, landmarksOktyabrsky 47,001 (with the Kapodistrias monument, as in the north)
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;
