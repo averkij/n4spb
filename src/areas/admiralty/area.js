@@ -356,6 +356,8 @@ const BRIDGE_ZONES = [
   { id: 'admiralteysky', name: 'Адмиралтейский мост', key: 'admiralty', c: [-3769.6, 238.1], axis: 62.4, w: 14.5, len: 12.8, own: true },
   { id: 'obukhovsky', name: 'Обуховский мост', key: 'fontanka', c: [-1872.8, 1202.1], axis: 178.1, w: 30.9, len: 54, own: true },
   { id: 'izmailovsky', name: 'Измайловский мост', key: 'fontanka', c: [-2428.7, 1456.4], axis: 2.1, w: 15.9, len: 70.5, own: true },
+  // FLOOR-ONLY row (floor: true; docs/AREAS.md 15.x "Bridge fixes", the palace rows prachechny / swan-upper / eng2): a mapped drivable OSM bridge that no module draws (the Fontanka at the Krasnoarmeysky Bridge, x -2807 z 1586): an invisible walk floor
+  { id: 'smezhny', name: 'Смежный мост', floor: true, c: [-2807.4, 1585.7], axis: 64.8, w: 14.5, len: 24 },      // w384987418 (22.1 m) + footways w384987435 / w384990678 of the polygon r5727580 (13.9 m across)
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */

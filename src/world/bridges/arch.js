@@ -13,22 +13,35 @@ import { railSpec, railWorld } from './rails.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const segCache = new Map();
+/** the edges of the water polygons of the site's waterway in the site frame, ONE list per polygon (a polygon = its outer ring and its holes): the area data may cut one waterway into several polygons whose rims overlap or
+ *  touch at a region seam (admiralty: the Fontanka at the Lomonosov Bridge is four pieces, the seam at x -880 lies under the west end of the bridge), so the crossings are paired per polygon and the intervals united */
 function localSegs(site) {
   const key = site.id; if (segCache.has(key)) return segCache.get(key);
   const out = [], w = WATER.find((q) => q.id === site.water);
-  if (w) for (const p of w.polys) for (const ring of [p.o, ...(p.h || [])]) {
-    const n = ring.length / 2;
-    for (let i = 0; i < n; i++) { const j = (i + 1) % n, a = toUV(site, ring[2 * i], ring[2 * i + 1]), b = toUV(site, ring[2 * j], ring[2 * j + 1]); out.push([a.u, a.v, b.u, b.v]); }
+  if (w) for (const p of w.polys) {
+    const segs = [];
+    for (const ring of [p.o, ...(p.h || [])]) {
+      const n = ring.length / 2;
+      for (let i = 0; i < n; i++) { const j = (i + 1) % n, a = toUV(site, ring[2 * i], ring[2 * i + 1]), b = toUV(site, ring[2 * j], ring[2 * j + 1]); segs.push([a.u, a.v, b.u, b.v]); }
+    }
+    out.push(segs);
   }
   segCache.set(key, out); return out;
 }
 /** [uL, uR] of the water interval around u = 0 at cross coordinate v (null when the polygon has no water there) */
 export function waterAt(site, v) {
-  const us = [];
-  for (const [u0, v0, u1, v1] of localSegs(site)) if ((v0 - v) * (v1 - v) <= 0 && v0 !== v1) us.push(u0 + (u1 - u0) * (v - v0) / (v1 - v0));
-  us.sort((a, b) => a - b);
+  const iv = [];      // the water intervals of every polygon (even-odd pairs of its crossings), united below
+  for (const segs of localSegs(site)) {
+    const us = [];
+    for (const [u0, v0, u1, v1] of segs) if ((v0 - v) * (v1 - v) <= 0 && v0 !== v1) us.push(u0 + (u1 - u0) * (v - v0) / (v1 - v0));
+    us.sort((a, b) => a - b);
+    for (let i = 0; i + 1 < us.length; i += 2) if (us[i + 1] - us[i] >= 0.5) iv.push([us[i], us[i + 1]]);
+  }
+  iv.sort((a, b) => a[0] - b[0]);
+  const un = [];      // overlapping or touching (within 0.5 m) intervals of two pieces of one waterway are one interval
+  for (const q of iv) { const l = un[un.length - 1]; if (l && q[0] <= l[1] + 0.5) l[1] = Math.max(l[1], q[1]); else un.push([q[0], q[1]]); }
   let best = null, bs = 1e9;
-  for (let i = 0; i + 1 < us.length; i++) { const a = us[i], b = us[i + 1]; if (b - a < 0.5) continue; const m = (a + b) / 2, s = a <= 0 && b >= 0 ? 0 : Math.abs(m); if (s < bs) { bs = s; best = [a, b]; } }
+  for (const [a, b] of un) { const m = (a + b) / 2, s = a <= 0 && b >= 0 ? 0 : Math.abs(m); if (s < bs) { bs = s; best = [a, b]; } }
   return best && bs < 14 && best[1] - best[0] < 70 ? best : null;
 }
 

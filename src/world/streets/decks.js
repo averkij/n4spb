@@ -17,17 +17,28 @@ function build() {
   for (const s of SITES) {
     if (s.kind !== 'road') continue;
     const f = frameOf(s), toUV = (x, z) => { const dx = x - f.cx, dz = z - f.cz; return [dx * f.c + dz * f.s, -dx * f.s + dz * f.c]; };
-    const segs = [], w = WATER.find((q) => q.id === s.water);
-    if (w) for (const p of w.polys) for (const ring of [p.o, ...(p.h || [])]) {
-      const n = ring.length / 2;
-      for (let i = 0; i < n; i++) { const j = (i + 1) % n, a = toUV(ring[2 * i], ring[2 * i + 1]), b = toUV(ring[2 * j], ring[2 * j + 1]); segs.push([a[0], a[1], b[0], b[1]]); }
+    const polys = [], w = WATER.find((q) => q.id === s.water);      // one edge list per water polygon (the pieces of one waterway are united below: bridges/arch.js localSegs)
+    if (w) for (const p of w.polys) {
+      const segs = [];
+      for (const ring of [p.o, ...(p.h || [])]) {
+        const n = ring.length / 2;
+        for (let i = 0; i < n; i++) { const j = (i + 1) % n, a = toUV(ring[2 * i], ring[2 * i + 1]), b = toUV(ring[2 * j], ring[2 * j + 1]); segs.push([a[0], a[1], b[0], b[1]]); }
+      }
+      polys.push(segs);
     }
     const waterAt = (v) => {                                              // [uL, uR] of the water interval around u = 0 at cross coordinate v (the same rule as bridges/arch.js waterAt)
-      const us = [];
-      for (const [u0, v0, u1, v1] of segs) if ((v0 - v) * (v1 - v) <= 0 && v0 !== v1) us.push(u0 + (u1 - u0) * (v - v0) / (v1 - v0));
-      us.sort((a, b) => a - b);
+      const iv = [];
+      for (const segs of polys) {
+        const us = [];
+        for (const [u0, v0, u1, v1] of segs) if ((v0 - v) * (v1 - v) <= 0 && v0 !== v1) us.push(u0 + (u1 - u0) * (v - v0) / (v1 - v0));
+        us.sort((a, b) => a - b);
+        for (let i = 0; i + 1 < us.length; i += 2) if (us[i + 1] - us[i] >= 0.5) iv.push([us[i], us[i + 1]]);
+      }
+      iv.sort((a, b) => a[0] - b[0]);
+      const un = [];
+      for (const q of iv) { const l = un[un.length - 1]; if (l && q[0] <= l[1] + 0.5) l[1] = Math.max(l[1], q[1]); else un.push([q[0], q[1]]); }
       let best = null, bs = 1e9;
-      for (let i = 0; i + 1 < us.length; i++) { const a = us[i], b = us[i + 1]; if (b - a < 0.5) continue; const m = (a + b) / 2, sc = a <= 0 && b >= 0 ? 0 : Math.abs(m); if (sc < bs) { bs = sc; best = [a, b]; } }
+      for (const [a, b] of un) { const m = (a + b) / 2, sc = a <= 0 && b >= 0 ? 0 : Math.abs(m); if (sc < bs) { bs = sc; best = [a, b]; } }
       return best && bs < 14 && best[1] - best[0] < 70 ? best : null;
     };
     const n = Math.max(1, Math.ceil((s.v1 - s.v0) / 1.0)), iv = [];
