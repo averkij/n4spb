@@ -67,7 +67,7 @@ REGISTRY.palace = {
   id: 'palace', page: 'index.html', bake: 'baked/palace/', requireBake: true,
   title: 'Дворцовый–Литейный', titleEn: 'Palace–Liteyny',
   sights: ['Эрмитаж и Зимний дворец', 'Дворцовая площадь', 'Спас на Крови', 'Русский музей', 'Михайловский замок', 'Летний сад', 'Невский проспект', 'Литейный проспект'],
-  approxMB: 50, dev: false, mapId: 98,
+  approxMB: 54, dev: false, mapId: 98,
   remap: {
     'src/world/data/city.js': 'src/areas/palace/data/city.js', 'src/world/area.js': 'src/areas/palace/area.js',
     'src/world/city/known-data.js': 'src/areas/palace/known-data.js',
@@ -119,7 +119,7 @@ REGISTRY.smolny = {
   id: 'smolny', page: 'smolny.html', bake: 'baked/smolny/', requireBake: true,
   title: 'Смольнинское', titleEn: 'Smolninskoye',
   sights: ['Смольный собор', 'Таврический сад и дворец', 'Московский вокзал', 'площадь Восстания', 'Суворовский музей', 'Чернышевская', 'Лиговский проспект'],
-  approxMB: 50, dev: false, mapId: 96,
+  approxMB: 51, dev: false, mapId: 96,
   remap: {
     'src/world/data/city.js': 'src/areas/smolny/data/city.js', 'src/world/area.js': 'src/areas/smolny/area.js',
     'src/world/city/known-data.js': 'src/areas/smolny/known-data.js',
@@ -174,7 +174,7 @@ REGISTRY.vladimirsky = {
   id: 'vladimirsky', page: 'vladimirsky.html', bake: 'baked/vladimirsky/', requireBake: true,
   title: 'Владимирский–Лиговка', titleEn: 'Vladimirsky–Ligovka',
   sights: ['Владимирский собор', 'Толстовский дом', 'Достоевская', 'Московский вокзал', 'площадь Восстания', 'Лиговский проспект', 'Александро-Невская лавра', 'Александринский театр'],
-  approxMB: 55, dev: false, mapId: 97,
+  approxMB: 62, dev: false, mapId: 97,
   remap: {
     'src/world/data/city.js': 'src/areas/vladimirsky/data/city.js', 'src/world/area.js': 'src/areas/vladimirsky/area.js',
     'src/world/city/known-data.js': 'src/areas/vladimirsky/known-data.js',
@@ -237,7 +237,7 @@ REGISTRY.admiralty = {
   id: 'admiralty', page: 'admiralty.html', bake: 'baked/admiralty/', requireBake: true,
   title: 'Адмиралтейский–Сенной', titleEn: 'Admiralty–Haymarket',
   sights: ['Адмиралтейство', 'Исаакиевский собор', 'Медный всадник', 'Казанский собор', 'Мариинский театр', 'Новая Голландия', 'Никольский морской собор', 'Юсуповский дворец', 'Сенная площадь'],
-  approxMB: 55, dev: false, mapId: 46,
+  approxMB: 60, dev: false, mapId: 46,
   remap: {
     'src/world/data/city.js': 'src/areas/admiralty/data/city.js', 'src/world/area.js': 'src/areas/admiralty/area.js',
     'src/world/city/known-data.js': 'src/areas/admiralty/known-data.js',
