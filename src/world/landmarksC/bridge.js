@@ -205,6 +205,12 @@ export function bridgeColliders(ctx) {
     const w = toWorld((u0 + u1) / 2, 0);
     ph.addWalkRamp(w.x, w.z, 2 * EDGE, len, RAMP_ROT, yDeck(u0), yDeck(u1), 2.5); n++;
   }
+  // the two PIERS stand in the water (3.6 m thick, as long as the bridge is wide, a round cutwater at both ends): a boat (drive/boat/) and a wader meet them like walls; the top is below the deck, so nothing on the bridge is touched
+  for (const [a, b] of PIERS) {
+    const uc = (a + b) / 2, w = toWorld(uc, 0);
+    ph.addBox(w.x, w.z, b - a, 2 * (FACE + 0.2), BOX_ROT, -8, -0.5); n++;
+    for (const sg of [-1, 1]) { const e = toWorld(uc, sg * (FACE + 0.2)); ph.addCylinder(e.x, e.z, 1.5, -8, -0.5); n++; }
+  }
   // (the solid column along both sides of the railing is gone: every panel of buildRailing is a breakable bay with its own collider; bankU stays exported for closure.js / boats.js)
   void bankU;
   return n;

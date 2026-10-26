@@ -66,7 +66,7 @@ export async function build(ctx) {
       if (pe && pe.sim && svc.theta > 0.01 && svc.leaves[0].slips(WALK_SLIP_DEG, svc.theta)) swept += sweepPeople(pe.sim, svc.B, svc, SET_DOWN);
     }
     const d = ctx.drive, pl = ctx.playerObj, step = dt > 0 ? Math.min(dt, 0.1) : 0;
-    if (d && d.active && d.car) stepCar(d.car, r.th0, r.th1, step, car);
+    if (d && d.active && d.car) { if (!d.car.floats) stepCar(d.car, r.th0, r.th1, step, car); }      // (a motor boat floats UNDER the span: the leaves neither carry nor push it, and the helmsman is not a walker on a leaf)
     else if (pl && !pl.fly && !pl.ride && pl.enabled !== false) stepWalker(pl, r.th0, r.th1, step, walk);
     first = false;
   });

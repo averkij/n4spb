@@ -121,7 +121,7 @@ export async function build(ctx) {
       }
     }
     const d = ctx.drive, pl = ctx.playerObj, step = dt > 0 ? Math.min(dt, 0.1) : 0;
-    if (d && d.active && d.car) stepCar(d.car, r.th0, r.th1, step, car);
+    if (d && d.active && d.car) { if (!d.car.floats) stepCar(d.car, r.th0, r.th1, step, car); }      // (a motor boat floats UNDER the span: the leaf neither carries nor pushes it, and the helmsman is not a walker on the leaf)
     else if (pl && !pl.fly && !pl.ride && pl.enabled !== false) stepWalker(pl, r.th0, r.th1, step, walk);
     first = false;
   });

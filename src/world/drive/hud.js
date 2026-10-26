@@ -79,7 +79,8 @@ export function createDriveHud({ isTouch, onExit, onRepair, onNitro, onHand, onB
   $('.d-condition button').addEventListener('click', () => onRepair?.());
   const el = { rpm: $('.d-rpm'), num: $('.d-num'), gear: $('.d-gear'), nitro: $('.d-nitro'), nbar: $('.d-nitro i'), vig: $('.d-vig'), flash: $('.d-flash'), drift: $('.d-drift'), driftN: $('.d-drift span'), keys: $('.d-keys'),
     streaks: $('.d-streaks'), hopKey: $('.d-hopk'), hopBtn: $('.d-touch [data-k="hop"]'), flipBtn: $('.d-touch [data-k="flip"]'), touch: $('.d-touch') };
-  const sctx = el.streaks.getContext('2d');
+  const sctx = el.streaks.getContext('2d'), keysDefault = el.keys.innerHTML;
+  let keysShown = keysDefault;
   let prof = {};         // per-car words (drive/cars/tuning.js HUD): the label of the boost bar, 'D' for a one-gear (electric) car
   let hasHop = false, hopOff = false, flipOff = false;       // the car can hop (set by its profile); the HOP / FLIP buttons are dimmed
   let shown = false, keyT = 0, lastNum = -1, lastGear = '', flashA = 0, bankT = 0, driftPts = 0, driftShown = 0;
@@ -97,6 +98,10 @@ export function createDriveHud({ isTouch, onExit, onRepair, onNitro, onHand, onB
     /** per-car words: { boost: 'NITRO' | 'BOOST', gearD: true }; hop = the car has the gas hops (tuning.hop): the X / C key hint and the HOP / FLIP touch buttons appear */
     setProfile(p, hop = false) {
       prof = p || {}; $('.d-nlab').textContent = prof.boost || 'NITRO'; lastGear = '';
+      // the motor boat has no nitro tank, no body damage and its own key line (drive/boat/index.js); a car profile restores all three (the key line is only rewritten when it changes: its hop span is looked up again)
+      $('.d-nlab').style.display = $('.d-nitro').style.display = prof.noBoost ? 'none' : ''; $('.d-condition').style.display = prof.noCondition ? 'none' : '';
+      const keys = prof.keys || keysDefault;
+      if (keys !== keysShown) { keysShown = keys; el.keys.innerHTML = keys; el.hopKey = $('.d-hopk') || { hidden: true }; }
       hasHop = hop; el.hopKey.hidden = el.hopBtn.hidden = el.flipBtn.hidden = !hop; el.touch.classList.toggle('hop', hop);
     },
     show(on) {

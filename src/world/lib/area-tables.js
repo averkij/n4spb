@@ -5,7 +5,7 @@
 // PURE DATA: no three.js, no layout.js (layout.js imports waterways.js, which imports this file).
 //   WATER            environment/waterways.js     plugs, bridgeZones, bridgeShades, clipLines, farSources, farCenter, farRadius, forcedBanks, openMouths, dataWater, slopeReaches
 //   ZONES            wildlife, people, trams, field, far  pigeons, crowHaunts, crowds, fountains, peopleDensity, peopleCorridor, peopleHot, tramLines, clearDiscs, farCentres
-//   GARAGE           drive/cars/index.js, drive.js        poses { coupe, truck, lada, roadster }, spawn
+//   GARAGE           drive/cars/index.js, drive.js        poses { coupe, truck, lada, roadster }, spawn, boats (optional: the docks of the motor boats, drive/boat/index.js; absent = the shared docks)
 //   PRUNE_SERVICES   environment.js                       the services whose door entrances clear the trees
 //   HOOKS, HEIGHT_PATCHES  layout.js, drive/handling.js, environment/trees.js + lawns.js, props/world.js, streets.js + streets/parking.js, people/nav.js
 //                                                        the hooks and the height patches of milestone M6 (docs/AREAS.md section 9; the strip's are {} and []: every call site is a no-op without its key).
@@ -85,6 +85,8 @@ export const GARAGE = {
   poses: obj(G.poses),
   /** { x, z, yaw } or null */
   spawn: G.spawn && Number.isFinite(G.spawn.x) && Number.isFinite(G.spawn.z) ? G.spawn : null,
+  /** the docks of the motor boats of this area ([{ id, x, z, yaw }], drive/boat/index.js) or null = the SHARED docks of drive/boat/index.js, those that lie in the territory on water; [] = no boat */
+  boats: Array.isArray(G.boats) ? G.boats : null,
 };
 
 /** the keys of the sub-groups of the area's GROUPS.bridges (= the ids of the bridge sites of bridges/sites.js that the area claims; the strip lists every site, a smaller area a subset, an area without a bridges module none) */

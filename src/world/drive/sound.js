@@ -6,6 +6,7 @@
 // the Lada is a rough old four, the pickup a low electric hum, the Roadster an electric whine whose `jet` field (gain, hp, attack, release) turns the nitro whoosh into the airy hiss of its cold-gas
 // nozzles, with a valve thunk when the thrust opens and the one-shots of its gas hops (hop(), cushion(), land(v, big)). HOP v3: the simple hop (X) is hop() alone (hop(true), a fuller one, for the barrel hop); the barrel hop (C) adds the flip() whoosh at take-off and
 // lands with a deeper, longer thump (land(v, true)). No charge hiss: both launch on key down. No profile = the red coupe's voice.
+// The MOTOR BOAT's outboard (drive/boat/index.js BOAT_SOUND) uses three more profile fields: `chug` (the depth of the cylinder-pulse beat), `wash` (the rush of the water along the hull replaces the wind: it grows with the speed) and `splash` (bow slaps).
 export function createCarSound(audio, profile = null) {
   let ac = null, out = null, E = null, started = false, last = { gear: 1, boosting: false }, P = profile || {};
   const noiseBuf = (ac2) => { const b = ac2.createBuffer(1, ac2.sampleRate * 2, ac2.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; };
@@ -72,12 +73,18 @@ export function createCarSound(audio, profile = null) {
       const t = ac.currentTime;
       E.o1.frequency.setTargetAtTime(f, t, 0.03); E.o2.frequency.setTargetAtTime(f * (P.detune ?? 1.007), t, 0.03); E.o3.frequency.setTargetAtTime(f * (P.subRatio ?? 0.5), t, 0.03);
       E.lp.frequency.setTargetAtTime((P.lpBase ?? 220) + rpm * (P.lpRpm ?? 1500) + thr * (P.lpThr ?? 900), t, 0.05);
-      g(E.eng.gain, (P.engBase ?? 0.10) + (P.engThr ?? 0.20) * thr + (P.engRpm ?? 0.06) * rpm, 0.05);
+      // P.chug (the boat's outboard): the cylinder pulses, a slow amplitude beat that quickens with the revs (a short smoothing time so that the beat is heard)
+      const chug = P.chug ? 1 + P.chug * Math.sin(t * (7 + rpm * 24)) : 1;
+      g(E.eng.gain, ((P.engBase ?? 0.10) + (P.engThr ?? 0.20) * thr + (P.engRpm ?? 0.06) * rpm) * chug, P.chug ? 0.012 : 0.05);
       g(E.intake.gain, (0.02 + 0.06 * thr * rpm) * (P.intake ?? 1), 0.06); E.ibp.frequency.setTargetAtTime(500 + rpm * 1400, t, 0.06);
       const slip = c.drifting ? Math.min(1, (Math.abs(c.vL) - 2) / 6) : 0;
       g(E.squeal.gain, 0.16 * slip, 0.05); E.sbp.frequency.setTargetAtTime(1900 + Math.abs(c.vL) * 90, t, 0.08);
       const sp = Math.min(1, c.speed / 220);
-      g(E.wind.gain, (0.02 + 0.28 * sp * sp) * (P.wind ?? 1), 0.12); E.wlp.frequency.setTargetAtTime(350 + sp * 1500, t, 0.12);
+      if (P.wash) {      // the boat: the wash of the water along the hull grows with the speed (not its square: it is loud already at 20 km/h), a low rush with a brighter top; now and then the bow slaps a wave
+        const ws = Math.min(1, c.speed / 55);
+        g(E.wind.gain, 0.025 + P.wash * ws, 0.10); E.wlp.frequency.setTargetAtTime(450 + ws * 1700, t, 0.10);
+        if (P.splash && ws > 0.35 && Math.random() < 0.018 * ws) burst(1100 + Math.random() * 600, 0.16, 0.05 + 0.05 * ws, 'bandpass');
+      } else { g(E.wind.gain, (0.02 + 0.28 * sp * sp) * (P.wind ?? 1), 0.12); E.wlp.frequency.setTargetAtTime(350 + sp * 1500, t, 0.12); }
       const J = P.jet;
       g(E.whoosh.gain, c.boosting ? (J ? J.gain : 0.09) : 0, c.boosting ? (J ? J.attack : 0.08) : (J ? J.release : 0.25));
       if (J && c.boosting && !last.boosting) thrust();
