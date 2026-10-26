@@ -58,6 +58,7 @@ export function bridgeZones() {
   if (_zones) return _zones;
   const out = [];
   for (const z of BRIDGE_ZONES) {
+    if (z.floor) continue;      // a floor-only row (floorZones below): no quay gap, no shade
     const site = SITES.find((s) => s.id === SITE_OF[z.id]);
     if (site) {
       const mid = (site.v0 + site.v1) / 2, c = siteToWorld(site, 0, mid), foot = site.kind === 'foot';
@@ -71,6 +72,9 @@ export function bridgeZones() {
   for (const z of moatBridgeZones()) out.push(z);
   return (_zones = out);
 }
+
+/** The FLOOR-ONLY rows of BRIDGE_ZONES (floor: true, docs/AREAS.md 15.x): mapped OSM bridges over water that no module draws; the quay lays an invisible walk floor under each (quay.js), nothing else changes: [{ id, name, c, axis, w, len }] */
+export const floorZones = () => BRIDGE_ZONES.filter((z) => z.floor);
 
 /** The decks over the castle moat (key 'moat'): every mapped bridge road piece (OSM bridge=yes, 2.4 - 7.2 m wide) inside the moat's window; landmarksCastle (Three-part bridge, footbridges) and the 2nd Engineer bridge draw them: the quay only leaves its
  *  wall / collider open under them (auto zone, test = distance to the polyline < half width + 3 m). No splits, no fallback deck. */
