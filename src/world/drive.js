@@ -137,7 +137,7 @@ export async function build(ctx) {
       if (!open(0)) { view.orbitY = open(0.95) ? 0.95 : open(-0.95) ? -0.95 : 0; view.idle = 0; }
     }
     hud.show(true); sound.start(); fx.clear(); hud.update(car, 0);
-    model.setView(view.mode === 2); damage.hideDetached();
+    model.setView(view.mode === 2); damage.hideDetached(); if (model.setDriven) model.setDriven(true);      // (the boat's helmsman is painted only while the boat is in use)
     ctx.ui.toast(V.def.toast);
     return true;
   }
@@ -172,7 +172,7 @@ export async function build(ctx) {
     // face the way the car was heading (camera yaw convention: forward = (-sin, -cos))
     const yawDeg = ((car.yaw + Math.PI) / DEG + 540) % 360 - 180;
     player.setPose(s.x, s.z, yawDeg, 0, parked.y + 0.35, { stand: true });
-    model.setView(false); damage.hideDetached(); poseModel(0);
+    model.setView(false); damage.hideDetached(); if (model.setDriven) model.setDriven(false); poseModel(0);
     return true;
   }
   /** teleport (digit keys / R while driving): the nearest free spot, car facing the given walker yaw (degrees, camera convention) */
@@ -204,7 +204,7 @@ export async function build(ctx) {
     const n = night ? night.value : 0;
     let gear = c.gear === 0 ? 'R' : ((c.speed || 0) < 1 && (c.throttle || 0) < 0.05 ? 'N' : String(c.gear || 1));
     if (v.def.hud.gearD && gear !== 'R' && gear !== 'N') gear = 'D';            // a one-gear electric car
-    v.model.set({ x: c.x, y: c.y, z: c.z, yaw: c.yaw, pitch: c.pitch, roll: c.roll, steer: c.steer, steerAngle: c.steerAngle, spin: c.spin || 0, brake: c.braking ? 1 : 0, boost: c.boosting ? v.car.boost + 0.2 : 0, dt: spinDt || 0.016, lights: driven && n > 0.25, glow: driven ? 1 : 0.25,
+    v.model.set({ x: c.x, y: c.y, z: c.z, yaw: c.yaw, pitch: c.pitch, roll: c.roll, steer: c.steer, steerAngle: c.steerAngle, spin: c.spin || 0, brake: c.braking ? 1 : 0, boost: c.boosting ? v.car.boost + 0.2 : 0, dt: spinDt || 0.016, lights: driven && n > 0.25, driven: !!driven, glow: driven ? 1 : 0.25,
       kmh: c.speed || 0, rpm: c.rpm ?? 0.15, gear, air: !!c.air, h: c.h || 0, jet: c.jet || 0, jetK: c.jetK || 1, flip: c.flip || 0, s0: c.pulse0 || 0, s1: c.pulse1 || 0 });
   }
   const poseModel = (spinDt) => poseVehicle(V, spinDt, state.active);

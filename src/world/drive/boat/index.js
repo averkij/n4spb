@@ -25,8 +25,11 @@ const PRESENTATION ={ name: 'Катер', nameEn: 'Motor boat', label: 'Сест
 
 /** the outboard's voice (drive/sound.js profile, procedural): a low rough four-stroke burble that climbs with the revs (`chug` = the depth of the cylinder pulses), the wash of the water along the hull (`wash` grows with the speed
  *  and replaces the wind of a car) and now and then a slap of the bow (`splash`). Calm: no alarms. */
-export const BOAT_SOUND = { types: ['sawtooth', 'square', 'sawtooth'], f0: 32, fk: 120, subRatio: 0.5, detune: 1.012, gains: [0.40, 0.30, 0.22], lpBase: 240, lpRpm: 950, lpThr: 600, lpQ: 1.6,
-  engBase: 0.11, engThr: 0.16, engRpm: 0.07, intake: 0.6, blip: false, wind: 1, volume: 0.9, wash: 0.30, chug: 0.35, splash: true };
+/** SOFTER and LOWER (the owner: "make the boat sound lower, more pleasant"): the whole voice is about 9 dB down (volume 0.9 -> 0.32), the pitch law is lower (a 26..106 Hz fundamental instead of 32..152), the buzzy saw / square pair
+ *  is a triangle + a quiet saw + a sine sub, the low-pass opens only to ~0.7 kHz (was 1.8 kHz) with a gentle resonance, the cylinder pulse is a little deeper (a burble, not a buzz), the intake hiss is thin and the water wash is
+ *  quieter and darker (wash 0.30 -> 0.17, its low-pass `washLp` 300..1000 Hz instead of 450..2150), the bow slaps are lower and softer. The car voices are untouched (their profiles do not have these fields). */
+export const BOAT_SOUND = { types: ['triangle', 'sawtooth', 'sine'], f0: 26, fk: 80, subRatio: 0.5, detune: 1.010, gains: [0.50, 0.14, 0.32], lpBase: 120, lpRpm: 360, lpThr: 200, lpQ: 0.8,
+  engBase: 0.11, engThr: 0.15, engRpm: 0.06, intake: 0.2, blip: false, wind: 1, volume: 0.32, wash: 0.17, washLp: [300, 700], chug: 0.45, splash: true, splashHz: [520, 280], splashVol: 0.6 };
 
 /** the tuning of the boat in the car's format: createBoatHandling(ctx, tuning) */
 export const boatTuning = (spec = SPEC_BOAT) => ({ ...BOAT_TUNING, spec, hf: spec.front - 0.02, hr: -spec.rear - 0.05, hw: spec.W / 2 + 0.02 });

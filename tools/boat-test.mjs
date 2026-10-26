@@ -11,6 +11,7 @@
 //   7  getting out: the walker stands beside the boat on the water bed (wading) or a landing, never inside the hull, not underground; the boat floats where it was left; E again boards it
 //   8  R / place on land leaves the boat and sets the player on foot; a hand-off arrival on water keeps the boat, on land drops the player on foot
 //   9  the other areas: no dock in the territory = no boat; the cars are exactly as before (fleet of four, ids, the prompt ids)
+//   10 the look: the helmsman exists only while driving, the windshield is a flat unlit pane (no specular streaks), the hull shell has no flipped / open panel (winding audit + ray audit from inside and outside)
 // A pose in water is never a failure; a wall of water is.
 import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
@@ -24,6 +25,7 @@ const { ctx, L, THREE, built, errors } = await buildWorld({ log: null });
 console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0) / 1000).toFixed(0)} s; ${ctx.physics.items.length} colliders`);
 const ph = ctx.physics, DEG = 180 / Math.PI;
 globalThis.__frame = await import('../src/world/landmarksC/frame.js');      // the Anichkov bridge's frame (u along the bridge, v along the river): the piers
+const BM = await import("../src/world/drive/boat/model.js");      // the boat model module (the hull audit of section 10)
 
 // ---------------------------------------------------------------- the page around the drive module (what main.js does)
 const { Player } = await import('../src/core/player.js');
@@ -295,6 +297,66 @@ check('9 the cars: the fleet of four, each enters and exits, the HUD / sound pro
   assert.deepEqual(d.fleet.map((f) => f.id), ['coupe', 'truck', 'lada', 'roadster']);
   for (const v of d.fleet) { walker(v.parked.x, v.parked.z + 6); assert.ok(d.enter(v.id), v.id); step(0.5, { thr: 1 }); assert.ok(d.car.speed > 0.5 && !d.car.floats, v.id); assert.ok(d.exit(true)); }
   const ids = ctx.interact.list().map((i) => i.id).sort(); assert.deepEqual(ids, ['drive-boat', 'drive-car', 'drive-lada', 'drive-roadster', 'drive-truck']);
+});
+// ---------------------------------------------------------------- 10 the model: the helmsman, the windshield, the hull shell (the owner's look fixes)
+const M = boat.model;
+const frames = (n = 5) => { for (let i = 0; i < n; i++) for (const f of ctx._updates) f(1 / 60, i / 60); };
+check('10 the helmsman: absent while the boat is parked (build, moored, after exit, after R, after a land hand-off), shown only while driving (and not in the cockpit view)', () => {
+  d.exit(true); frames();
+  assert.equal(M.driver.visible, false, 'a figure on the moored boat');
+  walker(DOCK.x - 3, DOCK.z); assert.ok(d.enter('boat')); step(0.1, {}); assert.equal(M.driver.visible, true, 'no helmsman while driving');
+  d.setView(2); step(0.05, {}); assert.equal(M.driver.visible, false, 'the helmsman in the first-person eye view'); d.setView(0); step(0.05, {}); assert.equal(M.driver.visible, true);
+  d.exit(true); frames(); assert.equal(M.driver.visible, false, 'the figure stays after exit');
+  walker(DOCK.x - 3, DOCK.z); d.enter('boat'); step(0.1, {}); assert.equal(M.driver.visible, true);
+  d.place(L.HERO.x, L.HERO.z, L.HERO.yaw); frames(); assert.ok(!d.active); assert.equal(M.driver.visible, false, 'the figure stays after R');
+  walker(L.HERO.x, L.HERO.z); assert.equal(d.arrive({ id: 'boat', view: 0, d: [0, 0, 0, 0] }, DOCK.x, DOCK.z + 20, 0), true); step(0.1, {}); assert.equal(M.driver.visible, true, 'no helmsman after a hand-off on water');
+  d.exit(true); frames(); assert.equal(M.driver.visible, false);
+  walker(L.HERO.x, L.HERO.z); assert.equal(d.arrive({ id: 'boat', view: 0, d: [0, 0, 0, 0] }, L.HERO.x, L.HERO.z, L.HERO.yaw), false); frames(); assert.equal(M.driver.visible, false, 'a figure after a refused hand-off');
+  d.enter('boat'); d.teleport(DOCK.x, DOCK.z, DOCK.yaw); d.exit(true); frames(); assert.equal(M.driver.visible, false);
+  assert.ok(M.root.getObjectByName('boat-driver') === M.driver, 'the figure is its own mesh (a draw of its own)');
+});
+check('10 the windshield is a calm pane: an unlit flat material (no specular, no env map, no shader streaks), a constant tint and opacity, the frame stays', () => {
+  const gm = M.glass.material;
+  assert.ok(gm.isMeshBasicMaterial && !gm.isShaderMaterial, `material ${gm.type}`);
+  assert.ok(gm.transparent && gm.opacity > 0.1 && gm.opacity < 0.4, `opacity ${gm.opacity}`);
+  assert.ok(!gm.envMap && gm.specular === undefined && gm.shininess === undefined && gm.map === null && gm.uniforms === undefined, 'a view dependent term');
+  const o0 = gm.opacity, c0 = gm.color.getHex();
+  for (const [yaw, pitch] of [[0, 0], [1.3, 0.1], [3, -0.1]]) { M.set({ x: 10, y: 0, z: 10, yaw, pitch, roll: 0, kmh: 45 }); ctx.camera.position.set(Math.sin(yaw) * 5, 3, Math.cos(yaw) * 5); }
+  assert.equal(gm.opacity, o0); assert.equal(gm.color.getHex(), c0);
+  assert.ok(M.body.geometry.getAttribute('position').count > 1000 && M.root.children.includes(M.glass), 'the frame / the pane are in the model');
+});
+check('10 the hull shell: every triangle winds the same way across its edges (no flipped panel), the liner follows the hull, and no ray from inside or outside sees through it', () => {
+  const H = BM.hullGeometries(), tris = [], key = (p) => p.map((v) => Math.round(v * 1000)).join(',');
+  for (const f of Object.values(H)) { const a = f.geo().attributes.position.array; for (let t = 0; t < a.length; t += 9) tris.push([[a[t], a[t + 1], a[t + 2]], [a[t + 3], a[t + 4], a[t + 5]], [a[t + 6], a[t + 7], a[t + 8]]]); }
+  const edges = new Map();
+  for (const T of tris) for (let k = 0; k < 3; k++) { const p = T[k], q = T[(k + 1) % 3], kp = key(p), kq = key(q), id = kp < kq ? kp + '|' + kq : kq + '|' + kp, e = edges.get(id) || { n: 0, fw: 0, p, q }; e.n++; e.fw += kp < kq ? 1 : -1; edges.set(id, e); }
+  const list = [...edges.values()], bad = list.filter((e) => e.n > 2 || (e.n === 2 && e.fw !== 0));
+  assert.equal(bad.length, 0, `${bad.length} edges are shared by panels of opposite winding: ${bad.slice(0, 3).map((e) => e.p.map((v) => v.toFixed(2)) + ' > ' + e.q.map((v) => v.toFixed(2))).join(' | ')}`);
+  // an open edge (one triangle) must lie on a longer edge of another panel (a T-junction of the loft), within 6 mm: no real slit
+  const dist = (m, a, b) => { const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], am = [m[0] - a[0], m[1] - a[1], m[2] - a[2]], l2 = ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2, t = Math.max(0, Math.min(1, (am[0] * ab[0] + am[1] * ab[1] + am[2] * ab[2]) / l2)); return Math.hypot(am[0] - ab[0] * t, am[1] - ab[1] * t, am[2] - ab[2] * t); };
+  const open = list.filter((e) => e.n === 1), slits = open.filter((e) => [0.05, 0.25, 0.5, 0.75, 0.95].some((s) => { const m = [0, 1, 2].map((k) => e.p[k] + (e.q[k] - e.p[k]) * s); return !open.some((o) => o !== e && dist(m, o.p, o.q) < 0.006); }));      // (each open edge must be met all along by the open edge of the neighbouring panel)
+  assert.equal(slits.length, 0, `${slits.length} open slits: ${slits.slice(0, 3).map((e) => e.p.map((v) => v.toFixed(2)) + ' > ' + e.q.map((v) => v.toFixed(2))).join(' | ')}`);
+  // the liner sits inside the outer hull: at the floor height its half width is smaller than the outer one at every station
+  for (const t of tris) for (const p of t) if (Math.abs(p[1] - 0.10) < 1e-6 && p[2] > -2.55 && p[2] < 0.96) { const i = BM.ST.z.findIndex((z) => Math.abs(z - p[2]) < 1e-6); if (i >= 0) { const lo = BM.ST, outer = lo.cw[i] + (lo.gw[i] - lo.cw[i]) * (0.10 - lo.cy[i]) / (lo.gy[i] - lo.cy[i]); assert.ok(Math.abs(p[0]) < outer - 0.03, `the liner pokes out of the hull at z ${p[2]}: ${Math.abs(p[0]).toFixed(3)} >= ${outer.toFixed(3)}`); } }
+  // rays: from points in the cockpit (below the gunwale) in 400 directions: whatever is hit first faces the eye, and nothing escapes except over the gunwale; from outside toward the hull: the first hit faces the eye
+  const hit = (o, dv) => { let best = null; for (const T of tris) { const e1 = [T[1][0] - T[0][0], T[1][1] - T[0][1], T[1][2] - T[0][2]], e2 = [T[2][0] - T[0][0], T[2][1] - T[0][1], T[2][2] - T[0][2]], pv = [dv[1] * e2[2] - dv[2] * e2[1], dv[2] * e2[0] - dv[0] * e2[2], dv[0] * e2[1] - dv[1] * e2[0]], det = e1[0] * pv[0] + e1[1] * pv[1] + e1[2] * pv[2]; if (Math.abs(det) < 1e-9) continue; const tv = [o[0] - T[0][0], o[1] - T[0][1], o[2] - T[0][2]], u = (tv[0] * pv[0] + tv[1] * pv[1] + tv[2] * pv[2]) / det; if (u < -1e-7 || u > 1 + 1e-7) continue; const qv = [tv[1] * e1[2] - tv[2] * e1[1], tv[2] * e1[0] - tv[0] * e1[2], tv[0] * e1[1] - tv[1] * e1[0]], v = (dv[0] * qv[0] + dv[1] * qv[1] + dv[2] * qv[2]) / det; if (v < -1e-7 || u + v > 1 + 1e-7) continue; const tt = (e2[0] * qv[0] + e2[1] * qv[1] + e2[2] * qv[2]) / det; if (tt > 1e-4 && (!best || tt < best.t)) { const nn = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]]; best = { t: tt, front: nn[0] * dv[0] + nn[1] * dv[1] + nn[2] * dv[2] < 0 }; } } return best; };
+  const dirs = []; const N = 400; for (let k = 0; k < N; k++) { const y = 1 - 2 * (k + 0.5) / N, r = Math.sqrt(1 - y * y), a = k * 2.399963; dirs.push([r * Math.cos(a), y, r * Math.sin(a)]); }
+  const at = (arr, z) => { const Z = BM.ST.z; z = Math.max(Z[0], Math.min(Z[Z.length - 1], z)); let i = 0; while (i + 2 < Z.length && z > Z[i + 1]) i++; return arr[i] + (arr[i + 1] - arr[i]) * (z - Z[i]) / (Z[i + 1] - Z[i]); };
+  const overGunwale = (o, dv) => { for (let t = 0; t < 14; t += 0.01) { const x = o[0] + dv[0] * t, y = o[1] + dv[1] * t, z = o[2] + dv[2] * t; if (Math.abs(x) > at(BM.ST.gw, z) || z < BM.ST.z[0] || z > 3.0) return y > at(BM.ST.gy, z) - 1e-3; } return dv[1] > 0; };      // a ray that leaves the hull without a hit must leave OVER the gunwale (the open cockpit)
+  let inRays = 0, outRays = 0, back = 0, esc = 0;
+  for (const o of [[0.3, 0.2, -1.0], [-0.3, 0.2, -0.2], [0, 0.2, -2.0], [0.35, 0.2, 0.55], [-0.35, 0.2, -1.6]]) for (const dv of dirs) {
+    const h = hit(o, dv); inRays++;
+    if (!h) { if (!overGunwale(o, dv)) esc++; continue; }
+    if (!h.front) back++;
+  }
+  for (const o of [[5, 1.5, -4], [-5, 0.5, 3], [0, 4, -5], [4, -0.5, 0], [-4, 2, -6], [0, 0.5, -7], [0, 1, 7], [3, 3, 4]]) for (let k = 0; k < 200; k++) {
+    const target = [Math.sin(k * 12.9898) * 0.6, ((k * 0.618) % 1) * 0.5, -2.4 + ((k * 0.381) % 1) * 3.2];      // a point inside the hull's volume
+    const dv = [target[0] - o[0], target[1] - o[1], target[2] - o[2]], l = Math.hypot(...dv); dv[0] /= l; dv[1] /= l; dv[2] /= l;
+    const h = hit(o, dv); outRays++; if (!h) esc++; else if (!h.front) back++;
+  }
+  console.log(`     ${tris.length} hull triangles, ${edges.size} edges, ${open.length} open edges (all T-junctions); ${inRays} rays from the cockpit and ${outRays} from outside: ${back} hit a back face first, ${esc} escaped`);
+  assert.equal(back, 0, `${back} rays see a back face first (the panel is culled: see-through)`); assert.equal(esc, 0, `${esc} rays pass through the hull`);
+  assert.ok(M.body.material.side === THREE.DoubleSide, 'the hull body is double sided as a second line of defence');
 });
 check('9 the module errors are empty', () => { assert.deepEqual(errors, []); });
 
