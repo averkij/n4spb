@@ -18,8 +18,8 @@ export function createWake(ctx) {
           acc -= 1;
           const side = Math.random() < 0.5 ? 1 : -1, back = -2.45 - Math.random() * 0.4, half = 0.75 + 0.4 * Math.random();
           const px = car.x + sy * back + lx * side * half, pz = car.z + cy * back + lz * side * half;
-          const out = (0.25 + 0.9 * k) * side;       // the V opens outward as the wash rolls off the quarters
-          foam.emit({ x: px + rnd(0.15), y, z: pz + rnd(0.15), vx: lx * out + car.vx * 0.12 + rnd(0.15), vz: lz * out + car.vz * 0.12 + rnd(0.15), vy: 0, life: 1.8 + 1.8 * k, s0: 0.5 + 0.4 * k, s1: 1.7 + 2.4 * k, a: 0.5 * (0.35 + 0.65 * k), r: 0.96, g: 0.99, b: 1.0, drag: 0.9 });
+          const out = (0.3 + 1.3 * k) * side * (0.6 + 0.8 * Math.random());       // the V opens outward as the wash rolls off the quarters
+          foam.emit({ x: px + rnd(0.2), y, z: pz + rnd(0.2), vx: lx * out + car.vx * 0.12 + rnd(0.2), vz: lz * out + car.vz * 0.12 + rnd(0.2), vy: 0, life: 1.8 + 1.6 * k, s0: 0.45 + 0.3 * k, s1: 1.5 + 2.0 * k, a: 0.38 * (0.35 + 0.65 * k), r: 0.96, g: 0.99, b: 1.0, drag: 0.8 });
         }
         // a churn right behind the transom, strongest on the throttle
         if ((car.thrS || 0) > 0.05 || k > 0.1) {

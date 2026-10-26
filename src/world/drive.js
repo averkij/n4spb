@@ -12,7 +12,10 @@
 // GARAGE (2026-10-13): three cars stand parked beside the taxi rank, each a vehicle with its own model, handling state, damage state and physics box (drive/cars/index.js registry, cars/tuning.js
 //   handling / sound / HUD per car): the red coupe, the taxi pickup (heavier, a bit slower) and the eggplant Zhiguli (lighter, a bit faster, loose). E gets into the NEAREST one (the interaction layer),
 //   exit leaves it parked where it stopped (dents included), only one car is active. A fourth, the white Roadster, adds THRUST (cold-gas nozzles) and the gas hop (handling.js tuning.hop). car / model / damage / parked in the service follow the current (last driven) car.
-// SERVICE  ctx.drive = ctx.services.drive = { active, car (handling state of the current car), parked, model, damage, fleet, vehicle, vehicleById(id), enter(idOrVehicle), exit(force), place(x, z, yawDeg), setView(i), sim(seconds, input) (test hook) }
+// BOATS (docs/AREAS.md "The motor boat"): the first water transport. The motor boats that wait at their docks (drive/boat/: index.js the docks and the entries, handling.js the floating physics on physics.waterLevel,
+//   model.js the hull, wake.js the foam) are vehicles of the same shape as the cars, in `boats` (not in `fleet`, which stays the four cars of the station), taken with E like a car, driven with the car's keys; the active boat is
+//   `car` / `model` / `damage` (empty) / `parked` like a car (`car.floats` = true, `vehicle.kind` = 'boat'). Exit: the walker stands beside the hull on the water bed; R / a hand-off onto land leaves the boat and sets the player on foot.
+// SERVICE  ctx.drive = ctx.services.drive = { active, car (handling state of the current car), parked, model, damage, fleet, boats, vehicles, vehicle, vehicleById(id), enter(idOrVehicle), exit(force), place(x, z, yawDeg), setView(i), sim(seconds, input) (test hook) }
 // TEST HOOKS  window.__drive = ctx.drive;  ?cam=... shots show the parked car; node tools/shot.mjs --eval "__ctx.drive.enter(); __ctx.drive.sim(3, { thr: 1 })" drives it headlessly.
 import * as THREE from 'three';
 import { loadGarage } from './drive/cars/index.js';

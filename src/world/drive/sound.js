@@ -6,6 +6,7 @@
 // the Lada is a rough old four, the pickup a low electric hum, the Roadster an electric whine whose `jet` field (gain, hp, attack, release) turns the nitro whoosh into the airy hiss of its cold-gas
 // nozzles, with a valve thunk when the thrust opens and the one-shots of its gas hops (hop(), cushion(), land(v, big)). HOP v3: the simple hop (X) is hop() alone (hop(true), a fuller one, for the barrel hop); the barrel hop (C) adds the flip() whoosh at take-off and
 // lands with a deeper, longer thump (land(v, true)). No charge hiss: both launch on key down. No profile = the red coupe's voice.
+// The MOTOR BOAT's outboard (drive/boat/index.js BOAT_SOUND) uses three more profile fields: `chug` (the depth of the cylinder-pulse beat), `wash` (the rush of the water along the hull replaces the wind: it grows with the speed) and `splash` (bow slaps).
 export function createCarSound(audio, profile = null) {
   let ac = null, out = null, E = null, started = false, last = { gear: 1, boosting: false }, P = profile || {};
   const noiseBuf = (ac2) => { const b = ac2.createBuffer(1, ac2.sampleRate * 2, ac2.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; };

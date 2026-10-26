@@ -23,6 +23,7 @@ const t0 = Date.now();
 const { ctx, L, THREE, built, errors } = await buildWorld({ log: null });
 console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0) / 1000).toFixed(0)} s; ${ctx.physics.items.length} colliders`);
 const ph = ctx.physics, DEG = 180 / Math.PI;
+globalThis.__frame = await import('../src/world/landmarksC/frame.js');      // the Anichkov bridge's frame (u along the bridge, v along the river): the piers
 
 // ---------------------------------------------------------------- the page around the drive module (what main.js does)
 const { Player } = await import('../src/core/player.js');
@@ -120,10 +121,12 @@ check('2 enter("boat"): active, the boat is the vehicle, the car tuning is not t
 
 // ---------------------------------------------------------------- 3 floating, speed, slide, reverse, brakes
 const wl0 = water(DOCK.x, DOCK.z);
+/** a start in the middle of the river 70 m north of the dock, heading south: open water for the 10 s of a run (from the dock itself the run ends at the bridge) */
+const openStart = () => { const zr = DOCK.z - 70; let a = DOCK.x + 30, b = a; while (water(a - 1, zr) !== null) a--; while (water(b + 1, zr) !== null) b++; d.teleport((a + b) / 2, zr, 0.1); };
 check('3 floats: at rest the height is the water level', () => { const r = step(0.5, {}); assert.ok(Math.abs(d.car.y - wl0) < 0.01, `y ${d.car.y} water ${wl0}`); });
 let top = 0;
 check('3 full throttle for 12 s: 40-50 km/h at the end, a monotone start, never off the water, the height stays the water level', () => {
-  d.teleport(DOCK.x, DOCK.z, DOCK.yaw);
+  openStart();
   let off = 0, maxDy = 0, prev = 0, monotone = true;
   step(12, { thr: 1 }, (i, c) => { if (water(c.x, c.z) === null) off++; maxDy = Math.max(maxDy, Math.abs(c.y - wl0)); top = Math.max(top, c.speed); if (i < 120 && c.speed < prev - 0.01) monotone = false; prev = c.speed; });
   console.log(`     top speed ${top.toFixed(1)} km/h after 12 s, ${d.car.z.toFixed(0)} z`);
@@ -131,7 +134,7 @@ check('3 full throttle for 12 s: 40-50 km/h at the end, a monotone start, never 
   assert.ok(top >= 40 && top <= 52, `top ${top}`);
 });
 check('3 the boat slides in a turn: the sideways speed builds and dies, the heading changes at speed', () => {
-  d.teleport(DOCK.x, DOCK.z, DOCK.yaw); step(5, { thr: 1 });
+  openStart(); step(5, { thr: 1 });
   const yaw0 = d.car.yaw; let maxVL = 0;
   step(2, { thr: 1, steer: 1 }, (i, c) => { maxVL = Math.max(maxVL, Math.abs(c.vL)); });
   const dyaw = Math.abs(angDiff(d.car.yaw, yaw0)) * DEG; console.log(`     turned ${dyaw.toFixed(0)} deg in 2 s, max sideways speed ${maxVL.toFixed(1)} m/s`);
@@ -139,12 +142,12 @@ check('3 the boat slides in a turn: the sideways speed builds and dies, the head
   step(3, { thr: 0, steer: 0 }); assert.ok(Math.abs(d.car.vL) < 0.4, 'the slide dies out');
 });
 check('3 S brakes from speed and then reverses slowly (under 18 km/h); Space stops', () => {
-  d.teleport(DOCK.x, DOCK.z, DOCK.yaw); step(5, { thr: 1 }); const v0 = d.car.speed;
+  openStart(); step(5, { thr: 1 }); const v0 = d.car.speed;
   step(3.5, { brk: 1 }, () => {}); assert.ok(d.car.speed < 8 || d.car.vF < 0.6, `still ${d.car.speed.toFixed(1)} km/h`);
   let vmin = 0; step(5, { brk: 1 }, (i, c) => { vmin = Math.min(vmin, c.vF); });
   console.log(`     from ${v0.toFixed(0)} km/h the brake stops it and reverse peaks at ${(-vmin * 3.6).toFixed(1)} km/h`);
   assert.ok(-vmin * 3.6 > 6 && -vmin * 3.6 < 18, `reverse ${-vmin * 3.6}`);
-  d.teleport(DOCK.x, DOCK.z, DOCK.yaw); step(4, { thr: 1 }); step(2.5, { hand: true }); assert.ok(d.car.speed < 3, `hand ${d.car.speed}`);
+  openStart(); step(4, { thr: 1 }); step(2.5, { hand: true }); assert.ok(d.car.speed < 3, `hand ${d.car.speed}`);
 });
 check('3 coasting: without input it slows but keeps going (a boat does not stop at once)', () => {
   const zr = DOCK.z + 15; let wa = DOCK.x, wb = DOCK.x; while (water(wa - 1, zr) !== null) wa--; while (water(wb + 1, zr) !== null) wb++;
@@ -227,6 +230,20 @@ check('6 a solid in the water (pier / abutment) stops the boat with a hit and sl
   step(9, { thr: 1 }, (i, c) => { if (water(c.x, c.z) === null) off++; for (const e of c.events) if (e.type === 'hit') { hit++; vHit = Math.max(vHit, e.v); } if (it.type === 'cyl' ? Math.hypot(c.x - it.cx, c.z - it.cz) < it.r : (() => { const dx = c.x - it.cx, dz = c.z - it.cz, lx = dx * it.c - dz * it.s, lz = dx * it.s + dz * it.c; return Math.abs(lx) < it.hw && Math.abs(lz) < it.hd; })()) inside = true; });
   console.log(`     ${hit} hit events (max ${vHit.toFixed(1)} m/s), ended ${Math.hypot(d.car.x - it.cx, d.car.z - it.cz).toFixed(1)} m from the pier at ${d.car.speed.toFixed(1)} km/h`);
   assert.ok(hit > 0, 'went through it without a hit'); assert.ok(!inside, 'the boat centre was inside the pier'); assert.equal(off, 0);
+});
+
+check('6 the Anichkov piers are solid: along a pier line the boat is stopped by the cutwater (never inside), along the middle arch it passes under the bridge without a hit', () => {
+  const F = globalThis.__frame;
+  const run = (u) => {
+    const p0 = F.toWorld(u, -34); d.exit(true); walker(p0.x, p0.z); d.enter('boat'); d.teleport(p0.x, p0.z, -F.TH);       // along +v (the river), 34 m north of the bridge centre line
+    let hit = 0, minV = 1e9, maxV = -1e9, off = 0;
+    step(8, { thr: 1 }, (i, c) => { const q = F.toUV(c.x, c.z); minV = Math.min(minV, q.v); maxV = Math.max(maxV, q.v); if (water(c.x, c.z) === null) off++; for (const e of c.events) if (e.type === 'hit') hit++; });
+    return { hit, maxV, off, speed: d.car.speed };
+  };
+  const pier = run((F.ARCHES[0][1] + F.ARCHES[1][0]) / 2), mid = run(0);
+  console.log(`     pier line: ${pier.hit} hit(s), got no further than v ${pier.maxV.toFixed(1)} (the pier face is at v ${-F.FACE}); middle arch: ${mid.hit} hit(s), reached v ${mid.maxV.toFixed(1)} (through: > ${F.FACE})`);
+  assert.ok(pier.hit > 0 && pier.maxV < -F.FACE + 1.5 && pier.off === 0, 'the pier did not stop the boat');
+  assert.ok(mid.hit === 0 && mid.maxV > F.FACE + 2 && mid.off === 0, 'the middle arch is not open');
 });
 
 // ---------------------------------------------------------------- 7 getting out
