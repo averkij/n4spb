@@ -31,6 +31,9 @@ const LOOK = {
   moat: ['#1d3a52', '#2d5270', '#4a5c4a', '#3a4432', '#22393f', 1.3],
   'swan-canal': ['#1d3a52', '#2d5270', '#4a5c4a', '#3a4432', '#22393f', 1.2],
   neva: ['#17356e', '#26509a', '#3c6a88', '#3a4a52', '#22404e', 0.55],
+  kryukov: ['#1b3a52', '#2c5272', '#4a5a48', '#3a4232', '#21383e', 1.15],
+  admiralty: ['#1d3a52', '#2d5270', '#4a5c4a', '#3a4432', '#22393f', 1.2],
+  'nh-inner': ['#1d3a52', '#2d5270', '#4a5c4a', '#3a4432', '#22393f', 1.2],
   // the ponds of the Tauride Garden (landmarksTauride/ponds.js, T4a): greenish and slightly turbid, olive near the banks, small chop; the duckweed mat of the Small Pond is patched into this shader by ponds.js.
   // T4b: darker and more teal, a less olive shallow, a calmer chop (the T4a GPU QA read the narrow arms as pale speckled gravel from the air; ponds.js also damps the iso-lines and the glints for this key)
   'tauride-pond': ['#1a342e', '#26473c', '#5c7246', '#2e3a2a', '#213532', 0.9],      // T7: a notch darker (the user's photos: the lake dark green, the west pond nearly black-green under the crowns)

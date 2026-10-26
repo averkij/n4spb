@@ -66,6 +66,20 @@ export function knockBays(ctx, { name = 'fence', bays, parts, collider = null, r
   return { records: r.records, items, frames, meshes: r.meshes };
 }
 
+/** split the run (x0, z0) -> (x1, z1) into equal bays of about `tile` metres (at least one; a texture tile per bay: a stretched alpha panel keeps its pattern), each carrying `extra` (y, ye, ghost ...);
+ *  `first` / `last` mark the first and the last bay of the run (a post at the start of the first bay and at the end of the last) */
+export function splitBays(x0, z0, x1, z1, tile, extra = {}) {
+  const l = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(l / tile)), out = [];
+  for (let k = 0; k < n; k++) out.push({ x0: x0 + (x1 - x0) * k / n, z0: z0 + (z1 - z0) * k / n, x1: x0 + (x1 - x0) * (k + 1) / n, z1: z0 + (z1 - z0) * (k + 1) / n, first: k === 0, last: k === n - 1, ...extra });
+  return out;
+}
+/** a vertical panel x 0..1, y y0..y1, in the plane z = 0, uv (0..1, 0..1): ONE texture tile per bay (an alpha-tested double-sided material); the normal faces +z (the left of the bay) */
+export function unitPanel(y0 = 0, y1 = 1, { u1 = 1 } = {}) {      // u1: the u coordinate of the far end (a bay of N texture tiles: u1 = N, the texture repeats)
+  const pos = [], nrm = [], uv = [], idx = [];
+  quad(pos, nrm, uv, idx, [[0, y0, 0], [1, y0, 0], [1, y1, 0], [0, y1, 0]], [0, 0, 1], [[0, 0], [u1, 0], [u1, 1], [0, 1]]);
+  return build(pos, nrm, uv, idx);
+}
+
 // ---------------------------------------------------------------- unit geometries (x 0..1 along the bay, scaled by the part's `stretch`)
 /** a box x 0..1, y y0..y1, z z0..z1 (local z = the left of the bay); uvs: texture metres per uv unit, uLen: the bay length the u coordinate is meant for (a stretched box repeats that many metres per tile) */
 export function unitBox(y0, y1, z0, z1, { uLen = 1, uvs = 1, bottom = false } = {}) {

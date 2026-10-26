@@ -66,6 +66,8 @@ export const WATER = {
   openMouths: arr(W.openMouths),
   dataWater: arr(W.dataWater),
   slopeReaches: arr(W.slopeReaches),
+  /** { RIVER record name: waterway key } for the RIVER records whose data `key` is null (Admiralty-Haymarket: the Kryukov, Admiralty, Novo-Admiralty and New Holland canals) */
+  keyByName: obj(W.keyByName),
 };
 
 export const ZONES = {

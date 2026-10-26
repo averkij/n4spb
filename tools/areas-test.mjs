@@ -157,8 +157,10 @@ for (const g of GATES.filter(isEdge)) {
   check(`the live areas (${live.map((a) => a.id).join(', ')}): an edge gate each way for every pair, no gate leads from a live area to a parked one, the station rectangle ST is the same in all`, () => {
     for (const a of live) for (const b of live) if (a !== b) assert(GATES.some((g) => isEdge(g) && g.from === a.id && g.to === b.id), `no edge gate ${a.id} -> ${b.id}`);
     for (const g of GATES) if (!g.dev && live.some((a) => a.id === g.from)) assert(!REGISTRY[g.to].parked, `gate ${g.id} leads from the live ${g.from} to the parked ${g.to}`);
-    const st = live.map((a) => a.play.find((r) => r.name === 'ST')); assert(st.every(Boolean), 'a live area without the ST rectangle');
+    // the Moscow station complex ST is the same rectangle in every live area that carries it; an area WITHOUT the station (Admiralty-Haymarket, docs/AREAS.md 15.2) has no ST and its territory must not reach the complex
+    const st = live.map((a) => a.play.find((r) => r.name === 'ST')).filter(Boolean); assert(st.length >= 1, 'no live area carries the ST rectangle');
     for (const r of st) assert.deepEqual([r.x0, r.x1, r.z0, r.z1], [st[0].x0, st[0].x1, st[0].z0, st[0].z1], 'ST differs between the live areas');
+    for (const a of live) if (!a.play.some((r) => r.name === 'ST')) assert(!a.play.some((r) => r.x1 > st[0].x0 && r.x0 < st[0].x1 && r.z1 > st[0].z0 && r.z0 < st[0].z1), `${a.id} has no ST rectangle but its territory reaches the station complex`);
   });
 }
 

@@ -15,6 +15,8 @@ export const OWNS_GROUPS = true;
 import * as THREE from 'three';
 import { Parts } from './bridges/kit.js';
 import { makeMats } from './bridges/mats.js';
+import { addVoMats } from './bridges/mats-vo.js';
+import { buildBlag } from './bridges/blag.js';
 import { makeRailBatch } from './bridges/rails.js';
 import { SITES, WATER_Y } from './bridges/sites.js';
 import { makeBelinsky } from './bridges/belinsky.js';
@@ -29,6 +31,7 @@ import { bridgeZones } from './environment/river.js';
 
 export async function build(ctx) {
   const M = makeMats(ctx), rails = makeRailBatch(ctx);
+  addVoMats(ctx, M);
   const root = new THREE.Group(); root.name = 'bridges';
   const decals = M.decalMats, failed = [], list = [], stats = { tris: 0, rails: 0, colliders: 0 };
   const env = ctx.services && ctx.services.environment;
@@ -49,6 +52,7 @@ export async function build(ctx) {
   };
 
   for (const site of SITES) {
+    if (site.kind === 'zone') continue;                                  // a quay-zone record (sites-vo.js BLAG_ZONE): the bridge itself is drawn below by bridges/blag.js
     try {
       const P = new Parts();
       const e = { ctx, P, M, rails, waterY: waterY(site.ww), site, zones: QZONES };
@@ -66,6 +70,10 @@ export async function build(ctx) {
       list.push({ id: site.id, name: site.name, nameEn: site.nameEn, x: site.cx, z: site.cz, at: site.at, site, B });
     } catch (err) { console.error(`[bridges] ${site.id} failed:`, err); failed.push(`${site.id}: ${err && err.stack || err}`); }
   }
+  // the Blagoveshchensky Bridge, bank to bank (bridges/blag.js, data sites-vo.js BLAG), when the area lists it (its quay-zone record passes siteInArea)
+  try {
+    if (SITES.some((s) => s.id === 'blagoveshchensky')) { const P = new Parts(), info = buildBlag({ ctx, P, M, rails, waterY: waterY('neva'), zones: QZONES }); info.colliders(); flush(P, 'blagoveshchensky'); stats.colliders += info.info.colliders; list.push({ id: 'blagoveshchensky', name: 'Благовещенский мост', nameEn: 'Blagoveshchensky Bridge', x: info.x, z: info.z, at: [info.at.x, info.at.z], B: info }); }
+  } catch (err) { console.error('[bridges] blagoveshchensky failed:', err); failed.push('blagoveshchensky: ' + (err && err.stack || err)); }
   // the bascule span of the Palace Bridge is built by module landmarksPalaceBridge when the page lists it (`leaves`, docs/AREAS.md 13.10); the strip keeps the closed bridge
   try {
     const P = new Parts(); const info = buildPalace({ ctx, P, M, rails, waterY: waterY('neva'), leaves: Array.isArray(ctx.buildList) && ctx.buildList.includes('landmarksPalaceBridge') }); info.colliders(); flush(P, 'palace'); stats.colliders += info.info.colliders; list.push({ id: 'palace', name: 'Дворцовый мост', nameEn: 'Palace Bridge', x: info.x, z: info.z, at: info.at ? [info.at.x, info.at.z] : [info.x, info.z], B: info });

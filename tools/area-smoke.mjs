@@ -1,6 +1,6 @@
 // tools/area-smoke.mjs - ONE real-browser smoke of the live areas on their BAKES (GPU job: take /d/git2/gpulock first): the page loads from assets/baked/<id>/, the scene builds, the player starts, a handful of
 // poses are photographed, console / page errors are listed. A look, not a test: the owner wants to see the areas with his eyes first (docs/AREAS.md 13).
-//   node tools/area-smoke.mjs [--area palace|smolny|all] [--out shots/smoke] [--only name,name]
+//   node tools/area-smoke.mjs [--area palace|smolny|admiralty|all] [--out shots/smoke] [--only name,name]
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,10 +40,19 @@ const SHOTS = [
   ['smolny', 'smolny-nursery', [1121.5, -1600.2, 44.2, -21.9, 34.1], '', 0],
   ['smolny', 'smolny-nursery-lane', [1072, -1631.5, 90, 2], '', 0],
   ['smolny', 'smolny-nursery-south', [1045, -1596, 0, 4], '', 0],
+  // Admiralty-Haymarket (docs/AREAS.md 15.2): the VIEWS poses of src/areas/admiralty/area.js
+  ['admiralty', 'admiralty-garden', [-2329, -508, 40.5, 8], '', 2.0],
+  ['admiralty', 'admiralty-isaac', [-2488, -63, 15, 18], '', 2.0],
+  ['admiralty', 'admiralty-horseman', [-2735, -405, 14.4, 6], '', 2.0],
+  ['admiralty', 'admiralty-mariinsky', [-3030, 760, 49.4, 8], '', 2.0],
+  ['admiralty', 'admiralty-yusupov', [-2950, 300, -155.3, 8], '', 2.0],
+  ['admiralty', 'admiralty-newholland', [-3339, 471, 70.6, 8], '', 2.0],
+  ['admiralty', 'admiralty-nikolsky', [-2873, 1040, -170.4, 10], '', 2.0],
+  ['admiralty', 'admiralty-blagoveshchensky', [-3376, -100, 25.7, 8], '', 2.0],
 ];
 const only = args.only ? String(args.only).split(',') : null, areaArg = args.area || 'all';
 const jobs = SHOTS.filter(([a, n]) => (areaArg === 'all' || a === areaArg) && (!only || only.includes(n)));
-const PAGE = { palace: 'index.html', smolny: 'smolny.html' };
+const PAGE = { palace: 'index.html', smolny: 'smolny.html', admiralty: 'admiralty.html' };
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-sandbox', '--no-first-run', '--disable-extensions', '--window-size=1280,720'] });
 const report = [];
 try {

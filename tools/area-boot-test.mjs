@@ -52,7 +52,9 @@ try {
     check('__ctx.area.ID equals <html data-area>', r.id === r.attr, r);
     check(`area id is ${ROW.id} and its bake dir is ${ROW.bake}`, r.id === ROW.id && r.bake === ROW.bake, r);
     check('the fast harness built its module', r.mods.includes('drive'), r.mods);
-    check('the garage holds the four cars at the poses of the area module', !!r.garage && r.garage.map((c) => c.id).join() === 'coupe,truck,lada,roadster' && r.garage.every((c) => Math.abs(c.x - r.poses[c.id].x) < 1e-6 && Math.abs(c.z - r.poses[c.id].z) < 1e-6), r);
+    // docs/AREAS.md 13.4: the four cars stand only at the central station; an area without the station (no ST rectangle in its registry row) holds the purple Zhiguli alone
+    const wantCars = ROW.play && !ROW.play.some((q) => q.name === 'ST') && ROW.id !== 'north' ? 'lada' : 'coupe,truck,lada,roadster';
+    check('the garage holds the cars of the area (' + wantCars + ') at the poses of the area module', !!r.garage && r.garage.map((c) => c.id).join() === wantCars && r.garage.every((c) => Math.abs(c.x - r.poses[c.id].x) < 1e-6 && Math.abs(c.z - r.poses[c.id].z) < 1e-6), r);
     check('no module errors, no page errors', r.errs === 0 && errors.length === 0, { errs: r.errs, errors });
     await page.close(); }
   console.log('a page whose data-area disagrees with its area module is refused:');

@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **2.0.0** (2026-10-26, major): new live area Admiralty-Haymarket (Адмиралтейский–Сенной, admiralty.html): Admiralty, St Isaac's, Mariinsky, New Holland, Yusupov, Nikolsky, Sennaya, the south-west canals and the Blagoveshchensky Bridge
 - **1.7.0** (2026-10-26, minor): a motor boat floats at the Anichkov Bridge: walk up, press E, drive it on the Fontanka (piers of the Anichkov Bridge now stop boats)
 - **1.6.1** (2026-10-26, patch): Anichkov quay: the landing-stage stair flight is steppable through a railing gap, the railing is closed at the four heads of the Anichkov Bridge
 - **1.6.0** (2026-10-26, minor): a junked car (100% damage) shows the Потрачено label for 5 s and stops moving; J still repairs it

@@ -121,6 +121,8 @@ check('1 no wall of colliders cuts a body of water: every connected body of wate
   for (const [k, c] of idx) {
     const bed = L.heightAt(c.x, c.z); let blocked = L.insideBuilding(c.x, c.z);
     if (!blocked) { const p = { x: c.x, z: c.z }; ph.resolve(p, 0.35, bed, 1.7); blocked = hyp(p.x - c.x, p.z - c.z) > 0.02; }
+    // under a bridge deck the solids are STRUCTURES (a low slab bridge over a 10 m diagonal canal, Admiralty-Haymarket: its underside is 0.4 m above the water, a wader on the bed does not fit under it): a hole, not a wall of the water
+    if (blocked && ctx.services.bridges && ctx.services.bridges.deckY && ctx.services.bridges.deckY(c.x, c.z) !== null) blocked = false;
     if (!blocked) free.add(k);
   }
   const comps = (has) => { const comp = new Map(), sizes = []; for (const s0 of has) { if (comp.has(s0)) continue; const id = sizes.length; let n = 0; const q = [s0]; comp.set(s0, id); while (q.length) { const k = q.pop(); n++; const [i, j] = k.split(',').map(Number); for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const kk = (i + di) + ',' + (j + dj); if (has.has(kk) && !comp.has(kk)) { comp.set(kk, id); q.push(kk); } } } sizes.push(n); } return { comp, sizes }; };

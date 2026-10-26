@@ -50,7 +50,11 @@ export function deckPoly() {
 const SITE_OF = { belinsky: 'belinsky', kazansky: 'kazansky', green: 'green', pevchesky: 'pevchesky', red: 'red', blue: 'blue', 'novo-konyushenny': 'novo', hermitage: 'hermitage', 'zimny-1': 'zimny1', 'zimny-2': 'zimny2', bankovsky: 'bankovsky', muchnoy: 'mucny', italyansky: 'italyansky',
   // the Mars Field / Summer Garden reach inside the extent margin
   'swan-lower': 'swan-lower', panteleymonovsky: 'panteleymonovsky', eng1: 'eng1', garden1: 'garden1', garden2: 'garden2', 'bolshoy-konyushenny': 'bolsh-konyushenny', teatralny: 'teatralny', 'malo-konyushenny': 'malo-konyushenny',
-  kamenny: 'kamenny', pochtamtsky: 'pochtamtsky', fonarny: 'fonarny' };
+  kamenny: 'kamenny', pochtamtsky: 'pochtamtsky', fonarny: 'fonarny',
+  // the south-west reach (Admiralty-Haymarket; zone id = site id, bridges/sites-sw.js): the sites of an area that does not list these zones are filtered out by sites.js siteInArea, so the rows are inert elsewhere
+  demidov: 'demidov', sennoy: 'sennoy', kokushkin: 'kokushkin', voznesensky: 'voznesensky', podyachesky: 'podyachesky', lviny: 'lviny', kharlamov: 'kharlamov', 'novo-nikolsky': 'novo-nikolsky', pikalov: 'pikalov', krasnogvardeysky: 'krasnogvardeysky',
+  'staro-nikolsky': 'staro-nikolsky', mogilevsky: 'mogilevsky', kashin: 'kashin', torgovy: 'torgovy', dekabristov: 'dekabristov', matveev: 'matveev', krasnoflotsky: 'krasnoflotsky', potseluev: 'potseluev', khrapovitsky: 'khrapovitsky',
+  krushtein1: 'krushtein1', krushtein2: 'krushtein2', admiralteysky: 'admiralteysky', obukhovsky: 'obukhovsky', izmailovsky: 'izmailovsky', blagoveshchensky: 'blagoveshchensky' };
 let _zones = null;
 /** Every bridge crossing of the quay: { id, name, key (waterway), c: [x, z] (middle of the deck), axis (compass deg of the road), w (deck width along the water), len, own (a bridge the bridges module draws),
  *  foot, test(x, z, grow) (a point lies in the gap of the quay) }. The bridges module's sites.js (the real decks) wins over the dossier table where both exist. */
@@ -69,7 +73,23 @@ export function bridgeZones() {
       out.push({ id: z.id, name: z.name, key: z.key, c: z.c, axis: z.axis, w: z.w, len: z.len, own: z.own && z.id !== 'anichkov', foot: false, test: (x, zz, grow = 0) => { const px = x - z.c[0], pz = zz - z.c[1], u = px * ux + pz * uz, v = -px * uz + pz * ux; return Math.abs(u) <= hl + grow && Math.abs(v) <= hw + grow; } });
     }
   }
+  // a record of kind 'zone' in bridges/sites.js (BLAG_ZONE: the south landing of the Blagoveshchensky Bridge, no geometry of its own) makes its quay opening without a BRIDGE_ZONES row: the opening is the owner's deck frame
+  // (|u| <= 30, v0 .. v1 round the origin); the length 90 is the one the source project's row had (the quay's gap radius)
+  { const rows = new Set(BRIDGE_ZONES.map((z) => z.id)), LEN = { blagoveshchensky: 90 };
+    for (const [zid, sid] of Object.entries(SITE_OF)) {
+      if (rows.has(zid)) continue;
+      const site = SITES.find((s) => s.id === sid && s.kind === 'zone'); if (!site) continue;
+      const mid = (site.v0 + site.v1) / 2, c = siteToWorld(site, 0, mid);
+      out.push({ id: zid, name: site.name, key: site.ww, c: [c.x, c.z], axis: site.b, w: site.v1 - site.v0, len: LEN[zid] || 90, own: true, foot: false, site, test: (x, zz, grow = 0) => siteInDeck(site, x, zz, 30, grow) });
+    }
+  }
   for (const z of moatBridgeZones()) out.push(z);
+  for (const z of nhBridgeZones()) out.push(z);
+  // the southern Fontanka decks (bridges/sites-south.js, site.south): the opening is the owner's deck frame (|u| <= 30 along the water, 60 m of quay), as in the source project
+  for (const site of SITES.filter((s) => s.south)) {
+    const foot = site.kind === 'foot';
+    out.push({ id: site.id, name: site.name, key: site.ww, c: [site.cx, site.cz], axis: site.b, w: site.v1 - site.v0, len: 60, own: true, foot, site, test: (x, z, grow = 0) => siteInDeck(site, x, z, 30, grow + (foot ? 0.4 : 0)) });
+  }
   return (_zones = out);
 }
 
@@ -78,8 +98,10 @@ export const floorZones = () => BRIDGE_ZONES.filter((z) => z.floor);
 
 /** The decks over the castle moat (key 'moat'): every mapped bridge road piece (OSM bridge=yes, 2.4 - 7.2 m wide) inside the moat's window; landmarksCastle (Three-part bridge, footbridges) and the 2nd Engineer bridge draw them: the quay only leaves its
  *  wall / collider open under them (auto zone, test = distance to the polyline < half width + 3 m). No splits, no fallback deck. */
-let _moatZones = null;
+let _moatZones = null, _nhZones = null;
 function moatBridgeZones() { return _moatZones || (_moatZones = windowBridgeZones('moat', [-800, -600, -885, -795], 'moat-')); }
+/** the footbridges over the inner canals of New Holland (drawn by landmarksNewHolland): bridge=yes roads inside the island's canal window (the window is empty in every other area's data) */
+function nhBridgeZones() { return _nhZones || (_nhZones = windowBridgeZones('nh-inner', [-3460, -3250, 265, 475], 'nh-')); }
 function windowBridgeZones(key, win, prefix) {
   const out = [];
   for (const r of ROADS) {
