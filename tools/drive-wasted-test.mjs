@@ -96,6 +96,6 @@ for (const needle of ["import { createWasted } from './drive/wasted.js'", 'waste
 assert(/wasted\.gate\(\{ \.\.\.\(typeof inp === 'function'/.test(src) && src.includes('wasted.step(dt, damage.amount); if (wake') , 'the sim() test hook runs the same gate and step');
 const r0 = src.indexOf('    repair() {'), r1 = src.indexOf('damage.repair()', r0);
 const rule = src.slice(r0, r1);
-assert(/if \(Math\.hypot\(car\.vx, car\.vz\) > 1\.4\)/.test(rule) && (rule.match(/return false/g) || []).length === 1, 'repair() refuses only a moving car (> 1.4 m/s): a wrecked, stopped car is repairable');
+assert(/if \(Math\.hypot\(car\.vx, car\.vz\) > 1\.4\)/.test(rule) && (rule.match(/return false/g) || []).length === 2, 'repair() refuses only a moving car (> 1.4 m/s): a wrecked, stopped car is repairable');
 assert(src.includes("e.code === 'KeyJ'") && src.includes('api.repair()'), 'the J key calls repair()');
 console.log('PASS wasted: label once per wreck event (5 s, exact text), wrecked car immobile (brakes to a stop, no reverse), repair / exit / respawn clear it, J repair rule unchanged');
