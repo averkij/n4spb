@@ -23,6 +23,7 @@ import { getCarWrecks } from './drive/wrecks.js';
 import { createCarSound } from './drive/sound.js';
 import { createFx } from './drive/fx.js';
 import { createDriveHud } from './drive/hud.js';
+import { createWasted } from './drive/wasted.js';
 
 const DEG = Math.PI / 180, TAU = Math.PI * 2;
 export const SPAWN = GARAGE.spawn || GARAGE.poses.coupe || null;      // GARAGE.spawn of the area module (the strip: on the asphalt strip beside the station's taxi rank, facing east, toward Vosstaniya Square)
@@ -54,6 +55,8 @@ export async function build(ctx) {
   let hopTap = false, flipTap = false;      // the X / C hop key (or button) went down since the last physics step: a press shorter than one frame (keydown + keyup between two frames) must still launch its hop
   const hud = createDriveHud({ isTouch, onExit: () => api.exit(), onRepair: () => api.repair(), onNitro: (v) => { touch.nitro = v; }, onHand: (v) => { touch.hand = v; }, onBrake: (v) => { touch.brake = v; }, onJump: (v) => { touch.jump = v; if (v) hopTap = true; }, onFlip: (v) => { touch.flip = v; if (v) flipTap = true; } });
   const night = ctx.shared.uNight;
+  // 100% junked: the "Потрачено" label for 5 s, the car cannot be driven (J still repairs it): drive/wasted.js
+  const wasted = createWasted({ onShow: () => ctx.ui.toast('Нажмите J — ремонт · Press J to repair') });
 
   const addBox = (v = V) => {
     if (v.box) return;
@@ -101,7 +104,7 @@ export async function build(ctx) {
     if (!v) return false;
     state.active = true; state.enteredAt = performance.now();
     player.inputLock++; player.fly = false;
-    use(v); dropBox();
+    use(v); dropBox(); wasted.reset(damage.amount);
     car.reset(parked.x, parked.z, parked.yaw);
     car.jumpHeld = keys.has('KeyX') || touch.jump; car.flipHeld = keys.has('KeyC') || touch.flip;      // a hop key that is down at the door starts nothing: only a fresh press does
     car.damage = damage.amount; car.damageStage = damage.stage; car.damageSmoke = damage.smoke;
@@ -137,7 +140,7 @@ export async function build(ctx) {
     state.active = false;
     parked.x = car.x; parked.z = car.z; parked.yaw = car.yaw; parked.y = car.air ? car.groundAt(car.x, car.z) : car.y; car.vx = car.vz = 0;
     addBox();
-    hud.show(false); sound.stop(); fx.clear(); extra.length = 0;
+    hud.show(false); sound.stop(); fx.clear(); extra.length = 0; wasted.hide();
     if (camera.fov !== view.baseFov) { camera.fov = view.baseFov; camera.updateProjectionMatrix(); }
     camera.up.set(0, 1, 0); cockpitNear(false);
     player.inputLock = Math.max(0, player.inputLock - 1);
@@ -159,7 +162,7 @@ export async function build(ctx) {
       for (const [fx_, bx] of [[pf, pw], [pf, -pw], [-pr, pw], [-pr, -pw]]) ok = ok && !car.blocked(px + sy * fx_ + cy * bx, pz + cy * fx_ - sy * bx);
       if (!ok) continue;
       const p = { x: px, z: pz }; ph.resolve(p, Math.max(0.9, SPEC.W / 2), car.groundAt(px, pz), SPEC.hgt); if (Math.hypot(p.x - px, p.z - pz) > 0.05) continue;
-      car.reset(px, pz, yaw); view.snap = true; view.camYaw = yaw; return true;
+      car.reset(px, pz, yaw); view.snap = true; view.camYaw = yaw; wasted.hide(); return true;
     }
     return false;
   }
@@ -319,11 +322,13 @@ export async function build(ctx) {
     if (!state.active) return;
     const locked = ctx.ui && ctx.ui.modalOpen;
     readInput(input);
+    wasted.gate(input, car.vF, damage.amount);      // a junked car (100%) cannot be driven; E and J still work
     if (locked) holdInput(input, car.vF);      // a panel / the area prompt is open: the car holds (a fixed brake input would make a stopped car reverse: handling.js holdInput)
     if (dt > 0) {
       car.step(dt, input); hopTap = flipTap = false;
       hopEvents();
       applyImpacts();
+      wasted.step(dt, damage.amount);
     }
     poseModel(dt);
     syncPlayer();
@@ -386,7 +391,7 @@ export async function build(ctx) {
     const d = Array.isArray(spec.d) ? spec.d : [0, 0, 0, 0];
     if (d.some((v) => v > 0)) {
       [damage.state.front, damage.state.rear, damage.state.left, damage.state.right] = d.map((v) => Math.max(0, Math.min(1, Number(v) || 0)));
-      damage.state.revision++; damage.sync();
+      damage.state.revision++; damage.sync(); wasted.reset(damage.amount);
       car.damage = damage.amount; car.damageStage = damage.stage; car.damageSmoke = damage.smoke; car.collisionSpec = crushedSpec(SPEC, damage.state); collisionRevision = damage.revision;
       model.setView(view.mode === 2); damage.hideDetached(); hud.update(car, 0);
     }
@@ -399,7 +404,7 @@ export async function build(ctx) {
     fleet, get vehicle() { return V; }, vehicleById: (id) => fleet.find((f) => f.id === id),
     repair() {
       if (Math.hypot(car.vx, car.vz) > 1.4) { ctx.ui.toast('Stop to repair'); return false; }
-      damage.repair(); car.damage = car.damageSmoke = 0; car.damageStage = damage.stage; fx.clear();
+      damage.repair(); wasted.hide(); car.damage = car.damageSmoke = 0; car.damageStage = damage.stage; fx.clear();
       car.collisionSpec = null;
       model.setView(view.mode === 2); damage.hideDetached();
       hud.update(car, 0);
@@ -410,7 +415,7 @@ export async function build(ctx) {
     sim(seconds, inp = {}, frames = null) {
       if (!state.active) enter();
       const dt = 1 / 60, n = Math.round(seconds / dt), full = { thr: 0, brk: 0, steer: 0, hand: false, nitro: false, jump: false, flip: false, ...inp };
-      for (let i = 0; i < n; i++) { wrecks.step(dt); car.step(dt, typeof inp === 'function' ? inp(i * dt) : full); hopEvents(false); applyImpacts(false); if (frames) frames(i, car); }
+      for (let i = 0; i < n; i++) { wrecks.step(dt); car.step(dt, wasted.gate({ ...(typeof inp === 'function' ? inp(i * dt) : full) }, car.vF, damage.amount)); hopEvents(false); applyImpacts(false); wasted.step(dt, damage.amount); if (frames) frames(i, car); }
       view.snap = true; model.root.updateMatrixWorld(true); poseModel(0); syncPlayer(); cameraStep(0); view.snap = false; hud.update(car, 0.016);
       return { x: +car.x.toFixed(2), z: +car.z.toFixed(2), speed: +car.speed.toFixed(1), yaw: +(car.yaw / DEG).toFixed(1), gear: car.gear, boost: +car.boost.toFixed(2), vL: +car.vL.toFixed(2) };
     },
