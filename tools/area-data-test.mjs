@@ -233,7 +233,8 @@ check('band parity: every array agrees - the same ids (BUILDINGS with every fiel
 
 // ---- 5. sanity queries
 const B = new Map(N.BUILDINGS.map((b) => [b.id, b]));
-check('sights: Tauride Garden bbox (918..1497, -1789..-1259) holds > 20 buildings; Chernyshevskaya vestibule w22999175, the Transfiguration r5802451 and Muruzi r946930 exist', () => {
+check(area === 'vladimirsky' ? 'sights (Vladimirsky-Ligovka): the Moscow station r2404499, Hotel Moscow r3132622, the Lavra gate church r5677834 and the Nevsky Centre r1784115 exist' : 'sights: Tauride Garden bbox (918..1497, -1789..-1259) holds > 20 buildings; Chernyshevskaya vestibule w22999175, the Transfiguration r5802451 and Muruzi r946930 exist', () => {
+  if (area === 'vladimirsky') { for (const id of ['r2404499', 'r3132622', 'r5677834', 'r1784115']) assert(B.has(id), id + ' is missing'); return; }
   const n = N.BUILDINGS.filter((b) => b.cx >= 918 && b.cx <= 1497 && b.cz >= -1789 && b.cz <= -1259).length;
   info('buildings in the Tauride Garden bbox: ' + n);
   assert(n > 20, String(n));
@@ -244,6 +245,7 @@ check('the Fontanka (RIVER key fontanka) and the Neva (key neva) are in RIVER', 
 });
 check('the unsplit arrays exist: SUBWAY_ROUTES 10, BUS_ROUTES >= 40, TROLLEY / TRAM_ROUTES non-empty, ENTRANCES / STATIONS of the Chernyshevskaya line', () => {
   assert.equal(N.SUBWAY_ROUTES.length, 10); assert(N.BUS_ROUTES.length >= 40); assert(N.TROLLEY.length > 0); assert(N.TRAM_ROUTES.length > 0);
+  if (area === 'vladimirsky') { assert(N.STATIONS.some((s) => /Площадь Восстания|Маяковская|Владимирская|Достоевская/.test(s.name || '')), 'no metro station of the Vladimirsky districts'); return; }
   assert(N.STATIONS.some((s) => /Чернышевск/.test(s.name || '')), 'no Chernyshevskaya station');
 });
 // landmark claims of the source modules (info: the area module of the area claims what it builds)
