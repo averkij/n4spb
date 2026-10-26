@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **1.6.1** (2026-10-26, patch): Anichkov quay: the landing-stage stair flight is steppable through a railing gap, the railing is closed at the four heads of the Anichkov Bridge
 - **1.6.0** (2026-10-26, minor): a junked car (100% damage) shows the Потрачено label for 5 s and stops moving; J still repairs it
 - **1.5.1** (2026-10-26, patch): bridges: cars no longer fall through the undrawn Prachechny / Upper Swan / 2nd Engineer bridges; the barrier booms of the opening bridges are light and break in half on a car hit
 - **1.5.0** (2026-10-25, minor): bridge stunts: breakable solid barrier arms, ballistic car physics over the opened bridges; no contact wires or masts over the open Palace Bridge span; the hand-off shows only the minimal veil (the loading watchdog can no longer bring the splash back); the Tauride nursery is summer green
