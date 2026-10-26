@@ -15,14 +15,16 @@ import { makeKit } from './landmarksE/common.js';
 import { makeG } from './landmarksE/mats.js';
 import { makeTrees } from './landmarksE/trees.js';
 
+// [part, the sub-group of layout.GROUPS.landmarksE it draws, loader]. A part is built only when the area claims its sub-group (n4spb, Vladimirsky-Ligovka: the Alexandrinsky Theatre, the Anichkov Palace and the Ostrovsky houses lie in
+// its territory, the Gostiny Dvor, the Catherine Garden and the National Library 100 m to 1 km west of it, in Palace-Liteyny, which claims all six: its output is what it was).
 const PARTS = [
-  ['gd', () => import('./landmarksE/gd.js')],
-  ['promenade', () => import('./landmarksE/promenade.js')],
-  ['garden', () => import('./landmarksE/garden.js')],
-  ['theatre', () => import('./landmarksE/theatre.js')],
-  ['library', () => import('./landmarksE/library.js')],
-  ['anichkov', () => import('./landmarksE/anichkov.js')],
-  ['houses', () => import('./landmarksE/houses.js')],
+  ['gd', 'gostiny-dvor', () => import('./landmarksE/gd.js')],
+  ['promenade', 'gostiny-dvor', () => import('./landmarksE/promenade.js')],
+  ['garden', 'catherine-garden', () => import('./landmarksE/garden.js')],
+  ['theatre', 'alexandrinsky-theatre', () => import('./landmarksE/theatre.js')],
+  ['library', 'national-library', () => import('./landmarksE/library.js')],
+  ['anichkov', 'anichkov', () => import('./landmarksE/anichkov.js')],
+  ['houses', 'ostrovsky-houses', () => import('./landmarksE/houses.js')],
 ];
 
 export async function build(ctx) {
@@ -32,7 +34,9 @@ export async function build(ctx) {
   K.trees = makeTrees(K);
   const root = new THREE.Group(); root.name = 'landmarksE'; K.root = root;
   const failed = [], t0 = Date.now(), times = {}, tris = {};
-  for (const [name, load] of PARTS) {
+  const claimed = new Set((K.L.GROUPS.landmarksE || []).map((g) => g.key));      // the sub-groups of THIS area
+  for (const [name, group, load] of PARTS) {
+    if (!claimed.has(group)) continue;
     const t = Date.now(), n0 = K.tris;
     try {
       const m = await load();

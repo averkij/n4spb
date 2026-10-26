@@ -66,6 +66,10 @@ export const WATER = {
   openMouths: arr(W.openMouths),
   dataWater: arr(W.dataWater),
   slopeReaches: arr(W.slopeReaches),
+  /** { name: waterway key }: a RIVER record without a key is drawn as that waterway when its name is listed (Vladimirsky-Ligovka: the Obvodny canal as a 'neva' trench); empty = the strip's rule, only RIVER[].key counts */
+  riverKeys: obj(W.riverKeys),
+  /** [waterway key, ...]: the bridge road pieces (OSM bridge=yes) claimed by eastBridges that cross water of these keys make auto quay openings (environment/river.js); empty = none */
+  riverBridgeZones: arr(W.riverBridgeZones),
 };
 
 export const ZONES = {
