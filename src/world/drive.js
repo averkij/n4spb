@@ -23,8 +23,14 @@ import { getCarWrecks } from './drive/wrecks.js';
 import { createCarSound } from './drive/sound.js';
 import { createFx } from './drive/fx.js';
 import { createDriveHud } from './drive/hud.js';
+import { STEP_HEIGHT } from '../core/physics.js';
+import { loadBoats } from './drive/boat/index.js';
+import { createBoatHandling } from './drive/boat/handling.js';
+import { createWake } from './drive/boat/wake.js';
 
 const DEG = Math.PI / 180, TAU = Math.PI * 2;
+/** the damage state of a vehicle that cannot be damaged (the motor boat): the shape of drive/damage.js that drive.js, the HUD and the hand-off read, with nothing in it */
+const noDamage = () => ({ amount: 0, stage: 0, smoke: 0, revision: 0, state: { front: 0, rear: 0, left: 0, right: 0 }, hit() {}, repair() {}, sync() {}, hideDetached() {} });
 export const SPAWN = GARAGE.spawn || GARAGE.poses.coupe || null;      // GARAGE.spawn of the area module (the strip: on the asphalt strip beside the station's taxi rank, facing east, toward Vosstaniya Square)
 const EXIT_MAX_KMH = 25;
 const angDiff = (a, b) => { let d = a - b; d -= TAU * Math.round(d / TAU); return d; };
@@ -46,6 +52,18 @@ export async function build(ctx) {
     const damage = createCarDamage(model, { interior: true, spec: def.spec, onDetach: fragment => wrecks.shed(fragment, car) });
     return { id: def.id, def, model, car, parked, damage, spec: def.spec, box: null };
   });
+  // THE BOATS (drive/boat/): the motor boats that wait at their docks, one vehicle each with the same shape as a car (model, handling state, parked pose, a damage state that stays empty, a physics box); they are NOT in `fleet`
+  // (the cars of the station, which the tests count) but in `boats`; `vehicles` is both. A boat floats at the water level, takes the car's controls and has its own wake, sound and key line.
+  const boats = [];
+  try {
+    for (const def of loadBoats(ctx)) {
+      const model = def.makeModel(ctx); ctx.add(model.root);
+      const car = createBoatHandling(ctx, def.tuning), p = def.parked;
+      car.reset(p.x, p.z, p.yaw);
+      boats.push({ id: def.id, kind: 'boat', def, model, car, parked: { x: p.x, z: p.z, yaw: p.yaw, y: car.y }, damage: noDamage(), spec: def.spec, box: null });
+    }
+  } catch (e) { console.warn(`[drive] the boats are not available (${e.message}); the cars go on without them`); boats.length = 0; }
+  const vehicles = fleet.concat(boats), wake = boats.length ? createWake(ctx) : null;
   let V = fleet[0], car = V.car, model = V.model, damage = V.damage, parked = V.parked, SPEC = V.spec, EYE = V.spec.eye;
   const sound = createCarSound(ctx.audio);
   const fx = createFx(ctx);
@@ -58,10 +76,11 @@ export async function build(ctx) {
   const addBox = (v = V) => {
     if (v.box) return;
     const { parked: p, spec } = v, sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
-    v.box = ph.addBox(p.x + sy * spec.centerZ, p.z + cy * spec.centerZ, spec.W + 0.08, spec.len + 0.08, p.yaw, p.y - 0.03, p.y - 0.03 + spec.hgt);
+    const draft = v.kind === 'boat' ? 0.45 : 0.03;      // (a boat's box reaches below the waterline: a walker on the shallow bed of a pond cannot stand inside the hull)
+    v.box = ph.addBox(p.x + sy * spec.centerZ, p.z + cy * spec.centerZ, spec.W + 0.08, spec.len + 0.08, p.yaw, p.y - draft, p.y - 0.03 + spec.hgt);
   };
   const dropBox = (v = V) => { if (v.box) { ph.remove(v.box); v.box = null; } };
-  for (const v of fleet) addBox(v);
+  for (const v of vehicles) addBox(v);
   /** make `v` the current car (the closure names follow it); a car parked since its last drive keeps its dents */
   function use(v) {
     if (v === V) return;
@@ -97,7 +116,7 @@ export async function build(ctx) {
   function enter(which) {
     if (state.active || !player) return false;
     if (player.fly || player.riding) return false;
-    const v = typeof which === 'string' ? fleet.find((f) => f.id === which) : which && which.car ? which : V;
+    const v = typeof which === 'string' ? vehicles.find((f) => f.id === which) : which && which.car ? which : V;
     if (!v) return false;
     state.active = true; state.enteredAt = performance.now();
     player.inputLock++; player.fly = false;
@@ -121,9 +140,11 @@ export async function build(ctx) {
     const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw), lx = cy, lz = -sy, c = car.carCenter, y = car.y;
     const spots = [[2.0, 0], [-2.0, 0], [2.7, 0.6], [-2.7, 0.6], [2.0, -1.5], [-2.0, -1.5], [3.4, 0], [-3.4, 0], [0, -3.9], [0, 3.9], [4.2, 1], [-4.2, 1]];
     for (let r = 3; r <= 9; r += 1.5) for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; spots.push([Math.cos(a) * r, Math.sin(a) * r]); }      // a ring search when the car is jammed against a wall / bollards
+    const boat = V.kind === 'boat', bad = boat ? car.walkerBlocked : car.blocked;      // a boat: the walker may stand on the water bed (wading) or on a bank, the water is no wall for him
     for (const [side, back] of spots) {
       const x = c.x + lx * side + sy * back, z = c.z + lz * side + cy * back;
-      if (car.blocked(x, z) || ph.columnBlocked(x, z, 0.35, y + 0.3, y + 1.7)) continue;
+      if (bad(x, z) || ph.columnBlocked(x, z, 0.35, y + 0.3, y + 1.7)) continue;
+      if (boat && !(ph.groundHeight(x, z, y + 0.35 - STEP_HEIGHT + 0.05, false) > -Infinity)) continue;      // the pose must have a floor the walker is set down on (player.setPose stand): the bed, a landing; not a quay 3 m over the boat
       return { x, z };
     }
     return null;
@@ -149,9 +170,9 @@ export async function build(ctx) {
     return true;
   }
   /** teleport (digit keys / R while driving): the nearest free spot, car facing the given walker yaw (degrees, camera convention) */
-  function place(x, z, yawDeg) {
+  function placeVehicle(x, z, yawDeg) {
     const yaw = yawDeg * DEG + Math.PI;
-    for (let r = 0; r <= 40; r += 4) for (let a = 0; a < (r ? 8 : 1); a++) {
+    for (let r = 0; r <= (V.kind === 'boat' ? 6 : 40); r += 4) for (let a = 0; a < (r ? 8 : 1); a++) {      // (a boat is only set where there is water: the spot itself or a few metres around it, never 40 m away)
       const px = x + Math.cos(a * Math.PI / 4) * r, pz = z + Math.sin(a * Math.PI / 4) * r;
       const sy = Math.sin(yaw), cy = Math.cos(yaw);
       let ok = !car.blocked(px, pz);
@@ -161,6 +182,12 @@ export async function build(ctx) {
       const p = { x: px, z: pz }; ph.resolve(p, Math.max(0.9, SPEC.W / 2), car.groundAt(px, pz), SPEC.hgt); if (Math.hypot(p.x - px, p.z - pz) > 0.05) continue;
       car.reset(px, pz, yaw); view.snap = true; view.camYaw = yaw; return true;
     }
+    return false;
+  }
+  /** teleport (R, the places) of the active car; a BOAT that cannot be set at the spot (it is on land: the start of the game) is left where it floats and the player is set down there on foot */
+  function place(x, z, yawDeg) {
+    if (placeVehicle(x, z, yawDeg)) return true;
+    if (state.active && V.kind === 'boat') { exit(true); if (player) player.setPose(x, z, yawDeg, 0); return true; }
     return false;
   }
 
@@ -179,7 +206,7 @@ export async function build(ctx) {
   const cullF = new THREE.Frustum(), _pm = new THREE.Matrix4(), _vm = new THREE.Matrix4(), _one = new THREE.Vector3(1, 1, 1), _sph = new THREE.Sphere();
   function parkedStep() {
     let frustum = false;
-    for (const v of fleet) {
+    for (const v of vehicles) {
       if (state.active && v === V) { v.model.root.visible = true; continue; }
       const p = v.parked, dx = p.x - camera.position.x, dz = p.z - camera.position.z, near = dx * dx + dz * dz < 70 * 70;
       let seen = near;
@@ -269,7 +296,7 @@ export async function build(ctx) {
     player.yaw = car.yaw + Math.PI; player.pitch = 0;
   }
   function trafficBlocker() {
-    const tr = ctx.services.traffic; if (!tr) return;
+    const tr = ctx.services.traffic; if (!tr || V.kind === 'boat') return;      // (a boat is on the water: nobody on the road needs to dodge it; the list was emptied at the exit from a car)
     const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw);
     me.x = car.x + sy * SPEC.centerZ; me.z = car.z + cy * SPEC.centerZ; me.rotY = car.yaw; me.vx = car.vx; me.vz = car.vz; me.speed = Math.hypot(car.vx, car.vz);
     if (!tr.extraBlockers) tr.extraBlockers = extra;
@@ -281,7 +308,8 @@ export async function build(ctx) {
   let collisionRevision = -1;
   /** the active car hit a PARKED car of the garage: that car crumples too, by the mass share (a 2.97 t pickup hurts a parked 0.95 t Zhiguli far more than the reverse); the struck car stays a static solid */
   function strikeParked(ev) {
-    const o = fleet.find((f) => f !== V && f.box && f.box === ev.obstacle); if (!o) return;
+    const o = vehicles.find((f) => f !== V && f.box && f.box === ev.obstacle); if (!o) return;
+    if (o.kind === 'boat') return;
     const mA = SPEC.mass || 1350, mB = o.spec.mass || 1350, p = o.parked, sy = Math.sin(p.yaw), cy = Math.cos(p.yaw), rx = ev.x - p.x, rz = ev.z - p.z;
     o.damage.hit({ type: 'hit', v: 1.4 * ev.v * mA / (mA + mB), localX: rx * cy - rz * sy, localZ: rx * sy + rz * cy, localNX: -(ev.nx * cy - ev.nz * sy), localNZ: -(ev.nx * sy + ev.nz * cy) });
   }
@@ -290,7 +318,8 @@ export async function build(ctx) {
       if (ev.type === 'hit') {
         const k = ev.obstacle?.source?.hitK ?? 1, v = ev.v * k;      // a knockable thing (core/knock.js) is not a wall: the car takes its hitK share of the blow
         damage.hit(k === 1 ? ev : { ...ev, v }); strikeParked(ev);
-        if (effects) {
+        if (effects && V.kind === 'boat') { sound.hit(v * 0.7); view.shake = Math.min(1.0, view.shake + v / 18); hud.flash(Math.min(0.4, v / 24)); }      // a boat has no body to crumple: a thump, a little shake, no sparks
+        else if (effects) {
           sound.hit(v); view.shake = Math.min(1.4, view.shake + v / 10); hud.flash(Math.min(0.85, v / 14));
           fx.sparks(ev.x ?? car.x, car.y + 0.5, ev.z ?? car.z, ev.nx ?? -Math.sin(car.yaw), ev.nz ?? -Math.cos(car.yaw), Math.min(30, 8 + v * 2), 4 + v * 0.3);
         }
@@ -316,6 +345,7 @@ export async function build(ctx) {
   }
   function frame(dt) {
     parkedStep();
+    if (wake) wake.update(dt, V.car, state.active && V.kind === 'boat');      // the foam of the boat: emitted while it is driven, fading afterwards
     if (!state.active) return;
     const locked = ctx.ui && ctx.ui.modalOpen;
     readInput(input);
@@ -332,7 +362,7 @@ export async function build(ctx) {
       model.wheels.forEach((w, i) => w.pivot.getWorldPosition(wheelsW[i]));
       exUse.length = 0; for (let i = 0; i < Math.min(V.def.exhaust.length, exW.length); i++) { const e = V.def.exhaust[i]; exUse.push(model.root.localToWorld(exW[i].set(e.x, e.y, e.z))); }     // the car's own tail pipes (an electric pickup has none: no flame particles)
       jetDir.set(-Math.sin(car.yaw), 0.05, -Math.cos(car.yaw));                                                                                  // the nozzles fire backwards, 3 degrees up (the Roadster's cold-gas cloud, def.jetFx)
-      fx.update(dt, car, wheelsW, exUse, V.def.jetFx, jetDir);
+      if (V.kind !== 'boat') fx.update(dt, car, wheelsW, exUse, V.def.jetFx, jetDir);
       sound.update({ rpm: car.rpm, throttle: car.throttle, drifting: car.drifting, vL: car.vL, boosting: car.boosting, gear: car.gear, speed: car.speed }, true);
       hud.update(car, dt);
     }
@@ -370,7 +400,7 @@ export async function build(ctx) {
 
   // ---------------------------------------------------------------- the prompts next to the parked cars (the interaction layer offers the NEAREST one in reach: E gets into that car)
   if (ctx.interact) {
-    for (const v of fleet) ctx.interact.add({
+    for (const v of vehicles) ctx.interact.add({
       id: v.id === 'coupe' ? 'drive-car' : 'drive-' + v.id, radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
       at: () => ({ x: v.parked.x + Math.sin(v.parked.yaw) * v.spec.centerZ, y: v.parked.y + 0.8, z: v.parked.z + Math.cos(v.parked.yaw) * v.spec.centerZ }),
       enabled: () => !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
@@ -381,7 +411,7 @@ export async function build(ctx) {
   /** Arrival of a hand-off (docs/AREAS.md): get into car `spec.id`, put it at (x, z) facing the camera yaw (degrees), restore its view and its four damage scalars. false (and the walker stays) when the car cannot be placed there. */
   function arrive(spec, x, z, yawDeg) {
     if (state.active || !spec || !enter(spec.id)) return false;
-    if (!place(x, z, yawDeg)) { exit(true); if (player) player.setPose(x, z, yawDeg, 0); return false; }      // (exit puts the walker beside the garage car: back to the resolved arrival pose)
+    if (!placeVehicle(x, z, yawDeg)) { exit(true); if (player) player.setPose(x, z, yawDeg, 0); return false; }      // (exit puts the walker beside the garage car: back to the resolved arrival pose)
     if (spec.view !== undefined && spec.view !== null) api.setView(Number(spec.view) || 0);
     const d = Array.isArray(spec.d) ? spec.d : [0, 0, 0, 0];
     if (d.some((v) => v > 0)) {
@@ -396,8 +426,11 @@ export async function build(ctx) {
     get active() { return state.active; }, get car() { return car; }, get parked() { return parked; }, get model() { return model; }, get damage() { return damage; }, hud, fx, sound, view,
     enter, exit, place, arrive,
     /** the garage: one vehicle per car { id, def, model, car (handling state), parked, damage, spec, box }; `vehicle` is the current / last driven one; enter('truck') gets into a car by id */
-    fleet, get vehicle() { return V; }, vehicleById: (id) => fleet.find((f) => f.id === id),
+    fleet, get vehicle() { return V; }, vehicleById: (id) => vehicles.find((f) => f.id === id),
+    /** the motor boats ({ id: 'boat', kind: 'boat', def, model, car, parked, damage (empty), spec, box }), docs/AREAS.md "The motor boat"; `vehicles` = the cars and the boats */
+    boats, vehicles, wake,
     repair() {
+      if (V.kind === 'boat') return false;      // a boat has no body to repair
       if (Math.hypot(car.vx, car.vz) > 1.4) { ctx.ui.toast('Stop to repair'); return false; }
       damage.repair(); car.damage = car.damageSmoke = 0; car.damageStage = damage.stage; fx.clear();
       car.collisionSpec = null;
@@ -410,7 +443,7 @@ export async function build(ctx) {
     sim(seconds, inp = {}, frames = null) {
       if (!state.active) enter();
       const dt = 1 / 60, n = Math.round(seconds / dt), full = { thr: 0, brk: 0, steer: 0, hand: false, nitro: false, jump: false, flip: false, ...inp };
-      for (let i = 0; i < n; i++) { wrecks.step(dt); car.step(dt, typeof inp === 'function' ? inp(i * dt) : full); hopEvents(false); applyImpacts(false); if (frames) frames(i, car); }
+      for (let i = 0; i < n; i++) { wrecks.step(dt); car.step(dt, typeof inp === 'function' ? inp(i * dt) : full); hopEvents(false); applyImpacts(false); if (wake && V.kind === 'boat') wake.update(dt, car, true); if (frames) frames(i, car); }
       view.snap = true; model.root.updateMatrixWorld(true); poseModel(0); syncPlayer(); cameraStep(0); view.snap = false; hud.update(car, 0.016);
       return { x: +car.x.toFixed(2), z: +car.z.toFixed(2), speed: +car.speed.toFixed(1), yaw: +(car.yaw / DEG).toFixed(1), gear: car.gear, boost: +car.boost.toFixed(2), vL: +car.vL.toFixed(2) };
     },

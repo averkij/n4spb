@@ -6,7 +6,7 @@
 // rear pair, pulsing left / right while the (cosmetic) barrel roll turns the car (car.flip, car.pulse0 / pulse1; tuning.hop.flip.nozzles), emitted along the body's own sideways axis so they spiral with the roll.
 import * as THREE from 'three';
 
-function system(ctx, cap, additive, name = additive ? 'drive-sparks' : 'drive-smoke') {
+export function system(ctx, cap, additive, name = additive ? 'drive-sparks' : 'drive-smoke', flat = false) {      // (exported: the boat's wake, drive/boat/wake.js, is two more soft-particle systems; flat = quads that lie on the water instead of facing the camera)
   const geo = new THREE.InstancedBufferGeometry();
   const base = new THREE.PlaneGeometry(1, 1);
   geo.index = base.index; geo.attributes.position = base.attributes.position; geo.attributes.uv = base.attributes.uv;
@@ -18,7 +18,7 @@ function system(ctx, cap, additive, name = additive ? 'drive-sparks' : 'drive-sm
   const mat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, toneMapped: false, fog: false,
     vertexShader: `attribute vec3 aPos; attribute float aSize; attribute vec4 aCol; varying vec2 vUv; varying vec4 vCol;
-      void main(){ vUv = uv; vCol = aCol; vec4 mv = viewMatrix * vec4(aPos, 1.0); mv.xy += position.xy * aSize; gl_Position = projectionMatrix * mv; }`,
+      void main(){ vUv = uv; vCol = aCol; ${flat ? 'vec4 mv = viewMatrix * vec4(aPos + vec3(position.x, 0.0, -position.y) * aSize, 1.0);' : 'vec4 mv = viewMatrix * vec4(aPos, 1.0); mv.xy += position.xy * aSize;'} gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `varying vec2 vUv; varying vec4 vCol;
       void main(){ float d = length(vUv - 0.5) * 2.0; float a = smoothstep(1.0, 0.15, d) * vCol.a; if (a < 0.01) discard; gl_FragColor = vec4(vCol.rgb, a); }`,
   });
