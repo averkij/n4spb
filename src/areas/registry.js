@@ -169,6 +169,63 @@ REGISTRY.smolny = {
   ],
 };
 
+// Admiralty-Haymarket (docs/AREAS.md 15.2): map area 46, the merge of the Admiralteysky and Sennoy districts and the 78th okrug; no railway station (one purple Zhiguli at the spawn, 13.4).
+REGISTRY.admiralty = {
+  id: 'admiralty', page: 'admiralty.html', bake: 'baked/admiralty/', requireBake: true,
+  title: 'Адмиралтейский–Сенной', titleEn: 'Admiralty–Haymarket',
+  sights: ['Адмиралтейство', 'Исаакиевский собор', 'Медный всадник', 'Казанский собор', 'Мариинский театр', 'Новая Голландия', 'Никольский морской собор', 'Юсуповский дворец', 'Сенная площадь'],
+  approxMB: 55, dev: false, mapId: 46,
+  remap: {
+    'src/world/data/city.js': 'src/areas/admiralty/data/city.js', 'src/world/area.js': 'src/areas/admiralty/area.js',
+    'src/world/city/known-data.js': 'src/areas/admiralty/known-data.js',
+  },
+  play: [
+      { name: 'A01', x0: -2000, x1: -1840, z0: -1440, z1: -1360 },
+      { name: 'A02', x0: -2400, x1: -1920, z0: -1360, z1: -1280 },
+      { name: 'A03', x0: -2480, x1: -1920, z0: -1280, z1: -1120 },
+      { name: 'A04', x0: -2560, x1: -2000, z0: -1120, z1: -960 },
+      { name: 'A05', x0: -2640, x1: -1920, z0: -960, z1: -880 },
+      { name: 'A06', x0: -2800, x1: -1920, z0: -880, z1: -800 },
+      { name: 'A07', x0: -2880, x1: -2080, z0: -800, z1: -720 },
+      { name: 'A08', x0: -3040, x1: -2080, z0: -720, z1: -640 },
+      { name: 'A09', x0: -1520, x1: -1440, z0: -720, z1: -640 },
+      { name: 'A10', x0: -3200, x1: -1360, z0: -640, z1: -560 },
+      { name: 'A11', x0: -3440, x1: -1360, z0: -560, z1: -480 },
+      { name: 'A12', x0: -3600, x1: -1120, z0: -480, z1: -400 },
+      { name: 'A13', x0: -400, x1: -240, z0: -480, z1: -400 },
+      { name: 'A14', x0: -3760, x1: -880, z0: -400, z1: -320 },
+      { name: 'A15', x0: -400, x1: -160, z0: -400, z1: -320 },
+      { name: 'A16', x0: -3920, x1: -240, z0: -320, z1: -240 },
+      { name: 'A17', x0: -4000, x1: -240, z0: -240, z1: -160 },
+      { name: 'A18', x0: -4160, x1: -240, z0: -160, z1: -80 },
+      { name: 'A19', x0: -4240, x1: -320, z0: -80, z1: 160 },
+      { name: 'A20', x0: -4240, x1: -400, z0: 160, z1: 240 },
+      { name: 'A21', x0: -4160, x1: -400, z0: 240, z1: 400 },
+      { name: 'A22', x0: -4080, x1: -480, z0: 400, z1: 480 },
+      { name: 'A23', x0: -3840, x1: -480, z0: 480, z1: 640 },
+      { name: 'A24', x0: -3760, x1: -560, z0: 640, z1: 720 },
+      { name: 'A25', x0: -3760, x1: -640, z0: 720, z1: 800 },
+      { name: 'A26', x0: -3600, x1: -3520, z0: 800, z1: 880 },
+      { name: 'A27', x0: -3360, x1: -800, z0: 800, z1: 880 },
+      { name: 'A28', x0: -3280, x1: -800, z0: 880, z1: 960 },
+      { name: 'A29', x0: -3280, x1: -960, z0: 960, z1: 1040 },
+      { name: 'A30', x0: -3280, x1: -1280, z0: 1040, z1: 1120 },
+      { name: 'A31', x0: -1120, x1: -1040, z0: 1040, z1: 1120 },
+      { name: 'A32', x0: -3200, x1: -1280, z0: 1120, z1: 1200 },
+      { name: 'A33', x0: -3120, x1: -1280, z0: 1200, z1: 1280 },
+      { name: 'A34', x0: -3120, x1: -1440, z0: 1280, z1: 1360 },
+      { name: 'A35', x0: -3040, x1: -1440, z0: 1360, z1: 1440 },
+      { name: 'A36', x0: -3040, x1: -1520, z0: 1440, z1: 1520 },
+      { name: 'A37', x0: -3040, x1: -1600, z0: 1520, z1: 1600 },
+      { name: 'A38', x0: -2880, x1: -1760, z0: 1600, z1: 1680 },
+      { name: 'A39', x0: -2880, x1: -1840, z0: 1680, z1: 1760 },
+      { name: 'A40', x0: -3040, x1: -2240, z0: 1760, z1: 1840 },
+      { name: 'A41', x0: -3200, x1: -2640, z0: 1840, z1: 1920 },
+      { name: 'A42', x0: -3360, x1: -2640, z0: 1920, z1: 2000 },
+      { name: 'A43', x0: -3280, x1: -3040, z0: 2000, z1: 2080 },
+  ],
+};
+
 /**
  * Gates between areas: { id, from, to, seg: [[x,z],[x,z]] (the border segment in the FROM area), inward: [nx,nz] (unit vector pointing from the border into the FROM area), zone (m: depth of the
  * prompt zone, walking), arrive: { x0, x1, z0, z1 } (where the player may land in the TO area), reverse (id of the gate back) }.
