@@ -17,7 +17,8 @@ import { buildWorld } from './lib/headless-world.mjs';
 const QUICK = process.argv.includes('--quick');
 const AREA = process.env.AREA || 'palace';
 let checks = 0, fails = 0;
-const check = (name, fn) => { try { fn(); checks++; console.log('PASS', name); } catch (e) { fails++; console.log('FAIL', name, '\n    ', String(e.message).split('\n').slice(0, 6).join('\n     ')); } };
+const ONLY = process.env.ONLY || null;      // ONLY=<text>: run only the checks whose name contains the text (a development aid)
+const check = (name, fn) => { if (ONLY && !ONLY.split('|').some((s) => name.includes(s))) return; try { fn(); checks++; console.log('PASS', name); } catch (e) { fails++; console.log('FAIL', name, '\n    ', String(e.message).split('\n').slice(0, 6).join('\n     ')); } };
 const t0 = Date.now();
 const { ctx, L, THREE, built, marks, errors } = await buildWorld({ log: (s) => console.log(s) });
 console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0) / 1000).toFixed(0)} s: ${built.join(' ')}; ${ctx.physics.items.length} colliders, ${ctx.knock.stats.registered} knock records ${JSON.stringify(ctx.knock.stats.byKind)}`);
@@ -29,6 +30,7 @@ const { SPEC } = await import('../src/world/drive/model.js');
 const { MASS, tuningFor } = await import('../src/world/drive/cars/tuning.js');
 const { HOOKS } = await import('../src/world/lib/area-tables.js');
 const hyp = Math.hypot, DEG = 180 / Math.PI;
+const { floorZones: BRIDGE_FLOORS_FN } = await import('../src/world/environment/river.js'), BRIDGE_FLOORS = BRIDGE_FLOORS_FN();
 const modOf = (it) => { const i = ph.items.indexOf(it); for (const [n, [a, b]] of Object.entries(marks)) if (i >= a && i < b) return n; return '?'; };
 const env = ctx.services.environment;
 
@@ -264,6 +266,9 @@ function carRun(f, speedKmh, { id = 'coupe' } = {}) {
   for (; t < 6; t += 1 / 60) { car.step(1 / 60, input); ctx.knock.update(1 / 60); for (const e of car.events) ev.push({ type: e.type, v: e.v }); if (car.fall) fell = true; minY = Math.min(minY, car.y); maxDepth = Math.max(maxDepth, car.depth); }
   return { car, ev, fell, minY, maxDepth, start, yaw };
 }
+/** the invisible walk floors of the undrawn OSM bridges (BRIDGE_ZONES rows with floor: true) catch a car that falls off the bank beside them; this check is about the quay fence, so they are lifted out for the run and put back */
+const floorItems = (() => { const zs = (BRIDGE_FLOORS || []); return ph.items.filter((it) => it.type === 'walk' && zs.some((z) => hyp(it.cx - z.c[0], it.cz - z.c[1]) < 1e-6)); })();
+function withoutFloors(fn) { const tops = floorItems.map((it) => it.top); for (const it of floorItems) it.top = -50; try { return fn(); } finally { floorItems.forEach((it, i) => { it.top = tops[i]; }); } }      // (their surface sinks below the bed for the run: no insertion or removal, the item order of the physics stays)
 function pickCarFence() {
   return pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && r.mass <= 300 && !r.__tried, 6000, true) || pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && !r.__tried, 6000, true) || pickFence((r) => r.anchored <= 24 && r.mass <= 900 && !r.__tried, 6000, true);      // (a railing panel first: the 900 kg granite parapet holds a car that is slowed by the trees before it)
 }
@@ -276,7 +281,7 @@ check('4 the car drives into a quay fence at 40 km/h: the bay breaks, the car fa
     for (let k = 0; k < 40 && !lane(); k++) { const b = corridorFree.last; if (!b || b.fence || b.type === 'walk' || b.type === 'ramp' || (b.y1 ?? 0) > 8 || (b.y0 ?? 0) < -1 || Math.max(b.hw || 0, b.hd || 0) > 2.5) break; cleared.push({ b, inItems: ph.items.includes(b), cells: [...ph.grid.values()].filter((a) => a.includes(b)) }); ph.remove(b); for (const a of ph.grid.values()) { const j = a.indexOf(b); if (j >= 0) a.splice(j, 1); } }      // the run-up lane: a lamp, a tree or a bench in it is taken out for the run (the check is about the fence and the water), put back after
     const restore = () => { for (const c of cleared) { if (c.inItems) ph._insert(c.b); else for (const a of c.cells) a.push(c.b); } };
     if (!lane()) { restore(); f.r.__tried = true; f = null; continue; }
-    const rr = carRun(f, 40); restore(); if (rr.minY < -1 && rr.fell && r.state !== 'stand') res = rr; else { /* a blocked run: try another place */ f.r.__tried = true; }
+    const rr = withoutFloors(() => carRun(f, 40)); restore(); if (rr.minY < -1 && rr.fell && r.state !== 'stand') res = rr; else { /* a blocked run: try another place */ f.r.__tried = true; }
   }
   assert(res, 'no fence in this area let the car through (the run-up is never free)');
   const { car, ev } = res; NEED.fell = true;
@@ -466,6 +471,55 @@ if (built.includes('landmarksTauride')) {
     }
     console.log(`  free bank ways ${n}, ended in the pond ${wet}, with an obstacle on the way ${blocked}`);
     assert(n >= 15 && wet === n, `${wet} of ${n} free bank walks ended in the pond: ${JSON.stringify(ex)}`);
+  });
+}
+
+// ---------------------------------------------------------------- 9 every NAMED DRIVABLE OSM bridge over water carries a car (docs/AREAS.md 15.x: Prachechny / Upper Swan / 2nd Engineer had no deck at all: a car drove off the bank into the Fontanka)
+{
+  const { ROADS } = await import('../src/world/data/city.js');
+  const DS = HOOKS.deckServices || [], _s = { y: -Infinity, kind: null, item: null };
+  const deck = (x, z) => { for (const n of DS) { const d = ctx.services[n]?.deckY?.(x, z); if (Number.isFinite(d)) return d; } return ctx.services.landmarksC?.bridge?.deckY?.(x, z) ?? ctx.services.bridges?.deckY(x, z) ?? null; };
+  /** the surface a car that arrives over the bridge stands on (drive/handling.js groundAt with the sky as the deck reference: a placement) */
+  const groundAt = (x, z) => {
+    const d = deck(x, z); if (d !== null) return d + 0.03;
+    const S = ph.surfaceAt(x, z, 0.5, false, _s), th = L.heightAt(x, z);
+    if (S.kind === 'walk' && S.item && !S.item.sticky && S.y <= 0.3) { if (S.y > 0.03) return S.y; if (th < -0.2 && S.y > th + 0.05) return S.y + 0.03; }
+    return th < -0.2 ? th + 0.03 : 0.03;
+  };
+  const DRIVABLE = new Set(['primary', 'secondary', 'tertiary', 'unclassified', 'residential']);
+  const bridges = ROADS.filter((r) => r.bridge && !r.tunnel && DRIVABLE.has(r.hw) && /мост/i.test(r.name || ''));
+  check(`9 every named drivable OSM bridge of the area (${bridges.length} ways) has a surface at the level of the road over every water cell of its way: the car never drops to the bed`, () => {
+    const bad = []; let wet = 0;
+    for (const r of bridges) {
+      let fall = 0, first = null;
+      for (let i = 0; i + 3 < r.pts.length; i += 2) {
+        const x0 = r.pts[i], z0 = r.pts[i + 1], x1 = r.pts[i + 2], z1 = r.pts[i + 3], k = Math.max(1, Math.ceil(hyp(x1 - x0, z1 - z0) / 2));
+        for (let j = 0; j < k; j++) { const x = x0 + (x1 - x0) * j / k, z = z0 + (z1 - z0) * j / k; if (!L.inPlay(x, z)) continue; const w = waterAt(x, z); if (w === null) continue; wet++; if (groundAt(x, z) < w - 0.5) { fall++; first ||= [Math.round(x), Math.round(z)]; } }
+      }
+      if (fall) bad.push(`${r.id} ${r.name} ${fall} cells, first ${first}`);
+    }
+    assert(wet > 0 && bad.length === 0, `${bad.length} bridge ways drop a car into the water: ${bad.join('; ')}`);
+  });
+  // the owner's report (pose -827.9, -1715.9: "driving a car on a bridge you fall through it"): a car drives over the Prachechny Bridge both ways at 6 .. 12 m/s
+  const prach = ROADS.find((r) => r.id === 'w548349392');
+  if (prach) check('9 a car drives over the Prachechny Bridge (the Fontanka at its mouth, x -828 z -1716) both ways without dropping into the trench', () => {
+    const base = []; for (let i = 0; i < prach.pts.length; i += 2) base.push([prach.pts[i], prach.pts[i + 1]]);
+    for (const dir of [1, -1]) for (const vmax of [6, 12]) {
+      const pts = dir > 0 ? base.slice() : base.slice().reverse(), e0 = pts[0], e1 = pts[1], f0 = pts[pts.length - 1], f1 = pts[pts.length - 2];
+      const ext = (a, b, d) => { const l = hyp(a[0] - b[0], a[1] - b[1]); return [a[0] + (a[0] - b[0]) / l * d, a[1] + (a[1] - b[1]) / l * d]; };
+      pts.unshift(ext(e0, e1, 14)); pts.push(ext(f0, f1, 14));
+      const car = createHandling(ctx, null); ctx.drive = { active: true, car, fx: { sparks() {} } };
+      car.reset(pts[0][0], pts[0][1], Math.atan2(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])); car.vx = Math.sin(car.yaw) * vmax; car.vz = Math.cos(car.yaw) * vmax;
+      let seg = 0, minY = 9, fell = false, done = false;
+      for (let t = 0; t < 30 && !done; t += 1 / 60) {
+        while (seg < pts.length - 2 && hyp(pts[seg + 1][0] - car.x, pts[seg + 1][1] - car.z) < 6) seg++;
+        let e = Math.atan2(pts[seg + 1][0] - car.x, pts[seg + 1][1] - car.z) - car.yaw; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI;
+        car.step(1 / 60, { thr: car.vF < vmax ? 0.6 : 0, brk: 0, steer: Math.max(-1, Math.min(1, e * 1.5)), hand: false, nitro: false });
+        minY = Math.min(minY, car.y); fell ||= car.fall; done = hyp(pts[pts.length - 1][0] - car.x, pts[pts.length - 1][1] - car.z) < 4;
+      }
+      ctx.drive = null;
+      assert(done && !fell && minY > -0.5, `dir ${dir} at ${vmax} m/s: reached the far end ${done}, min y ${minY.toFixed(2)}, fell ${fell}`);
+    }
   });
 }
 

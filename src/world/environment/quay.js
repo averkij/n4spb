@@ -34,7 +34,7 @@ import { mergedMedianAt } from '../lib/road-plan.js';
 import * as L from '../layout.js';
 import { MeshBuilder } from '../lib/massing.js';
 import { PIERS, STEPS } from '../data/city.js';
-import { deckPoly, bridgeZones, waterBanks } from './river.js';
+import { deckPoly, bridgeZones, floorZones, waterBanks } from './river.js';
 import { WATERWAYS, waterGeo, farBanks, slopeRuns } from './waterways.js';
 import { pointInRing, distToRing, hash2 } from './util.js';
 import { pierRects } from './boats.js';
@@ -902,6 +902,14 @@ export function buildQuay(ctx, root) {
     const ux = Math.sin(a), uz = -Math.cos(a), ang = Math.atan2(-uz, ux), L0 = zn.len + 28;
     ctx.physics.addWalkBox(zn.c[0], zn.c[1], Math.min(L0, zn.site ? 62 : L0), zn.w, ang, 0.0, -1.2);
     // (the two invisible parapet boxes of the fallback deck are gone: an invisible fence cannot be broken, and water is reachable. The deck is a floor, its edges are open.)
+    info.fallbackDecks++;
+  }
+  // ---- floors of the mapped OSM bridges that nothing draws (BRIDGE_ZONES rows with floor: true): ONE invisible walk floor at y 0 (bottom -1.2: the bed below stays free) under the road and its footways, exactly the
+  //      oriented box of the rows; a car or a walker crosses instead of falling into the trench. No quay gap, no fence (the roads already open the quay there), nothing to break.
+  for (const zn of floorZones()) {
+    if (!L.inPlay(zn.c[0], zn.c[1], -5)) continue;
+    const a = zn.axis * Math.PI / 180;
+    ctx.physics.addWalkBox(zn.c[0], zn.c[1], zn.len, zn.w, Math.atan2(Math.cos(a), Math.sin(a)), 0.0, -1.2);
     info.fallbackDecks++;
   }
 

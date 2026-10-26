@@ -415,6 +415,12 @@ const BRIDGE_ZONES = [
   { id: 'garden2', name: '2-й Садовый мост', key: 'moika', c: [-1178.9, -1010.1], axis: 192, w: 20.6, len: 29.7, own: true },
   { id: 'malo-konyushenny', name: 'Мало-Конюшенный мост', key: 'moika', c: [-1249.8, -1036.4], axis: 11, w: 15.6, len: 24.6, own: true },
   { id: 'troitsky', name: 'Троицкий мост', key: 'neva', c: [-1331.0, -1819.9], axis: 156.99, w: 27, len: 554, own: true },      // the 554 m bridge: the deck centre u = 277 of landmarksTroitsky/frame.js (bearing 336.99 = 156.99 + 180), the quay is open at both banks
+  // FLOOR-ONLY rows (floor: true; docs/AREAS.md 15.x): mapped OSM bridges (layer 1) that no module draws and that lie over water: the quay is left as it is (the roads already open it), the environment only lays an invisible walk floor
+  // at y 0 under the road and its two footways (centre, bearing of the road, width = road + footways + 0.6 m, length = bank to bank + 2 m), so a car or a walker crosses instead of dropping into the water. c / axis / w / len are the oriented
+  // box of the OSM ways (tools/water-reachable-test.mjs section 9 audits that every named drivable bridge of the area is carried).
+  { id: 'prachechny', name: 'Прачечный мост', floor: true, c: [-828.8, -1716.5], axis: 246.7, w: 15.6, len: 41.1 },        // the Fontanka at its mouth: w548349392 + footways w420044392 / w461739409
+  { id: 'swan-upper', name: 'Верхний Лебяжий мост', floor: true, c: [-1069.2, -1610.6], axis: 66.0, w: 16.1, len: 12.0 },    // the Swan Canal at the Neva: w548349395 + footways w287052711 / w287052712
+  { id: 'eng2', name: '2-й Инженерный мост', floor: true, c: [-636.6, -863.7], axis: 326.8, w: 11.8, len: 21.6 },          // the castle moat: w466200209 + footways w364227577 / w466200212
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
