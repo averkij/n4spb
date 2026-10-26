@@ -141,26 +141,46 @@ for (const g of GATES.filter(isDoor)) {
   });
 }
 // an EDGE gate (docs/AREAS.md 14, tools/lib/edge-geometry.mjs): no segment, no arrival rectangle. The shape of the row, the reverse pair, the territories overlap, enough of the boundary of FROM hops to TO (the lens)
+// THE LENS THRESHOLDS PER GATE (docs/AREAS.md 15.y): the global rule is worksMin 1000 m of hopping boundary, deadMax 300 m for the worst dead strip, nearMaxPct 10 percent of the hopping boundary within 100 m
+// of the reverse trigger. A pair whose overlap is legitimately thin may be relaxed HERE, by gate id, with the measured numbers in the comment (and in docs/AREAS.md 15.y) - never by loosening the global rule.
+// The measured numbers of the ten gates of the four-area graph all pass the global rule (tightest: e9 hops 2400 m of its boundary, e2 / e9 have the longest dead strip 260 m, e1 / e2 the largest bounce-back share 5.9 / 6.0 percent), so the table is empty.
+const LENS_GLOBAL = { worksMin: 1000, deadMax: 300, nearMaxPct: 10 };
+const LENS_RELAX = {};      // gate id -> a partial { worksMin, deadMax, nearMaxPct }, e.g. e9: { deadMax: 320 }   // measured: ...
+const lensRule = (g) => ({ ...LENS_GLOBAL, ...(LENS_RELAX[g.id] || {}) });
 for (const g of GATES.filter(isEdge)) {
-  const lens = EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 300 });
-  check(`edge ${g.id} (${g.from} -> ${g.to}): the row has no border fields, the reverse leads back, the territories overlap, the boundary hops (>= 1000 m) and has no dead strip over 300 m`, () => {
-    const pr = EG.edgeProblems(g, { fromRects: REGISTRY[g.from].play, toRects: REGISTRY[g.to].play, reverse: GATES.find((r) => r.id === g.reverse) }); assert.equal(pr.length, 0, pr.join('\n       '));
+  const lens = EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 300 }), rule = lensRule(g);
+  check(`edge ${g.id} (${g.from} -> ${g.to}): the row has no border fields, the reverse leads back, the territories overlap, the boundary hops (>= ${rule.worksMin} m) and has no dead strip over ${rule.deadMax} m`, () => {
+    const pr = EG.edgeProblems(g, { fromRects: REGISTRY[g.from].play, toRects: REGISTRY[g.to].play, reverse: GATES.find((r) => r.id === g.reverse) }, { worksMin: rule.worksMin, deadMax: rule.deadMax }); assert.equal(pr.length, 0, pr.join('\n       '));
   });
-  check(`edge ${g.id}: the bounce-back risk is small (at most 10 percent of the hopping boundary has a point of ${g.to} within 100 m of the landing where the reverse gate would fire)`, () => {
-    const near = lens.back.filter((d) => d < 100).length; assert(near <= 0.1 * lens.points.length, `${near * lens.step} of ${lens.works} m`);
+  check(`edge ${g.id}: the bounce-back risk is small (at most ${rule.nearMaxPct} percent of the hopping boundary has a point of ${g.to} within 100 m of the landing where the reverse gate would fire)`, () => {
+    const near = lens.back.filter((d) => d < 100).length; assert(near <= rule.nearMaxPct / 100 * lens.points.length, `${near * lens.step} of ${lens.works} m`);
   });
   const near = lens.back.filter((d) => d < 100).length, w = lens.strips[0];
   console.log(`       lens ${g.from} -> ${g.to}: boundary ${lens.boundary} m = hops ${lens.works} + dead ${lens.dead} + world edge ${lens.world}; worst dead strip ${w ? `${w.len} m (${w.rect}.${w.side}, near ${w.at})` : 'none'}; landing within 100 m of the reverse trigger: ${near * lens.step} m`);
 }
 {
   const live = Object.values(REGISTRY).filter((a) => a.status !== 'planned' && !a.parked);
-  check(`the live areas (${live.map((a) => a.id).join(', ')}): an edge gate each way for every pair, no gate leads from a live area to a parked one, the station rectangle ST is the same in all`, () => {
-    for (const a of live) for (const b of live) if (a !== b) assert(GATES.some((g) => isEdge(g) && g.from === a.id && g.to === b.id), `no edge gate ${a.id} -> ${b.id}`);
+  // the territories overlap by an area (shared edges and corners are no overlap): the pair rule of the edge gates
+  const overlaps = (a, b) => a.play.some((p) => b.play.some((q) => p.x0 < q.x1 && q.x0 < p.x1 && p.z0 < q.z1 && q.z0 < p.z1));
+  const pairs = live.flatMap((a, i) => live.slice(i + 1).map((b) => [a, b])), linked = pairs.filter(([a, b]) => overlaps(a, b)), apart = pairs.filter(([a, b]) => !overlaps(a, b));
+  check(`the live areas (${live.map((a) => a.id).join(', ')}): an edge gate runs each way for every pair whose territories overlap (${linked.map(([a, b]) => a.id + '-' + b.id).join(', ')}) and none for a pair that does not (${apart.map(([a, b]) => a.id + '-' + b.id).join(', ') || 'no such pair'}), once per direction; no gate leads from a live area to a parked one`, () => {
+    assert(linked.length >= 1, 'no pair of live areas overlaps');
+    const edges = (a, b) => GATES.filter((g) => isEdge(g) && g.from === a.id && g.to === b.id);
+    for (const [a, b] of linked) for (const [p, q] of [[a, b], [b, a]]) assert.equal(edges(p, q).length, 1, `${edges(p, q).length} edge gates ${p.id} -> ${q.id} (exactly one: the territories overlap)`);
+    for (const [a, b] of apart) for (const [p, q] of [[a, b], [b, a]]) assert.equal(edges(p, q).length, 0, `edge gate ${edges(p, q).map((g) => g.id)} ${p.id} -> ${q.id}: the territories do not overlap, there is nothing to hop to`);
+    for (const g of GATES) if (isEdge(g)) assert(live.some((a) => a.id === g.from) && live.some((a) => a.id === g.to), `edge gate ${g.id} (${g.from} -> ${g.to}) leaves or enters a parked area`);
     for (const g of GATES) if (!g.dev && live.some((a) => a.id === g.from)) assert(!REGISTRY[g.to].parked, `gate ${g.id} leads from the live ${g.from} to the parked ${g.to}`);
-    // the Moscow station complex ST is the same rectangle in every live area that carries it; an area WITHOUT the station (Admiralty-Haymarket, docs/AREAS.md 15.2) has no ST and its territory must not reach the complex
-    const st = live.map((a) => a.play.find((r) => r.name === 'ST')).filter(Boolean); assert(st.length >= 1, 'no live area carries the ST rectangle');
-    for (const r of st) assert.deepEqual([r.x0, r.x1, r.z0, r.z1], [st[0].x0, st[0].x1, st[0].z0, st[0].z1], 'ST differs between the live areas');
-    for (const a of live) if (!a.play.some((r) => r.name === 'ST')) assert(!a.play.some((r) => r.x1 > st[0].x0 && r.x0 < st[0].x1 && r.z1 > st[0].z0 && r.z0 < st[0].z1), `${a.id} has no ST rectangle but its territory reaches the station complex`);
+  });
+  check('the Moscow station complex: every live area whose territory contains it carries the SAME ST rectangle (palace, smolny, vladimirsky), the others (admiralty) have none and stay clear of it', () => {
+    const ST = { x0: 400, x1: 835, z0: 160, z1: 1060 }, reaches = (a) => a.play.some((r) => r.x1 > ST.x0 && r.x0 < ST.x1 && r.z1 > ST.z0 && r.z0 < ST.z1);      // (the strip's own extent of the complex)
+    const carriers = live.filter((a) => a.play.some((r) => r.name === 'ST'));
+    assert.deepEqual(carriers.map((a) => a.id).sort(), ['palace', 'smolny', 'vladimirsky'], 'the areas that carry ST');
+    for (const a of live) {
+      const rows = a.play.filter((r) => r.name === 'ST');
+      if (reaches(a)) { assert.equal(rows.length, 1, `${a.id}: its territory reaches the station complex, so it must carry exactly one ST rectangle`); assert.deepEqual([rows[0].x0, rows[0].x1, rows[0].z0, rows[0].z1], [ST.x0, ST.x1, ST.z0, ST.z1], `${a.id}: ST differs from the shared rectangle`); }
+      else assert.equal(rows.length, 0, `${a.id} has an ST rectangle but its territory does not reach the station complex`);
+    }
+    assert.deepEqual(live.filter(reaches).map((a) => a.id).sort(), carriers.map((a) => a.id).sort(), 'every area that reaches the complex carries ST and no other does');
   });
 }
 

@@ -1,7 +1,8 @@
-// tools/edge-smoke.mjs - real-browser crossings of the edge gates between the live areas on the BAKED pages (GPU job: take /d/git2/gpulock first). A player is placed inside Palace-Liteyny near the edge that faces
-// Smolninskoye, the gate fires without a question, the page navigates, the destination loads from its bake behind the veil and starts by itself. A look + a check, not a suite.
-//   node tools/edge-smoke.mjs [--out shots/edge] [--mode fly|walk] [--ret] [--net KBPS,LATENCY_MS] [--cpu N] [--fonts-delay MS] [--block-storage] [--remote https://host/path/] [--idle SECONDS]
-//   --ret            after the first crossing cross BACK (smolny -> palace) as well, recording that arrival too
+// tools/edge-smoke.mjs - real-browser crossings of the edge gates between the live areas on the BAKED pages (GPU job: take /d/git2/gpulock first). A player is placed inside the FROM area (default Palace-Liteyny) near an edge
+// that faces the TO area (default Smolninskoye), the gate fires without a question, the page navigates, the destination loads from its bake behind the veil and starts by itself. A look + a check, not a suite.
+//   node tools/edge-smoke.mjs [--from palace] [--to smolny] [--out shots/edge] [--mode fly|walk] [--ret] [--net KBPS,LATENCY_MS] [--cpu N] [--fonts-delay MS] [--block-storage] [--remote https://host/path/] [--idle SECONDS]
+//   --from / --to    registry ids of two live areas that have an edge gate between them (docs/AREAS.md 15.y: palace, smolny, admiralty, vladimirsky; admiralty and smolny have none)
+//   --ret            after the first crossing cross BACK (to -> from) as well, recording that arrival too
 //   --net / --cpu    throttle the network (download kbit/s, latency ms; applied after the origin page is up) / the CPU of the page (a factor, 4 = four times slower)
 //   --fonts-delay    the Google Fonts stylesheet (render-blocking in the head) answers after this many ms (default 2500 when --net is given, else 0)
 //   --stall MS       the destination's FIRST bake request is held for MS ms (a stalled download behind the veil: 55000 outlasts the 45 s loading watchdog of the page, which used to throw the veil away and show the splash)
@@ -23,19 +24,25 @@ const NET = args.net ? String(args.net).split(',').map(Number) : null;
 const WAIT = Number(args.wait) || 400;
 const STALL = Number(args.stall) || 0; let stallLeft = 1;
 const FONTS_DELAY = args['fonts-delay'] !== undefined ? Number(args['fonts-delay']) : NET ? 2500 : 0;
-const { REGISTRY } = await import(pathToFileURL(path.join(here, 'src/areas/registry.js')).href);
+const { REGISTRY, GATES } = await import(pathToFileURL(path.join(here, 'src/areas/registry.js')).href);
 const inU = (rs, x, z, m = 0) => rs.some((r) => x >= r.x0 + m && x <= r.x1 - m && z >= r.z0 + m && z <= r.z1 - m);
-// a start point inside FROM, 40 m (the probe rule of the edge gate) before a point that is outside FROM but >= 60 m inside TO; dir = +1 east, -1 west
-function findStart(from, to, dir) {
-  for (let z = -1900; z < -200; z += 20) for (let x = 300; x < 1400; x += 10) {
-    const q = x + 40 * dir;
-    if (inU(REGISTRY[from].play, x, z, 10) && !inU(REGISTRY[from].play, q, z) && inU(REGISTRY[to].play, q, z, 60) && inU(REGISTRY[to].play, x, z, 60)) return { x: x - 40 * dir, z, yaw: dir > 0 ? -90 : 90 };
+const FROM = args.from || 'palace', TO = args.to || 'smolny';
+for (const id of [FROM, TO]) if (!REGISTRY[id] || REGISTRY[id].parked) { console.log(`unknown or parked area "${id}" (live: ${Object.values(REGISTRY).filter((a) => !a.parked).map((a) => a.id).join(', ')})`); process.exit(2); }
+if (!GATES.some((g) => g.kind === 'edge' && g.from === FROM && g.to === TO)) { console.log(`no edge gate ${FROM} -> ${TO} (the territories do not overlap)`); process.exit(2); }
+// a start point inside FROM, 40 m (the probe rule of the edge gate) before a point that is outside FROM but >= 60 m inside TO, heading east / west / north / south: the first hit of a 20 m grid over the territory of FROM
+// (HEADS: dx, dz, yaw; yaw 0 = north, 90 = west, -90 = east, 180 = south)
+const HEADS = [[1, 0, -90], [-1, 0, 90], [0, -1, 0], [0, 1, 180]];
+function findStart(from, to) {
+  const rs = REGISTRY[from].play, x0 = Math.min(...rs.map((r) => r.x0)), x1 = Math.max(...rs.map((r) => r.x1)), z0 = Math.min(...rs.map((r) => r.z0)), z1 = Math.max(...rs.map((r) => r.z1));
+  for (let z = z0; z < z1; z += 20) for (let x = x0; x < x1; x += 20) for (const [dx, dz, yaw] of HEADS) {
+    const qx = x + 40 * dx, qz = z + 40 * dz;
+    if (inU(rs, x, z, 10) && !inU(rs, qx, qz) && inU(REGISTRY[to].play, qx, qz, 60) && inU(REGISTRY[to].play, x, z, 60)) return { x: x - 40 * dx, z: z - 40 * dz, yaw, dx, dz };
   }
   return null;
 }
-const S1 = findStart('palace', 'smolny', +1), S2 = findStart('smolny', 'palace', -1);
+const S1 = findStart(FROM, TO), S2 = findStart(TO, FROM);
 if (!S1 || (args.ret && !S2)) { console.log('no start point found'); process.exit(2); }
-console.log('start', JSON.stringify(S1), args.ret ? JSON.stringify(S2) : '', 'mode', MODE, 'net', NET ? NET.join(',') : 'off', 'cpu', args.cpu || 1, 'fonts-delay', FONTS_DELAY);
+console.log(`crossing ${FROM} -> ${TO}`, 'start', JSON.stringify(S1), args.ret ? JSON.stringify(S2) : '', 'mode', MODE, 'net', NET ? NET.join(',') : 'off', 'cpu', args.cpu || 1, 'fonts-delay', FONTS_DELAY);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json', '.gz': 'application/gzip' };
 let server = null, ORIGIN = args.remote ? String(args.remote).replace(/\/+$/, '') : '';
 if (!args.remote) {
@@ -131,31 +138,31 @@ try {
     if (m && !args.remote) { const f = path.join(threeRoot, m[1].split('?')[0]); if (fs.existsSync(f)) return req.respond({ status: 200, contentType: 'text/javascript; charset=utf-8', headers: { 'Access-Control-Allow-Origin': '*' }, body: fs.readFileSync(f) }); }
     if (/^https:\/\/fonts\.googleapis\.com/.test(u)) { if (!FONTS_DELAY) return req.abort('failed'); return void setTimeout(() => req.respond({ status: 200, contentType: 'text/css', body: '/* the fonts stylesheet, late */' }).catch(() => {}), FONTS_DELAY); }
     if (/^https:\/\/fonts\.gstatic\.com/.test(u)) return req.abort('failed');
-    if (STALL && stallLeft && /\/baked\/smolny\//.test(u) && page.url().includes('smolny.html')) { stallLeft--; console.log('  holding the first smolny bake request for', STALL, 'ms:', u.slice(-60)); return void setTimeout(() => req.continue().catch(() => {}), STALL); }
+    if (STALL && stallLeft && u.includes('/' + REGISTRY[TO].bake) && page.url().includes(REGISTRY[TO].page)) { stallLeft--; console.log('  holding the first ' + TO + ' bake request for', STALL, 'ms:', u.slice(-60)); return void setTimeout(() => req.continue().catch(() => {}), STALL); }
     req.continue();
   });
   const errors = []; page.on('pageerror', (e) => errors.push(String(e.message).slice(0, 200)));
   await page.evaluateOnNewDocument(recorderSource);
   if (args['block-storage']) await page.evaluateOnNewDocument(() => { if (/[?&]ho=/.test(location.search)) { try { Object.defineProperty(window, 'sessionStorage', { get() { throw new DOMException('blocked', 'SecurityError'); } }); } catch (e) { /* ignore */ } } });
-  await page.goto(`${ORIGIN}/index.html?q=performance`, { waitUntil: 'load', timeout: 180000 });
+  await page.goto(`${ORIGIN}/${REGISTRY[FROM].page}?q=performance`, { waitUntil: 'load', timeout: 180000 });
   await page.waitForFunction("document.body.classList.contains('loaded')", { timeout: 360000, polling: 500 });
   await page.click('#go'); await page.waitForFunction("document.body.classList.contains('playing')", { timeout: 20000 });
-  check('palace page has edge gates armed', await page.evaluate(() => !!window.__gates && window.__gates.gates.some((g) => g.kind === 'edge')));
+  check(`${FROM} page has edge gates armed`, await page.evaluate(() => !!window.__gates && window.__gates.gates.some((g) => g.kind === 'edge')));
   if (args.idle) { await sleep(Number(args.idle) * 1000); console.log('idle check: path', await page.evaluate(() => location.pathname).catch((e) => 'NAVIGATED ' + e.message.slice(0, 40)), 'traveling', await page.evaluate(() => window.__gates && window.__gates.traveling).catch(() => 'n/a')); process.exit(0); }
   if (NET) await page.emulateNetworkConditions({ download: NET[0] * 125, upload: NET[0] * 125, latency: NET[1] || 0 });
   if (args.cpu) await page.emulateCPUThrottling(Number(args.cpu));
 
-  const r = await cross(page, S1, 'there', 'smolny.html');
+  const r = await cross(page, S1, 'there', REGISTRY[TO].page);
   console.log('  destination', JSON.stringify({ ...r, rec: undefined }));
-  check('smolny started by itself and the veil is gone', !!r.path && r.path.endsWith('smolny.html') && r.playing && !r.seamLeft, JSON.stringify({ ...r, rec: undefined }));
+  check(`${TO} started by itself and the veil is gone`, !!r.path && r.path.endsWith(REGISTRY[TO].page) && r.area === TO && r.playing && !r.seamLeft, JSON.stringify({ ...r, rec: undefined }));
   check('the splash card stays hidden on the running destination', r.introDisplay === 'none', String(r.introDisplay));
-  check('same place: within 150 m of where he left', r.p && Math.hypot(r.p[0] - (S1.x + 80), r.p[1] - S1.z) < 150, JSON.stringify(r.p));
-  if (r.rec) judge('palace -> smolny', r.rec);
+  check('same place: within 150 m of where he left', r.p && Math.hypot(r.p[0] - (S1.x + 80 * S1.dx), r.p[1] - (S1.z + 80 * S1.dz)) < 150, JSON.stringify(r.p));
+  if (r.rec) judge(`${FROM} -> ${TO}`, r.rec);
   if (args.ret && r.playing) {
-    const r2 = await cross(page, S2, 'back', 'index.html');
+    const r2 = await cross(page, S2, 'back', REGISTRY[FROM].page);
     console.log('  back at', JSON.stringify({ ...r2, rec: undefined }));
-    check('palace started by itself again and the veil is gone', !!r2.path && !r2.path.endsWith('smolny.html') && r2.playing && !r2.seamLeft, JSON.stringify({ ...r2, rec: undefined }));
-    if (r2.rec) judge('smolny -> palace', r2.rec);
+    check(`${FROM} started by itself again and the veil is gone`, !!r2.path && r2.path.endsWith(REGISTRY[FROM].page) && r2.area === FROM && r2.playing && !r2.seamLeft, JSON.stringify({ ...r2, rec: undefined }));
+    if (r2.rec) judge(`${TO} -> ${FROM}`, r2.rec);
   }
   if (errors.length) console.log('  page errors:', JSON.stringify(errors.slice(0, 3)));
 } finally { await browser.close(); if (server) server.close(); }

@@ -309,10 +309,22 @@ export const GATES = [
   // strip at a spot outside the rectangle lands at the nearest point of it (the departure x is clamped, so a crossing on the Fontanka quay at x -370 lands 145 m east of it).
   { id: 'g1', from: 'strip', to: 'north', seg: [[-420, -405], [835, -405]], inward: [0, 1], zone: 30, arrive: { x0: -225, x1: 755, z0: -460, z1: -310 }, reverse: 'g2' },
   { id: 'g2', from: 'north', to: 'strip', seg: [[-420, -205], [835, -205]], inward: [0, -1], zone: 30, arrive: { x0: -225, x1: 805, z0: -300, z1: -230 }, reverse: 'g1' },
-  // e1 / e2 - the edge gates between the two live areas (docs/AREAS.md sections 13 and 14): the territories overlap by about one block (Ligovsky, Nevsky / Vosstaniya, Liteyny / Chernyshevskaya), and the player
+  // e1 / e2 - the edge gates between the first two live areas (docs/AREAS.md sections 13 and 14; the whole graph: e3 .. e10 below): the territories overlap by about one block (Ligovsky, Nevsky / Vosstaniya, Liteyny / Chernyshevskaya), and the player
   // who walks out of one territory into the core of the other is carried over without a question (freeze, blur, progress bar). No segment and no arrival rectangle: he lands at the same x, z, yaw.
   { id: 'e1', kind: 'edge', from: 'palace', to: 'smolny', zone: 40, reverse: 'e2' },
   { id: 'e2', kind: 'edge', from: 'smolny', to: 'palace', zone: 40, reverse: 'e1' },
+  // e3 .. e10 - the four-area graph (docs/AREAS.md 15.y): an edge gate each way for EVERY pair of live areas whose territories (REGISTRY[id].play) overlap, none for a pair that does not. Computed from the rectangles
+  // (km2 of overlap): palace-smolny 2.09 (e1/e2), palace-admiralty 1.44 (e3/e4), palace-vladimirsky 1.87 (e5/e6), smolny-vladimirsky 2.32 (e7/e8), admiralty-vladimirsky 0.98 (e9/e10); admiralty-smolny 0.00: the two have
+  // no common ground, so there is NO gate between them (tools/areas-test.mjs checks the rule both ways: a gate for every overlapping pair, none for a pair that does not overlap).
+  // Where three territories overlap (the Moscow station complex ST lies in palace, smolny and vladimirsky) the gate machine takes the first row of the FROM area that triggers, in registry order.
+  { id: 'e3', kind: 'edge', from: 'palace', to: 'admiralty', zone: 40, reverse: 'e4' },
+  { id: 'e4', kind: 'edge', from: 'admiralty', to: 'palace', zone: 40, reverse: 'e3' },
+  { id: 'e5', kind: 'edge', from: 'palace', to: 'vladimirsky', zone: 40, reverse: 'e6' },
+  { id: 'e6', kind: 'edge', from: 'vladimirsky', to: 'palace', zone: 40, reverse: 'e5' },
+  { id: 'e7', kind: 'edge', from: 'smolny', to: 'vladimirsky', zone: 40, reverse: 'e8' },
+  { id: 'e8', kind: 'edge', from: 'vladimirsky', to: 'smolny', zone: 40, reverse: 'e7' },
+  { id: 'e9', kind: 'edge', from: 'admiralty', to: 'vladimirsky', zone: 40, reverse: 'e10' },
+  { id: 'e10', kind: 'edge', from: 'vladimirsky', to: 'admiralty', zone: 40, reverse: 'e9' },
   // g0 - the dev loop (?devgates=1): a gate across the Nevsky approach to Vosstaniya Square (a vertical segment at x = 470, the strip east of it is the "own area") that leads back to the SAME page at
   // the same pose. It exercises the whole hand-off (prompt, preflight, veil, navigation, arrival, memory) before a second area exists, and stays as a test fixture afterwards.
   { id: 'g0', dev: true, from: 'strip', to: 'strip', seg: [[470, 100], [470, 240]], inward: [1, 0], zone: 30, arrive: { x0: 440, x1: 700, z0: 80, z1: 260 }, reverse: 'g0' },

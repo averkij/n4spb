@@ -6,6 +6,8 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DEFAULTS, depthFor, chipFor, gateCoords, createGateMachine, createGates, planArrival, promptTexts, crossPlaces, isDoor, backLink, inUnion, seamEntryOk, seamWrite, seamRead, seamClear, createSeam, grabFrame, SEAM_LEAD } from '../src/core/gates.js';
 import { REGISTRY, GATES } from '../src/areas/registry.js';
+import { EDGE_DIRS as EDGE_DIRS_T } from '../src/core/gates.js';
+import * as EG from './lib/edge-geometry.mjs';
 import { decodeHo, makeHo, encodeHo, camParam, parseCamParam } from '../src/core/handoff.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -444,6 +446,20 @@ check('the real registry territories: a strip -> north edge row triggers on the 
   const E = { id: 'edev-t', kind: 'edge', from: 'strip', to: 'north' }, m = createGateMachine({ gates: [E], config: { graceS: 0 } });
   const o = walkTo(m, 100, -330, 100, -380); assert(o && o.dir === 0, JSON.stringify(o)); assert.equal(walkTo(createGateMachine({ gates: [E], config: { graceS: 0 } }), 100, 0, 100, -100), null);
 });
+check('the four-area graph (docs/AREAS.md 15.y): with ALL real edge rows of an area in one machine, a walker at ~40 working points of every real edge gate (lens of tools/lib/edge-geometry.mjs) heading for the edge is offered a gate of HIS area; the gate asked for fires at half of them or more (in a three-way overlap - the station complex ST lies in palace, smolny and vladimirsky - the point goes to the neighbour row that comes first in the registry, never to nothing; measured 20 .. 44 of 29 .. 50)', () => {
+  const edges = GATES.filter((g) => g.kind === 'edge'); assert(edges.length >= 8, 'the registry has ' + edges.length + ' edge rows');
+  for (const g of edges) {
+    const own = edges.filter((q) => q.from === g.from), pts = EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 0 }).points, stride = Math.max(1, Math.floor(pts.length / 40));
+    let tried = 0, fired = 0, mine = 0;
+    for (let i = 0; i < pts.length; i += stride) {
+      const p = pts[i], d = EDGE_DIRS_T[p.k], sx = p.x - 60 * d[0], sz = p.z - 60 * d[1];
+      if (!inUnion(REGISTRY[g.from].play, sx, sz, 0)) continue;      // (the run-up must lie inside FROM, or the machine ignores the player)
+      tried++; const o = walkTo(createGateMachine({ gates: own, config: { graceS: 0 } }), sx, sz, p.x + d[0], p.z + d[1]);
+      if (o) { fired++; assert.equal(o.offer.from, g.from, 'an offer of another area'); if (o.offer.id === g.id) mine++; }
+    }
+    assert(tried >= 10, `${g.id}: only ${tried} run-ups`); assert.equal(fired, tried, `${g.id}: ${tried - fired} of ${tried} working points never offer a gate`); console.log(`       ${g.id} (${g.from} -> ${g.to}): offered at ${fired} of ${tried} working points, by ${g.id} itself at ${mine}`); assert(mine >= 0.5 * tried, `${g.id}: the gate itself fires at ${mine} of ${tried} points`);
+  }
+});
 check('the update() of an edge gate allocates nothing per call (no spread, no array literal, no Math.hypot in the per-frame loop)', () => {
   const src = fs.readFileSync(path.join(root, 'src/core/gates.js'), 'utf8'), i = src.indexOf('function edgeDir('), j = src.indexOf('const machine = {', i), body = src.slice(i, j);
   assert(i > 0 && j > i); assert(!/\{\s*\.\.\./.test(body) && !/Math\.hypot/.test(body) && !/=>\s*\[/.test(body) && !/\[\s*[a-z]/.test(body.replace(/EDGE_DIRS\[k\]\[[01]\]/g, '').replace(/EDGE_DIRS\[k\]/g, '')), 'allocation in edgeDir');
@@ -549,7 +565,7 @@ check('the preloader rule: the bar continues across pages (lead -> entry.p -> ba
   function seamWriteProbe() { const st = fakeStorage(); seamWrite({ sessionStorage: st }, { img: SNAP.img, t: Date.now(), from: 'a', to: 'b', p: SEAM_LEAD }); return st.getItem('n4spb.seam'); }
 });
 check('the preloader rule: every generated page sets html.seam-in in the HEAD (before the first paint), carries the veil as the FIRST thing in the body (before the canvas and the splash), and the watchdog never removes the veil', () => {
-  for (const f of ['strip.html', 'index.html', 'north.html', 'smolny.html', 'vladimirsky.html']) {
+  for (const f of [...new Set(Object.values(REGISTRY).filter((r) => r.status !== 'planned').map((r) => r.page))]) {      // (every real page of the registry: strip, north, palace = index.html, smolny, vladimirsky, admiralty)
     const h = fs.readFileSync(path.join(root, f), 'utf8'), head = h.slice(0, h.indexOf('<body>')), body = h.slice(h.indexOf('<body>'));
     assert(/classList\.add\('seam-in'\)/.test(head) && /html\.seam-in #intro \{ display: none !important; \}/.test(head) && /html\.seam-in, html\.seam-in body \{ background: #0b1230; \}/.test(head), f + ': the head script + CSS');
     assert(body.startsWith('<body>\n<div id="seam"'), f + ': the veil is the first element of the body');
