@@ -133,7 +133,7 @@ export function makeAreas(h) {
   ..._groupPolys(SUBGROUPS.tolstoy, 8).map((r) => ({ name: 'Толстовский дом · Tolstoy House', ...r })),
   ..._groupPolys(SUBGROUPS.dostoevsky, 8).map((r) => ({ name: 'Владимирская площадь · Vladimirskaya Square (Dostoevskaya)', ...r })),
   ..._groupPolys(SUBGROUPS.library, 6).map((r) => ({ name: 'Российская национальная библиотека · National Library', ...r })),
-  { name: 'Аничков мост · Anichkov Bridge', c: [-441, -93], r: 42 },
+  { name: 'Аничков мост · Anichkov Bridge', c: [-441, -93], r: 52 },
   ..._groupPolys(SUBGROUPS.beloselsky, 8).map((r) => ({ name: 'Дворец Белосельских-Белозерских · Beloselsky-Belozersky Palace', ...r })),
   ..._groupPolys(SUBGROUPS.anichkov, 10).map((r) => ({ name: 'Аничков дворец · Anichkov Palace', ...r })),
   ..._named(/Александринск/i, 8, null).map((r) => ({ name: 'Александринский театр · Alexandrinsky Theatre', ...r })),
@@ -225,14 +225,14 @@ export function makeViews({ yawToward }) {
     { key: 'Digit4', label: 'Платформы Московского вокзала', x: 644.8, z: 520, yaw: yawToward(644.8, 520, 700, 800), pitch: 3 },
     { key: 'Digit5', label: 'Аничков мост', x: -395, z: -108, yaw: yawToward(-395, -108, -470, -92), pitch: 6 },
     { key: 'Digit6', label: 'Владимирский собор и колокольня', x: -215, z: 438, yaw: yawToward(-215, 438, -165, 450), pitch: 14 },
-    { key: 'Digit7', label: 'Толстовский дом · Фонтанка', x: -672, z: 292, yaw: yawToward(-672, 292, -615, 282), pitch: 6 },
-    { key: 'Digit8', label: 'Владимирский пассаж · Достоевская', x: -222, z: 430, yaw: yawToward(-222, 430, -240, 440), pitch: 10 },
-    { key: 'Digit9', label: 'Надвратная церковь Александро-Невской лавры', x: 1940, z: 990, yaw: yawToward(1940, 990, 1968, 1029), pitch: 10 },
+    { key: 'Digit7', label: 'Толстовский дом · Фонтанка', x: -726, z: 292, yaw: yawToward(-726, 292, -615, 282), pitch: 6 },
+    { key: 'Digit8', label: 'Владимирский пассаж · Достоевская', x: -217, z: 432, yaw: yawToward(-217, 432, -240, 440), pitch: 10 },
+    { key: 'Digit9', label: 'Надвратная церковь Александро-Невской лавры', x: 1939, z: 996, yaw: yawToward(1939, 996, 1968, 1029), pitch: 10 },
     { key: 'Digit0', label: 'Площадь Александра Невского', x: 1940, z: 940, yaw: yawToward(1940, 940, 1983, 822), pitch: 6 },
     // the Places list only
     { key: 'Place.alexandrinsky', label: 'Александринский театр · площадь Островского', x: -800, z: 120, yaw: yawToward(-800, 120, -844, 70), pitch: 8 },
     { key: 'Place.library', label: 'Российская национальная библиотека · Фонтанка', x: -372, z: -300, yaw: yawToward(-372, -300, -334, -311), pitch: 8 },
-    { key: 'Place.trinity', label: 'Троицкий собор Лавры', x: 2040, z: 1200, yaw: yawToward(2040, 1200, 2089, 1260), pitch: 12 },
+    { key: 'Place.trinity', label: 'Троицкий собор Лавры', x: 2038, z: 1200, yaw: yawToward(2038, 1200, 2089, 1260), pitch: 12 },
   ];
   return { HERO, VIEWS };
 }

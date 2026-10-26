@@ -3,7 +3,7 @@
 // source project. No invented streets or city-wide updates.
 // n4spb: the source picks the decks by its regions C1.. (REGIONS names, playRect); here a deck belongs to the area when its centre lies in the PLAY rectangles of THIS facade and the Anichkov Bridge (landmarksC) is left to its owner.
 // Which of the sites an area really builds is the area's choice: sites.js adds only the ids that the area lists in GROUPS.bridges (BRIDGE_GROUP_KEYS), so the other areas (whose facades may hold such a deck in their margin) build none.
-import { BRIDGES, ROADS, WATER, PLAY_RECTS } from '../data/city.js';
+import { BRIDGES, ROADS, WATER, EXTENT_RECTS } from '../data/city.js';
 import { EAST_BRIDGE_ROADS } from '../eastBridges/groups.js';
 const eastOwned = new Set(EAST_BRIDGE_ROADS.map(r => r.id));
 const OTHER_OWNERS = new Set(['r5537267', 'w372394912', 'w372394928']);      // n4spb: the Anichkov Bridge deck and its two ways belong to landmarksC
@@ -17,7 +17,7 @@ export const SOUTH_SITES = [];
 for(const deck of BRIDGES) {
   if(!deck.name || !deck.polys?.length || OTHER_OWNERS.has(deck.id)) continue;
   const o=deck.polys[0].o,[cx,cz]=centre(o);
-  if(!PLAY_RECTS.some(r=>insideRect(r,cx,cz))) continue;
+  if(!EXTENT_RECTS.some(r=>insideRect(r,cx,cz))) continue;
   const ways=candidates.filter(r=>!eastOwned.has(r.id)&&!OTHER_OWNERS.has(r.id)&&r.name===deck.name&&r.pts.some((v,i)=>i%2===0&&Math.hypot(v-cx,r.pts[i+1]-cz)<150));
   if(!ways.length) continue;
   const road=ways.find(r=>!['footway','path','pedestrian'].includes(r.hw)) || ways[0],p=road.pts;
