@@ -53,7 +53,12 @@ const tileH = (key) => Y_TOP - yBot(key);
 /** descents (stair flights down to the water) of the canals and the Neva: dimensions in metres along the wall (u) and out from the wall face (v) */
 const DS = { gateA: 2.0, gateB: 1.8, run: 0.34, rise: 0.19, low: 3.0, topY: 0.10 };
 const descentWidth = (key, site) => (key === 'neva' ? (site.big ? 4.6 : 2.8) : key === 'winter-canal' ? 1.6 : 1.9);
-const nearMargin = 25;                                       // detail (posts, rings, 9 m pieces) inside the data extent + this margin
+/** STEPPABLE FONTANKA FLIGHTS (owner 2026-10-26, a motor boat is parked beside the Anichkov landing stage): the stair flight of the pontoon at the west bank of the Fontanka (OSM pier near (-452.9, -166.3)) is walkable: the railing
+ *  has a gap of +-OPEN_GATE m along the quay at the flight (no collider, no drawn panel; the posts frame it), walk boxes carry the walker over the landing / treads / lower landing and the deck of the pontoon of landmarksC/boats.js
+ *  (PONTOON: its length / width / deck top, kept in step with buildPier there). Other flights stay as they were (decoration); add a site here to open one. */
+const OPEN_FONTANKA_STAIRS = [{ x: -452.9, z: -166.3, r: 6 }];
+const OPEN_GATE = 1.2, PONTOON = { len: 15, wid: 3.0, top: -2.72 };
+const nearMargin = 25;                                      // detail (posts, rings, 9 m pieces) inside the data extent + this margin
 const isNear = (x, z) => L.inExtent(x, z, -nearMargin);
 
 // ---------------------------------------------------------------- textures
@@ -454,7 +459,7 @@ export function buildQuay(ctx, root) {
   // THE BREAKABLE FENCE (docs/AREAS.md 13.7, the world rule "water is reachable"): every post, panel and tube of a railing, every section of the Neva parapet and every cheek wall of a descent is a BAY of lib/fence-bays.js: its own
   // thin collider + its instances + one knock record (a car above the break speed breaks the bay off, the gap is passable). A railing bay is the span between two posts and the post at its end (a post that no span ends at stands alone
   // as a one-post bay). Where no fence is drawn there is no collider: the quay edge is open (a walker steps off it, a car drives off it).
-  const bays = [], parapetBays = [], cheekBays = [], pierBays = [], postPts = [];
+  const bays = [], parapetBays = [], cheekBays = [], pierBays = [], postPts = [], openStairs = [];
   const addBay = (b) => { bays.push(b); postPts.push([b.x1, b.z1]); return b; };
   const postTone = (kind, key, t, x, z) => new THREE.Color((POST_TONES[kind] || POST_TONES[key] || POST_TONES.griboedov)(t)).multiplyScalar(0.92 + 0.14 * hash2(Math.round(x * 3), Math.round(z * 3), 9));
   // the Palace Bridge deck rectangle (bridges/palace.js frame: cx -2339.5, cz -875, bearing 323.5, u 0..254.5, half width ~14.2): the OSM water-polygon seam runs along the abutment line (u ~ 1.5)
@@ -691,7 +696,12 @@ export function buildQuay(ctx, root) {
     const { fr, seg } = frames(bank, splits), total = fr[fr.length - 1].s;
     // position of a point in a descent's frame: u along the flight (gate = [-gateA, gateB]), v out from the wall face
     const dUV = (d, x, z) => ({ u: (x - d.p0.x) * d.t[0] + (z - d.p0.z) * d.t[1], v: -((x - d.p0.x) * d.n[0] + (z - d.p0.z) * d.n[1]) });
-    const inGate = (x, z, m = 0.4) => { for (const d of mine) { const q = dUV(d, x, z); if (q.u >= -DS.gateA - m && q.u <= DS.gateB + m && Math.abs(q.v) < 1.6) return true; } return false; };
+    const inOpenGate = (x, z) => { for (const o of openStairs) { const q = dUV({ p0: o, t: [o.tx, o.tz], n: [o.nx, o.nz] }, x, z); if (Math.abs(q.u) <= o.gate && Math.abs(q.v) < 1.6) return true; } return false; };
+    const inGate = (x, z, m = 0.4) => {
+      for (const d of mine) { const q = dUV(d, x, z); if (q.u >= -DS.gateA - m && q.u <= DS.gateB + m && Math.abs(q.v) < 1.6) return true; }
+      for (const o of openStairs) { const q = dUV({ p0: o, t: [o.tx, o.tz], n: [o.nx, o.nz] }, x, z); if (Math.abs(q.u) <= o.gate + m && Math.abs(q.v) < 1.6) return true; }      // the gap in the railing at a steppable Fontanka flight
+      return false;
+    };
     const segKind = seg.map((sg, i) => {                           // 1 = the gate of a descent (no parapet, no collider), 2 = its flight / lower landing (thin wall collider), 0 = ordinary wall
       const mx = (fr[i].x + fr[i + 1].x) / 2, mz = (fr[i].z + fr[i + 1].z) / 2;
       for (const d of mine) { const q = dUV(d, mx, mz); if (Math.abs(q.v) > 1.2) continue; if (q.u >= -DS.gateA - 0.05 && q.u <= DS.gateB + 0.05) return 1; if (q.u > DS.gateB && q.u <= d.end + 0.05) return 2; }
@@ -798,20 +808,74 @@ export function buildQuay(ctx, root) {
       if (segNear[i]) info.segments.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, nx: sg.nx, nz: sg.nz, bank: bank.name, key });
     }
 
+    // ---- stair flights at the landing-stage / steps sites
+    const placed = [];
+    for (const site of bank.far || key !== 'fontanka' ? [] : sitesOf[key] || []) {
+      let best = null;
+      for (let s = 0; s < total; s += 1) { const p = at(fr, seg, s), d = Math.hypot(p.x - site.x, p.z - site.z); if (!best || d < best.d) best = { d, s, p }; }
+      if (!best || best.d > 28 || !isNear(best.p.x, best.p.z)) continue;
+      if (placed.some((q) => Math.hypot(q.x - best.p.x, q.z - best.p.z) < 14)) continue;
+      let dir = 1; { const a = at(fr, seg, Math.min(total, best.s + 10)), b = at(fr, seg, Math.max(0, best.s - 10)); if (gapAt(key, a.x, a.z) && !gapAt(key, b.x, b.z)) dir = -1; }
+      const at0 = (u) => at(fr, seg, best.s + dir * u);
+      const p0 = at0(0), e = at0(10.5);
+      if (gapAt(key, p0.x, p0.z) || gapAt(key, e.x, e.z) || gapAt(key, at0(5).x, at0(5).z) || Math.abs(p0.tx * e.tx + p0.tz * e.tz) < 0.97) continue;
+      const tx = p0.tx * dir, tz = p0.tz * dir, nx = p0.nx, nz = p0.nz;      // tx,tz: direction of descent; n: landward
+      const Wd = site.w || 1.7, y0 = -0.5, wl = lvl(key);
+      const put = (u0m, u1m, top, bot = YB) => {                              // a block from u0m to u1m along the descent, hugging the wall on the water side
+        const uc = (u0m + u1m) / 2, c = { x: p0.x + tx * uc, z: p0.z + tz * uc };
+        box(granite, c.x - nx * (Wd / 2 + 0.02), c.z - nz * (Wd / 2 + 0.02), tx, tz, nx, nz, (u1m - u0m) / 2, Wd / 2, bot, top, 2);
+      };
+      put(-1.6, 1.6, y0);                                                      // top landing (below the coping)
+      const steps = key === 'fontanka' ? 11 : Math.max(8, Math.ceil((y0 - (wl + 0.22)) / 0.235)), run = 0.4, rise = (y0 - (wl + 0.22)) / steps;
+      for (let k = 0; k < steps; k++) {
+        const u0m = 1.6 + k * run, top = y0 - rise * (k + 1);
+        put(u0m, u0m + run, top);
+        box(granite, p0.x + tx * (u0m + run / 2) - nx * (Wd + 0.1), p0.z + tz * (u0m + run / 2) - nz * (Wd + 0.1), tx, tz, nx, nz, run / 2, 0.12, top, top + 0.9, 2);     // balustrade on the water side
+      }
+      put(1.6 + steps * run, 1.6 + steps * run + 3.0, wl + 0.22);              // the lower landing 0.22 m above the water
+      const st = { x: p0.x, z: p0.z, tx, tz, nx, nz, bank: bank.name, key, length: 4.6 + steps * run + 3, landingY: wl + 0.22, w: Wd, steps };
+      placed.push(p0); info.allStairs.push(st); if (key === 'fontanka') info.stairs.push(st);
+      if (OPEN_FONTANKA_STAIRS.some((o) => Math.hypot(o.x - p0.x, o.z - p0.z) < o.r) && L.inPlay(p0.x, p0.z, -5)) {      // a steppable flight (owner 2026-10-26): a gap in the railing, walk boxes for the landing / treads / pontoon deck
+        const rot = Math.atan2(-tz, tx), Pq = (u, v) => [p0.x + tx * u - nx * v, p0.z + tz * u - nz * v], lowY = wl + 0.22, uL = 1.6 + steps * run;
+        const walk = (u0, u1, v0, v1, top) => { const c = Pq((u0 + u1) / 2, (v0 + v1) / 2); ctx.physics.addWalkBox(c[0], c[1], u1 - u0, v1 - v0, rot, top, -8); info.colliders++; };
+        walk(-1.6, 1.6, -0.02, Wd + 0.1, y0);                                  // the top landing (0.5 m under the pavement)
+        walk(-1.2, 1.2, -0.75, 0.45, y0 + 0.25);                               // a hidden sill under the pavement edge: the climb back from the landing (0.5 m) is two 0.25 m steps
+        { const c = Pq(1.6 + (steps * run) / 2, Wd / 2 + 0.02); ctx.physics.addStairs(c[0], c[1], Wd, steps * run, Math.atan2(tx, tz), y0, lowY, steps); info.colliders += steps; }
+        walk(uL, uL + 3.0, -0.02, Wd + 0.1, lowY);                             // the lower landing
+        walk(uL + 3.0 - 0.05, uL + 3.0 + PONTOON.len, 0.1, PONTOON.wid, PONTOON.top);      // the deck of the landing-stage pontoon of landmarksC/boats.js (it starts 9 m from the flight origin; its deck is 0.26 m above the landing)
+        openStairs.push({ x: p0.x, z: p0.z, tx, tz, nx, nz, gate: OPEN_GATE });
+        st.walk = true; st.gate = OPEN_GATE; st.topY = y0; st.pontoonTop = PONTOON.top;
+      }
+    }
+
     // ---- posts + panels (near parts only, never in a gap)
     if (W.rail.length) {
-      let prevPost = null, prevStyle = null;
+      let prevPost = null, prevStyle = null, deckPost = null;
+      // THE ANICHKOV DECK EDGE (owner 2026-10-26: "a hole in the fence" at the west bank just north of the bridge): the posts inside the deck polygon (+ 1.2 m) are left out, and the bridge railing starts about where the first of
+      // them stood, so the last quay bay used to end one bay (3.6 m) short of it: an open hole beside the bridge head. The first / last post of the deck zone is now the end of a closing bay (a deck post is only used as such an end,
+      // never drawn on its own, and never where a carriageway or a gate lies); every other deck post stays out.
       const postAt = (x, z, tx, tz, nx, nz, s) => {
-        if (!isNear(x, z) || inRunS(s) || gapAt(key, x, z) || inGate(x, z, 0.0) || onRoad(x + nx * 0.26, z + nz * 0.26)) { prevPost = null; return; }
+        const onDeck = key === 'fontanka' && inAnichkov(x, z);
+        if (!isNear(x, z) || inRunS(s) || (!onDeck && gapAt(key, x, z)) || inGate(x, z, 0.0) || onRoad(x + nx * 0.26, z + nz * 0.26)) { prevPost = null; deckPost = null; return; }
         const style = railStyle(key, bank, x, z, nx, s, nz);
-        if (!style) { prevPost = null; return; }
+        if (!style) { prevPost = null; deckPost = null; return; }
         const px = x + nx * 0.26, pz = z + nz * 0.26, minGap = style === 'tube' ? 1.2 : 1.6;
+        if (onDeck) {
+          if (prevPost && !deckPost && Math.hypot(prevPost.x - px, prevPost.z - pz) < 4.8 && Math.hypot(prevPost.x - px, prevPost.z - pz) >= minGap && !onRoad((px + prevPost.x) / 2, (pz + prevPost.z) / 2)) {      // coming from the quay: close up to the deck edge
+            const dk = { kind: style === 'tube' ? 'tube' : style === 'arcade' ? 'bigpost' : style === 'moika' ? 'moika' : (POST[key] || 'bigpost') };
+            dk.col = postTone(dk.kind, key, hash2(Math.round(x), Math.round(z), 5), x, z); dk.y = Y_TOP - 0.03;
+            addBay({ x0: prevPost.x, z0: prevPost.z, x1: px, z1: pz, nx, nz, key, y: Y_TOP, post: dk, panel: style === 'tube' ? null : style, h: RAIL_H[style], tube: style === 'tube' });
+          }
+          prevPost = null; deckPost = { x: px, z: pz }; return;                 // (the next deck posts only move the "last deck post" on)
+        }
+        if (!prevPost && deckPost) { prevPost = deckPost; }                      // going out of the deck zone: the first quay post closes the bay up to the last deck post
+        deckPost = null;
         if (prevPost && Math.hypot(prevPost.x - px, prevPost.z - pz) < minGap) return;
         const postKind = style === 'tube' ? 'tube' : style === 'arcade' ? 'bigpost' : style === 'moika' ? 'moika' : (POST[key] || 'bigpost');
         const post = { kind: postKind, col: postTone(postKind, key, hash2(Math.round(x), Math.round(z), 5), x, z), y: Y_TOP - 0.03 };
         if (key === 'winter-canal') corbels.push({ x: x - nx * 0.0 + nx * 0.0, z, nx, nz, yaw: Math.atan2(nx, nz), px: x + nx * 0.0, pz: z });
         let spanned = false;
-        if (prevPost && Math.hypot(prevPost.x - px, prevPost.z - pz) < 4.8 && !onRoad((px + prevPost.x) / 2, (pz + prevPost.z) / 2)) {      // a span over a carriageway has no railing: the post stands alone
+        if (prevPost && Math.hypot(prevPost.x - px, prevPost.z - pz) < 4.8 && !onRoad((px + prevPost.x) / 2, (pz + prevPost.z) / 2) && !inOpenGate((px + prevPost.x) / 2, (pz + prevPost.z) / 2)) {      // a span over a carriageway or over the gap of a steppable flight has no railing: the post stands alone
           addBay({ x0: prevPost.x, z0: prevPost.z, x1: px, z1: pz, nx, nz, key, y: Y_TOP, post, panel: style === 'tube' ? null : style, h: RAIL_H[style], tube: style === 'tube' });
           spanned = true;
         }
@@ -856,34 +920,6 @@ export function buildQuay(ctx, root) {
       if (key !== 'fontanka' && segNear[i]) { const c = { x: a.x + sg.tx * (off * 2.2), z: a.z + sg.tz * (off * 2.2) }; if (!onRoad(c.x, c.z, 0.9)) culverts.push({ x: c.x - sg.nx * 0.03, z: c.z - sg.nz * 0.03, nx: -sg.nx, nz: -sg.nz, y: lvl(key) + 0.3 }); }
     }
 
-    // ---- stair flights at the landing-stage / steps sites
-    const placed = [];
-    for (const site of bank.far || key !== 'fontanka' ? [] : sitesOf[key] || []) {
-      let best = null;
-      for (let s = 0; s < total; s += 1) { const p = at(fr, seg, s), d = Math.hypot(p.x - site.x, p.z - site.z); if (!best || d < best.d) best = { d, s, p }; }
-      if (!best || best.d > 28 || !isNear(best.p.x, best.p.z)) continue;
-      if (placed.some((q) => Math.hypot(q.x - best.p.x, q.z - best.p.z) < 14)) continue;
-      let dir = 1; { const a = at(fr, seg, Math.min(total, best.s + 10)), b = at(fr, seg, Math.max(0, best.s - 10)); if (gapAt(key, a.x, a.z) && !gapAt(key, b.x, b.z)) dir = -1; }
-      const at0 = (u) => at(fr, seg, best.s + dir * u);
-      const p0 = at0(0), e = at0(10.5);
-      if (gapAt(key, p0.x, p0.z) || gapAt(key, e.x, e.z) || gapAt(key, at0(5).x, at0(5).z) || Math.abs(p0.tx * e.tx + p0.tz * e.tz) < 0.97) continue;
-      const tx = p0.tx * dir, tz = p0.tz * dir, nx = p0.nx, nz = p0.nz;      // tx,tz: direction of descent; n: landward
-      const Wd = site.w || 1.7, y0 = -0.5, wl = lvl(key);
-      const put = (u0m, u1m, top, bot = YB) => {                              // a block from u0m to u1m along the descent, hugging the wall on the water side
-        const uc = (u0m + u1m) / 2, c = { x: p0.x + tx * uc, z: p0.z + tz * uc };
-        box(granite, c.x - nx * (Wd / 2 + 0.02), c.z - nz * (Wd / 2 + 0.02), tx, tz, nx, nz, (u1m - u0m) / 2, Wd / 2, bot, top, 2);
-      };
-      put(-1.6, 1.6, y0);                                                      // top landing (below the coping)
-      const steps = key === 'fontanka' ? 11 : Math.max(8, Math.ceil((y0 - (wl + 0.22)) / 0.235)), run = 0.4, rise = (y0 - (wl + 0.22)) / steps;
-      for (let k = 0; k < steps; k++) {
-        const u0m = 1.6 + k * run, top = y0 - rise * (k + 1);
-        put(u0m, u0m + run, top);
-        box(granite, p0.x + tx * (u0m + run / 2) - nx * (Wd + 0.1), p0.z + tz * (u0m + run / 2) - nz * (Wd + 0.1), tx, tz, nx, nz, run / 2, 0.12, top, top + 0.9, 2);     // balustrade on the water side
-      }
-      put(1.6 + steps * run, 1.6 + steps * run + 3.0, wl + 0.22);              // the lower landing 0.22 m above the water
-      const st = { x: p0.x, z: p0.z, tx, tz, nx, nz, bank: bank.name, key, length: 4.6 + steps * run + 3, landingY: wl + 0.22, w: Wd, steps };
-      placed.push(p0); info.allStairs.push(st); if (key === 'fontanka') info.stairs.push(st);
-    }
     for (const d of mine) buildDescent(d);
   });
 

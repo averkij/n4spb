@@ -349,6 +349,62 @@ check('6 AUDIT: every thin tall collider within 12 m of water is a knock record 
   assert.equal(bad.size, 0, 'not breakable: ' + [...bad.entries()].map(([k, e]) => k + ' x' + e.n).join(', '));
 });
 
+// ---------------------------------------------------------------- 7b the Anichkov landing stage (owner 2026-10-26): a steppable flight with a gap in the railing, and no hole beside the bridge heads
+if (AREA === 'palace') {
+  const flight = (env.quay.allStairs || []).find((s) => s.key === 'fontanka' && s.walk);
+  const feetOf = (p) => p.pos.y;
+  const FP = (u, v) => [flight.x + flight.tx * u - flight.nx * v, flight.z + flight.tz * u - flight.nz * v];      // u along the descent, v out from the wall face toward the water
+  const uOf = (p) => (p.pos.x - flight.x) * flight.tx + (p.pos.z - flight.z) * flight.tz;
+  const vOf = (p) => -((p.pos.x - flight.x) * flight.nx + (p.pos.z - flight.z) * flight.nz);
+  const stops = (x, z) => { const c = { x, z }; ph.resolve(c, 0.3, 0, 1.7); return hyp(c.x - x, c.z - z) > 0.02; };      // a standing walker at (x, z) on the pavement is pushed out by a solid
+  check('7b the Fontanka flight at the Anichkov landing stage is steppable: a gap in the railing (no collider across it, no drawn bay), the railing stands on both sides of it', () => {
+    assert(flight, 'no steppable Fontanka flight (quay.allStairs[].walk)');
+    let open = 0, n = 0; for (let u = -0.8; u <= 0.8; u += 0.2) for (const v of [-0.9, -0.6, -0.3, 0, 0.5, 1.0]) { n++; const [x, z] = FP(u, v); if (!stops(x, z)) open++; else console.log('   blocked at u', u, 'v', v, x.toFixed(2), z.toFixed(2)); }
+    console.log(`  gap centre (${flight.x.toFixed(2)}, ${flight.z.toFixed(2)}), descends toward (${flight.tx.toFixed(3)}, ${flight.tz.toFixed(3)}), water side (${(-flight.nx).toFixed(3)}, ${(-flight.nz).toFixed(3)}); ${open} of ${n} gate samples are free`);
+    assert.equal(open, n, 'the gate is not free: ' + (n - open) + ' of ' + n);
+    for (const u of [-1.5, 1.5]) { const [x, z] = FP(u, -0.26); assert(stops(x, z), `the railing (a post) must stand at u ${u}`); }
+    for (const u of [-3.0, 3.0]) { const [x, z] = FP(u, -0.1); assert(stops(x, z) || stops(...FP(u + 0.3, -0.1)) || stops(...FP(u - 0.3, -0.1)), `the railing must stand at u ${u}`); }
+    const span = ctx.knock.list.filter((r) => r.kind === 'fence' && r.w > 1 && hyp(r.x - flight.x, r.z - flight.z) < 3.2 && Math.abs((r.x - flight.x) * flight.tx + (r.z - flight.z) * flight.tz) < 1.0);
+    assert.equal(span.length, 0, 'a drawn bay (panel) spans the gate: ' + span.length);
+  });
+  check('7b a walker goes from the street through the gap, down the flight to the lower landing and onto the pontoon deck, and back up to the street (dry, never stuck); the pontoon side is open to the water', () => {
+    const [sx, sz] = FP(0, -3);                                                       // 3 m landward of the gate, on the street
+    const p = walker(sx, sz, -flight.nx, -flight.nz);
+    walk(p, 1.15);                                                                    // through the gap onto the top landing
+    console.log(`  after the gap: v ${vOf(p).toFixed(2)}, feet ${feetOf(p).toFixed(2)} (landing ${flight.topY.toFixed(2)})`);
+    assert(vOf(p) > 0.3 && Math.abs(feetOf(p) - flight.topY) < 0.15, 'not on the top landing');
+    heading(p, flight.tx, flight.tz);                                                 // along the flight
+    const w2 = walk(p, 4.2);
+    console.log(`  after 4.2 s down the flight: u ${uOf(p).toFixed(1)}, v ${vOf(p).toFixed(2)}, feet ${feetOf(p).toFixed(2)} (lower landing ${flight.landingY.toFixed(2)}, pontoon ${flight.pontoonTop.toFixed(2)}), deepest ${w2.maxDepth.toFixed(2)}`);
+    assert(w2.maxDepth < 0.05 && uOf(p) > 10 && Math.abs(feetOf(p) - flight.pontoonTop) < 0.12, 'did not reach the pontoon deck dry');
+    heading(p, -flight.tx, -flight.tz);
+    const w3 = walk(p, 4.2);
+    console.log(`  after 4.2 s back up: u ${uOf(p).toFixed(1)}, feet ${feetOf(p).toFixed(2)}, deepest ${w3.maxDepth.toFixed(2)}`);
+    assert(w3.maxDepth < 0.05 && uOf(p) < 1.7 && feetOf(p) > flight.topY - 0.15, 'did not come back up the flight');
+    heading(p, flight.nx, flight.nz);
+    walk(p, 2.0);
+    const g = ph.heightAt(p.pos.x, p.pos.z);
+    console.log(`  back on the street: v ${vOf(p).toFixed(2)}, feet ${feetOf(p).toFixed(2)}, ground ${g.toFixed(2)}`);
+    assert(vOf(p) < -0.6 && Math.abs(feetOf(p) - g) < 0.2, 'did not climb back to the street');
+    // the water side of the pontoon is open: a walker leaving the deck sideways is in the river
+    const [qx, qz] = FP(12, 1.5), q = walker(qx, qz, flight.nx * -1, flight.nz * -1); q.pos.y = flight.pontoonTop; const w4 = walk(q, 4.0);
+    assert(w4.maxDepth > 0.1, 'the water side of the pontoon is open: depth ' + w4.maxDepth.toFixed(2));
+  });
+  check('7b the fence is closed at the heads of the Anichkov Bridge on the Fontanka banks (4 corners): the closing bay joins the quay railing to the bridge railing, and no walker passes the line between them', () => {
+    const near = ctx.knock.list.filter((r) => r.kind === 'fence' && hyp(r.x + 440, r.z + 90) < 100);
+    const ends = []; for (const r of near) { const tx = Math.cos(r.rotY), tz = -Math.sin(r.rotY), h = (r.w || 0) / 2; ends.push([r.x - tx * h, r.z - tz * h], [r.x + tx * h, r.z + tz * h]); }
+    // [bay end of the quay railing, end of the bridge railing]: the owner's pose -463.3, -121.9 (looking east) is the first
+    const corners = [[-461.62, -123.72, -462.35, -120.16, 'west bank north of the bridge (the owner pose -463.3, -121.9)'], [-408.12, -111.10, -408.65, -108.23, 'east bank north'], [-421.72, -62.58, -420.66, -65.31, 'east bank south'], [-474.95, -78.48, -475.99, -75.77, 'west bank south']];
+    for (const [ax, az, bx, bz, name] of corners) {
+      const endsA = ends.filter(([x, z]) => hyp(x - ax, z - az) < 0.15).length, endsB = ends.filter(([x, z]) => hyp(x - bx, z - bz) < 0.15).length;
+      assert(endsA >= 2 && endsB >= 2, `${name}: the railing is not continuous (bay ends at the quay end ${endsA}, at the bridge end ${endsB})`);
+    }
+    const pass = [];
+    for (let z = -123.7; z <= -120.2; z += 0.35) { const x = -461.62 + (z + 123.72) * (-462.35 + 461.62) / (-120.16 + 123.72); if (!stops(x, z)) pass.push(+z.toFixed(2)); }
+    assert.equal(pass.length, 0, 'a walker passes the railing line at z ' + JSON.stringify(pass));
+  });
+}
+
 // ---------------------------------------------------------------- 8 the car and the floors over water: decks (placement), pier decks and landings
 {
   const chain = (x, z) => { for (const n of HOOKS.deckServices || []) { const d = ctx.services[n]?.deckY?.(x, z); if (Number.isFinite(d)) return d; } return ctx.services.landmarksC?.bridge?.deckY?.(x, z) ?? ctx.services.bridges?.deckY(x, z) ?? null; };      // (the order of drive/handling.js)
