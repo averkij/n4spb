@@ -186,37 +186,39 @@ for (const kind of ['palace', 'troitsky']) {
 
   // ---------------------------------------------------------------- (d) the barrier arms
   {
-    const bars = T.barriers.barriers, g = T.gates[0], lane = -5.7;
-    const run1 = (kmh, label) => {
+    const bars = T.barriers.barriers, g = T.gates[0], lane0 = -5.7;
+    const halves = (a) => a.segs.map((g) => g.rec && g.rec.state).join('/');
+    const run1 = (kmh, label, lane = lane0) => {
       settle(); T.setMode('open'); T.advance(7, 0); T.leaf.set(T.theta); R.update(0, 1);                  // the warning: the arms are down, the leaves have not moved
       const arms = bars.arms.filter((a) => Math.abs(a.u - g.u) < 1e-6 && !a.ped && Math.sign(a.v) === Math.sign(lane));
       const dir = g.dir, uStart = g.u - dir * 14, w = R.W(uStart, lane);
       const cctx = { L: eng.L, physics: ph, services: ctx.services }, car = createHandling(cctx, null);
       car.reset(w.x, w.z, R.yawN + (dir > 0 ? 0 : Math.PI)); car.y = R.deckAny(w.x, w.z) + 0.03; car.vx = Math.sin(car.yaw) * kmh / 3.6; car.vz = Math.cos(car.yaw) * kmh / 3.6;
       ctx.drive = { active: true, car, fx: { sparks() {} } }; ctx.player.position.set(w.x, 0, w.z);
-      const state0 = arms.map((a) => a.rec && a.rec.state); let maxProg = -99; const ev = [];
+      const state0 = arms.map(halves); let maxProg = -99; const ev = [];
       for (let t = 0; t < 16; t += DT) { ph.refreshDynamic(); car.step(DT, { thr: car.vF < kmh / 3.6 ? 1 : 0, brk: 0, steer: 0, hand: false, nitro: false, jump: false, flip: false }); ctx.knock.update(DT); for (const e of car.events) ev.push(e.type + ' ' + fmt(e.v, 1)); maxProg = Math.max(maxProg, dir * (R.F.toUV(car.x, car.z, {}).u - g.u)); }
       ctx.drive = null;
-      say(`  ${label}: arm states ${state0} -> ${arms.map((a) => a.rec && a.rec.state)}, the car got ${fmt(maxProg)} m past the gate line, events ${ev.slice(0, 6).join(', ')}`);
+      say(`  ${label}: arm states ${state0} -> ${arms.map(halves)}, the car got ${fmt(maxProg)} m past the gate line, events ${ev.slice(0, 6).join(', ')}`);
       return { arms, maxProg, car };
     };
-    const slow = run1(5, '5 km/h into the lowered road arm');
-    ok(slow.maxProg < 0.3 && slow.arms.every((a) => !a.rec || a.rec.state === 'stand'), `(d) a car at 5 km/h is stopped by the lowered arm (it got ${fmt(slow.maxProg)} m past the line) and the arm stands`);
+    const slow = run1(3, '3 km/h into the lowered road arm');
+    ok(slow.maxProg < 0.3 && slow.arms.every((a) => a.state === 'stand'), `(d) a creeping car at 3 km/h (below ARM_BREAK) is stopped by the lowered arm (it got ${fmt(slow.maxProg)} m past the line) and the arm stands`);
     const fast = run1(45, '45 km/h into the lowered road arm');
-    ok(fast.arms.some((a) => a.rec && a.rec.state !== 'stand') && fast.maxProg > 3, `(d) a car at 45 km/h breaks the arm (${fast.arms.map((a) => a.rec && a.rec.state)}) and drives on (${fmt(fast.maxProg)} m past the line)`);
-    const broken = fast.arms.filter((a) => a.rec && a.rec.state !== 'stand'), box0 = broken[0].box;
+    ok(fast.arms.some((a) => a.state !== 'stand') && fast.maxProg > 3, `(d) a car at 45 km/h breaks the arm (${fast.arms.map(halves)}) and drives on (${fmt(fast.maxProg)} m past the line)`);
+    const broken = fast.arms.filter((a) => a.state !== 'stand'), brokenSegs = broken.flatMap((a) => a.segs.filter((g) => g.rec && g.rec.state !== 'stand')), box0 = brokenSegs[0].box;
     ok(!bars.boxes().includes(box0), '(d) a broken arm gave its collider box up');
     // the broken arm stays broken until the next cycle starts
     settle(); R.update(0.1, 2);
-    ok(broken.every((a) => a.rec.state !== 'stand'), '(d) the arm is still broken after the cycle ended (nothing in the world repairs itself)');
+    ok(brokenSegs.every((g) => g.rec.state !== 'stand'), '(d) the arm is still broken after the cycle ended (nothing in the world repairs itself)');
     T.setMode('open'); R.update(0.1, 3); R.update(0.1, 4);                                                // the next cycle starts: the event "warn" -> the module restores the arms
-    ok(T.state().stage === 'warn' && broken.every((a) => a.rec.state === 'stand'), `(d) when the next cycle starts the module restores the arms (${broken.map((a) => a.rec.state)})`);
+    ok(T.state().stage === 'warn' && broken.every((a) => a.state === 'stand'), `(d) when the next cycle starts the module restores the arms (${broken.map(halves)})`);
     T.advance(7, 0); R.update(0, 5);
     ok(bars.boxes().includes(box0), '(d) the restored arm is solid again (its box is back)');
+    { const half = run1(45, '45 km/h into the post half of the lowered road arm (lane -9)', -9);
+      ok(half.arms.length === 1 && half.arms[0].segs[0].rec.state !== 'stand' && half.arms[0].segs[1].rec.state === 'stand' && half.maxProg > 3, `(d) the boom breaks IN HALF: the post half the car hit lies on the road, the tip half still stands (${half.arms.map(halves)}), the car drives on (${fmt(half.maxProg)} m)`); }
     // raised arms are no obstacle
     settle(); R.update(0, 6);
-    ok(!bars.boxes().some((b) => bars.arms.some((a) => a.box === b)) || true, '(d) raised: no box');
-    { let n = 0; ph.refreshDynamic(); for (const it of ph._dynItems) if (bars.arms.some((a) => a.box === it.source)) n++; ok(n === 0, `(d) with the arms up none of them is a collider (${n} boxes)`); }
+    { let n = 0; ph.refreshDynamic(); for (const it of ph._dynItems) if (bars.arms.some((a) => a.segs.some((g) => g.box === it.source))) n++; ok(n === 0, `(d) with the arms up none of them is a collider (${n} boxes)`); }
     T.setMode('closed'); settle();
   }
   R.release();
