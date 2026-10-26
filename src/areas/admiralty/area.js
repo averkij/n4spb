@@ -18,6 +18,7 @@ import { GROUPS_LIST as G_H } from '../../world/landmarksH/groups.js';
 import { GROUPS_LIST as G_I } from '../../world/landmarksI/groups.js';
 import { GROUPS_LIST as G_J } from '../../world/landmarksJ/groups.js';
 import { GROUPS_LIST as G_BR } from '../../world/bridges/groups.js';
+import { GROUPS_SW, GROUPS_SOUTH } from '../../world/bridges/groups-sw.js';
 import { LIBRARY_GROUP } from '../../world/landmarksD/groups.js';
 import { GROUPS_LIST as G_MARIINSKY } from '../../world/landmarksMariinsky/groups.js';
 import { GROUPS_LIST as G_NIKOLSKY } from '../../world/landmarksNikolsky/groups.js';
@@ -123,7 +124,7 @@ export const GROUPS = {
 GROUPS.landmarksE = G_E; GROUPS.landmarksF = G_F; GROUPS.landmarksG = G_G; GROUPS.landmarksH = G_H; GROUPS.landmarksI = G_I; GROUPS.landmarksJ = G_J;
 // the bridges: only the ones whose OSM ways are in the data of this area (the bridges of the Mars Field / Summer Garden reach and the Winter Canal east of the Hermitage lie in Palace-Liteyny)
 const BRIDGE_KEYS = new Set(['kazansky', 'green', 'red', 'blue', 'bankovsky', 'mucny', 'palace', 'kamenny', 'pochtamtsky', 'fonarny', 'hermitage', 'zimny1', 'italyansky']);
-GROUPS.bridges = G_BR.filter((b) => BRIDGE_KEYS.has(b.key));
+GROUPS.bridges = G_BR.filter((b) => BRIDGE_KEYS.has(b.key)).concat(GROUPS_SW, GROUPS_SOUTH);      // + the 24 bridges of the south-west and the six southern Fontanka crossings (bridges/groups-sw.js)
 // the ported west and south-west: Nikolsky, Mariinsky, New Holland, Yusupov draw every sub-group of their lists (all in this territory and in its data); CentralSouth draws the Trinity-Izmailovsky Cathedral and the Technological Institute
 // (the Vitebsky station lies 200 m outside the data: its sub-group is not claimed)
 GROUPS.landmarksNikolsky = G_NIKOLSKY; GROUPS.landmarksMariinsky = G_MARIINSKY; GROUPS.landmarksNewHolland = G_NEWHOLLAND; GROUPS.landmarksYusupov = G_YUSUPOV;
@@ -143,12 +144,12 @@ export function makeAreas(h) {
   ..._groupPolys(SUBGROUPS.library, 6).map((r) => ({ name: 'Российская национальная библиотека · National Library', ...r })),
   ..._groupPolys(SUBGROUPS.tolstoy, 6).map((r) => ({ name: 'Толстовский дом · Tolstoy House', ...r })),
   // ---- sights (outline of the named OSM building + margin; the circle is the fallback when OSM has no such outline), squares, waterways, streets. The areas find the buildings by their OSM names.
-  ..._named(/Казанский собор/i, 14, { c: [-1568, -186], r: 90 }).map((r) => ({ name: 'Казанский собор · Kazan Cathedral', ...r })),
+  ..._groupPolys(SUBGROUPS['kazan-cathedral'], 14).map((r) => ({ name: 'Казанский собор · Kazan Cathedral', ...r })),
   ..._named(/Дом Зингера|Дом книги/i, 8, { c: [-1420, -383], r: 32 }).map((r) => ({ name: 'Дом Зингера · Singer House', ...r })),
   ..._named(/Гостиный двор/i, 8, null).map((r) => ({ name: 'Гостиный Двор · Gostiny Dvor', ...r })),
   ..._named(/Александринск/i, 8, null).map((r) => ({ name: 'Александринский театр · Alexandrinsky Theatre', ...r })),
   ..._named(/Строгановск/i, 8, null).map((r) => ({ name: 'Строгановский дворец · Stroganov Palace', ...r })),
-  ..._named(/Адмиралтейство|Главное адмиралтейство/i, 12, { c: [-2433, -622], r: 150 }).map((r) => ({ name: 'Адмиралтейство · Admiralty', ...r })),
+  ..._groupPolys(SUBGROUPS.admiralty, 12).map((r) => ({ name: 'Адмиралтейство · Admiralty', ...r })),
   { name: 'Александровский сад · Alexander Garden', c: [-2400, -490], r: 105 },       // after the Admiralty outline (the circle of the Admiralty is only the fallback when OSM has no outline)
   ..._named(/Зимний дворец/i, 10, { c: [-2096, -896], r: 110 }).map((r) => ({ name: 'Зимний дворец · Winter Palace', ...r })),
   ..._named(/Эрмитажный театр/i, 8, { c: [-1862, -1138], r: 50 }).map((r) => ({ name: 'Эрмитажный театр · Hermitage Theatre', ...r })),
@@ -158,18 +159,20 @@ export function makeAreas(h) {
   { name: 'Александровская колонна · Alexander Column', c: [-1983, -738], r: 30 },
   ..._named(/Исаакиевский собор/i, 14, { c: [-2523, -185], r: 110 }).map((r) => ({ name: 'Исаакиевский собор · St Isaac\'s Cathedral', ...r })),
   ..._named(/Мариинский дворец/i, 10, null).map((r) => ({ name: 'Мариинский дворец · Mariinsky Palace', ...r })),
-  ..._named(/Сенат(?!ор)|Синод/i, 10, { c: [-2815, -350], r: 60 }).map((r) => ({ name: 'Сенат и Синод · Senate and Synod', ...r })),
+  ..._groupPolys(SUBGROUPS['senate-synod'], 10).map((r) => ({ name: 'Сенат и Синод · Senate and Synod', ...r })),
   { name: 'Медный всадник · Bronze Horseman', c: [-2744, -443], r: 40 },
   ..._groupPolys(SUBGROUPS['mariinsky-theatre'], 8).map((r) => ({ name: 'Мариинский театр · Mariinsky Theatre', ...r })),
   ..._groupPolys(SUBGROUPS['mariinsky-conservatory'], 8).map((r) => ({ name: 'Консерватория имени Римского-Корсакова · St Petersburg Conservatory', ...r })),
   ..._groupPolys(SUBGROUPS['mariinsky-two'], 8).map((r) => ({ name: 'Мариинский-2 · Mariinsky-II', ...r })),
   ..._groupPolys(SUBGROUPS['nikolsky-cathedral'], 12).map((r) => ({ name: 'Никольский Морской собор · St Nicholas Naval Cathedral', ...r })),
+  { name: 'Никольский сад · Nikolsky Garden', c: [-2900, 1050], r: 75 },
   ..._groupPolys(SUBGROUPS['nikolsky-bell-tower'], 8).map((r) => ({ name: 'Колокольня Никольского собора · Nikolsky bell tower', ...r })),
   ..._groupPolys(SUBGROUPS['yusupov-palace'], 10).map((r) => ({ name: 'Юсуповский дворец · Yusupov Palace', ...r })),
   ..._groupPolys(SUBGROUPS['yusupov-pavilion'], 8).map((r) => ({ name: 'Садовый павильон Юсуповского сада · Yusupov garden pavilion', ...r })),
   ..._groupPolys(SUBGROUPS['nh-warehouses'], 8).map((r) => ({ name: 'Новая Голландия · New Holland warehouses', ...r })),
   ..._groupPolys(SUBGROUPS['nh-bottle'], 8).map((r) => ({ name: 'Бутылка · New Holland Bottle', ...r })),
   { name: 'Новая Голландия · New Holland', c: [-3470, 320], r: 170 },
+  { name: 'Троице-Измайловский собор · Trinity-Izmailovsky Cathedral', c: [-2540, 1727], r: 60 },
   ..._groupPolys(SUBGROUPS['central-trinity'], 14).map((r) => ({ name: 'Троице-Измайловский собор · Trinity-Izmailovsky Cathedral', ...r })),
   ..._groupPolys(SUBGROUPS['central-institute'], 10).map((r) => ({ name: 'Технологический институт · Technological Institute', ...r })),
   ..._areaPolys(/Дворцовая площадь/).map((o) => ({ name: 'Дворцовая площадь · Palace Square', poly: o, margin: 6 })),
@@ -185,11 +188,11 @@ export function makeAreas(h) {
   { name: 'Казанская площадь · Kazan Square', c: [-1568, -250], r: 90 },
   { name: 'Сенная площадь · Haymarket (Sennaya) Square', c: [-1746, 718], r: 110 },
   { name: 'Театральная площадь · Teatralnaya Square', c: [-3000, 710], r: 90 },
-  { name: 'Нева · Neva River', x0: -4300, x1: -1100, z0: -1500, z1: 330, test: (x, z) => _shoreOf(['neva'], x, z) < 6 || inRiver(x, z) },
   { name: 'Зимняя канавка · Winter Canal', x0: -1950, x1: -1700, z0: -1180, z1: -880, test: (x, z) => _shoreOf(['winter-canal'], x, z) < 14 },
   { name: 'Мойка · Moika River', x0: -4400, x1: -720, z0: -1180, z1: 740, test: (x, z) => _shoreOf(['moika'], x, z) < 16 },
   { name: 'Канал Грибоедова · Griboedov Canal', x0: -4000, x1: -1180, z0: -1180, z1: 1780, test: (x, z) => _shoreOf(['griboedov'], x, z) < 14 },
   { name: 'Фонтанка · Fontanka River', x0: -4100, x1: -330, z0: -1700, z1: 1900, test: (x, z) => shoreDist(x, z) < 14 },
+  { name: 'Нева · Neva River', x0: -4300, x1: -1100, z0: -1500, z1: 330, test: (x, z) => _shoreOf(['neva'], x, z) < 6 || inRiver(x, z) },
   { name: 'Невский проспект · Nevsky Prospekt', road: NAMES.streets.nevsky },
   { name: 'Набережная реки Фонтанки · Fontanka embankment', road: NAMES.streets.fontanka },
   { name: 'Набережная реки Мойки · Moika embankment', road: NAMES.streets.moika },
@@ -242,20 +245,20 @@ export function makeAreas(h) {
 export function makeViews({ yawToward }) {
   // Every pose is a free, walkable spot (tools/layout-test.mjs checks insideBuilding / isOnRoad / line of sight; tools/views-check.mjs adds the colliders). x, z, yaw (deg, 0 = north, 90 = west), pitch (deg).
   // Admiralty-Haymarket: 1..0 the great sights of the Admiralty district, Shift + 1..9 the sights of the south-west and the centre, Alt + 1..4 the rest; the Places list also holds the Anichkov Bridge, the library ...
-  const HERO = { x: -2330, z: -505, yaw: yawToward(-2330, -505, -2430, -622), pitch: 8 };      // the Alexander Garden, looking at the Admiralty
+  const HERO = { x: -2329, z: -508, yaw: yawToward(-2329, -508, -2430, -622), pitch: 8 };      // the Alexander Garden, looking at the Admiralty
   const VIEWS = [
-    { key: 'Digit1', label: 'Адмиралтейство · Александровский сад', x: -2330, z: -505, yaw: yawToward(-2330, -505, -2430, -622), pitch: 8 },
-    { key: 'Digit2', label: 'Исаакиевский собор', x: -2490, z: -60, yaw: yawToward(-2490, -60, -2524, -186), pitch: 18 },
+    { key: 'Digit1', label: 'Адмиралтейство · Александровский сад', x: -2329, z: -508, yaw: yawToward(-2329, -508, -2430, -622), pitch: 8 },
+    { key: 'Digit2', label: 'Исаакиевский собор', x: -2488, z: -63, yaw: yawToward(-2488, -63, -2524, -186), pitch: 18 },
     { key: 'Digit3', label: 'Медный всадник · Сенатская площадь', x: -2735, z: -405, yaw: yawToward(-2735, -405, -2745, -444), pitch: 6 },
-    { key: 'Digit4', label: 'Сенат и Синод', x: -2780, z: -300, yaw: yawToward(-2780, -300, -2800, -335), pitch: 10 },
+    { key: 'Digit4', label: 'Сенат и Синод', x: -2740, z: -380, yaw: yawToward(-2740, -380, -2800, -335), pitch: 10 },
     { key: 'Digit5', label: 'Казанский собор', x: -1470, z: -312, yaw: yawToward(-1470, -312, -1482, -235), pitch: 8 },
     { key: 'Digit6', label: 'Мариинский театр · Театральная площадь', x: -3030, z: 760, yaw: yawToward(-3030, 760, -3058, 736), pitch: 8 },
     { key: 'Digit7', label: 'Юсуповский дворец · Мойка', x: -2950, z: 300, yaw: yawToward(-2950, 300, -2933, 337), pitch: 8 },
-    { key: 'Digit8', label: 'Новая Голландия · арка', x: -3420, z: 440, yaw: yawToward(-3420, 440, -3390, 453), pitch: 8 },
-    { key: 'Digit9', label: 'Никольский Морской собор', x: -2880, z: 1070, yaw: yawToward(-2880, 1070, -2862, 1105), pitch: 10 },
-    { key: 'Digit0', label: 'Дворцовая площадь · Александровская колонна', x: -1985, z: -715, yaw: yawToward(-1985, -715, -2096, -896), pitch: 6 },
-    { key: 'ShiftDigit1', label: 'Троице-Измайловский собор', x: -2540, z: 1720, yaw: yawToward(-2540, 1720, -2540, 1777), pitch: 12 },
-    { key: 'ShiftDigit2', label: 'Технологический институт', x: -1840, z: 1530, yaw: yawToward(-1840, 1530, -1840, 1565), pitch: 8 },
+    { key: 'Digit8', label: 'Новая Голландия · арка', x: -3420, z: 442, yaw: yawToward(-3420, 442, -3390, 453), pitch: 8 },
+    { key: 'Digit9', label: 'Никольский Морской собор', x: -2877, z: 1077, yaw: yawToward(-2877, 1077, -2862, 1105), pitch: 10 },
+    { key: 'Digit0', label: 'Дворцовая площадь · Александровская колонна', x: -2095, z: -748, yaw: yawToward(-2095, -748, -1983, -738), pitch: 6 },
+    { key: 'ShiftDigit1', label: 'Троице-Измайловский собор', x: -2587, z: 1738, yaw: yawToward(-2587, 1738, -2540, 1777), pitch: 12 },
+    { key: 'ShiftDigit2', label: 'Технологический институт', x: -1815, z: 1607, yaw: yawToward(-1815, 1607, -1840, 1565), pitch: 8 },
     { key: 'ShiftDigit3', label: 'Сенная площадь', x: -1746, z: 690, yaw: yawToward(-1746, 690, -1746, 718), pitch: 6 },
     { key: 'ShiftDigit4', label: 'Гостиный Двор · Невский проспект', x: -1123, z: -282, yaw: yawToward(-1123, -282, -1100, -190), pitch: 6 },
     { key: 'ShiftDigit5', label: 'Аничков мост', x: -395, z: -108, yaw: yawToward(-395, -108, -470, -92), pitch: 6 },
@@ -265,7 +268,7 @@ export function makeViews({ yawToward }) {
     { key: 'ShiftDigit9', label: 'Синий мост · Исаакиевская площадь', x: -2370, z: 40, yaw: yawToward(-2370, 40, -2370, 84), pitch: 6 },
     // the Places list only
     { key: 'Place.library', label: 'Российская национальная библиотека · Фонтанка', x: -372, z: -300, yaw: yawToward(-372, -300, -334, -311), pitch: 8 },
-    { key: 'Place.alexandrinsky', label: 'Александринский театр · Екатерининский сад', x: -800, z: -95, yaw: yawToward(-800, -95, -844, 70), pitch: 8 },
+    { key: 'Place.alexandrinsky', label: 'Александринский театр · Екатерининский сад', x: -801, z: -95, yaw: yawToward(-801, -95, -844, 70), pitch: 8 },
     { key: 'Place.hermitage', label: 'Большой Эрмитаж · Дворцовая набережная', x: -2039, z: -1084, yaw: yawToward(-2039, -1084, -1985, -1050), pitch: 10 },
   ];
   return { HERO, VIEWS };
@@ -295,8 +298,8 @@ export const TEST = {
   viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'ShiftDigit1', 'ShiftDigit2', 'ShiftDigit3', 'ShiftDigit4', 'ShiftDigit5', 'ShiftDigit6',
     'ShiftDigit7', 'ShiftDigit8', 'ShiftDigit9', 'Place.library', 'Place.alexandrinsky', 'Place.hermitage'],
   mustHaveAreas: [
-    { x: -441, z: -93, has: 'аничков' }, { x: -2430, z: -622, has: 'адмиралтейство' }, { x: -2523, z: -185, has: 'исаакиевский' }, { x: -2744, z: -443, has: 'всадник' },
-    { x: -1568, z: -186, has: 'казанский' }, { x: -3058, z: 736, has: 'мариинский' }, { x: -1746, z: 718, has: 'сенная' },
+    { x: -441, z: -93, has: 'аничков' }, { x: -2322, z: -805, has: 'адмиралтейство' }, { x: -2523, z: -216, has: 'исаакиевский' }, { x: -2744, z: -443, has: 'всадник' },
+    { x: -1484, z: -200, has: 'казанский' }, { x: -3097, z: 735, has: 'мариинский' }, { x: -1746, z: 718, has: 'сенная' }, { x: -2880, z: 1096, has: 'никольский' }, { x: -2861, z: 412, has: 'юсуповский' },
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
   roadsNear: { at: [-2330, -300], r: 75, min: 3 },
@@ -327,6 +330,32 @@ const BRIDGE_ZONES = [
   { id: 'kamenny', name: 'Каменный мост', key: 'griboedov', c: [-1800.4, 218.5], axis: 143, w: 13.9, len: 19.7, own: true },
   { id: 'pochtamtsky', name: 'Почтамтский мост', key: 'moika', c: [-2821.7, 214.3], axis: 166.3, w: 6, len: 41.9, own: true },
   { id: 'fonarny', name: 'Фонарный мост', key: 'moika', c: [-2651.5, 200.3], axis: 142.6, w: 20, len: 40, own: true },
+  // ---- the south-west (S1..S5; docs/research/sw-canals-bridges.md section 5): the Griboedov Canal south of the Kamenny Bridge, the Kryukov Canal, the Moika west of the Blue Bridge, the Admiralty canals, the Fontanka
+  // (rows of the source project, 0568f7af; the six southern Fontanka decks of bridges/sites-south.js get their zones from environment/river.js)
+  { id: 'demidov', name: 'Демидов мост', key: 'griboedov', c: [-2002.6, 414], axis: 154.4, w: 16.1, len: 36, own: true },
+  { id: 'sennoy', name: 'Сенной мост', key: 'griboedov', c: [-2017.7, 657.4], axis: 103.6, w: 4.5, len: 22.5, own: true },
+  { id: 'kokushkin', name: 'Кокушкин мост', key: 'griboedov', c: [-2105.3, 735.8], axis: 152.5, w: 13.1, len: 22, own: true },
+  { id: 'voznesensky', name: 'Вознесенский мост', key: 'griboedov', c: [-2410.4, 662.7], axis: 1.6, w: 20, len: 25, own: true },
+  { id: 'podyachesky', name: 'Подьяческий мост', key: 'griboedov', c: [-2549.3, 627.6], axis: 14.2, w: 20.6, len: 19, own: true },
+  { id: 'lviny', name: 'Львиный мост', key: 'griboedov', c: [-2788.7, 613.4], axis: 155.4, w: 5.2, len: 22.4, own: true },
+  { id: 'kharlamov', name: 'Харламов мост', key: 'griboedov', c: [-2698.1, 902.1], axis: 66.7, w: 22.5, len: 26, own: true },
+  { id: 'novo-nikolsky', name: 'Ново-Никольский мост', key: 'griboedov', c: [-2698.7, 1161.8], axis: 155.4, w: 22.6, len: 22.8, own: true },
+  { id: 'pikalov', name: 'Пикалов мост', key: 'griboedov', c: [-2955.5, 1284.1], axis: 155.6, w: 10.6, len: 22.8, own: true },
+  { id: 'krasnogvardeysky', name: 'Красногвардейский мост', key: 'griboedov', c: [-2910.7, 1262.6], axis: 155.1, w: 8.5, len: 22.5, own: true },
+  { id: 'mogilevsky', name: 'Могилёвский мост', key: 'griboedov', c: [-3237.9, 1202.7], axis: 155.3, w: 24, len: 32, own: true },
+  { id: 'staro-nikolsky', name: 'Старо-Никольский мост', key: 'kryukov', c: [-2921.2, 1314.3], axis: 66.2, w: 20.2, len: 24.3, own: true },
+  { id: 'kashin', name: 'Кашин мост', key: 'kryukov', c: [-3034.1, 1044.8], axis: 66.2, w: 16, len: 23.9, own: true, pad: 4 },      // pad: the asphalt of the approach flares to the wall beside the deck
+  { id: 'torgovy', name: 'Торговый мост', key: 'kryukov', c: [-3105.7, 874], axis: 65.9, w: 10.8, len: 24, own: true },
+  { id: 'dekabristov', name: 'мост Декабристов', key: 'kryukov', c: [-3162.8, 692.9], axis: 66, w: 23.3, len: 26, own: true },
+  { id: 'matveev', name: 'Матвеев мост', key: 'kryukov', c: [-3213, 527.1], axis: 81.1, w: 9.8, len: 26, own: true },
+  { id: 'krasnoflotsky', name: 'Краснофлотский мост', key: 'moika', c: [-3196.6, 498.1], axis: 158.2, w: 6, len: 29.8, own: true },
+  { id: 'potseluev', name: 'Поцелуев мост', key: 'moika', c: [-3146.5, 472.1], axis: 156, w: 23.5, len: 40, own: true },
+  { id: 'khrapovitsky', name: 'Храповицкий мост', key: 'moika', c: [-3689.6, 382.9], axis: 164.1, w: 20.5, len: 42.4, own: true },
+  { id: 'krushtein1', name: '1-й мост Круштейна', key: 'admiralty', c: [-3394, 168], axis: 147.7, w: 9.3, len: 14.3, own: true },
+  { id: 'krushtein2', name: '2-й мост Круштейна', key: 'admiralty', c: [-3620.7, 314.2], axis: 143.4, w: 10.7, len: 14.8, own: true },
+  { id: 'admiralteysky', name: 'Адмиралтейский мост', key: 'admiralty', c: [-3769.6, 238.1], axis: 62.4, w: 14.5, len: 12.8, own: true },
+  { id: 'obukhovsky', name: 'Обуховский мост', key: 'fontanka', c: [-1872.8, 1202.1], axis: 178.1, w: 30.9, len: 54, own: true },
+  { id: 'izmailovsky', name: 'Измайловский мост', key: 'fontanka', c: [-2428.7, 1456.4], axis: 2.1, w: 15.9, len: 70.5, own: true },
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
@@ -360,8 +389,10 @@ export const WATER = {
   farRadius: 6000,                      // the radius of the far scenery
   forcedBanks: [[-2460.8, -1097.5, -2460.7, -1098.7]],      // the 1.2 m corner edge of the Neva polygon beside the Palace Bridge plug
   openMouths: [],
-  dataWater: [],
+  dataWater: [{ id: 'r1648982', key: 'nh-inner' }],      // the Kovsh basin of New Holland (a plain pond in the data) is a waterway of the inner canals
   slopeReaches: SLOPE_REACHES,
+  // the RIVER records whose data key is null: the Kryukov Canal, the Admiralty and Novo-Admiralty canals round New Holland and the inner canals of the island (East, South)
+  keyByName: { 'Крюков канал': 'kryukov', 'Адмиралтейский канал': 'admiralty', 'Ново-Адмиралтейский канал': 'admiralty', 'Восточный канал': 'nh-inner', 'Южный канал': 'nh-inner' },
 };
 
 // ---------------------------------------------------------------- PEOPLE (people.js DENSITY, people/zones.js)

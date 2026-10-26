@@ -64,6 +64,9 @@ const WALLS = {
   'winter-canal': { tones: ['#a8968c', '#9c8a82', '#b2a096', '#94847c', '#a8928a', '#9e8c84', '#b09c90'], rows: 6, vein: 0.6 },
   moat: { tones: ['#a8968c', '#9c8a82', '#b2a096', '#94847c', '#a8928a'], rows: 4, vein: 0.5 },
   'swan-canal': { tones: ['#a39088', '#98867e', '#ad9a90', '#907f78', '#a68e84', '#9a8880'], rows: 6, vein: 0.5 },
+  kryukov: { tones: ['#a99b8f', '#9e9086', '#b3a498', '#968880', '#a8978c', '#9c8d84', '#b19c8e'], rows: 6, vein: 0.6 },
+  'nh-inner': { tones: ['#a8968c', '#9c8a82', '#b2a096', '#94847c', '#a8928a', '#9e8c84'], rows: 6, vein: 0.5 },
+  admiralty: { tones: ['#a39088', '#98867e', '#ad9a90', '#907f78', '#a68e84', '#9a8880'], rows: 6, vein: 0.5 },
   neva: { tones: ['#ab9487', '#b49d90', '#9d8a7e', '#a68f84', '#b8a094', '#a08c80', '#b09584'], rows: 7, vein: 0.8, big: 1 },
 };
 function wallTexture(ctx, key, base = key) {
@@ -426,9 +429,11 @@ function railStyle(key, bank, x, z, nx, s, nz = 0) {
   }
   if (key === 'moika') return x > -1000 ? 'vase' : 'moika';
   if (key === 'winter-canal') return 'lancet';
+  if (key === 'admiralty') return 'moika';                                    // the house bank of the Admiralty / Novo-Admiralty canals: the Moika pattern
+  if (key === 'kryukov') return z < 500 ? 'moika' : 'vase';                    // the north reach (Moika -> Truda Sq, 12-13 m) the Moika pattern, the middle / south reach the Griboedov-type vase balusters
   return 'vase';
 }
-const POST = { fontanka: 'pyramid', griboedov: 'twostep', moika: 'moika', 'winter-canal': 'pylon', 'swan-canal': 'twostep', neva: null };
+const POST = { fontanka: 'pyramid', griboedov: 'twostep', moika: 'moika', 'winter-canal': 'pylon', 'swan-canal': 'twostep', kryukov: 'twostep', admiralty: 'twostep', 'nh-inner': 'twostep', neva: null };
 const RAIL_H = { lattice: 0.88, clover: 0.88, bars: 1.0, vase: 1.0, loops: 1.02, moika: 1.0, lancet: 0.85, arcade: 0.95, trellis: 1.9 };
 const POST_TONES = {
   fontanka: (t) => (t < 0.12 ? '#a58274' : t < 0.45 ? '#a89a96' : '#b2a5a0'),
@@ -645,7 +650,7 @@ export function buildQuay(ctx, root) {
     }
     // descents (walkable stair flights) of this bank: planned on a first frames pass, then the wall pieces are cut at the gate / flight / landing ends
     const mine = [];
-    if (key !== 'fontanka' && key !== 'moat' && !bank.far) {
+    if (key !== 'fontanka' && key !== 'moat' && key !== 'nh-inner' && !bank.far) {
       const pre = frames(bank, null), pf = pre.fr, ps = pre.seg, ptotal = pf[pf.length - 1].s;
       const siteList = (sitesOf[key] || []).slice().sort((a, b) => (a.src === 'steps' ? 0 : 1) - (b.src === 'steps' ? 0 : 1));
       // The dead-end walls at the data margin (bank.caps, waterways.js) stitch the two banks of a canal into ONE chain; the planner treats each STRETCH between two walls as a chain of its own, as it was when every bank was
@@ -844,7 +849,7 @@ export function buildQuay(ctx, root) {
 
     // ---- mooring rings (every ~15 m on the Fontanka, 6 m on the canals, 12 m on the Neva), anchor plates, culverts at the bridges
     const ringStep = key === 'fontanka' ? 15 : key === 'neva' ? 12 : 6.5, ringY = key === 'fontanka' ? -0.95 : lvl(key) + 1.25, signY = key === 'fontanka' ? -1.25 : lvl(key) + 1.85;
-    for (let s = 6 + (bank.idx < 100 ? bank.idx : bank.idx % 4) * 3.7; s < total && !bank.far && key !== 'moat'; s += ringStep) {
+    for (let s = 6 + (bank.idx < 100 ? bank.idx : bank.idx % 4) * 3.7; s < total && !bank.far && key !== 'moat' && key !== 'nh-inner'; s += ringStep) {
       const p = at(fr, seg, s); if (!isNear(p.x, p.z) || inRunS(s) || gapAt(key, p.x, p.z) || inGate(p.x, p.z, 0.6)) continue;
       rings.push({ x: p.x - p.nx * 0.045, z: p.z - p.nz * 0.045, nx: -p.nx, nz: -p.nz, y: ringY });
       if (Math.floor(s / ringStep) % (key === 'fontanka' ? 4 : 5) === 1 && !onRoad(p.x, p.z)) signs.push({ x: p.x - p.nx * 0.03, z: p.z - p.nz * 0.03, nx: -p.nx, nz: -p.nz, y: signY });

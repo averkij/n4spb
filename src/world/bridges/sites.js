@@ -8,6 +8,7 @@
 // Blue 97.3 m ...).  `zones` = [v from, v to, kind] bands of the deck surface (asphalt roadway, granite pavement, sett paving, plaza).  Sources: docs/research/west-canals-bridges.md
 // section 4 (cards), OSM bridge ways (tools: scratchpad br_frames.mjs) and relation r-boxes; heights: street level y = 0, water y per waterway (WATER_Y).
 import { SW_SITES } from './sites-sw.js';
+import { SOUTH_SITES } from './sites-south.js';      // the southern Fontanka decks of the area's data (empty for every area but Admiralty-Haymarket)
 import { BRIDGE_GROUP_KEYS } from '../lib/area-tables.js';       // pure data too (the area module's tables)
 import { EXTENT_RECTS } from '../data/city.js';
 export const EXT = 0.8;                                   // the deck runs this far over the land beyond the bank line (no sliver of water at the corners; the street asphalt ends at the bank, a small overlap)
@@ -102,7 +103,7 @@ const BASE_SITES = [
 ];
 
 /** every bridge site there is: the west + the Mars Field reach (this file) + the three south-west bridges (sites-sw.js: Kamenny, Pochtamtsky, Fonarny); in the strip every centre lies in the data extent (tools/bridges-sites-check.mjs) */
-export const ALL_SITES = [...BASE_SITES, ...SW_SITES];
+export const ALL_SITES = [...BASE_SITES, ...SW_SITES, ...SOUTH_SITES];
 /** THE predicate of the area: a site belongs to the area when its id is a sub-group of the area's GROUPS.bridges (the area claims its OSM ways) or its centre lies in the data extent of the area. The strip lists every site
  *  in GROUPS.bridges, so all of them stay; a smaller area (Palace-Liteyny) keeps the ones in its data and does not build, open the quay for or walk over the rest. */
 export const siteInArea = (s) => BRIDGE_GROUP_KEYS.has(s.id) || EXTENT_RECTS.some((r) => s.cx >= r.x0 && s.cx <= r.x1 && s.cz >= r.z0 && s.cz <= r.z1);

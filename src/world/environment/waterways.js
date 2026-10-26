@@ -44,7 +44,7 @@ const FAR_SOURCES = [
   // shore walls; only clipped to FAR_WIN), and the mouth edge, which both rings share, is an open join (no wall on either side)
   { name: 'neva-malaya', rings: [NEVA_MALAYA], box: null, inData: true },
 ].filter((s) => AREA_WATER.farSources.includes(s.name));
-const keyOf = (r) => r.key || null;
+const keyOf = (r) => r.key || AREA_WATER.keyByName[r.name] || null;      // (WATER.keyByName of the area: the canals of the south-west whose data key is null)
 
 /** Cross-section / look parameters per waterway key. water / bed: y of the surface and of the bed (street level = 0). */
 export const WATERWAYS = {
@@ -58,6 +58,11 @@ export const WATERWAYS = {
   // the restored Voskresensky canal = the moat along the south front of the Engineering (Mikhailovsky) Castle (OSM WATER r15750440): narrow, only ~1.3 m below the street; landmarksCastle draws its bridges and railings
   moat: { key: 'moat', name: 'Воскресенский канал', water: -1.2, bed: -2.4, wall: 'moat', rail: [], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.4, width: 14, shadeH: 1.3 },
   neva: { key: 'neva', name: 'Нева', water: -3.4, bed: -6.0, wall: 'neva', rail: [], post: 'roll', postW: 0.88, postH: 1.0, bay: 2.2, width: 400, shadeH: 3.5 },
+  // the south-west (docs/research/new-holland.md section 3; rows of the source project, used only by an area that names these waterways in WATER.keyByName / dataWater): the Kryukov Canal (Nikolsky / Mariinsky side, to the Moika)
+  // and the Admiralty / Novo-Admiralty canals round New Holland; the inner canals of New Holland (East, South, the Kovsh basin) are walls + coping only: the loop railing, its colliders, the pier, the stairs and the footbridges are landmarksNewHolland's
+  kryukov: { key: 'kryukov', name: 'Крюков канал', water: -2.9, bed: -4.3, wall: 'kryukov', rail: ['vase'], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 22, shadeH: 3.0 },
+  admiralty: { key: 'admiralty', name: 'Адмиралтейский канал', water: -2.8, bed: -4.0, wall: 'admiralty', rail: ['moika'], post: 'moika', postW: 0.45, postH: 1.0, bay: 2.4, width: 10, shadeH: 2.8 },
+  'nh-inner': { key: 'nh-inner', name: 'Каналы Новой Голландии', water: -2.8, bed: -4.0, wall: 'admiralty', rail: [], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 11, shadeH: 2.8 },
 };
 const SEAM_TOL = 0.8;
 
