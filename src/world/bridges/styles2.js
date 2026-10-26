@@ -113,6 +113,10 @@ const arch3 = (e, B) => {
       P.fan(M.coping, [[pAt(site.v1) - hw, top, site.v1], [pAt(site.v1) + hw, top, site.v1], [tipU, yTip, vt]], [0, 1, 0.3]);
       if (skewed) { const tu = pAt(site.v0) + slope * (-3.2); for (const s of [-1, 1]) P.quad(mat, [pAt(site.v0) + s * hw, yb, site.v0], [tu, yb, site.v0 - 3.2], [tu, yTip, site.v0 - 3.2], [pAt(site.v0) + s * hw, top, site.v0], [s * 0.9, 0, -0.5], [[0, 0], [2, 0], [2, 1], [0, 1]]); P.fan(M.coping, [[pAt(site.v0) - hw, top, site.v0], [pAt(site.v0) + hw, top, site.v0], [tu, yTip, site.v0 - 3.2]], [0, 1, -0.3]); }
     }
+    if (site.posts) for (const sg of [-1, 1]) {      // the Prachechny Bridge (bridges/sites-pal.js): four granite corner posts (0.95 m square, 1.4 m, capped) at the heads, over the outer ends of the two parapets
+      const fi = B.faceInfo(sg), vA = fi.v - sg * 0.85, vB = fi.v + sg * 0.1;
+      for (const u of [fi.uA - 3.45, fi.uB + 3.45]) { const y0 = B.yDeck(u) - 0.1; pylon(P, M.pylon, M.coping, u - 0.475, u + 0.475, y0, y0 + 1.45, Math.min(vA, vB), Math.max(vA, vB), { cap: 0.06 }); }
+    }
     if (skewed && !izm) cornerBlocks(e, B, 0.7, 0.7, 0.9, (u, topY, v, sg) => obeliskLamp(P, M, u, topY - 0.0, v, Math.PI / 2, { h: 3.4, plinthH: 0.4 }));
     if (izm) cornerBlocks(e, B, 0.8, 0.8, 1.0, (u, topY, v, sg) => lampLeaf(P, M, u, topY, v, 0));
   });

@@ -5,7 +5,7 @@
 //   The Mars Field / Summer Garden reach (docs/research/mars-bridges-canals.md, docs/MARS-BRIEF.md): Lower Swan (swan-lower), Panteleymonovsky (gilded, eagle standards), 1st Engineer, 1st + 2nd Sadovy, Bolshoy Konyushenny,
 //   the Triple Bridge (Teatralny + Malo-Konyushenny: pedestrian sett decks) = bridges/styles2.js + rails2.js (railing patterns) + sculpt2.js (standards, eagle, candelabra); and from the south-west the Kamenny and
 //   Fonarny bridges (styles3.js) and the Pochtamtsky footbridge (foot.js).  Only the sites of the AREA are built (bridges/sites.js SITES = the sites that pass siteInArea: the id is a sub-group of the area's GROUPS.bridges or the centre lies in the data extent;
-//   the strip has all 24 + the Palace Bridge, Palace-Liteyny 18 + the Palace Bridge); the ones that stand in the 120 m margin are scenery.  Every OSM way of those bridges is claimed in groups.js, so streets leaves the deck to this module while the lanes stay in the lane graph.
+//   the strip has all 24 + the Palace Bridge, Palace-Liteyny 18 + the Prachechny, Upper Swan and 2nd Engineer bridges of bridges/sites-pal.js + the Palace Bridge); the ones that stand in the 120 m margin are scenery.  Every OSM way of those bridges is claimed in groups.js, so streets leaves the deck to this module while the lanes stay in the lane graph.
 //   Files: bridges/sites.js (pure data: frames, widths, deck zones: other modules may import it) · groups.js (claims) · kit.js (geometry collector) · mats.js · rails.js (railing patterns,
 //   instanced panels) · arch.js (the generic arch road bridge) · styles.js / styles2.js / styles3.js (per-bridge extras: pylons, lamps, obelisks, boards) · foot.js (footbridges) · sculpt*.js (griffins, lamps) · palace.js · deck.js (profile / closeBank).
 //   Owns every sub-group of layout.GROUPS.bridges.  Publishes ctx.services.bridges = { list (+ extra entries along a long deck: traffic prefilters by 190 m), deckY(x, z), masts, spans } and wraps ctx.services.landmarksC.bridge.deckY so that traffic / people / drive
@@ -25,6 +25,7 @@ import { STYLES } from './bridges/styles.js';
 import { makeFoot } from './bridges/foot.js';
 import { STYLES2 } from './bridges/styles2.js';
 import { STYLES3 } from './bridges/styles3.js';
+import { STYLES_PAL } from './bridges/styles-pal.js';
 import { buildPalace } from './bridges/palace.js';
 import { BRIDGE_ZONES } from './environment/waterways.js';
 import { bridgeZones } from './environment/river.js';
@@ -59,7 +60,7 @@ export async function build(ctx) {
       let B = null;
       if (site.kind === 'road') {
         B = site.id === 'belinsky' ? makeBelinsky(e, site) : makeArch(e, site); B.draw();
-        const S = STYLES[site.id] || STYLES2[site.style] || STYLES3[site.style]; if (S) S(e, B);
+        const S = STYLES[site.id] || STYLES2[site.style] || STYLES3[site.style] || STYLES_PAL[site.style]; if (S) S(e, B);
         B.closeQuay(ZONES.find((z) => z.id === (ZID[site.id] || site.id)));
       } else {
         B = makeFoot(e, site); B.draw();
