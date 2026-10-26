@@ -521,7 +521,12 @@ export const ZONES = {
   },
   peopleCorridor: PEOPLE_CORRIDOR,
   peopleHot: PEOPLE_HOT,
-  tramLines: [],
+  // the terminals in map metres: the track ends of THIS area's data (src/areas/admiralty/data, clipped at its extent; a terminal needs a degree-1 track end within 90 m, traffic/trams.js). Two lines run through the
+  // data: route 3 (from the east edge (-840, -520) to the south-west edge (-3240, 1457)) and route 16 (from (-840, 1111) to the same south-west edge); checked with buildTramNet: 4 routes, 12.5 km, nothing missing
+  tramLines: [
+    { refs: ['3'], a: [-840, -520], b: [-3240, 1457], headway: 190 },
+    { refs: ['16'], a: [-840, 1111], b: [-3240, 1457], headway: 240 },
+  ],
   clearDiscs: [],
   farCentres: [{ x: -2430, z: -800, bias: 700 }],      // the historic centre reaches the Admiralty and over the Neva (Vasilievsky, Petrograd side): dense stone blocks there too
 };
