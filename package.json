@@ -32,6 +32,7 @@
     "areaboot:north": "node tools/area-boot-test.mjs --page north.html",
     "areahop": "node tools/areas-hop-test.mjs",
     "garage": "node tools/each-area.mjs tools/area-garage-check.mjs",
+    "wildlifeboat": "node tools/area.mjs palace tools/wildlife-boat-test.mjs",
     "water": "node tools/area.mjs palace tools/water-reachable-test.mjs && node tools/area.mjs smolny tools/water-reachable-test.mjs && node tools/area.mjs admiralty tools/water-reachable-test.mjs && node tools/area.mjs vladimirsky tools/water-reachable-test.mjs",
     "crossplaces": "node tools/each-area.mjs tools/cross-places-test.mjs",
     "northknock": "node tools/area.mjs north tools/north-knock-test.mjs",
