@@ -3,7 +3,7 @@
 // for the headless tools). The engine modules whose literals used to name places of the strip read their tables HERE, never from area.js directly: a minimal area module (no WATER, no ZONES ...)
 // then still boots, and the modules do nothing for what the area does not list. A namespace import is used on purpose: a named import of a table that the area module does not export would be a link error.
 // PURE DATA: no three.js, no layout.js (layout.js imports waterways.js, which imports this file).
-//   WATER            environment/waterways.js     plugs, bridgeZones, bridgeShades, clipLines, farSources, farCenter, farRadius, forcedBanks, openMouths, dataWater, slopeReaches
+//   WATER            environment/waterways.js     plugs, bridgeZones, bridgeShades, clipLines, farSources, farCenter, farRadius, forcedBanks, openMouths, dataWater, dataRings, pierFit, slopeReaches
 //   ZONES            wildlife, people, trams, field, far  pigeons, crowHaunts, crowds, fountains, peopleDensity, peopleCorridor, peopleHot, tramLines, clearDiscs, farCentres
 //   GARAGE           drive/cars/index.js, drive.js        poses { coupe, truck, lada, roadster }, spawn, boats (optional: the docks of the motor boats, drive/boat/index.js; absent = the shared docks)
 //   PRUNE_SERVICES   environment.js                       the services whose door entrances clear the trees
@@ -65,6 +65,10 @@ export const WATER = {
   forcedBanks: arr(W.forcedBanks),
   openMouths: arr(W.openMouths),
   dataWater: arr(W.dataWater),
+  /** [{ id, key, source } | { id, key, ring }]: a scenery ring of environment/waterways.js (FAR_SOURCES name, e.g. 'neva-malaya') that this area holds as DATA water inside its data region (a real polygon: banks, queries, the ground cut); the scenery goes on beyond (Vasilyevsky-Okrug 7: the Malaya Neva) */
+  dataRings: arr(W.dataRings),
+  /** { 'osm-id#polygon-index': { cx, cz, ax, az, len, wid } }: replaces the oriented bounding rectangle of a generated pier / landing stage (environment/boats.js pierRects) where the polygon is a long thin mole with bumps (Vasilyevsky-Okrug 7: w74745049, 255 m x 9 m, whose bounding rectangle is 40 m wide) */
+  pierFit: obj(W.pierFit),
   slopeReaches: arr(W.slopeReaches),
   /** { RIVER record name: waterway key } for the RIVER records whose data `key` is null (Admiralty-Haymarket: the Kryukov, Admiralty, Novo-Admiralty and New Holland canals) */
   keyByName: obj(W.keyByName),

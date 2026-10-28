@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import * as L from '../layout.js';
 import { PIERS } from '../data/city.js';
 import { WATERWAYS, keepOut } from './waterways.js';
+import { WATER as AREA_WATER } from '../lib/area-tables.js';
 import { Acc, hash2 } from './util.js';
 import { craftSolids, addFloatBlock, obbGap } from '../lib/craft-solids.js';
 
@@ -113,7 +114,7 @@ function smooth(cp, step = 10) {
 export function pierRects() {
   const out = [];
   for (const p of PIERS) p.polys.forEach((poly, pi) => {
-    const r = orientedRect(poly.o);
+    const r = { ...orientedRect(poly.o), ...(AREA_WATER.pierFit[p.id + '#' + pi] || {}) };      // (WATER.pierFit of the area: the rectangle of a pier polygon whose bounding rectangle is much wider than the pier, Vasilyevsky-Okrug 7)
     if (r.len < 5 || r.wid < 1) return;
     const key = L.waterwayAt(r.cx, r.cz);
     if (!key || key === 'fontanka') return;       // (the Fontanka stages are landmarksC's)
