@@ -18,6 +18,9 @@ import { lathe } from './prims.js';
 import { fillPolyFine, coverFn, ribbon } from './surfaces.js';
 import { ROADS } from '../data/city.js';
 import { klodtFig, khetagurovFig } from './monuments.js';
+import { knockBays, splitBays, unitPanel, unitBox } from '../lib/fence-bays.js';        // n4spb (docs/AREAS.md 13.7, docs/vo-m1.md): the fence, its closed gate leaves and the hedges are breakable bays,
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';              // the benches are knock records
+import { partsGeos } from './inst.js';
 import { figureMats, tube } from '../lib/figures.js';
 import { plantTrees } from './trees.js';
 
@@ -69,25 +72,16 @@ function fences(K) {
   const gap = 1.3, run = [], cover = coverFn(ctx);
   const onRoad = (u, v) => { const w = W(u, v); return cover(w.x, w.z) > -0.3; };                                       // road integrity: no footing, post or leaf on real asphalt (a service road runs through the gate n6550670306)
   const post = (u, v, h = 1.75) => { if (onRoad(u, v)) return; P.box(M.graniteGrey, u - 0.2, u + 0.2, 0, 0.45, v - 0.2, v + 0.2, 'b', 1); P.box(M.iron, u - 0.075, u + 0.075, 0.45, h, v - 0.075, v + 0.075, 'b', 1); P.geo(M.iron, ballGeo(), u, h + 0.07, v, 0, 0, 0, 0.11); };
+  const fenceBays = [];      // n4spb: the fence is a row of BREAKABLE bays (one per ~3 m section, a thin collider + a knock record + the drawn footing and panel each); the posts stay instanced
   const piece = (a, b) => {
     const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz); if (len < 0.2) return;
     const wa0 = W(a[0], a[1]), wb0 = W(b[0], b[1]);
-    ph.addBox((wa0.x + wb0.x) / 2, (wa0.z + wb0.z) / 2, len + 0.1, 0.3, Math.atan2(-(wb0.z - wa0.z), wb0.x - wa0.x), 0, 2.1);
     // the visual is cut into sections of about 3 m (the post pitch) and ONLY the sections that touch real asphalt are left out (the first build tested the two ends and the middle of the WHOLE
-    // piece: the 136 m west fence of the garden ends 1.3 m from the gate on the asphalt of the service stub w766764000 and was dropped completely, review-academy 2026-10-08).  The collider stays.
+    // piece: the 136 m west fence of the garden ends 1.3 m from the gate on the asphalt of the service stub w766764000 and was dropped completely, review-academy 2026-10-08).  The collider stays (n4spb: a ghost bay).
     const k = Math.max(1, Math.round(len / 3.0)), at = (t) => [a[0] + dx * t, a[1] + dz * t], ok = [];
     for (let i = 0; i < k; i++) { const p = at(i / k), q = at((i + 1) / k), m = at((i + 0.5) / k); ok.push(!(onRoad(p[0], p[1]) || onRoad(m[0], m[1]) || onRoad(q[0], q[1]))); }
-    const nx = dz / len, nz = -dx / len, n = [nx, nz], tw = 0.17, fc = (K.svc.fence ||= { drawn: 0, dropped: 0 });
-    for (let i = 0; i < k; i++) {
-      if (!ok[i]) { fc.dropped++; continue; }
-      fc.drawn++;
-      const pa = at(i / k), pb = at((i + 1) / k), sl = len / k;
-      const p0 = [pa[0] + nx * tw, pa[1] + nz * tw], p1 = [pb[0] + nx * tw, pb[1] + nz * tw], q0 = [pa[0] - nx * tw, pa[1] - nz * tw], q1 = [pb[0] - nx * tw, pb[1] - nz * tw];       // footing: two side quads and the top
-      P.quad(M.graniteGrey, [p0[0], 0, p0[1]], [p1[0], 0, p1[1]], [p1[0], 0.45, p1[1]], [p0[0], 0.45, p0[1]], [n[0], 0, n[1]], [[0, 0], [sl / 1.2, 0], [sl / 1.2, 0.4], [0, 0.4]]);
-      P.quad(M.graniteGrey, [q1[0], 0, q1[1]], [q0[0], 0, q0[1]], [q0[0], 0.45, q0[1]], [q1[0], 0.45, q1[1]], [-n[0], 0, -n[1]], [[0, 0], [sl / 1.2, 0], [sl / 1.2, 0.4], [0, 0.4]]);
-      P.quad(M.graniteGrey, [p0[0], 0.45, p0[1]], [p1[0], 0.45, p1[1]], [q1[0], 0.45, q1[1]], [q0[0], 0.45, q0[1]], [0, 1, 0], [[0, 0], [sl / 1.2, 0], [sl / 1.2, 0.3], [0, 0.3]]);
-      P.quad(M.fence, [pa[0], 0.45, pa[1]], [pb[0], 0.45, pb[1]], [pb[0], 1.65, pb[1]], [pa[0], 1.65, pa[1]], [n[0], 0, n[1]], [[0, 0], [sl, 0], [sl, 1], [0, 1]]);
-    }
+    const fc = (K.svc.fence ||= { drawn: 0, dropped: 0 });
+    splitBays(wa0.x, wa0.z, wb0.x, wb0.z, 3.0, { y: 0 }).forEach((bay, i) => { bay.ghost = ok[Math.min(i, k - 1)] === false; if (bay.ghost) fc.dropped++; else fc.drawn++; fenceBays.push(bay); });
     for (let i = 0; i <= k; i++) if ((i > 0 && ok[i - 1]) || (i < k && ok[i])) { const p = at(i / k); post(p[0], p[1]); }
   };
   for (const f of FENCES) {
@@ -114,24 +108,34 @@ function fences(K) {
       post(a[0], a[1], 2.1); post(b[0], b[1], 2.1);
       const w = W(g.u, g.v);
       if (!g.open) {                                                                                  // a closed double leaf with a cross rail and a collider (no visual on a road)
-        const nx = d[1], nz = -d[0];
-        if (!onRoad(g.u, g.v)) P.quad(M.fence, [a[0], 0.2, a[1]], [b[0], 0.2, b[1]], [b[0], 1.9, b[1]], [a[0], 1.9, a[1]], [nx, 0, nz], [[0, 0], [2.6, 0], [2.6, 1.2], [0, 1.2]]);
         if (!onRoad(g.u, g.v)) P.box(M.iron, g.u - 0.04, g.u + 0.04, 0.2, 1.9, g.v - 0.04, g.v + 0.04, 'b', 1);
         const wa = W(a[0], a[1]), wb = W(b[0], b[1]);
-        ph.addBox((wa.x + wb.x) / 2, (wa.z + wb.z) / 2, 2.7, 0.3, Math.atan2(-(wb.z - wa.z), wb.x - wa.x), 0, 2.1);
+        fenceBays.push({ x0: wa.x, z0: wa.z, x1: wb.x, z1: wb.z, y: 0, gate: true, ghost: onRoad(g.u, g.v) });      // the leaf (a panel + the cross rail) is a bay of its own: a car breaks the gate
       }
       K.svc.gates.push({ id: g.id, x: w.x, z: w.z, open: g.open, w: gap * 2, name: 'Академический сад: ' + g.name });
     }
     K.svc.fences.push({ id: f.id, pts: f.pts.map((p) => { const w = W(p[0], p[1]); return [w.x, w.z]; }), height: 1.65, gates: gaps.map((q) => q.g.id) });
   }
-  // the hedges outside the east fence (clipped, 1.2 m high, 0.8 m wide)
+  // the hedges outside the east fence (clipped, 1.2 m high, 0.8 m wide): the drawn hedge stays, its collider is a row of breakable GHOST bays (n4spb)
+  const hedgeBays = [];
   for (const h of HEDGES) for (let i = 0; i + 1 < h.length; i++) {
     const a = h[i], b = h[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), nx = dz / len, nz = -dx / len, t = 0.4;
     const v = (p, s, y) => [p[0] + nx * t * s, y, p[1] + nz * t * s];
     P.quad(M.hedge, v(a, 1, 0), v(b, 1, 0), v(b, 1, 1.15), v(a, 1, 1.15), [nx, 0, nz]); P.quad(M.hedge, v(b, -1, 0), v(a, -1, 0), v(a, -1, 1.15), v(b, -1, 1.15), [-nx, 0, -nz]);
     P.quad(M.hedge, v(a, 1, 1.2), v(b, 1, 1.2), v(b, -1, 1.2), v(a, -1, 1.2), [0, 1, 0]);
-    const wa = W(a[0], a[1]), wb = W(b[0], b[1]); ph.addBox((wa.x + wb.x) / 2, (wa.z + wb.z) / 2, len, 0.9, Math.atan2(-(wb.z - wa.z), wb.x - wa.x), 0, 1.3);
+    const wa = W(a[0], a[1]), wb = W(b[0], b[1]); hedgeBays.push(...splitBays(wa.x, wa.z, wb.x, wb.z, 3.0, { y: 0, ghost: true }));
   }
+  const cut = M.cutouts && M.cutouts.has(M.fence);
+  knockBays(ctx, { name: 'lmacade-garden-fence', bays: fenceBays, far: 320,
+    parts: [
+      { geo: unitBox(0, 0.45, -0.17, 0.17, { uLen: 3.0, uvs: 1.2 }), mat: M.graniteGrey, name: 'footing', stretch: true, when: (bay) => !bay.gate },
+      { geo: unitPanel(0.45, 1.65, { u1: 3.0 }), mat: M.fence, name: 'panel', stretch: true, shadow: false, receive: false, noOutline: cut, when: (bay) => !bay.gate },
+      { geo: unitPanel(0.2, 1.9, { u1: 2.6 }), mat: M.fence, name: 'gate', stretch: true, shadow: false, receive: false, noOutline: cut, when: (bay) => !!bay.gate },
+    ],
+    collider: { y0: 0, y1: 2.1, thick: 0.3, e0: 0.05, e1: 0.05 },
+    rec: () => ({ kind: 'fence', mass: 220, h: 1.65, anchored: 18, hitK: 0.4, metal: true, minDv: 0 }) });
+  knockBays(ctx, { name: 'lmacade-garden-hedge', bays: hedgeBays, parts: [], far: 260, collider: { y0: 0, y1: 1.3, thick: 0.9, e0: 0, e1: 0 }, rec: () => ({ kind: 'fence', mass: 100, h: 1.2, anchored: 12, hitK: 0.3, metal: false, minDv: 0 }) });
+  K.extraTris += fenceBays.filter((bay) => !bay.ghost).length * 12;
   void run;
 }
 
@@ -303,12 +307,13 @@ function lawnAndTrees(K) {
   const trees = list.filter((t) => !L.insideBuilding(t.x, t.z, 1.5));
   if (trees.length) { plantTrees(K, trees, 'lmacade-trees'); K.svc.trees.push(...trees.map((t) => ({ x: t.x, z: t.z, r: 3, h: 14 }))); }
   // benches (about 1.8 m): around the column, along the central alley; one at the OSM bench node (44, -158)
-  const bench = (u, v, ang) => {
-    P.push(ACAD.x, 0, ACAD.z, ACAD.rot); P.push(u, 0, v, ang);
-    try { P.box(M.bench, -0.9, 0.9, 0.42, 0.5, -0.25, 0.25, 'b', 1); P.box(M.bench, -0.9, 0.9, 0.5, 0.9, -0.27, -0.2, 'b', 1); for (const x of [-0.8, 0.8]) P.box(M.iron, x - 0.04, x + 0.04, 0, 0.42, -0.2, 0.2, 'b', 1); } finally { P.pop(); P.pop(); }
-    const w = W(u, v); ctx.physics.addBox(w.x, w.z, 1.9, 0.6, ACAD.rot + ang, 0, 0.9); K.svc.benches.push({ x: w.x, z: w.z, len: 1.8, rotY: ACAD.rot + ang });
-  };
-  for (const [u, v, a] of [[-1.6 - 6.5, -122.3, 1.57], [-1.6 + 6.5, -122.3, -1.57], [-1.6, -122.3 + 6.0, 0], [-18, -99.0, 0], [14, -99.0, 0], [44, -158, 3.14159], [-18, -86.0, 3.14159], [12, -86.0, 3.14159]]) bench(u, v, a);
+  // n4spb (docs/AREAS.md 13.7): the benches are KNOCK records (lib/knock-furniture.js; the collider is the record's item)
+  const benchGeo = partsGeos((Q) => { Q.box(M.bench, -0.9, 0.9, 0.42, 0.5, -0.25, 0.25, 'b', 1); Q.box(M.bench, -0.9, 0.9, 0.5, 0.9, -0.27, -0.2, 'b', 1); for (const x of [-0.8, 0.8]) Q.box(M.iron, x - 0.04, x + 0.04, 0, 0.42, -0.2, 0.2, 'b', 1); });
+  const bSpots = [], bItems = [];
+  for (const [u, v, ang] of [[-1.6 - 6.5, -122.3, 1.57], [-1.6 + 6.5, -122.3, -1.57], [-1.6, -122.3 + 6.0, 0], [-18, -99.0, 0], [14, -99.0, 0], [44, -158, 3.14159], [-18, -86.0, 3.14159], [12, -86.0, 3.14159]]) {
+    const w = W(u, v); bSpots.push({ x: w.x, y: 0, z: w.z, rotY: ACAD.rot + ang }); bItems.push(ctx.physics.addBox(w.x, w.z, 1.9, 0.6, ACAD.rot + ang, 0, 0.9)); K.svc.benches.push({ x: w.x, z: w.z, len: 1.8, rotY: ACAD.rot + ang });
+  }
+  K.extraTris += knockFurniture(ctx, 'lmacade-garden-benches', benchGeo, bSpots, bItems, { ...FURNITURE_REC.bench, w: 1.8 }, 200);
 }
 
 export async function build(K) {

@@ -12,9 +12,9 @@
 // ============================================================================
 import * as ACADEMY from '../../world/landmarksAcademy/groups.js';
 // ---
-// PORT-IMPORT: landmarksStrelka
+import * as STRELKA from '../../world/landmarksStrelka/groups.js';
 // ---
-// PORT-IMPORT: landmarksUniversity
+import * as UNIVERSITY from '../../world/landmarksUniversity/groups.js';
 // ---
 // PORT-IMPORT: landmarksMenshikov
 // ---
@@ -48,9 +48,9 @@ import * as ACADEMY from '../../world/landmarksAcademy/groups.js';
 const SOURCES = [
   { module: 'landmarksAcademy', ns: ACADEMY, paved: false },      // all five sub-groups are claimed here; the Academy's PAVED_RINGS stay hard-wired in environment/claims.js
   // ---
-  // PORT-SOURCE: landmarksStrelka
+  { module: 'landmarksStrelka', ns: STRELKA },
   // ---
-  // PORT-SOURCE: landmarksUniversity
+  { module: 'landmarksUniversity', ns: UNIVERSITY },
   // ---
   // PORT-SOURCE: landmarksMenshikov
   // ---

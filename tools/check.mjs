@@ -98,9 +98,9 @@ const BUDGET_AREA = {
   // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; foundation, measured with `node tools/area.mjs vasilyevsky tools/check.mjs --area-modules`, + about 15 %): 11.2 km2 with the Neva, the Malaya Neva, the Smolenka and the Gavan harbour
   // measured: environment 1,152,944, streets 998,740, city 1,254,653, landmarksAcademy 192,706 (all five sub-groups), bridges 49,900, props 272,252. The rows of the ported modules go in the marked slots (measured + 15 %), one line each:
   vasilyevsky: { environment: 1.33e6, streets: 1.15e6, city: 1.45e6, landmarksAcademy: 222e3,
-    // PORT-BUDGET: landmarksStrelka
+    landmarksStrelka: 213e3,      // measured 184,785 (the Exchange, the Rostral columns, the garden, the descent, the warehouses, the Customs house; docs/vo-m1.md) + 15 %
     //
-    // PORT-BUDGET: landmarksUniversity
+    landmarksUniversity: 67e3,      // measured 57,786 (Kunstkamera, Academy of Sciences, Twelve Collegia, monuments, Rector wing, Peter II palace, Gostiny Dvor) + 15 %
     //
     // PORT-BUDGET: landmarksMenshikov
     //
