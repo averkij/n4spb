@@ -25,6 +25,8 @@ const { ctx, L, THREE, built, errors } = await buildWorld({ log: null });
 console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0) / 1000).toFixed(0)} s; ${ctx.physics.items.length} colliders`);
 const ph = ctx.physics, DEG = 180 / Math.PI;
 globalThis.__frame = await import('../src/world/landmarksC/frame.js');      // the Anichkov bridge's frame (u along the bridge, v along the river): the piers
+const { SPEC_BOAT: SB } = await import('../src/world/drive/boat/handling.js'), { carContact: cc } = await import('../src/world/drive/collision.js');
+const { isPierBox } = await import('../src/world/bridges/piers.js');
 const BM = await import("../src/world/drive/boat/model.js");      // the boat model module (the hull audit of section 10)
 
 // ---------------------------------------------------------------- the page around the drive module (what main.js does)
@@ -217,6 +219,7 @@ check('6 a solid in the water (pier / abutment) stops the boat with a hit and sl
   for (const it of ph.items) {
     if (it.type === 'cyl' || it.type === 'box') {
       if (it.y0 > wy - 0.2 || (it.y1 ?? 0) < wy + 0.6) continue;
+      if (isPierBox(it)) continue;      // (the pier / soffit boxes made from the drawn bridges, bridges/piers.js, are proved by tools/boat-passage-test.mjs; this check is about a hand-made pier or abutment, a head-on stop)
       if (water(it.cx, it.cz) === null) continue;
       const dd = Math.hypot(it.cx - DOCK.x, it.cz - DOCK.z); if (!best || dd < best.dd) best = { it, dd };
     }
@@ -225,7 +228,9 @@ check('6 a solid in the water (pier / abutment) stops the boat with a hit and sl
   const it = best.it, r = it.type === 'cyl' ? it.r : Math.hypot(it.hw, it.hd);
   console.log(`     pier: ${it.type} at ${it.cx.toFixed(1)}, ${it.cz.toFixed(1)}, size ${r.toFixed(1)} m, ${best.dd.toFixed(0)} m from the dock`);
   // approach from 30 m away on the open-water side toward the middle of the collider
-  let ap = null; for (const ang of [0, 1, 2, 3, 4, 5, 6, 7].map((k) => k * Math.PI / 4)) { const sx = it.cx + Math.sin(ang) * 30, sz = it.cz + Math.cos(ang) * 30; let ok = true; for (let t = 0; t <= 1 && ok; t += 0.05) if (water(it.cx + (sx - it.cx) * t, it.cz + (sz - it.cz) * t) === null) ok = false; if (ok) { ap = { sx, sz, ang }; break; } }
+  // the run is head-on: from the start to the collider no other solid touches the hull (the boat is not put inside the stone of an arch springing, and not deflected round the target by it)
+  const headOn = (sx, sz) => { const yaw = Math.atan2(it.cx - sx, it.cz - sz), car = { x: 0, z: 0, y: wl0, yaw, floats: true }; for (let t = 0; t <= 1; t += 0.5 / 30) { car.x = sx + (it.cx - sx) * t; car.z = sz + (it.cz - sz) * t; if (Math.hypot(car.x - it.cx, car.z - it.cz) < r + 3.5) break; for (const q of ph.querySolids(car.x, car.z, 5)) if (q !== it && cc(car, SB, q, {})) return false; } return true; };
+  let ap = null; for (const ang of [0, 1, 2, 3, 4, 5, 6, 7].map((k) => k * Math.PI / 4)) { const sx = it.cx + Math.sin(ang) * 30, sz = it.cz + Math.cos(ang) * 30; let ok = true; for (let t = 0; t <= 1 && ok; t += 0.05) if (water(it.cx + (sx - it.cx) * t, it.cz + (sz - it.cz) * t) === null) ok = false; if (ok && headOn(sx, sz)) { ap = { sx, sz, ang }; break; } }
   if (!ap) { console.log('     (no open water approach, skipped)'); return; }
   d.exit(true); walker(ap.sx, ap.sz); d.enter('boat'); d.teleport(ap.sx, ap.sz, Math.atan2(it.cx - ap.sx, it.cz - ap.sz));
   let hit = 0, inside = false, off = 0, vHit = 0;

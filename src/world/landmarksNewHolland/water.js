@@ -176,7 +176,7 @@ export async function build(K) {
     // parapet railing: black looped panels on both sides + posts: breakable bays below (lib/fence-bays.js), drawn in world coordinates
     P.pop();
     // walkable deck (the ground below the bridge is the canal bed in deep mode)
-    ph.addWalkBox(cx, cz, span, w, rot, 0.04, -6);
+    ph.addWalkBox(cx, cz, span, w, rot, 0.04, timber ? -0.6 : mode === 'flush' ? -0.5 : -1.15);      // (the bottom is the drawn soffit: a solid column down to the bed walled the canal for a boat, docs/water-transport-bridges.md)
     for (const sd of [-1, 1]) {      // the parapet bays: the line of a side is the bridge centre line moved by zl across (left of the travel a -> b = (-uz, ux))
       const zl = sd * (w / 2 + (timber ? 0.0 : 0.2)), ox = -uz * zl, oz = ux * zl;
       footBays.push(...splitBays(cx - ux * span / 2 + ox, cz - uz * span / 2 + oz, cx + ux * span / 2 + ox, cz + uz * span / 2 + oz, 2.4, { y: 0.05, off: sd * (w / 2 + 0.05) - zl }));

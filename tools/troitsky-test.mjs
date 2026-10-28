@@ -18,6 +18,7 @@ import { HOOKS } from '../src/world/lib/area-tables.js';
 import { OWNS_TABLE } from '../src/world/lib/owns-table.js';
 import * as L from '../src/world/layout.js';
 import { ROADS, BRIDGES } from '../src/world/data/city.js';
+import { isPierBox } from '../src/world/bridges/piers.js';
 
 const QUIET = process.argv.includes('--quiet'), VERBOSE = process.argv.includes('--verbose');
 if (process.env.AREA !== 'palace') { console.error('run it as the palace: node tools/area.mjs palace tools/troitsky-test.mjs'); process.exit(2); }
@@ -408,7 +409,7 @@ const nearLeaf = () => { const w = W(36, 0); ctx.player.position.set(w.x, 0, w.z
 {
   settleClosed(); nearLeaf(); ph.refreshDynamic();
   // (a) the audit: every box / cylinder the module made is a knock record, except the two obelisk blocks (granite monuments 2 x 2 m, 8 m tall: structure); the leaf's dynamic boxes are the knock records' own sources
-  const solids = ph.items.filter((it) => it.type === 'box' || it.type === 'cyl'), plain = solids.filter((it) => !(it.source && it.source.knock));
+  const solids = ph.items.filter((it) => (it.type === 'box' || it.type === 'cyl') && !isPierBox(it)), plain = solids.filter((it) => !(it.source && it.source.knock));
   const obelisks = plain.filter((it) => it.type === 'box' && Math.abs(it.hw - 1) < 1e-6 && Math.abs(it.hd - 1) < 1e-6 && it.y1 === 8);
   ok(plain.length === 2 && obelisks.length === 2, `${solids.length} boxes and posts, ${plain.length} are not knock records (the two obelisks: ${obelisks.length})`);
   const kinds = {}; for (const it of solids) if (it.source && it.source.knock) { const k = it.source.knock; const key = k.kind + (it.type === 'cyl' ? ' post' : k.mass >= 2000 ? ' candelabrum' : k.mass >= 900 ? ' kerb/parapet' : ' bay'); kinds[key] = (kinds[key] || 0) + 1; }

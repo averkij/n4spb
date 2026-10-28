@@ -7,7 +7,8 @@ import * as THREE from 'three';
 import { EAST_BRIDGE_ROADS } from './eastBridges/groups.js';
 import { Parts } from './landmarksD/kit.js';
 import * as L from './layout.js';
-import { knockBays } from './lib/fence-bays.js';      // n4spb: inExtent (the clip of the 907 m main span to the data of the area, below)
+import { knockBays } from './lib/fence-bays.js';
+import { solidPiers } from './bridges/piers.js';      // the drawn piers in the water are solid for a floating hull      // n4spb: inExtent (the clip of the 907 m main span to the data of the area, below)
 
 export function build(ctx) {
   const root = new THREE.Group(); root.name = 'east-bridges';
@@ -97,7 +98,7 @@ export function build(ctx) {
       collider: (q) => ({ y0: Math.min(q.y, q.ye), y1: Math.max(q.y, q.ye) + 1.2, thick: 0.18, e0: 0.02, e1: 0.02 }),
       rec: () => ({ kind: 'fence', mass: 100, h: 1.15, r: 0.06, anchored: 12, hitK: 0.25, metal: true, minDv: 0 }) });
   }
-  P.build(root, { name: 'east-bridges' }); ctx.addStatic(root);
+  solidPiers(ctx, P.build(root, { name: 'east-bridges' })); ctx.addStatic(root);
   const deckY = (x, z) => {
     for (const r of surf) {
       const dx = x - r.x, dz = z - r.z, u = dx * r.c - dz * r.s, v = dx * r.s + dz * r.c;

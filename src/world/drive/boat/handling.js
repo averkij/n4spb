@@ -5,7 +5,7 @@
 //   * thrust from an outboard motor (needs speed or throttle to turn: the rudder bites on the flow), strong inertia, a weak keel: the sideways speed dies in about half a second, so the boat slides in a turn;
 //     the hull drag is linear (it coasts a long way), S brakes hard and then reverses slowly, Space is the emergency stop.
 //   * it collides like a car through drive/collision.js (the same solids, the knock system included): the quay walls, the piers, the abutments, a fallen bench. The collision height `hgt` is only the hull
-//     (0.95 m over the water): the decks of the bridges, 1.1 m and more above the water of a canal, pass over it. Hits make a thump and a scrape, never damage.
+//     (0.7 m over the water: the gunwale is 0.55-0.62 m amidships): a bridge whose deck is 0.7 m + 0.5 m of slab over the water (docs/water-transport-bridges.md) passes over it. Hits make a thump and a scrape, never damage.
 // Frame: the same as the car: yaw = rotY (0 faces +Z, positive turns toward +X = the boat's LEFT), forward = (sin yaw, cos yaw), left = (cos yaw, -sin yaw). Units m, s. steer > 0 = left.
 import { createCarCollisions } from '../collision.js';
 
@@ -13,7 +13,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /** the boat's footprint and weight: W beam, len length, front / rear the bow tip and the transom from the origin (the middle of the hull), hgt the collision height over the water, eye = the helmsman's eye (the cockpit view) */
 export const SPEC_BOAT = {
-  name: 'motorboat', W: 1.9, len: 5.6, front: 3.0, rear: -2.6, centerZ: 0.2, hgt: 0.95, wb: 3.4, R: 0.3,
+  name: 'motorboat', W: 1.9, len: 5.6, front: 3.0, rear: -2.6, centerZ: 0.2, hgt: 0.7, wb: 3.4, R: 0.3,
   mass: 850, durability: 4, eye: { x: 0.32, y: 1.16, z: -0.2 }, fovRest: 74, exhaust: [],
 };
 

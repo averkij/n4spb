@@ -27,6 +27,7 @@ import { STYLES2 } from './bridges/styles2.js';
 import { STYLES3 } from './bridges/styles3.js';
 import { STYLES_PAL } from './bridges/styles-pal.js';
 import { buildPalace } from './bridges/palace.js';
+import { solidPiers } from './bridges/piers.js';
 import { BRIDGE_ZONES } from './environment/waterways.js';
 import { bridgeZones } from './environment/river.js';
 
@@ -49,6 +50,7 @@ export async function build(ctx) {
     // uploaded meshes own copies; construction arrays must not live with them.
     P.b.clear();
     for (const m of meshes) if (decals.has(m.material)) ctx.noOutline(m);
+    const pr = solidPiers(ctx, meshes); stats.piers = (stats.piers || 0) + pr.boxes;      // the drawn pillars in open water are solid for a floating hull (bridges/piers.js)
     return meshes;
   };
 

@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { makeKit } from './landmarksC/common.js';
 import { makeBridgeMats } from './landmarksC/bridgemats.js';
 import * as F from './landmarksC/frame.js';
+import { solidPiers } from './bridges/piers.js';
 
 const PARTS = [
   ['bridge', () => import('./landmarksC/bridge.js'), async (m, K, M, ctx, root, svc) => {
@@ -38,6 +39,7 @@ export async function build(ctx) {
       K.begin();
       await run(m, K, M, ctx, root, svc);
       K.flush(root, name);
+      if (name === 'bridge') solidPiers(ctx, root.children.filter((c) => c.name === 'bridge'));      // the abutment feet that bridgeColliders' piers do not cover (bridges/piers.js leaves what a solid covers already)
     } catch (e) { console.error(`[landmarksC] ${name} failed:`, e); failed.push(`${name}: ${e && e.stack || e}`); K.begin(); }
   }
   ctx.addStatic(root);

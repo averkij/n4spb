@@ -18,6 +18,7 @@ import { makeRailBatch } from './bridges/rails.js';
 import { WATER_Y } from './bridges/sites.js';
 import { buildTroitsky } from './landmarksTroitsky/bridge.js';
 import { buildLeaf } from './landmarksTroitsky/leaf.js';
+import { solidPiers } from './bridges/piers.js';
 import { buildGates } from './landmarksTroitsky/gates.js';
 import { createService, addStopLines, stepWalker, stepCar, bodyState } from './landmarksTroitsky/service.js';
 import { TROITSKY, toWorld, toUV, FR, LEN, HW, U_HINGE, U_TIP, leafFoot, GATE_S, WALK_SLIP_DEG, slips } from './landmarksTroitsky/frame.js';
@@ -37,6 +38,7 @@ export async function build(ctx) {
   B.colliders();
   const meshes = P.build(root, { name: 'troitsky', waterY, sub: (m) => ctx.noOutline(m) });      // (the piers under the water: colour only, no contour lines through the river, docs/AREAS.md 15.z)
   for (const m of meshes) if (M.decalMats.has(m.material)) ctx.noOutline(m);
+  solidPiers(ctx, meshes);      // the drawn piers of the 554 m bridge are solid for a floating hull (bridges/piers.js)
   rails.flush(root);
   ctx.addStatic(root);
   const lamps = B.buildKnockables();
