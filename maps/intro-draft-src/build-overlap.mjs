@@ -16,14 +16,17 @@ if (water.length !== GW * GH || lab.length !== GW * GH) throw new Error('grid si
 const cellKm2 = CELL * CELL / 1e6;
 const DEPTH = 8, JR = 4;                                      // cells: the depth of "one block", the radius of a junction
 const log = (...a) => console.log(...a);
+const EDITS = (() => { try { return JSON.parse(fs.readFileSync(path.join(here, 'edits.json'), 'utf8')); } catch (e) { return {}; } })();
 
 // ------------------------------------------------------------------ streets and canals as barriers; the bridges
 const barrier = new Uint8Array(GW * GH);
 const DRIVE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'residential', 'unclassified', 'living_street']);
 const bridges = [];
+const byName = new Map();                                        // street name -> Map(way id -> points), for the 'cut' edits
 const addWay = (e) => {
   const t = e.tags || {}; if (!e.geometry || e.geometry.length < 2) return;
   const pts = geomOf(e.geometry);
+  if (t.name && t.highway && DRIVE.has(t.highway)) { let m = byName.get(t.name); if (!m) byName.set(t.name, m = new Map()); m.set(e.id, pts); }
   if (t.bridge && t.bridge !== 'no' && t.highway) bridges.push({ id: e.id, name: t.name || '', hw: t.highway, pts });
   if (!t.highway || !DRIVE.has(t.highway)) return;
   if (t.tunnel && t.tunnel !== 'no') return;
@@ -35,6 +38,31 @@ if (fs.existsSync(SRC_ROADS)) for (const e of JSON.parse(fs.readFileSync(SRC_ROA
 for (const n of ['main_roads', 'roads', 'c_streets', 'secondary', 'tertiary']) for (const e of tryRaw(n)) addWay(e);
 for (const n of ['rivers', 'c_rivers']) for (const e of tryRaw(n)) { const t = e.tags || {}; if (e.geometry && /^(river|canal)$/.test(t.waterway || '')) drawLine(geomOf(e.geometry), (i) => { barrier[i] = 1; }); }
 log('bridge ways', bridges.length);
+
+// 'cut' edits (edits.json): close the gap between the END of a named street and the coast, so the two faces beside the street end stop being one face (see README). { street, end: 'sw' | 'n' | ... (compass of the chain end, default every end), to: 'coast' (the nearest water cell) | [lon, lat], maxM }
+{
+  const DIR = { n: [0, 1], s: [0, -1], e: [1, 0], w: [-1, 0], ne: [1, 1], nw: [-1, 1], se: [1, -1], sw: [-1, -1] };
+  const KXc = toM([1, 0])[0], KYc = toM([0, 1])[1];
+  for (const ct of EDITS.cut || []) {
+    const ways = byName.get(ct.street);
+    if (!ways) { log('edit: cut skipped, street not found:', ct.street); continue; }
+    const key = (p) => p[0].toFixed(7) + ',' + p[1].toFixed(7), deg = new Map(), at = new Map();
+    for (const pts of ways.values()) pts.forEach((p, i) => { const k = key(p); at.set(k, p); deg.set(k, (deg.get(k) || 0) + (i === 0 || i === pts.length - 1 ? 1 : 2)); });
+    let ends = [...deg].filter(([, d]) => d === 1).map(([k]) => at.get(k));      // the ends of the chain (nodes that only one way ends at)
+    if (ct.end && DIR[ct.end]) { const v = DIR[ct.end], sc = (p) => p[0] * KXc * v[0] + p[1] * KYc * v[1]; ends = [ends.reduce((b, p) => (!b || sc(p) > sc(b) ? p : b), null)].filter(Boolean); }
+    for (const p of ends) {
+      let to = Array.isArray(ct.to) ? ct.to : null;
+      if (!to) {                                                  // the nearest water cell within maxM
+        const c = toG(p), cx = Math.floor(c[0]), cy = Math.floor(c[1]), R = Math.ceil((ct.maxM || 300) / CELL);
+        let bd = Infinity;
+        for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const x = cx + dx, y = cy + dy; if (x < 0 || y < 0 || x >= GW || y >= GH || !water[y * GW + x]) continue; const d = Math.hypot(x + 0.5 - c[0], y + 0.5 - c[1]); if (d < bd) { bd = d; to = fromG(x + 0.5, y + 0.5); } }
+      }
+      if (!to) { log('edit: cut skipped, no water within', ct.maxM || 300, 'm of the end of', ct.street, p.join(',')); continue; }
+      let n = 0; drawLine([p, to], (i) => { barrier[i] = 1; n++; });
+      log('edit: cut', ct.street, 'end', p.join(','), '->', to.map((v) => v.toFixed(5)).join(','), n, 'cells');
+    }
+  }
+}
 
 // ------------------------------------------------------------------ blocks: the faces of the street network
 const blk = new Int32Array(GW * GH);

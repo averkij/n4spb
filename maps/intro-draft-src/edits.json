@@ -2,6 +2,11 @@
   "merge": [
     { "names": ["Литейный", "Дворцовый"], "ru": "Дворцовый–Литейный", "en": "Palace–Liteyny" },
     { "names": ["Владимирский", "Лиговка-Ямская"], "ru": "Владимирский–Лиговка", "en": "Vladimirsky–Ligovka" },
-    { "names": ["Адмиралтейский", "Сенной", "№ 78"], "ru": "Адмиралтейский–Сенной", "en": "Admiralty–Haymarket" }
+    { "names": ["Адмиралтейский", "Сенной", "№ 78"], "ru": "Адмиралтейский–Сенной", "en": "Admiralty–Haymarket" },
+    { "names": ["Васильевский", "№ 7"], "ru": "Васильевский–Округ № 7", "en": "Vasilyevsky–Okrug № 7", "stable": true }
+  ],
+  "cut": [
+    { "street": "Большой проспект В.О.", "end": "sw", "to": "coast", "maxM": 400,
+      "note": "OSM stops Bolshoy prospekt V.O. about 200 m short of the Gulf shore: the shore strip of Gavan west of it was one face with the south-west tip of Okrug 7, and that face (owned by Okrug 7) dragged the walkable territory of Okrug 7 along the whole west coast. The cut closes the gap." }
   ]
 }
