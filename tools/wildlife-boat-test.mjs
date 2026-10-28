@@ -22,6 +22,7 @@ const t0 = Date.now();
 const { ctx, L, THREE, built, errors } = await buildWorld({ skip: ['traffic', 'people', 'metro', 'drive'], log: null });
 console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0) / 1000).toFixed(0)} s; ${ctx.physics.items.length} colliders${errors.length ? '; build errors: ' + errors.join(' | ') : ''}`);
 const ph = ctx.physics, svc = ctx.services.wildlife;
+if (ctx.services.craftSolids) ctx.services.craftSolids.list.length = 0;        // (the tourist hulls of lib/craft-solids.js are solid for the boat: they sail the Fontanka lanes of the ducks and would stop the runs this test drives; boat-craft-test covers them)
 assert.ok(svc && svc.debug && svc.debug.ducks, 'the area has no wildlife / no ducks');
 const D = svc.debug.ducks, B = svc.debug.birds, W = svc.debug.world, threat = svc.debug.threat;
 
@@ -263,11 +264,14 @@ for (let pi = 0; pi < runs.length; pi++) {
 
 // ---------------------------------------------------------------- 5 a car (faked drive state of the car shape), the pigeons
 {
-  const { g } = plan[plan.length - 1];
+  // (the groups swim along their lanes: take the last one whose run is clear NOW; the pontoons and moored hulls that are solid for a boat stand on some stretches of the Fontanka)
+  let g = plan[plan.length - 1].g;
+  for (let i = plan.length - 1; i >= 0; i--) { const q = plan[i].g; settleAt(q); if (q.st === 'swim' && approach(centre(q), 10)) { g = q; break; } }
   check('5 a car driven at 15 m/s straight at a duck group flushes it the same way; a walker beside it does not', () => {
     settleAt(g); if (g.st !== 'swim') { run(60, () => g.st !== 'swim' && g.st !== 'fly' ? undefined : (g.st === 'swim' ? false : undefined)); }
     assert.equal(g.st, 'swim', 'the group is not at rest (' + g.st + ')');
-    const real = ctx.drive, c0 = centre(g), a = approach(c0, 10) || plan[plan.length - 1].a;
+    const real = ctx.drive, c0 = centre(g), a = approach(c0, 10);
+    assert.ok(a, 'no clear run at the group');
     const car = { x: a.x, y: waterOfLane(g.lane), z: a.z, vx: Math.sin(a.yaw) * 15, vz: Math.cos(a.yaw) * 15 };
     ctx.drive = { active: true, car, vehicle: { kind: 'car', spec: { front: 2.3 } } };
     const f0 = D.flushes; let dAt = -1;
