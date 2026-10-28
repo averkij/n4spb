@@ -30,13 +30,13 @@ import * as ACADEMY from '../../world/landmarksAcademy/groups.js';
 // ---
 // PORT-IMPORT: landmarksModernVO
 // ---
-// PORT-IMPORT: landmarksKirova
+import * as KIROVA from '../../world/landmarksKirova/groups.js';
 // ---
-// PORT-IMPORT: landmarksSmolensky
+import * as SMOLENSKY from '../../world/landmarksSmolensky/groups.js';
 // ---
-// PORT-IMPORT: landmarksSevkabel
+import * as SEVKABEL from '../../world/landmarksSevkabel/groups.js';
 // ---
-// PORT-IMPORT: landmarksSeaTerminal
+import * as SEATERMINAL from '../../world/landmarksSeaTerminal/groups.js';
 // ---
 // PORT-IMPORT: landmarksVOStatues
 // ---
@@ -66,13 +66,13 @@ const SOURCES = [
   // ---
   // PORT-SOURCE: landmarksModernVO
   // ---
-  // PORT-SOURCE: landmarksKirova
+  { module: 'landmarksKirova', ns: KIROVA },
   // ---
-  // PORT-SOURCE: landmarksSmolensky
+  { module: 'landmarksSmolensky', ns: SMOLENSKY },
   // ---
-  // PORT-SOURCE: landmarksSevkabel
+  { module: 'landmarksSevkabel', ns: SEVKABEL },
   // ---
-  // PORT-SOURCE: landmarksSeaTerminal
+  { module: 'landmarksSeaTerminal', ns: SEATERMINAL },
   // ---
   // PORT-SOURCE: landmarksVOStatues
   // ---

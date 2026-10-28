@@ -42,13 +42,13 @@ import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as 
 // ---
 // PORT-IMPORT: landmarksModernVO
 // ---
-// PORT-IMPORT: landmarksKirova
+import { GROUPS_LIST as G_KIROVA } from '../../world/landmarksKirova/groups.js';
 // ---
-// PORT-IMPORT: landmarksSmolensky
+import { GROUPS_LIST as G_SMOLENSKY } from '../../world/landmarksSmolensky/groups.js';
 // ---
-// PORT-IMPORT: landmarksSevkabel
+import { GROUPS_LIST as G_SEVKABEL } from '../../world/landmarksSevkabel/groups.js';
 // ---
-// PORT-IMPORT: landmarksSeaTerminal
+import { GROUPS_LIST as G_SEATERMINAL } from '../../world/landmarksSeaTerminal/groups.js';
 // ---
 // PORT-IMPORT: landmarksVOStatues
 // ---
@@ -87,13 +87,13 @@ export const MODULES = [
   //
   // PORT-MODULE: landmarksModernVO
   //
-  // PORT-MODULE: landmarksKirova
+  'landmarksKirova', // the Kirov Palace of Culture, Erarta museum, the Vasileostrovets garden, the Sobchak monument
   //
-  // PORT-MODULE: landmarksSmolensky
+  'landmarksSmolensky', // the Smolensky Orthodox Cemetery: the Church of the Smolensk Icon and bell tower, St Xenia chapel, Trinity chapel, Holy Gates, Resurrection church, 2.4 km fence, the forest and the graves
   //
-  // PORT-MODULE: landmarksSevkabel
+  'landmarksSevkabel', // Sevkabel Port (hall, yard, Istkabel), the Brusnitsyn quarter, the almshouse, the Skobsky Palace, CHP-7, the Baltic Shipyard cranes
   //
-  // PORT-MODULE: landmarksSeaTerminal
+  'landmarksSeaTerminal', // the Sea Terminal (the two-tier deck, the five berths, the port fence)
   //
   // PORT-MODULE: landmarksVOStatues
   //
@@ -127,13 +127,13 @@ export const LABELS = {
   // ---
   // PORT-LABEL: landmarksModernVO
   // ---
-  // PORT-LABEL: landmarksKirova
+  landmarksKirova: 'Дворец культуры Кирова, Эрарта, сад Василеостровец',
   // ---
-  // PORT-LABEL: landmarksSmolensky
+  landmarksSmolensky: 'Смоленское кладбище, церкви, часовня Ксении Блаженной',
   // ---
-  // PORT-LABEL: landmarksSevkabel
+  landmarksSevkabel: 'Севкабель Порт, Брусницынский квартал, ТЭЦ-7',
   // ---
-  // PORT-LABEL: landmarksSeaTerminal
+  landmarksSeaTerminal: 'Морской вокзал',
   // ---
   // PORT-LABEL: landmarksVOStatues
   // ---
@@ -193,13 +193,13 @@ GROUPS.landmarksAcademy = G_ACADEMY.GROUPS_LIST;
 // ---
 // PORT-GROUPS: landmarksModernVO
 // ---
-// PORT-GROUPS: landmarksKirova
+GROUPS.landmarksKirova = G_KIROVA;
 // ---
-// PORT-GROUPS: landmarksSmolensky
+GROUPS.landmarksSmolensky = G_SMOLENSKY;
 // ---
-// PORT-GROUPS: landmarksSevkabel
+GROUPS.landmarksSevkabel = G_SEVKABEL;
 // ---
-// PORT-GROUPS: landmarksSeaTerminal
+GROUPS.landmarksSeaTerminal = G_SEATERMINAL;
 // ---
 // PORT-GROUPS: landmarksVOStatues
 // ---
@@ -234,13 +234,18 @@ export function makeAreas(h) {
   // ---
   // PORT-AREAS: landmarksModernVO
   // ---
-  // PORT-AREAS: landmarksKirova
+  { name: 'Эрарта · Erarta Museum', c: [-5593, 25], r: 58 },
+  { name: 'Дворец культуры имени Кирова · Kirov Palace of Culture', c: [-5449, -145], r: 90 },
+  { name: 'Сад Василеостровец · Vasileostrovets Garden', c: [-5273, -221], r: 85 },
   // ---
-  // PORT-AREAS: landmarksSmolensky
+  { name: 'Смоленская церковь · Smolensk Icon Church', c: [-5612, -1525], r: 50 },
+  { name: 'Святые ворота · Holy Gates of the cemetery', c: [-5502.6, -1529.6], r: 30 },
+  { name: 'Смоленское православное кладбище · Smolensky Orthodox Cemetery', c: [-5730, -1231], r: 330 },
   // ---
-  // PORT-AREAS: landmarksSevkabel
+  { name: 'Севкабель Порт · Sevkabel Port', c: [-6149, 933], r: 170 },
+  { name: 'Брусницынский квартал · Brusnitsyn quarter', c: [-5640, 1085], r: 70 },
   // ---
-  // PORT-AREAS: landmarksSeaTerminal
+  { name: 'Морской вокзал · Sea Terminal', c: [-6519, 709], r: 150 },
   // ---
   // PORT-AREAS: landmarksVOStatues
   // ---
@@ -320,13 +325,13 @@ export const TEST = {
     // ---
     // PORT-CLAIMED: landmarksModernVO
     // ---
-    // PORT-CLAIMED: landmarksKirova
+    { id: 'w45966107', by: 'landmarksKirova', group: 'kirova-dk' },
     // ---
-    // PORT-CLAIMED: landmarksSmolensky
+    { id: 'w30351796', by: 'landmarksSmolensky', group: 'smolensky-church' },
     // ---
-    // PORT-CLAIMED: landmarksSevkabel
+    { id: 'r8702908', by: 'landmarksSevkabel', group: 'sevkabel-hall' },
     // ---
-    // PORT-CLAIMED: landmarksSeaTerminal
+    { id: 'r6702553', by: 'landmarksSeaTerminal', group: 'sea-terminal' },
     // ---
     // PORT-CLAIMED: landmarksVOStatues
     // ---
@@ -463,7 +468,7 @@ export const PRUNE_SERVICES = [
   //
   // PORT-PRUNE: landmarksSredny
   //
-  // PORT-PRUNE: landmarksKirova
+  'landmarksKirova',
 ];
 /** the area-specific hooks of the engine modules (milestone M6, docs/AREAS.md section 9: keep-outs of trees / tufts / props / ways / parking, the crowd garden, the deck services; the call sites read
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */
