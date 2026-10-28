@@ -27,6 +27,7 @@ ph.refreshDynamic();      // the dynamic solids (the bascule leaves of the Troit
 const { createBoatHandling, SPEC_BOAT } = await import('../src/world/drive/boat/handling.js');
 const { carContact } = await import('../src/world/drive/collision.js');
 const { BRIDGE_ZONES } = await import('../src/world/environment/waterways.js');
+const { WATER: WATER_TABLE } = await import('../src/world/lib/area-tables.js');
 const { LOW_CLEARANCE: LOW_CLEARANCE_BRIDGES } = await import('../src/world/bridges/piers.js');
 const DEG = Math.PI / 180, R_FREE = Number(process.env.RFREE || 1.5), HULL = SPEC_BOAT.hgt;
 
@@ -384,9 +385,16 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
       for (let a = 0; a < 3; a++) { const p = V[a], q = V[(a + 1) % 3], l = Math.hypot(q[0] - p[0], q[2] - p[2]), nn = Math.max(1, Math.ceil(l)); for (let i = 0; i <= nn; i++) drawn.add(key(p[0] + (q[0] - p[0]) * i / nn, p[2] + (q[2] - p[2]) * i / nn)); }
     }
   });
+  // n4spb (Vasilyevsky, the Rumyantsevsky apron): the pit ring of a landmark module (WATER.ownerRings) may hold a walkable PLATFORM that stands over the water (the apron floor, 2.2 m over the Neva, its pink skirt drawn along the river edge):
+  // the walk slabs stop a hull, and the middle of an 18 m wide platform is more than 6 m from any drawn waterline surface. A solid cell under such a platform is the platform itself, not a wall of water: the skirt at the river edge
+  // is what a boat meets (it is drawn and tested here like every other wall). Bridges are not owner rings: the decks of a bridge stay under the rule.
+  const platRings = WATER_TABLE.ownerRings.map((w) => (w.ring || w.o || []).flat()).filter((o) => o.length >= 6);
+  const inRing = (o, x, z) => { let c = false; for (let i = 0, j = o.length / 2 - 1; i < o.length / 2; j = i++) { const xi = o[2 * i], zi = o[2 * i + 1], xj = o[2 * j], zj = o[2 * j + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
+  const underPlatform = (x, z, w) => platRings.some((o) => inRing(o, x, z)) && ph.groundHeight(x, z, 1e9, false) > w + 0.3;
   const bad = new Map();
   for (let k = 0; k < solid.length; k++) {
     if (!solid[k] || !isWet(k) || Dwet[k] < 2.5) continue;
+    if (underPlatform(cx(k), cz(k), wl[k])) continue;
     const x = cx(k), z = cz(k); if (!L.waterwayAt(x, z)) continue;      // (a waterway: the ponds of the gardens have islands, rocks and trees of their own)
     let near = false;
     for (let dz = -6; dz <= 6 && !near; dz++) for (let dx = -6; dx <= 6; dx++) if (drawn.has(key(x + dx, z + dz))) { near = true; break; }

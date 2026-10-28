@@ -1010,7 +1010,8 @@ export function buildQuay(ctx, root) {
   const matFor = (k, deckMat) => ctx.mat.toon('#ffffff', { map: wallTexture(ctx, k), paint: 0.05, polygonOffset: deckMat ? 3 : 0, name: 'env-quay-wall-' + (deckMat ? 'deck-' : '') + k });
   const copingMat = (k) => ctx.mat.toon(k === 'neva' ? '#b69c92' : k === 'fontanka' ? (P.graniteCoping || '#a49a95') : '#b0a29a', { paint: 0.05, name: 'env-quay-coping-' + k });
   const mk = (B, mat, name, shadow = true, rec = true) => { if (B.empty) return null; const m = new T.Mesh(B.build(), mat); m.name = name; m.castShadow = shadow; m.receiveShadow = rec; root.add(m); return m; };
-  for (const k of keys) { mk(face[k], matFor(k, false), 'env-quay-wall-' + k); mk(faceDeck[k], matFor(k, true), 'env-quay-wall-deck-' + k, false); mk(coping[k], copingMat(k), 'env-quay-coping-' + k); }
+  // (n4spb: WATERWAYS lists the Smolenka in every area; where it has no wall at all it costs no 1024 x 512 canvas, so the other areas build as before)
+  for (const k of keys) { const skip = k === 'smolenka' && face[k].empty && faceDeck[k].empty; if (!skip) { mk(face[k], matFor(k, false), 'env-quay-wall-' + k); mk(faceDeck[k], matFor(k, true), 'env-quay-wall-deck-' + k, false); } mk(coping[k], copingMat(k), 'env-quay-coping-' + k); }
   mk(parapet, ctx.mat.toon('#ffffff', { map: parapetTexture(ctx), paint: 0.04, name: 'env-quay-parapet' }), 'env-quay-parapet');
   mk(grass, ctx.mat.toon('#ffffff', { map: grassTexture(ctx), paint: 0.06, name: 'env-quay-grass' }), 'env-quay-grass');
   mk(capB, ctx.mat.toon('#a69489', { paint: 0.05, side: 'double', name: 'env-quay-slope-caps' }), 'env-quay-slope-caps');

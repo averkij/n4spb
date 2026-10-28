@@ -96,8 +96,8 @@ const BUDGET_AREA = {
   vladimirsky: { environment: 770e3, streets: 1.3e6, city: 1.65e6, landmarksD: 345e3 },      // measured (node tools/area.mjs vladimirsky tools/check.mjs --area-modules): environment 662,706, streets 1,133,535, city 1,432,842, landmarksD 300,686 (all four sub-groups: the cathedral and the bell tower, the Tolstoy House, the Passage, the library), + about 15 %
   smolny: { streets: 1.25e6, city: 1.42e6, landmarksOktyabrsky: 57e3 },      // measured: streets 1,088,461, city 1,237,047, landmarksOktyabrsky 47,001 (with the Kapodistrias monument, as in the north)
   // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; foundation, measured with `node tools/area.mjs vasilyevsky tools/check.mjs --area-modules`, + about 15 %): 11.2 km2 with the Neva, the Malaya Neva, the Smolenka and the Gavan harbour
-  // measured: environment 1,152,944, streets 998,740, city 1,254,653, landmarksAcademy 192,706 (all five sub-groups), bridges 49,900, props 272,252. The rows of the ported modules go in the marked slots (measured + 15 %), one line each:
-  vasilyevsky: { environment: 1.33e6, streets: 1.15e6, city: 1.45e6, landmarksAcademy: 222e3,
+  // merged measured (all 13 ported modules + the bridge wave): environment 989,463, streets 994,103, city 1,175,519, landmarksAcademy 193,116, props 268,906; every row = measured + about 15 % (docs/AREAS.md 15.v).
+  vasilyevsky: { environment: 1.14e6, streets: 1.15e6, city: 1.35e6, props: 310e3, landmarksAcademy: 222e3,
     landmarksStrelka: 213e3,      // measured 184,785 (the Exchange, the Rostral columns, the garden, the descent, the warehouses, the Customs house; docs/vo-m1.md) + 15 %
     bridges: 104e3,      // measured 89,974 (Palace + Blagoveshchensky + Birzhevoy, Tuchkov, Uralsky, Smolensky, Nalichny, Novo-Andreevsky; the foundation had 49,900) + about 15 %
     //

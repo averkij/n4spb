@@ -331,13 +331,29 @@ export function makeAreas(h) {
 /** HERO (the start pose) and VIEWS (keys 1..0, Shift + 1..9, Alt + 1..5 and the Places list), built with the layout helper yawToward. */
 export function makeViews({ yawToward }) {
   // Every pose is a free, walkable spot (tools/layout-test.mjs checks insideBuilding / isOnRoad / line of sight; tools/views-check.mjs adds the colliders). x, z, yaw (deg, 0 = north, 90 = west), pitch (deg).
-  // Foundation set: the Spit with the Exchange, the Palace Bridge seen from the island, the Academy of Arts and the sphinxes. The ported modules add their poses (the later waves, with the TEST.viewKeys list).
+  // 1..3 the Spit, the Palace Bridge, the Academy of Arts; 4..0 the Rostral columns, Kunstkamera, Twelve Collegia, Menshikov palace, Andrew cathedral, Naval Corps, Mining University; Shift + 1..6 Smolensky cemetery, Kirov DK, Sevkabel, Sea Terminal, Krasin, Chernikhov tower; Places: Lions pier, Customs house, Tuchkov bridge, sphinxes (poses found with a ring search around each sight, then checked by tools/views-check.mjs).
   const HERO = { x: -2508.4, z: -1293.1, yaw: yawToward(-2508.4, -1293.1, -2609.8, -1232.7), pitch: 8 };      // the Spit (Strelka) looking at the Exchange
   const VIEWS = [
     { key: 'Digit1', label: 'Стрелка · Биржа', x: -2508.4, z: -1293.1, yaw: yawToward(-2508.4, -1293.1, -2609.8, -1232.7), pitch: 8 },
     { key: 'Digit2', label: 'Дворцовый мост · Дворцовая набережная', x: -2337, z: -848, yaw: yawToward(-2337, -848, -2495, -1075), pitch: 4 },
     { key: 'Digit3', label: 'Академия художеств', x: -3407.5, z: -497.9, yaw: yawToward(-3407.5, -497.9, -3431, -597), pitch: 10 },
+    { key: 'Digit4', label: 'Ростральные колонны · Стрелка', x: -2433.8, z: -1217.6, yaw: yawToward(-2433.8, -1217.6, -2481.4, -1190.1), pitch: 8 },
+    { key: 'Digit5', label: 'Кунсткамера · Университетская набережная', x: -2579.1, z: -979.2, yaw: yawToward(-2579.1, -979.2, -2612.7, -1012.8), pitch: 8 },
+    { key: 'Digit6', label: 'Двенадцать коллегий · Университет', x: -2871.1, z: -1068.9, yaw: yawToward(-2871.1, -1068.9, -2910, -1030), pitch: 8 },
+    { key: 'Digit7', label: 'Меншиковский дворец', x: -3137.7, z: -759.9, yaw: yawToward(-3137.7, -759.9, -3098.8, -721), pitch: 8 },
+    { key: 'Digit8', label: 'Андреевский собор · Большой проспект', x: -3784.6, z: -753, yaw: yawToward(-3784.6, -753, -3802.7, -820.6), pitch: 10 },
+    { key: 'Digit9', label: 'Морской кадетский корпус · Крузенштерн', x: -4064.7, z: -353.7, yaw: yawToward(-4064.7, -353.7, -4047, -336), pitch: 12 },
+    { key: 'Digit0', label: 'Горный университет', x: -4519.5, z: 359, yaw: yawToward(-4519.5, 359, -4567, 359), pitch: 8 },
+    { key: 'ShiftDigit1', label: 'Смоленское кладбище · церковь Смоленской иконы', x: -5616, z: -1468, yaw: yawToward(-5616, -1468, -5616, -1523), pitch: 8 },
+    { key: 'ShiftDigit2', label: 'Дворец культуры имени Кирова', x: -5420.3, z: -194.1, yaw: yawToward(-5420.3, -194.1, -5444, -153), pitch: 8 },
+    { key: 'ShiftDigit3', label: 'Севкабель Порт', x: -6140.8, z: 866.9, yaw: yawToward(-6140.8, 866.9, -6172, 921), pitch: 8 },
+    { key: 'ShiftDigit4', label: 'Морской вокзал', x: -6539.1, z: 783.9, yaw: yawToward(-6539.1, 783.9, -6519, 709), pitch: 6 },
+    { key: 'ShiftDigit5', label: 'Ледокол «Красин»', x: -4554.1, z: 524.3, yaw: yawToward(-4554.1, 524.3, -4600, 512), pitch: 6 },
+    { key: 'ShiftDigit6', label: 'Водонапорная башня Чернихова · Средний проспект', x: -4796.9, z: 444.2, yaw: yawToward(-4796.9, 444.2, -4850, 430), pitch: 10 },
     // the Places list only
+    { key: 'Place.lions', label: 'Спуск со львами · набережная Макарова', x: -2817.4, z: -1408.4, yaw: yawToward(-2817.4, -1408.4, -2851, -1442), pitch: 6 },
+    { key: 'Place.customs', label: 'Таможня · Пушкинский Дом', x: -2824.5, z: -1332.4, yaw: yawToward(-2824.5, -1332.4, -2797, -1380), pitch: 8 },
+    { key: 'Place.tuchkov', label: 'Тучков мост · набережная Макарова', x: -3672.5, z: -1697.6, yaw: yawToward(-3672.5, -1697.6, -3700, -1650), pitch: 6 },
     // the Egyptian sphinx pier on Universitetskaya Embankment: the west sphinx six metres to the right, the stair pit to the Neva ahead, the Academy of Arts behind the camera
     { key: 'Place.sphinxes', label: 'Египетские сфинксы · Университетская набережная', x: -3407.5, z: -497.9, yaw: yawToward(-3407.5, -497.9, -3386.8, -504.1), pitch: 6 },
   ];
@@ -379,9 +395,12 @@ export const TEST = {
     // ---
     { id: 'w362796524', by: 'bridges', group: 'palace' },
   ],      // one row per landmark module and its main sub-group
-  viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Place.sphinxes'],
+  viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'ShiftDigit1', 'ShiftDigit2', 'ShiftDigit3', 'ShiftDigit4', 'ShiftDigit5', 'ShiftDigit6',
+    'Place.lions', 'Place.customs', 'Place.tuchkov', 'Place.sphinxes'],
   mustHaveAreas: [
     { x: -2420, z: -975, has: 'дворцовый' }, { x: -3378.7, z: -507.7, has: 'сфинкс' }, { x: -3420, z: -502, has: 'университетская' },
+    { x: -2433.8, z: -1217.6, has: 'стрелка' }, { x: -2579.1, z: -979.2, has: 'кунсткамера' }, { x: -3137.7, z: -759.9, has: 'меншиков' }, { x: -4519.5, z: 359, has: 'горный' },
+    { x: -5420.3, z: -194.1, has: 'кирова' }, { x: -6140.8, z: 866.9, has: 'севкабель' }, { x: -6539.1, z: 783.9, has: 'морской вокзал' },
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
   roadsNear: { at: [-3400, -520], r: 90, min: 3 },

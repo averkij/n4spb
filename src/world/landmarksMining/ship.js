@@ -244,8 +244,11 @@ export async function build(K) {
   } finally { P.pop(); P.pop(); }
   // ------------------------------------------------------------------------------------------ colliders: the hull in 10 m slices (nobody boards), the gangway, the mooring lines are not solid
   step('colliders', () => {
-    for (let z = -50; z < 49; z += 8) {
-      const z1 = Math.min(49, z + 8), zm = (z + z1) / 2, h = Math.max(hb(z), hb(z1), hb(zm)) + 0.2;
+    // n4spb (docs/AREAS.md 15.v, tools/boat-passage-test.mjs "no invisible wall"): the slices follow the hull 0.6 m over the waterline (hbAt), in 3 m steps, not the flared deck line: the raked stem is 6 m shorter at the water than at the deck, and a
+    // collider that reaches beyond the drawn hull is a wall of water for the motor boat
+    const hw = (Z) => hbAt(Z, WL + 0.6);
+    for (let z = -50; z < 49; z += 3) {
+      const z1 = Math.min(49, z + 3), zm = (z + z1) / 2, h = Math.max(hw(z), hw(z1), hw(zm)) + 0.2;
       if (h < 0.3) continue;
       FS.box(ph, AX, zm, 2 * h, z1 - z + 0.4, 0, -7, 14.5);
     }
