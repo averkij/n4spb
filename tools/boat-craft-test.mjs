@@ -9,7 +9,10 @@
 //   2  (a) a moored tourist boat, (b) a moving one crossing the path (the clock advances), (c) the Fontanka boat, (d) the steppable pontoon and the landing of the Anichkov stair, (e) a hull sweeping into a
 //      resting boat: a 'hit' / 'scrape', never inside (the hull OBB overlaps the craft's by <= 0.06 m at any step), the boat bounces off, the craft is not moved by it, no teleport, the centre stays on water
 //   3  the dock: the boat leaves its dock and comes back with the craft running (no hit, no catch on the landing / pontoon); the walker and a car on the bed are stopped by a hull, a walker on a deck is not
-//   4  other areas: no boat, no craft in the territory
+//   4  the guard (docs/water-transport-boat-collisions.md): a scripted hull that comes at a float block / a resting boat with the player's boat in the gap never squeezes it (no teleport, no deep overlap; fixtures: the
+//      pinch of the review - a track that crosses a pontoon with a boat beside it), a script that snaps moves its box gradually, the unit rules of the ghost
+//   5  the sweep, every area: over a whole run of the clock no scripted hull overlaps a float block, a bridge pier, the quay or another craft by more than 0.1 m (the long-term oracle against tracks that cross something)
+//   (areas other than palace: a boat only where the dock is, no craft outside the territory, the sweep)
 import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
 
@@ -43,26 +46,7 @@ const tourists = collectBoats(ctx, L);                 // the independent descri
 /** the input of the sim hook: a constant or a function of the time, with every field (a function result is not completed by drive.sim) */
 const inp = (f, ctxr = null) => (t) => ({ thr: 0, brk: 0, steer: 0, hand: false, nitro: false, jump: false, flip: false, ...(typeof f === 'function' ? f(t, ctxr && ctxr()) : f) });
 
-const await_DOCKS = await import('../src/world/drive/boat/index.js');
-if (AREA !== 'palace') {
-  check(`area ${AREA}: a boat only where the dock is; every craft box that exists lies in this territory (${craftSvc ? craftSvc.list.length : 0} craft), nothing outside it is a solid`, () => {
-    const { DOCKS } = await_DOCKS; const docks = DOCKS.filter((k) => L.inPlay(k.x, k.z) && ph.waterLevel(k.x, k.z) != null).length;
-    assert.equal(d.boats.length, docks, 'a boat exactly where a dock lies in the territory'); assert.equal(d.vehicles.length, d.fleet.length + docks);
-    for (const c of (craftSvc ? craftSvc.list : [])) { let inside = false; for (let k = 0; k < 16 && !inside; k++) { const o = { x: 0, z: 0, rot: 0 }; c.pose(k * 47, o); inside = L.inPlay(o.x, o.z, -40); if (!c.moving) break; } assert.ok(inside, `${c.id} is outside the territory`); }
-    if (AREA === 'smolny') assert.ok(!craftSvc || craftSvc.list.length === 0, `${craftSvc.list.length} craft in the Smolninskoye`);
-    ctx.time = 50; ctx.player.position.set(L.HERO.x, 0, L.HERO.z); ph.refreshDynamic();
-    for (const i of ph._dynItems) if (i.source && i.source.craft) assert.ok(Math.hypot(i.cx - L.HERO.x, i.cz - L.HERO.z) < 400, 'a craft box far from the player');
-  });
-  check(`area ${AREA}: the cars are as before (each of the fleet enters, drives off and exits)`, () => { for (const v of d.fleet) { assert.ok(d.enter(v.id), v.id); d.sim(0.5, inp({ thr: 1 })); assert.ok(d.car.speed > 0.5, v.id); assert.ok(d.exit(true)); } });
-  console.log(fails ? `
-${fails} FAILED of ${checks + fails}` : `
-ALL ${checks} PASSED`); process.exit(fails ? 1 : 0);
-}
-
-// ---------------------------------------------------------------- the helpers
-const boat = d.boats[0], SPEC = boat.spec;
-const DOCK = { x: boat.parked.x, z: boat.parked.z, yaw: boat.parked.yaw };
-const walker = (x, z) => { player.inputLock = 0; player.setPose(x, z, 0, 0); return player; };
+// ---------------------------------------------------------------- the sweep: the long-term oracle against "a scripted hull sails through something" (every area)
 /** an oriented box { cx, cz, hw, hd, c, s } (the physics convention: local x -> (c, -s), local z -> (s, c)) */
 const obb = (cx, cz, w, dd, rot) => ({ cx, cz, hw: w / 2, hd: dd / 2, c: Math.cos(rot), s: Math.sin(rot) });
 /** the penetration depth of two oriented boxes (0 when apart): the smallest overlap over the four separating axes */
@@ -74,6 +58,78 @@ const pen = (a, b) => {
   }
   return m;
 };
+/** Over a whole run of the clock (the real pose function of every registered craft, the one that poses its mesh) no scripted hull box may overlap a static float block, a bridge pier, the quay, a
+ *  resting craft or another craft by more than `tol` metres. A static obstacle is judged by carContact (the very code that stops the player's boat: the hull as a floating car, boatPass floors excepted),
+ *  another craft by the exact footprint overlap. Returns { n, steps, worst: [{ a, b, kind, depth, t }] } (the worst overlap of every pair, deepest first). */
+function sweepCraft({ T = 1500, dt = 0.1, tol = 0.1 } = {}) {
+  const list = craftSvc ? craftSvc.list : [], worst = new Map(), SKIN = 0.06;
+  const note = (a, b, depth, t, kind) => { if (depth <= tol) return; const k = a + ' / ' + b; const w = worst.get(k); if (!w || depth > w.depth) worst.set(k, { a, b, kind, depth: +depth.toFixed(2), t: +t.toFixed(1) }); };
+  const specs = list.map((c) => { const b = c.box; return { c, spec: { W: b.w, len: b.d, centerZ: 0, hgt: b.y1 - (b.y0 + 0.15) }, y: b.y0 + 0.15 }; });
+  const poses = specs.map(() => ({ x: 0, z: 0, rot: 0 })), inside = specs.map(() => false);
+  const steps = specs.some((s) => s.c.moving) ? Math.floor(T / dt) : 0;
+  const contact = {};
+  for (let k = 0; k <= steps; k++) {
+    const t = k * dt;
+    for (let i = 0; i < specs.length; i++) {
+      const { c, spec, y } = specs[i], o = poses[i];
+      if (!c.moving && k > 0) continue;                                         // (a resting craft: judged once; its pose and its `inside` stay)
+      inside[i] = false;
+      c.pose(t, o);
+      if (!L.inPlay(o.x, o.z, -10)) continue;                                   // (the page's territory: a hull beyond it is no business of this page)
+      inside[i] = true;
+      const car = { x: o.x, z: o.z, yaw: o.rot, y, floats: true }, r = Math.hypot(spec.W, spec.len) / 2 + 1;
+      for (const b of ph.querySolids(o.x, o.z, r)) {
+        if (b.source) continue;                                                 // (a craft or a car, judged below)
+        if (b.type === 'ramp' || b.y0 > y + 0.3) continue;                         // (a bridge deck / an overhead slab is no obstacle in the water: the roof of a tourist boat may clip the Anichkov deck, 2.2 m over the Fontanka; what stands IN the water counts)
+        const q = carContact(car, spec, b, contact);
+        if (q) note(c.id, b.floatBlock ? `float@${b.cx.toFixed(0)},${b.cz.toFixed(0)}` : `${b.type}@${b.cx.toFixed(0)},${b.cz.toFixed(0)}`, q.depth - SKIN, t, b.floatBlock ? 'float block' : 'solid');
+      }
+    }
+    for (let i = 0; i < specs.length; i++) {
+      const a = poses[i], sa = specs[i];
+      if (!inside[i]) continue;
+      for (let j = i + 1; j < specs.length; j++) {
+        if (!inside[j] || (k > 0 && !sa.c.moving && !specs[j].c.moving)) continue;
+        const b = poses[j], sb = specs[j];
+        if (Math.abs(a.x - b.x) > 50 || Math.abs(a.z - b.z) > 50) continue;
+        const wa = sa.spec.W, da = sa.spec.len, wb = sb.spec.W, db = sb.spec.len;
+        if ((a.x - b.x) ** 2 + (a.z - b.z) ** 2 > (Math.hypot(wa, da) / 2 + Math.hypot(wb, db) / 2) ** 2) continue;
+        if (Math.abs(sa.y - sb.y) > 1) continue;
+        const dd = pen(obb(a.x, a.z, wa, da, a.rot), obb(b.x, b.z, wb, db, b.rot));
+        note(sa.c.id, sb.c.id, dd, t, sa.c.moving && sb.c.moving ? 'two moving craft' : 'a resting craft');
+      }
+    }
+  }
+  return { n: specs.length, steps, worst: [...worst.values()].sort((p, q) => q.depth - p.depth) };
+}
+const sweepCheck = () => check(`5 the sweep: no scripted hull overlaps a float block, a bridge pier, the quay or another craft by more than 0.1 m over ${QUICK ? 900 : 3600} s of the clock (${craftSvc ? craftSvc.list.length : 0} craft, area ${AREA})`, () => {
+  const t1 = Date.now(), r = sweepCraft({ T: QUICK ? 900 : 3600 });
+  console.log(`     ${r.n} craft, ${r.steps} steps each, ${((Date.now() - t1) / 1000).toFixed(1)} s; ${r.worst.length} overlap(s) over 0.1 m${r.worst.length ? ':\n       ' + r.worst.slice(0, +process.env.SWEEP_LINES || 14).map((w) => `${w.a} x ${w.b} (${w.kind}) ${w.depth} m at t ${w.t}`).join('\n       ') : ''}`);
+  assert.equal(r.worst.length, 0, `${r.worst.length} overlap(s): ${r.worst.slice(0, 5).map((w) => `${w.a} x ${w.b} ${w.depth} m`).join('; ')}`);
+});
+
+if (process.env.SWEEP_ONLY) { sweepCheck(); process.exit(fails ? 1 : 0); }          // (a quick loop while the tracks are tuned)
+const await_DOCKS = await import('../src/world/drive/boat/index.js');
+if (AREA !== 'palace') {
+  check(`area ${AREA}: a boat only where the dock is; every craft box that exists lies in this territory (${craftSvc ? craftSvc.list.length : 0} craft), nothing outside it is a solid`, () => {
+    const { DOCKS } = await_DOCKS; const docks = DOCKS.filter((k) => L.inPlay(k.x, k.z) && ph.waterLevel(k.x, k.z) != null).length;
+    assert.equal(d.boats.length, docks, 'a boat exactly where a dock lies in the territory'); assert.equal(d.vehicles.length, d.fleet.length + docks);
+    for (const c of (craftSvc ? craftSvc.list : [])) { let inside = false; for (let k = 0; k < 16 && !inside; k++) { const o = { x: 0, z: 0, rot: 0 }; c.pose(k * 47, o); inside = L.inPlay(o.x, o.z, -40); if (!c.moving) break; } assert.ok(inside, `${c.id} is outside the territory`); }
+    if (AREA === 'smolny') assert.ok(!craftSvc || craftSvc.list.length === 0, `${craftSvc.list.length} craft in the Smolninskoye`);
+    ctx.time = 50; ctx.player.position.set(L.HERO.x, 0, L.HERO.z); ph.refreshDynamic();
+    for (const i of ph._dynItems) if (i.source && i.source.craft) assert.ok(Math.hypot(i.cx - L.HERO.x, i.cz - L.HERO.z) < 400, 'a craft box far from the player');
+  });
+  check(`area ${AREA}: the cars are as before (each of the fleet enters, drives off and exits)`, () => { for (const v of d.fleet) { assert.ok(d.enter(v.id), v.id); d.sim(0.5, inp({ thr: 1 })); assert.ok(d.car.speed > 0.5, v.id); assert.ok(d.exit(true)); } });
+  sweepCheck();
+  console.log(fails ? `
+${fails} FAILED of ${checks + fails}` : `
+ALL ${checks} PASSED`); process.exit(fails ? 1 : 0);
+}
+
+// ---------------------------------------------------------------- the helpers
+const boat = d.boats[0], SPEC = boat.spec;
+const DOCK = { x: boat.parked.x, z: boat.parked.z, yaw: boat.parked.yaw };
+const walker = (x, z) => { player.inputLock = 0; player.setPose(x, z, 0, 0); return player; };
 const hullOf = (car) => obb(car.x + Math.sin(car.yaw) * SPEC.centerZ, car.z + Math.cos(car.yaw) * SPEC.centerZ, SPEC.W, SPEC.len, car.yaw);
 /** the footprint of a tourist boat from its service description at time t */
 // (the Fontanka hulls by kind: landmarksC/boats.js SPECS Ln x B; the wildlife table rounds them to 24 x 4.4 / 18 x 4.0)
@@ -94,7 +150,7 @@ function run({ x, z, yaw, v0 = 0, tStart = 0, T = 8, input, targets = [], tol = 
   ctx.time = tStart; ctx.player.position.set(x, 0, z);
   d.exit(true); walker(x, z); d.enter('boat'); d.teleport(x, z, yaw);
   d.car.vx = Math.sin(yaw) * v0; d.car.vz = Math.cos(yaw) * v0;
-  const r = { hits: [], scrapes: 0, maxPen: 0, penAt: null, off: 0, jump: 0, jumpAt: null, minGap: Infinity, firstHit: null, relAfter: null, recoil: 0, trace: [] };
+  const r = { hits: [], scrapes: 0, maxPen: 0, penAt: null, off: 0, jump: 0, jumpAt: null, maxStep: 0, minGap: Infinity, firstHit: null, relAfter: null, recoil: 0, trace: [] };
   let prev = { x: d.car.x, z: d.car.z }, hitFrame = -1, sep0 = 0;
   const sepN = (c, i) => { const tg = targets[0]; if (!tg || !r.firstHit) return 0; const o = tg.obb(tStart + i / 60); return (c.x - o.cx) * r.firstHit.nx + (c.z - o.cz) * r.firstHit.nz; };
   d.sim(T, inp(input || { thr: 1 }, () => r), (i, c) => {
@@ -111,7 +167,7 @@ function run({ x, z, yaw, v0 = 0, tStart = 0, T = 8, input, targets = [], tol = 
       r.recoil = Math.max(r.recoil, sepN(c, i) - sep0);
     }       // the boat's distance from the struck hull along the first contact normal, after the blow
     if (!wet(c.x, c.z)) r.off++;
-    const mv = Math.hypot(c.x - prev.x, c.z - prev.z); if (mv > 0.9) { r.jump++; r.jumpAt = r.jumpAt || { i, mv: +mv.toFixed(2), x: +c.x.toFixed(1), z: +c.z.toFixed(1) }; } prev = { x: c.x, z: c.z };
+    const mv = Math.hypot(c.x - prev.x, c.z - prev.z); r.maxStep = Math.max(r.maxStep, mv); if (mv > 0.9) { r.jump++; r.jumpAt = r.jumpAt || { i, mv: +mv.toFixed(2), x: +c.x.toFixed(1), z: +c.z.toFixed(1) }; } prev = { x: c.x, z: c.z };
     for (const tg of targets) { const o = tg.obb(t); r.minGap = Math.min(r.minGap, Math.hypot(c.x - o.cx, c.z - o.cz)); }
     ctx.time = tStart + (i + 1) / 60; ctx.player.position.set(c.x, c.y, c.z);
     if (i % 30 === 0) r.trace.push([+c.x.toFixed(1), +c.z.toFixed(1), +c.speed.toFixed(0)]);
@@ -163,6 +219,7 @@ check('1 the pontoons and the landing slabs are float blocks: a top over the boa
   assert.ok(fbs.length >= 20, `${fbs.length} float blocks`);
   for (const b of fbs) { const wl = water(b.cx, b.cz); assert.ok(wl !== null, 'a float block on dry land'); assert.ok(b.y1 - wl > 0.45 && b.y1 - wl <= 0.45 + 0.22 + 1e-9, `top ${b.y1 - wl} over the water`); }
 });
+const await_DOCKS_lib = await import('../src/world/lib/docks.js'), { obbGap: obbGapOf } = await import('../src/world/lib/craft-solids.js');
 const q = ctx.services.environment.quay, openStair = q.allStairs.find((s) => s.walk && s.pontoonTop !== undefined);
 const PONT = openStair && { len: 15, wid: 3.0, top: openStair.pontoonTop };
 check('1 a walker standing on the pontoon deck / the lower landing of the Anichkov stair is NOT pushed by the float blocks (they are floors for him, as before) and can step from the landing onto the deck', () => {
@@ -174,6 +231,20 @@ check('1 a walker standing on the pontoon deck / the lower landing of the Anichk
   assert.ok(stand(uL + 3.2, 1.5, PONT.top) < 1e-6 && ph.groundHeight(Pq(uL + 3.2, 1.5)[0], Pq(uL + 3.2, 1.5)[1], openStair.landingY, false) === PONT.top, 'the deck is still the floor above the landing');
   // a wader on the bed is stopped by the pontoon (as by the walk box before) and by the landing
   assert.ok(stand(14, 1.5, -4.6) > 0.5, 'a wader walks through the pontoon');
+});
+check('1 the lower landing of the Anichkov stair is a block for the boat everywhere except the footprint of the dock hull grown by its clear water (the notch follows the hull, not a strip of the whole landing)', () => {
+  assert.ok(openStair, 'no steppable stair'); const { DOCK_HULL, DOCK_CLEAR } = await_DOCKS_lib;
+  assert.equal(DOCK_HULL.W, SPEC.W); assert.equal(DOCK_HULL.front, SPEC.front); assert.equal(DOCK_HULL.rear, SPEC.rear); assert.equal(DOCK_HULL.centerZ, SPEC.centerZ);
+  const { x, z, tx, tz, nx, nz, w } = openStair, uL = 1.6 + 11 * 0.4, Pq = (u, v) => [x + tx * u - nx * v, z + tz * u - nz * v];
+  const hull = obb(DOCK.x + Math.sin(DOCK.yaw) * SPEC.centerZ, DOCK.z + Math.cos(DOCK.yaw) * SPEC.centerZ, SPEC.W, SPEC.len, DOCK.yaw), probe = (px, pz) => obbGapOf(obb(px, pz, 0.02, 0.02, 0), hull);
+  const covered = (px, pz) => fbs.some((b) => { const dx = px - b.cx, dz = pz - b.cz; return Math.abs(dx * b.c - dz * b.s) <= b.hw && Math.abs(dx * b.s + dz * b.c) <= b.hd; });
+  let open = 0, solid = 0, n = 0, leak = 0;
+  for (let u = uL + 0.05; u < uL + 3.0; u += 0.1) for (let v = 0.0; v < w + 0.08; v += 0.1) {
+    const [px, pz] = Pq(u, v), g = probe(px, pz); n++;
+    if (g > DOCK_CLEAR + 0.15) { if (!covered(px, pz)) { open++; } } else if (g < 0.5 && covered(px, pz)) solid++; else if (g >= 0.5 && g <= DOCK_CLEAR + 0.15 && !covered(px, pz)) leak++;
+  }
+  console.log(`     ${n} points of the landing: ${open} uncovered farther than the clear water from the hull, ${solid} covered within 0.5 m of the hull, ${leak} uncovered in the margin strip (0.5 .. ${(DOCK_CLEAR + 0.15).toFixed(2)} m)`);
+  assert.equal(open, 0, `${open} points of the landing are not a block although the dock is farther than its clear water`); assert.equal(solid, 0, `${solid} points of the landing within 0.5 m of the dock hull are a block`);
 });
 
 // ---------------------------------------------------------------- 2 driving into the craft
@@ -318,6 +389,118 @@ check('3 a car on the river bed (feet far under the water) meets the same hull; 
   assert.ok(carContact(bedCar, lada, it), 'a car on the bed passes through the hull'); assert.ok(carContact(floatCar, SPEC, it), 'a floating boat passes through the hull');
   void o;
 });
+// ---------------------------------------------------------------- 4 the guard
+const PL = L.WORLD.play;
+/** a spot of open water (R m of water all around it, inside the territory, no craft of the page within R + 20 m + its reach at any time of 1500 s): the fixtures of 4 go there. { x, z } or null */
+function openWater(R = 45) {
+  const busy = [], o = { x: 0, z: 0, rot: 0 };
+  for (const c of craftSvc.list) for (let t = 0; t < (c.moving ? 1500 : 1); t += 5) { c.pose(t, o); busy.push([o.x, o.z, c.reach]); }
+  let best = null;
+  for (let x = PL.x0; x <= PL.x1; x += 30) for (let z = PL.z0; z <= PL.z1; z += 30) {
+    if (!wet(x, z) || !L.inPlay(x, z, R)) continue;
+    let ok = true; for (let k = 0; k < 24 && ok; k++) for (const r of [15, 30, R]) { const a = k * Math.PI / 12; if (!wet(x + Math.cos(a) * r, z + Math.sin(a) * r)) { ok = false; break; } }
+    if (!ok) continue;
+    let clear = Infinity; for (const [bx, bz, br] of busy) clear = Math.min(clear, Math.hypot(bx - x, bz - z) - br);
+    if (clear > R + 20 && (!best || clear > best.clear)) best = { x, z, clear };
+  }
+  return best;
+}
+/** the half extent of the oriented box S along the unit vector n */
+const support = (S, n) => S.hw * Math.abs(n[0] * S.c - n[1] * S.s) + S.hd * Math.abs(n[0] * S.s + n[1] * S.c);
+/** A scripted hull H (12 x 3.4 m, 3 m/s, a fixture of the registry) comes straight at the face of the static box S (outward normal n) with the player's boat lying in the gap between them, engine off, its long axis
+ *  along the approach (the worst case: it needs the whole 5.7 m of the gap), and goes on THROUGH S (a track that crosses it: what moika-green did at the pontoon). The boat must not be squeezed deep and never thrown. */
+function pinchRun(S, n, { yaw, T = 18, t0 = 200 } = {}) {
+  const sup = support(S, n), t = [-n[1], n[0]], rot = Math.atan2(-t[1], t[0]), wl = water(S.cx + n[0] * (sup + 4), S.cz + n[1] * (sup + 4)), v = 3;
+  const D0 = sup + 3.3 * 2 + 6 + 30, D1 = sup, at = (d) => [S.cx + n[0] * d, S.cz + n[1] * d];
+  const dOf = (tt) => Math.max(D1, D0 - v * (tt - t0));
+  const H = craftSvc.add({ id: 'test-H', kind: 'test', key: 'x', y: wl, w: 12, d: 3.4, h: 2.2, moving: true, speed: v, pose: (tt, o) => { const q = at(dOf(tt)); o.x = q[0]; o.z = q[1]; o.rot = rot; } });
+  assert.ok(H, 'the fixture hull is not in the territory');
+  try {
+    const bc = at(sup + 3.3), ya = yaw === undefined ? Math.atan2(n[0], n[1]) : yaw;
+    return run({ x: bc[0] - Math.sin(ya) * SPEC.centerZ, z: bc[1] - Math.cos(ya) * SPEC.centerZ, yaw: ya, tStart: t0, T, input: { thr: 0 }, targets: [{ name: 'static', obb: () => S }] });
+  } finally { craftSvc.remove(H); }
+}
+const showPinch = (name, r) => console.log(`     ${name}: biggest step of the boat in one frame ${r.maxStep.toFixed(2)} m, deepest overlap with the static box ${r.maxPen.toFixed(2)} m, ${r.hits.length} hit(s) ${JSON.stringify(r.hits.slice(0, 2))}, ${r.scrapes} scrape(s), off ${r.off}`);
+const ow = openWater();
+check('4 the guard: a hull comes at a resting boat with the player\'s boat in the gap and goes through it: the boat is not squeezed deep and not thrown (a step per frame under 0.5 m), at any yaw', () => {
+  assert.ok(ow, 'no open water for the fixtures');
+  for (const yaw of [undefined, 0.8, 1.9]) {
+    const wl = water(ow.x, ow.z), rotS = 0.4, S = obb(ow.x, ow.z, 12, 3.4, rotS), n = [S.s, S.c];
+    const St = craftSvc.add({ id: 'test-S', kind: 'test', key: 'x', y: wl, w: 12, d: 3.4, h: 2.2, moving: false, pose: (tt, o) => { o.x = ow.x; o.z = ow.z; o.rot = rotS; } });
+    try {
+      const r = pinchRun(S, n, { yaw });
+      showPinch(`a resting boat, the boat's yaw ${yaw === undefined ? 'along the approach' : yaw}`, r);
+      assert.ok(r.maxStep < 0.5, `the boat was thrown ${r.maxStep.toFixed(2)} m in one frame`); assert.ok(r.maxPen < 0.5, `squeezed ${r.maxPen.toFixed(2)} m into the resting boat`); assert.equal(r.off, 0, 'the boat left the water');
+    } finally { craftSvc.remove(St); }
+  }
+});
+check('4 the guard: the same against a pontoon (a float block of the page)', () => {
+  let done = 0;
+  for (const f of floatBlocks()) {
+    if (done >= 2) break;
+    const S = { cx: f.cx, cz: f.cz, hw: f.hw, hd: f.hd, c: f.c, s: f.s };
+    for (const sg of [1, -1]) {
+      const n = [S.s * sg, S.c * sg], sup = support(S, n); let clear = true;                       // (the normal of a long side: local z)
+      for (let u = sup; u <= sup + 70 && clear; u += 2) for (const o of [-8, -4, 0, 4, 8]) {
+        const x = S.cx + n[0] * u - n[1] * o, z = S.cz + n[1] * u + n[0] * o;
+        if (!wet(x, z) || !L.inPlay(x, z, 6)) { clear = false; break; }
+        for (const b of ph.querySolids(x, z, 6)) if (!b.source && b !== f && b.type !== 'ramp' && b.y0 < water(x, z) + 0.3 && b.y1 > water(x, z) + 0.5) { clear = false; break; }
+      }
+      if (!clear) continue;
+      const r = pinchRun(S, n, { t0: 200 + done * 40 }); showPinch(`float block at ${S.cx.toFixed(0)}, ${S.cz.toFixed(0)}`, r); done++;
+      assert.ok(r.maxStep < 0.5, `the boat was thrown ${r.maxStep.toFixed(2)} m in one frame`); assert.ok(r.maxPen < 0.5, `squeezed ${r.maxPen.toFixed(2)} m into the pontoon`); assert.equal(r.off, 0, 'the boat left the water');
+      break;
+    }
+  }
+  assert.ok(done > 0, 'no pontoon with a free approach');
+});
+check('4 a script that snaps (1.2 m / 4 deg once per lap, like the Fontanka loop) moves its box gradually: no jump of the box, a boat beside it is pushed, never thrown', () => {
+  assert.ok(ow, 'no open water'); const wl = water(ow.x, ow.z), t0 = 200, v = 2, tS = t0 + 12.5;
+  const pose = (tt, o) => { const sn = tt >= tS ? 1 : 0; o.x = ow.x - 25 + v * (tt - t0); o.z = ow.z + 2.45 - 1.2 * sn; o.rot = Math.PI / 2 - 0.07 * sn; };
+  const H = craftSvc.add({ id: 'test-snap', kind: 'test', key: 'x', y: wl, w: 12, d: 3.4, h: 2.2, moving: true, speed: v, pose });
+  assert.ok(H);
+  try {
+    const r = run({ x: ow.x, z: ow.z - 0.5, yaw: Math.PI / 2, tStart: t0, T: 16, input: { thr: 0 }, targets: [] });
+    let boxJump = 0, last = null, vmax = 0;                                       // the box over the snap, frame by frame (the clock runs 1/60 s a step)
+    for (let i = 0; i < 16 * 60; i++) {
+      ctx.time = t0 + i / 60; ctx.player.position.set(ow.x, 0, ow.z); const b = craftSvc.boxes().find((q) => q.craft === H); if (!b) { last = null; continue; }
+      if (last) boxJump = Math.max(boxJump, Math.hypot(b.cx - last[0], b.cz - last[1])); last = [b.cx, b.cz]; vmax = Math.max(vmax, Math.hypot(b.vx, b.vz));
+    }
+    showPinch('a hull whose script snaps 1.2 m into a boat beside it', r); console.log(`     the box: biggest step ${boxJump.toFixed(3)} m in a frame (the script jumps 1.2 m), biggest velocity ${vmax.toFixed(1)} m/s`);
+    assert.ok(boxJump < 0.12, `the box jumped ${boxJump.toFixed(2)} m in one frame`); assert.ok(vmax < 1.6 * v + 1.6, `a phantom velocity of ${vmax.toFixed(1)} m/s`);
+    assert.ok(r.maxStep < 0.5, `the boat was thrown ${r.maxStep.toFixed(2)} m in one frame`);
+  } finally { craftSvc.remove(H); }
+});
+check('4 the ghost rules: coming closer than PINCH to a resting boat = no box; keeping the distance, opening = a box; never solid on top of the player', () => {
+  assert.ok(ow); const wl = water(ow.x, ow.z), t0 = 400;
+  const S = craftSvc.add({ id: 'test-S2', kind: 'test', key: 'x', y: wl, w: 12, d: 3.4, h: 2.2, moving: false, pose: (tt, o) => { o.x = ow.x; o.z = ow.z; o.rot = 0; } });
+  const mk = (id, f) => craftSvc.add({ id, kind: 'test', key: 'x', y: wl, w: 12, d: 3.4, h: 2.2, moving: true, speed: 3, pose: (tt, o) => { const q = f(tt - t0); o.x = ow.x + q[0]; o.z = ow.z + q[1]; o.rot = 0; } });
+  const closing = mk('test-closing', (u) => [0, 30 - 3 * u]);                       // along z toward S (both 3.4 thick: the gap is z - 3.4), through it
+  const parallel = mk('test-parallel', (u) => [-25 + 3 * u, 5.4]);                  // along x toward the end of S, then past it at a 2.0 m gap
+  const opening = mk('test-opening', (u) => [0, 5.9 + 3 * u]);                      // away from S
+  const back = mk('test-back', (u) => [0, u < 4 ? 12 - 3 * u : 3 * (u - 4)]);         // to the middle of S at u = 4 and away again
+  const fx = [S, closing, parallel, opening, back];
+  try {
+    ctx.player.position.set(ow.x + 40, 0, ow.z + 40);
+    const L1 = [], L2 = [], L3 = [], L4 = [];
+    for (let i = 0; i < 12 * 30; i++) {
+      const u = i / 30; ctx.time = t0 + u; const boxes = craftSvc.boxes(), has = (c) => boxes.includes(c.box);
+      L1.push([30 - 3 * u - 3.4, has(closing)]); L2.push([-25 + 3 * u, has(parallel)]); L3.push(has(opening));
+    }
+    for (const [g, h] of L1) { if (g > 6.6) assert.ok(h, `the closing hull is a ghost at gap ${g.toFixed(1)} m`); if (g < 5.6 && g > -1.5) assert.ok(!h, `the closing hull is a solid at gap ${g.toFixed(1)} m`); }
+    for (const [x, h] of L2) { const gx = -x - 12; if (gx > 7) assert.ok(h, `the end-on hull is a ghost at ${gx.toFixed(1)} m from the end of S`); if (gx < 5 && gx > 3) assert.ok(!h, `the end-on hull is a solid at ${gx.toFixed(1)} m from the end of S`); if (gx < 0.5 && x < 11) assert.ok(h, `the hull that glides past S at 2 m is not a solid (x ${x.toFixed(1)})`); }
+    assert.ok(L3.every((h) => h), 'a hull that moves away is a ghost');
+    // hold: the player stands inside the box of the retreating hull: it stays a ghost until he is 3.6 m clear of it
+    ctx.player.position.set(ow.x, 0, ow.z + 0.5);
+    for (let i = 0; i < 12 * 30; i++) {
+      const u = i / 30; ctx.time = t0 + u; const h = craftSvc.boxes().includes(back.box);
+      if (u > 3.0 && u < 5.5) assert.ok(!h, `the hull is a solid at ${u.toFixed(2)} s with the player inside it`);
+      if (u > 7.5) assert.ok(h, `the hull is a ghost at ${u.toFixed(2)} s, the player is clear of it`);
+      L4.push(h);
+    }
+  } finally { for (const c of fx) craftSvc.remove(c); }
+});
+sweepCheck();
 console.log(fails ? `\n${fails} FAILED of ${checks + fails}` : `\nALL ${checks} PASSED`);
 void THREE; void errors;
 process.exit(fails ? 1 : 0);
