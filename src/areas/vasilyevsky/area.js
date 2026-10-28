@@ -24,9 +24,9 @@ import { GROUPS_SW } from '../../world/bridges/groups-sw.js';
 import * as G_ACADEMY from '../../world/landmarksAcademy/groups.js';
 import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as RINGS_PAVED } from './rings.js';
 // ---
-// PORT-IMPORT: landmarksStrelka
+import { GROUPS_LIST as G_STRELKA } from '../../world/landmarksStrelka/groups.js';
 // ---
-// PORT-IMPORT: landmarksUniversity
+import { GROUPS_LIST as G_UNIVERSITY } from '../../world/landmarksUniversity/groups.js';
 // ---
 // PORT-IMPORT: landmarksMenshikov
 // ---
@@ -67,11 +67,11 @@ export const MODULES = [
   'environment',  // ground, embankment granite, Neva / Malaya Neva / Smolenka water, trees, lawns, flowerbeds, far skyline
   'streets',      // roads, markings, kerbs, granite pavements, crossings, road furniture, trolleybus overhead wires
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
-  // PORT-MODULE: landmarksStrelka
+  'landmarksStrelka', // the Spit: the Old Stock Exchange, the two Rostral columns, Birzhevaya Square garden, the granite descent, the warehouses, the Customs house (docs/vo-m1.md)
   //
-  // PORT-MODULE: landmarksUniversity
+  'landmarksUniversity', // Universitetskaya embankment: the Kunstkamera, the Academy of Sciences, the Twelve Collegia, the monuments, the Rector wing, the Palace of Peter II, Novobirzhevoy Gostiny Dvor (docs/vo-m1.md)
   //
-  'landmarksAcademy', // the Academy of Arts, the Egyptian sphinx pier, the Academic Garden, Trezzini Square, the House of Academicians (docs/AREAS.md 15.z; the last three parts are not knock-adapted yet)
+  'landmarksAcademy', // the Academy of Arts, the Egyptian sphinx pier, the Academic Garden, Trezzini Square, the House of Academicians (docs/AREAS.md 15.z; the garden, the square and the House of Academicians are knock-adapted in docs/vo-m1.md)
   //
   // PORT-MODULE: landmarksMenshikov
   //
@@ -109,9 +109,9 @@ export const MODULES = [
 export const LABELS = {
   landmarksAcademy: 'Академия художеств, Египетские сфинксы, Академический сад',
   // ---
-  // PORT-LABEL: landmarksStrelka
+  landmarksStrelka: 'Стрелка, Биржа, Ростральные колонны, Таможня',
   // ---
-  // PORT-LABEL: landmarksUniversity
+  landmarksUniversity: 'Кунсткамера, Академия наук, Двенадцать коллегий',
   // ---
   // PORT-LABEL: landmarksMenshikov
   // ---
@@ -175,9 +175,9 @@ export const GROUPS = {};
 // the Academy of Arts (docs/AREAS.md 15.z): all five sub-groups lie in this territory (Admiralty-Haymarket claims only the first two)
 GROUPS.landmarksAcademy = G_ACADEMY.GROUPS_LIST;
 // ---
-// PORT-GROUPS: landmarksStrelka
+GROUPS.landmarksStrelka = G_STRELKA;
 // ---
-// PORT-GROUPS: landmarksUniversity
+GROUPS.landmarksUniversity = G_UNIVERSITY;
 // ---
 // PORT-GROUPS: landmarksMenshikov
 // ---
@@ -216,9 +216,15 @@ export function makeAreas(h) {
   _deck('Дворцовый мост · Palace Bridge', [-2344.2, -871.2], [-2495.5, -1075.8], 32),
   { name: 'Благовещенский мост · Blagoveshchensky Bridge', c: [-3449, -264], r: 170 },
   // ---
-  // PORT-AREAS: landmarksStrelka
+  { name: 'Ростральные колонны · Rostral Columns', c: [-2585.1, -1364.3], r: 22 }, { name: 'Ростральные колонны · Rostral Columns', c: [-2481.4, -1190.1], r: 22 },
+  ...h._named(/Санкт-Петербургская Биржа/i, 16, { c: [-2590, -1245], r: 60 }).map((r) => ({ name: 'Биржа · Old Stock Exchange', ...r })),
+  { name: 'Пушкинский Дом · Pushkin House (Customs house)', c: [-2797.2, -1380.1], r: 45 },
+  { name: 'Стрелка Васильевского острова · Spit of Vasilievsky Island', c: [-2500, -1290], r: 120 },
   // ---
-  // PORT-AREAS: landmarksUniversity
+  { name: 'Кунсткамера · Kunstkamera', c: [-2613.3, -1012.9], r: 58 },
+  { name: 'Академия наук · Academy of Sciences', c: [-2705.1, -940.4], r: 52 },
+  { name: 'Памятник Ломоносову · Lomonosov monument', c: [-2777.2, -905.9], r: 22 },
+  ...h._named(/Двенадцати коллегий/i, 14, { c: [-2910, -1030], r: 60 }).map((r) => ({ name: 'Двенадцать коллегий · Twelve Collegia (University)', ...r })),
   // ---
   // PORT-AREAS: landmarksMenshikov
   // ---
@@ -302,9 +308,9 @@ export const TEST = {
   claimed: [
     { id: 'r165182', by: 'landmarksAcademy', group: 'academy-of-arts' },
     // ---
-    // PORT-CLAIMED: landmarksStrelka
+    { id: 'r3084726', by: 'landmarksStrelka', group: 'exchange' },
     // ---
-    // PORT-CLAIMED: landmarksUniversity
+    { id: 'r3296328', by: 'landmarksUniversity', group: 'kunstkamera' },
     // ---
     // PORT-CLAIMED: landmarksMenshikov
     // ---
@@ -453,9 +459,9 @@ export const GARAGE = {
 /** environment.js: the services whose `entrances` ([{ x, z, clearance? }]) clear the trees from the doors of the buildings they list */
 export const PRUNE_SERVICES = [
   'city',
-  // PORT-PRUNE: landmarksStrelka
+  'landmarksStrelka',
   //
-  // PORT-PRUNE: landmarksUniversity
+  'landmarksUniversity',
   //
   // PORT-PRUNE: landmarksMenshikov
   //
