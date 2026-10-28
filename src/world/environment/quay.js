@@ -41,6 +41,9 @@ import { pierRects } from './boats.js';
 import { BANK_INDEX } from './bank-index.js';
 import { lionGeometry } from './lions.js';
 import { knockBays, faceLeft, unitBox, unitProfile } from '../lib/fence-bays.js';
+import { addFloatBlock } from '../lib/craft-solids.js';
+import { DOCKS, DOCK_HULL, DOCK_CLEAR } from '../lib/docks.js';
+import { GARAGE } from '../lib/area-tables.js';
 const L2 = L;
 
 export const WATER_Y = L.RIVER_Y.water;
@@ -461,6 +464,31 @@ const POST_TONES = {
   ballpost: () => '#24282c', trellis: () => '#3f7a3c', bigpost: (t) => (t < 0.5 ? '#b08c7c' : '#a98476'),
 };
 
+/** The float block of the lower landing of a steppable flight (3 m along the flight x the width + 0.12, in the frame of the flight: u along it, v across, Pq(u, v)): a block for the player's boat, except
+ *  where the hull of a boat at its dock lies: the docks of the area (lib/docks.js) keep DOCK_CLEAR m of free water around their hull (the boat must leave the dock and a collider within 0.5 m of it fails
+ *  tools/boat-test.mjs 1), so the block is the landing MINUS the hull grown by DOCK_CLEAR (in the frame of the flight: the box of its corners), cut as pieces: before / behind the hull along the flight,
+ *  and beside it across the flight. A landing that no dock touches is one block. */
+function landingBlocks(phys, Pq, tx, tz, nx, nz, p0, uL, Wd, rot, wl) {
+  const u0 = uL, u1 = uL + 3.0, v0 = -0.02, v1 = Wd + 0.1;
+  let cut = null;
+  for (const dk of (Array.isArray(GARAGE.boats) ? GARAGE.boats : DOCKS)) {
+    if (!dk || !Number.isFinite(dk.x) || !Number.isFinite(dk.z)) continue;
+    const yaw = Number.isFinite(dk.yaw) ? dk.yaw : 0, sy = Math.sin(yaw), cy = Math.cos(yaw), H = DOCK_HULL, hw = H.W / 2 + DOCK_CLEAR;
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (const [fa, fb] of [[H.front + DOCK_CLEAR, hw], [H.front + DOCK_CLEAR, -hw], [H.rear - DOCK_CLEAR, hw], [H.rear - DOCK_CLEAR, -hw]]) {
+      const px = dk.x + sy * fa + cy * fb, pz = dk.z + cy * fa - sy * fb, dx = px - p0.x, dz = pz - p0.z;
+      const u = dx * tx + dz * tz, v = -(dx * nx + dz * nz);
+      a0 = Math.min(a0, u); a1 = Math.max(a1, u); b0 = Math.min(b0, v); b1 = Math.max(b1, v);
+    }
+    if (a1 > u0 && a0 < u1 && b1 > v0 && b0 < v1) cut = { a0, a1, b0, b1 };
+  }
+  const piece = (ua, ub, va, vb) => { if (ub - ua < 0.05 || vb - va < 0.05) return; const c = Pq((ua + ub) / 2, (va + vb) / 2); addFloatBlock(phys, c[0], c[1], ub - ua, vb - va, rot, wl); };
+  if (!cut) { piece(u0, u1, v0, v1); return; }
+  const ca = Math.max(u0, cut.a0), cb = Math.min(u1, cut.a1);
+  piece(u0, ca, v0, v1); piece(cb, u1, v0, v1);                                  // before / behind the hull along the flight
+  piece(ca, cb, v0, Math.min(v1, cut.b0)); piece(ca, cb, Math.max(v0, cut.b1), v1);      // beside it, across the flight
+}
+
 export function buildQuay(ctx, root) {
   const T = ctx.THREE || THREE;
   const P = ctx.palette || {};
@@ -577,6 +605,7 @@ export function buildQuay(ctx, root) {
       let c = P((gB - gA) / 2, (Wd - 0.4) / 2); ctx.physics.addWalkBox(c[0], c[1], gA + gB, Wd + 0.4, rot, top, -8);
       c = P(gB + flight / 2, Wd / 2); ctx.physics.addStairs(c[0], c[1], Wd, flight, Math.atan2(t[0], t[1]), top, lowY, N);
       c = P(uL + DS.low / 2, Wd / 2); ctx.physics.addWalkBox(c[0], c[1], DS.low, Wd, rot, lowY, -8);
+      addFloatBlock(ctx.physics, c[0], c[1], DS.low, Wd, rot, wl);            // the lower landing stands 0.22 m over the water in the river: a walker's floor, and a block for a boat (it rode over it: lib/craft-solids.js)
       d.rot = rot; d.play = true; info.colliders += 3;                         // the barriers (outer edge, back, end) come in finishDescent once a pier may be attached
     }
     const e = P(uE, Wd / 2);
@@ -867,6 +896,7 @@ export function buildQuay(ctx, root) {
         walk(-1.2, 1.2, -0.75, 0.45, y0 + 0.25);                               // a hidden sill under the pavement edge: the climb back from the landing (0.5 m) is two 0.25 m steps
         { const c = Pq(1.6 + (steps * run) / 2, Wd / 2 + 0.02); for (const t of ctx.physics.addStairs(c[0], c[1], Wd, steps * run, Math.atan2(tx, tz), y0, lowY, steps)) t.boatPass = true; info.colliders += steps; }
         walk(uL, uL + 3.0, -0.02, Wd + 0.1, lowY);                             // the lower landing
+        landingBlocks(ctx.physics, Pq, tx, tz, nx, nz, p0, uL, Wd, rot, wl);      // the landing and the pontoon deck stay walker floors (boatPass) but stop the player's boat (lib/craft-solids.js); the treads and the top landing belong to the quay wall and stay boatPass
         walk(uL + 3.0 - 0.05, uL + 3.0 + PONTOON.len, 0.1, PONTOON.wid, PONTOON.top);      // the deck of the landing-stage pontoon of landmarksC/boats.js (it starts 9 m from the flight origin; its deck is 0.26 m above the landing)
         openStairs.push({ x: p0.x, z: p0.z, tx, tz, nx, nz, gate: OPEN_GATE });
         st.walk = true; st.gate = OPEN_GATE; st.topY = y0; st.pontoonTop = PONTOON.top;

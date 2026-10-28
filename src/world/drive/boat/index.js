@@ -4,19 +4,11 @@
 // the Anichkov dock gets the boat, and an area that does not (the Smolninskoye) gets none; a new area needs no edit.
 // An entry (the car's shape, drive/cars/index.js): { id, kind: 'boat', name, nameEn, label, labelEn, toast, spec, tuning, parked {x, z, yaw}, sound, hud, exhaust [], reach, makeModel(ctx) }.
 import { GARAGE } from '../../lib/area-tables.js';
+import { DOCKS } from '../../lib/docks.js';       // (the shared table of docks: the environment needs it too)
 import { createBoatModel } from './model.js';
 import { SPEC_BOAT, BOAT_TUNING } from './handling.js';
 
-/**
- * The shared docks (street frame: x east, z south; yaw 0 faces +Z = south, forward = (sin yaw, cos yaw)).
- * anichkov: the Fontanka, on the west side of the river 80 m north of the Anichkov Bridge, beside the first quay stair (the stair at x -452.9, z -166.3; the pontoon of the tourist boats starts 8 m further north).
- *   The water edge on that row is at x -452.2, so the hull lies 2.35 m off it (the centre 3.3 m): the centre at x -448.9, z -170.3, the bow downstream (south, toward the bridge), parallel to the quay (the river runs along
- *   (0.183, -0.983): yaw -0.184 rad = -10.5 deg). The tourist pontoon (landmarksC/boats.js, no collider) starts 4.7 m north of the stern; the stair of the quay (x -452.9, z -166.3) ends at the boat's bow quarter.
- *   The pose of the owner's request (-451.2, -0.8, -169.8, yaw 684, pitch -16.3) is at the water edge, 2 m from the hull.
- */
-export const DOCKS = [
-  { id: 'boat', dock: 'anichkov', x: -448.9, z: -170.3, yaw: -0.184 },
-];
+export { DOCKS };
 
 /** the key hint line of the boat's HUD (hud.js setProfile) */
 const HUD_KEYS = '<kbd>W</kbd><kbd>S</kbd> газ · назад &nbsp; <kbd>A</kbd><kbd>D</kbd> руль &nbsp; <kbd>Space</kbd> стоп &nbsp; <kbd>G</kbd> сигнал &nbsp; <kbd>V</kbd> камера &nbsp; <kbd>R</kbd> на старт &nbsp; <kbd>E</kbd> выйти · exit';
