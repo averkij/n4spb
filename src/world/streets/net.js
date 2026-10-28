@@ -407,7 +407,7 @@ function cover(net, px, pz, o) {
     const list = net.grid.get((cx0 + 300) * 2048 + (cz0 + 300)); if (!list) continue;
     for (let q = 0; q < list.length; q++) {
       const e = list[q]; if (e.st === st) continue; e.st = st;
-      const w = e.w; if (w === skip || w === skip2 || (minRank && w.rank < minRank) || (noBed && w.tramBed)) continue;
+      const w = e.w; if (w === skip || w === skip2 || (o.skipSet && o.skipSet.has(w)) || (minRank && w.rank < minRank) || (noBed && w.tramBed)) continue;
       if (own && w === own.w && Math.abs(w.s[e.i] + e.l / 2 - own.s) < own.d) continue;
       // (segInfo without the allocations and without Math.hypot: this loop runs for every lamp / parking slot / signal candidate)
       const ax = e.ax, az = e.az, dx = e.dx, dz = e.dz, l2 = e.l2;

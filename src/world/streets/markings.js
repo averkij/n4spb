@@ -36,6 +36,16 @@ export const classOf = (w) => `r${w.rank}${w.oneway ? '-1way' : '-2way'}-${w.lan
 export const eligible = (w) => w.rank >= 1 && !w.skipDraw && !w.pedestrianOnly && w.hw !== 'living_street';
 export const isBusLaneWay = (w) => w.oneway && w.name === 'Невский проспект' && w.rank >= 3 && w.lanes.nF >= 3 && w.x[0] < WEST_X && w.x[w.n - 1] < WEST_X;
 
+/** the ways that carry way w on at its two ends under the same name and rank (one road cut into ways at a seam, Kirochnaya at -42): their asphalt is no 'other carriageway' that hides w's paint */
+function continuations(net, w) {
+  if (w._cont) return w._cont;
+  const set = new Set(), ends = [[w.x[0], w.z[0]], [w.x[w.n - 1], w.z[w.n - 1]]];
+  if (w.name) for (const v of net.ways) {
+    if (v === w || v.name !== w.name || v.rank !== w.rank || v.oneway !== w.oneway) continue;
+    if (ends.some(([x, z]) => (Math.hypot(v.x[0] - x, v.z[0] - z) < 0.5 || Math.hypot(v.x[v.n - 1] - x, v.z[v.n - 1] - z) < 0.5))) set.add(v);
+  }
+  return (w._cont = set.size ? set : null);
+}
 const realNode = (nd, w) => nd.arms.length >= 3 && (nd.arms.some((a) => a.w !== w && a.w.rank >= 1) || nd.arms.some((a) => a.cross && a.cross.signalised));     // (a signalised pedestrian crossing at a courtyard gateway stops the traffic: its stop line ends the lines)
 const armOf = (nd, w, along) => nd.arms.find((a) => a.w === w && a.along === along) || nd.arms.find((a) => a.w === w) || null;
 
@@ -89,6 +99,14 @@ function medOffsets(w) {
     const hLv = v.hL[best.i] + (v.hL[best.i + 1] - v.hL[best.i]) * best.t, edgeV = best.d - hLv;      // the partner's left edge: edgeV metres from our centre line, to our left
     return -Math.max(Math.min(w.hL[k], edgeV), (w.hL[k] + edgeV) / 2);
   });
+  // a junction mouth widens the half width hL over ONE or TWO vertices (Kirochnaya at -52.8 and -80.9: 5 and 8.5 m against 4.7 m around), which throws the shared line 1-2 m out in a kink: a vertex that
+  // lies more than 0.8 m from the median of its five-vertex window (all of them with a partner) takes that median
+  const o = w._medOff, src = o.slice();
+  for (let k = 2; k + 2 < o.length; k++) {
+    if (!(w.med[k] && w.medPartner[k - 2] && w.medPartner[k - 1] && w.medPartner[k] && w.medPartner[k + 1] && w.medPartner[k + 2])) continue;
+    const m = [src[k - 2], src[k - 1], src[k], src[k + 1], src[k + 2]].sort((p, q) => p - q)[2];
+    if (Math.abs(src[k] - m) > 0.8) o[k] = m;
+  }
   return w._medOff;
 }
 
@@ -103,7 +121,7 @@ export function planMarkings(net, graph, o = {}) {
   };
   const sample = (w, s, latFn) => { const q = wayAt(w, s), off = latFn(q), nx = -q.tz, nz = q.tx; return { x: q.x + nx * off, z: q.z + nz * off, nx, nz, s, q }; };
   /** why a point carries no paint: 'gate' (the rule itself does not ask for it there), 'deck' (a bridge deck of the bridges module), 'cross' (zebra bars), 'cover' (another carriageway's asphalt) or '' */
-  const hidOf = (w, skip2, gate) => (p) => (gate && gate(p) ? 'gate' : deckAt(p.x, p.z, 0.3) ? 'deck' : nearCrossing(net, p.x, p.z, RULES.zebraClear) ? 'cross' : net.cover(p.x, p.z, { skip: w, skip2 }) > 0.2 ? 'cover' : '');
+  const hidOf = (w, skip2, gate) => (p) => (gate && gate(p) ? 'gate' : deckAt(p.x, p.z, 0.3) ? 'deck' : nearCrossing(net, p.x, p.z, RULES.zebraClear) ? 'cross' : net.cover(p.x, p.z, { skip: w, skip2, skipSet: continuations(net, w) }) > 0.2 ? 'cover' : '');
   /** ask for a line of `kind` along w between arclengths lo and hi at the lateral position latFn(q): dashed (1 m / 3 m from `anchor`), or solid at the offsets `offs` (a double line = two thin lines);
    *  o.hid tells where there is no paint. Records the rule (what was asked / drawn / hidden by what) and pushes the drawn pieces. */
   const ask = (kind, w, lo, hi, latFn, width, o) => {

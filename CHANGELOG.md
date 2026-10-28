@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **2.3.5** (2026-10-28, patch): Road markings: the shared double line of paired carriageways no longer kinks at junction-mouth widenings and no longer breaks at a seam between two ways of the same street (Kirochnaya at -42,-1296)
 - **2.3.4** (2026-10-28, patch): Preloader of the main entrance shows just the city name 'Санкт-Петербург' (no area name)
 - **2.3.3** (2026-10-26, patch): the committed bake of the four live areas (revision 4b2064685b97b2f0593e)
 - **2.3.2** (2026-10-26, patch): open bascule bridges: no tram rails or dark water rectangle under the raised span, no contour lines of the pier feet through the water
