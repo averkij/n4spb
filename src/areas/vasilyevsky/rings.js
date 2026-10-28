@@ -42,7 +42,7 @@ import * as ACADEMY from '../../world/landmarksAcademy/groups.js';
 // ---
 // PORT-IMPORT: landmarksGavan
 // ---
-// PORT-IMPORT: bridges (groups-vo.js and the bridge pits / stairs)
+import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js)
 // ---
 
 const SOURCES = [
@@ -78,7 +78,7 @@ const SOURCES = [
   // ---
   // PORT-SOURCE: landmarksGavan
   // ---
-  // PORT-SOURCE: bridges
+  { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
   // ---
 ];
 

@@ -21,6 +21,7 @@
 // ============================================================================
 import { GROUPS_LIST as G_BR } from '../../world/bridges/groups.js';
 import { GROUPS_SW } from '../../world/bridges/groups-sw.js';
+import { GROUPS_VO } from '../../world/bridges/groups-vo.js';
 import * as G_ACADEMY from '../../world/landmarksAcademy/groups.js';
 import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as RINGS_PAVED } from './rings.js';
 // ---
@@ -203,8 +204,9 @@ GROUPS.landmarksAcademy = G_ACADEMY.GROUPS_LIST;
 // ---
 // PORT-GROUPS: landmarksVOStatues
 // ---
-// the bridges: the Palace Bridge (both ends lie in the territory) and the Blagoveshchensky Bridge (bridges/groups-sw.js carries its claim); the bridge wave appends the island's other bridges (a groups-vo.js)
-GROUPS.bridges = G_BR.filter((b) => b.key === 'palace').concat(GROUPS_SW.filter((b) => b.key === 'blagoveshchensky'));
+// the bridges: the Palace Bridge (both ends lie in the territory), the Blagoveshchensky Bridge (bridges/groups-sw.js carries its claim) and the island's other bridges (bridges/groups-vo.js: Birzhevoy and Tuchkov over the Malaya Neva,
+// Uralsky, Smolensky and Nalichny over the Smolenka, the Novo-Andreevsky footbridge)
+GROUPS.bridges = G_BR.filter((b) => b.key === 'palace').concat(GROUPS_SW.filter((b) => b.key === 'blagoveshchensky'), GROUPS_VO);
 
 /**
  * The HUD location table (first match wins), built with the layout helpers `h` ({ NAMES, SUBGROUPS, _sqPolys, _groupPolys, _named, _areaPolys, _shoreOf, _deck, inRiver, shoreDist }).
@@ -215,6 +217,12 @@ export function makeAreas(h) {
   return [
   _deck('Дворцовый мост · Palace Bridge', [-2344.2, -871.2], [-2495.5, -1075.8], 32),
   { name: 'Благовещенский мост · Blagoveshchensky Bridge', c: [-3449, -264], r: 170 },
+  _deck('Биржевой мост · Birzhevoy Bridge', [-2686.3, -1425.7], [-2671.2, -1663.9], 16),
+  _deck('Тучков мост · Tuchkov Bridge', [-3739.3, -1752.1], [-3614.3, -1932.6], 20),
+  { name: 'Уральский мост · Uralsky Bridge', c: [-4626.9, -1826.9], r: 26 },
+  { name: 'Смоленский мост · Smolensky Bridge', c: [-5286.9, -1645.8], r: 26 },
+  { name: 'Наличный мост · Nalichny Bridge', c: [-6702.1, -1707.9], r: 48 },
+  { name: 'Ново-Андреевский мост · Novo-Andreevsky Bridge', c: [-6328.8, -1603.0], r: 20 },
   // ---
   // PORT-AREAS: landmarksStrelka
   // ---
@@ -355,12 +363,25 @@ const PLUGS = [{ key: 'neva', o: [-2315.3, -885.3, -2320, -892.2, -2330, -906.8,
  *  the others get an invisible fallback deck (walk box + parapet boxes). The bridge wave adds the rows of the island's bridges here. */
 const BRIDGE_ZONES = [
   { id: 'palace', name: 'Дворцовый мост', key: 'neva', c: [-2322, -884], axis: 143, w: 30, len: 255, own: true },
+  // the bridges of the island (bridges/groups-vo.js): the quay stays open over the drawn deck (c, axis, w, len = the OSM deck polygons, the rows of the source project's BRIDGE_SHADES); the bridges module closes the rest with wing walls
+  { id: 'birzhevoy', name: 'Биржевой мост', key: 'neva', c: [-2678.7, -1544.8], axis: 3.63, w: 27.3, len: 238.7, own: true },
+  { id: 'tuchkov', name: 'Тучков мост', key: 'neva', c: [-3676.7, -1842.5], axis: 34.69, w: 36.0, len: 220.1, own: true },
+  { id: 'uralsky', name: 'Уральский мост', key: 'smolenka', c: [-4626.9, -1826.9], axis: 144.3, w: 31.0, len: 21.6, own: true },
+  { id: 'smolensky', name: 'Смоленский мост', key: 'smolenka', c: [-5286.9, -1645.8], axis: 149.5, w: 28.2, len: 21.3, own: true },
+  { id: 'nalichny', name: 'Наличный мост', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7, own: true },
+  { id: 'novo-andreevsky', name: 'Ново-Андреевский мост', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3, own: true, foot: true },
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
 const BRIDGE_SHADES = [
   { id: 'palace-deck', key: 'neva', c: [-2415.2, -977.3], axis: 323.5, w: 27.7, len: 254.5 },
   { id: 'blagoveshchensky-deck', key: 'neva', c: [-3448.92, -263.75], axis: 334.3, w: 37.4, len: 332.6 },      // the Blagoveshchensky Bridge (bridges/blag.js)
+  { id: 'birzhevoy-deck', key: 'neva', c: [-2678.7, -1544.8], axis: 3.63, w: 27.3, len: 238.7 },      // the Birzhevoy Bridge (bridges/long.js)
+  { id: 'tuchkov-deck', key: 'neva', c: [-3676.7, -1842.5], axis: 34.69, w: 36.0, len: 220.1 },      // the Tuchkov Bridge (bridges/long.js)
+  { id: 'uralsky-deck', key: 'smolenka', c: [-4626.9, -1826.9], axis: 144.3, w: 31.0, len: 21.6 },
+  { id: 'smolensky-deck', key: 'smolenka', c: [-5286.9, -1645.8], axis: 149.5, w: 28.2, len: 21.3 },
+  { id: 'nalichny-deck', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7 },
+  { id: 'novo-andreevsky-deck', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3 },
 ];
 
 /** reaches: key of the waterway, test(x, z, nx, nz) on a bank point (landward normal n), run = horizontal length of the slope, kerb = banquette top above the water, lip = step from the banquette to the slope */
@@ -378,13 +399,20 @@ export const WATER = {
   plugs: PLUGS,
   bridgeZones: BRIDGE_ZONES,
   bridgeShades: BRIDGE_SHADES,
-  clipLines: [],      // the seams where the cut ends a river polygon in the middle of the river: none known yet (tools/water-reachable-test.mjs names them; the bridge / water wave adds them)
+  clipLines: [['x', -4420], ['x', -4430], ['x', -5370], ['x', -6070], ['x', -5000], ['z', 1370], ['z', 1720], ['z', 1770]],      // the part seam of the Bolshaya Neva polygons 2:0 / 2:1 across the bay south of the island: their rims overlap by 10 m (2:0 ends on x = -4430, 2:1 begins on x = -4420) and each stood as a quay wall across the water (1.4 km of wall)
   farSources: ['neva-up', 'neva-down', 'neva-malaya'],
   farCenter: [-4500, -200],             // the middle of the area (the Neva scenery rings are real positions: the window only says how far the far ring reaches)
   farRadius: 6000,                      // the radius of the far scenery
   forcedBanks: [[-2460.8, -1097.5, -2460.7, -1098.7]],      // the 1.2 m corner edge of the Neva polygon beside the Palace Bridge plug
   openMouths: [],
   dataWater: [{ id: 'r1576084', key: 'smolenka' }, { id: 'r1576086', key: 'smolenka' }, { id: 'r1576116', key: 'neva' }],
+  dataRings: [{ id: 'malaya-neva', key: 'neva', source: 'neva-malaya' },
+    // the Neva Bay south of the island: the data polygons of the Bolshaya Neva end on the lines z 1370 / 1720 / 1770 (the part seams of the source bake), but the territory goes on to z 1920 (the wedge of rectangles VO56 .. VO63 round the bay):
+    // three patches of water fill the gap down to the data region's border (z 2640), so that the bay is water to the edge of the play area (the cut lines are clip lines, no wall)
+    { id: 'bay-a', key: 'neva', ring: [-7840, 1370, -6070, 1370, -6070, 2640, -7840, 2640] },
+    { id: 'bay-b', key: 'neva', ring: [-6070, 1720, -5370, 1720, -5370, 2640, -6070, 2640] },
+    { id: 'bay-c', key: 'neva', ring: [-5370, 1770, -5000, 1770, -5000, 2640, -5370, 2640] }],
+  pierFit: { 'w74745049#0': { cx: -4353.4, cz: 177.9, ax: -0.602, az: 0.798, len: 256, wid: 9.6 } },      // the mole w74745049: 256 m x 9 m on the line (-4276, 76) .. (-4430, 280); the bounding rectangle of its bumps was 255 x 40 m      // the Malaya Neva (OSM relation 72500, environment/neva-malaya.js) between the Spit and the Gulf: real water with real shores inside the data region (Birzhevoy and Tuchkov bridges cross it)
   slopeReaches: SLOPE_REACHES,
   keyByName: {},
   riverKeys: { 'Смоленка': 'smolenka', 'Кронверкский пролив': 'neva', 'Ждановка': 'neva' },
