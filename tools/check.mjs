@@ -116,13 +116,13 @@ const BUDGET_AREA = {
     //
     landmarksModernVO: 177e3,      // measured 153,951 (vo-m3: + 15 %)
     //
-    // PORT-BUDGET: landmarksKirova
+    landmarksKirova: 218e3,      // measured 189,336 (Palace of Culture, Erarta, the garden, Sobchak; the garden fence / hedges / passage walls are knock bays) + 15 %
     //
-    // PORT-BUDGET: landmarksSmolensky
+    landmarksSmolensky: 320e3,      // measured 277,547 (6 groups: churches, chapels, 2.4 km fence as knock bays, the forest and 13,000 graves) + 15 %
     //
-    // PORT-BUDGET: landmarksSevkabel
+    landmarksSevkabel: 222e3,      // measured 192,892 (8 groups; the culture kit, stalls and tables are knock records) + 15 %
     //
-    // PORT-BUDGET: landmarksSeaTerminal
+    landmarksSeaTerminal: 34e3,      // measured 29,383 (sea-terminal only; torpedo-boat, d2-narodovolets and lenexpo-site are not claimed) + 15 %
     //
     landmarksVOStatues: 176e3,      // measured 153,116 (vo-m3: + 15 %)
   },
