@@ -138,6 +138,19 @@ const KNOWN_UNCLAIMED = {
   },
 };
 
+// Vasilyevsky-Okrug 7, cluster M4 (Smolensky cemetery, Kirov Palace of Culture / Erarta / garden, Sevkabel Port, Sea Terminal; docs/vo-m4.md). Written as separate statements (not inside the tables above) so that the
+// blocks of the parallel port branches merge by keeping all of them. Checked with --where / --where-high at the first run.
+OWNER_SKIPS.vasilyevsky = { ...(OWNER_SKIPS.vasilyevsky || {}),
+  w1423396925: 'landmarksKirova / kirova-garden draws the ruin (building=ruins) as a flat crushed-stone decal with rubble stumps below 1.5 m (garden.js ruin(): a patch, not a mass)',
+};
+GENERIC_WAIVERS.vasilyevsky = { ...(GENERIC_WAIVERS.vasilyevsky || {}),
+  'w45966107|streets': 'street lamps of the Bolshoy pr. V.O. kerb (lamps-D, 2.2 .. 4 m) stand about 2.3 m inside the outline of the Kirov Palace of Culture at its west corner (-5332, -196): hidden in the wall mass of the front that landmarksKirova draws; the lamp phase along the kerb differs per territory',
+};
+KNOWN_UNCLAIMED.vasilyevsky = { ...(KNOWN_UNCLAIMED.vasilyevsky || {}),
+  w820265264: { module: 'landmarksSevkabel', why: 'one of the eight timber cable-spool towers (SPOOL_TOWERS of public-life-plan.js, yard.js props: 4.9 m, larch drums + a lamp) and the festoons of culture.js stand on the OSM outline of the bicycle shop Electra (92 m2, 2 levels), which city draws: verbatim source behaviour, a tower beside a kiosk, not a second building' },
+  w133084710: { module: 'landmarksSevkabel', why: 'the portal crane T1a of the Baltic Shipyard (cranes.js, 60 m, instanced silhouette on its runway) reaches into the OSM outline of the yard hall Kosaya liniya 16 k43 (the source leaves the hall to city: "the yard hall w133084710 stays generic"): the crane gantry passes over the hall roof, verbatim source behaviour' },
+};
+
 // ---------------------------------------------------------------- engine
 const THREE = await import('three');
 const { createContext } = await import(pathToFileURL(path.join(root, 'src/core/ctx.js')).href);

@@ -122,7 +122,7 @@ const BUDGET_AREA = {
     //
     landmarksSevkabel: 222e3,      // measured 192,892 (8 groups; the culture kit, stalls and tables are knock records) + 15 %
     //
-    landmarksSeaTerminal: 41.5e3,      // measured 35,761 (sea-terminal + torpedo-boat; d2-narodovolets and lenexpo-site are not claimed) + 15 %
+    landmarksSeaTerminal: 34e3,      // measured 29,383 (sea-terminal only; torpedo-boat, d2-narodovolets and lenexpo-site are not claimed) + 15 %
     //
     // PORT-BUDGET: landmarksVOStatues
   },
