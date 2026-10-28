@@ -33,6 +33,7 @@
     "areahop": "node tools/areas-hop-test.mjs",
     "garage": "node tools/each-area.mjs tools/area-garage-check.mjs",
     "water": "node tools/area.mjs palace tools/water-reachable-test.mjs && node tools/area.mjs smolny tools/water-reachable-test.mjs && node tools/area.mjs admiralty tools/water-reachable-test.mjs && node tools/area.mjs vladimirsky tools/water-reachable-test.mjs",
+    "boatpass": "node tools/area.mjs palace tools/boat-passage-test.mjs && node tools/area.mjs smolny tools/boat-passage-test.mjs && node tools/area.mjs admiralty tools/boat-passage-test.mjs && node tools/area.mjs vladimirsky tools/boat-passage-test.mjs",
     "crossplaces": "node tools/each-area.mjs tools/cross-places-test.mjs",
     "northknock": "node tools/area.mjs north tools/north-knock-test.mjs",
     "people:mutant": "node tools/people-test.mjs --mutant jump1m && node tools/area.mjs north tools/people-test.mjs --mutant jump1m",

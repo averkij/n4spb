@@ -217,10 +217,11 @@ check('2 a walker runs along the bed for 10 s without being stuck or leaving the
 });
 
 // ---------------------------------------------------------------- 3 a fence bay knocked away opens the way
-function pickFence(filter = () => true, tries = 400, loose = false) {
+function pickFence(filter = () => true, tries = 400, loose = false, stable = false) {
   const fs = fences().filter((r) => r.state === 'stand' && r.items.length && L.inPlay(r.x, r.z, 30));
+  if (stable) fs.sort((a, b) => a.x - b.x || a.z - b.z);      // (the car run of check 4: the order of the picks must not depend on how many fence records the area has; a change of a bank elsewhere used to reshuffle the pseudo-random walk below and the run-up lottery was lost)
   for (let i = 0; i < fs.length && tries > 0; i++) {
-    const r = fs[(i * 7919) % fs.length]; if (!filter(r)) continue; tries--;
+    const r = stable ? fs[i] : fs[(i * 7919) % fs.length]; if (!filter(r)) continue; tries--;
     const w = towardWater(r); if (!w) continue;
     const len = r.w || 2, ex = new Set(r.items);
     // the neighbours of the same fence line are allowed (the walk is straight at the bay), nothing else may stand in the way, on either side
@@ -271,8 +272,10 @@ function carRun(f, speedKmh, { id = 'coupe' } = {}) {
 /** the invisible walk floors of the undrawn OSM bridges (BRIDGE_ZONES rows with floor: true) catch a car that falls off the bank beside them; this check is about the quay fence, so they are lifted out for the run and put back */
 const floorItems = (() => { const zs = (BRIDGE_FLOORS || []); return ph.items.filter((it) => it.type === 'walk' && zs.some((z) => hyp(it.cx - z.c[0], it.cz - z.c[1]) < 1e-6)); })();
 function withoutFloors(fn) { const tops = floorItems.map((it) => it.top); for (const it of floorItems) it.top = -50; try { return fn(); } finally { floorItems.forEach((it, i) => { it.top = tops[i]; }); } }      // (their surface sinks below the bed for the run: no insertion or removal, the item order of the physics stays)
+/** the bay has the trench behind it: the ground 3 m beyond it (surfaces included) is 1 m or more below the street. A bay at the approach of a bridge leads onto its deck, and the car that breaks it drives on over the canal. */
+const deepBeyond = (r) => { const w = towardWater(r); return !!w && ph.groundHeight(r.x + w.nx * 3, r.z + w.nz * 3, 30, false) < -1; };
 function pickCarFence() {
-  return pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && r.mass <= 300 && !r.__tried, 6000, true) || pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && !r.__tried, 6000, true) || pickFence((r) => r.anchored <= 24 && r.mass <= 900 && !r.__tried, 6000, true);      // (a railing panel first: the 900 kg granite parapet holds a car that is slowed by the trees before it)
+  return pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && r.mass <= 300 && !r.__tried && deepBeyond(r), 6000, true, true) || pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && !r.__tried && deepBeyond(r), 6000, true, true) || pickFence((r) => r.anchored <= 24 && r.mass <= 900 && !r.__tried && deepBeyond(r), 6000, true, true);      // (a railing panel first: the 900 kg granite parapet holds a car that is slowed by the trees before it)
 }
 check('4 the car drives into a quay fence at 40 km/h: the bay breaks, the car falls into the trench (fall damage events), lands on the bed in the water with the drag, cannot climb out', () => {
   let f = null, res = null;
@@ -456,12 +459,14 @@ if (AREA === 'palace') {
 // The Troitsky Bridge (module landmarksTroitsky, docs/AREAS.md 13.8) is audited WHOLE, not only what is thin and tall: the 554 m deck lies over the Neva, so every solid it made must be breakable
 // (a railing panel, a granite parapet section, a barrier kerb piece, a candelabrum, a contact-wire pole), whatever its size, except the structure listed here; and the MOVING leaf has no physics item at all:
 // its rails and kerbs are knock records whose box is a dynamic one (the record's own source), checked through the dynamic providers.
+/** a pier collider that bridges/piers.js made from the drawn pillars: a box from the bed (y -8) up to 1.6 m over the water, in the river (structure, never knockable like the Anichkov piers; the audit below is about what a car or a walker can knock) */
+const isPierBox = (it) => it.type === 'box' && it.y0 === -8 && waterAt(it.cx, it.cz) !== null && it.y1 - waterAt(it.cx, it.cz) <= 1.65;
 const TROITSKY_STRUCTURE = [
   { why: 'the two granite obelisks with rostra at the south entrance (monument blocks 2 x 2 m, 8 m tall, on the Mars Field embankment beside the roadway: they keep no one from the water)', ok: (it) => it.type === 'box' && Math.abs(it.hw - 1) < 1e-6 && Math.abs(it.hd - 1) < 1e-6 && it.y1 === 8 },
 ];
 if (built.includes('landmarksTroitsky')) {
   check('6 AUDIT (the Troitsky Bridge): every box and post of the module is a knock record except the listed structure; the leaf\'s rails and kerbs are knock records with a dynamic box, none is a plain solid', () => {
-    const own = troitskyItems.filter((it) => it.type === 'box' || it.type === 'cyl'); assert(own.length > 600, 'the module made ' + own.length + ' boxes and posts');
+    const own = troitskyItems.filter((it) => (it.type === 'box' || it.type === 'cyl') && !isPierBox(it)); assert(own.length > 600, 'the module made ' + own.length + ' boxes and posts');
     const kinds = {}, plain = [];
     for (const it of own) { const k = it.source && it.source.knock; if (k) { const key = k.kind + (it.type === 'cyl' ? ' post' : k.mass >= 2000 ? ' candelabrum' : k.mass >= 900 ? ' kerb/parapet' : ' bay'); kinds[key] = (kinds[key] || 0) + 1; } else plain.push(it); }
     const left = [], bad = [];

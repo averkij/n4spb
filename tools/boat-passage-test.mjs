@@ -318,6 +318,34 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
   });
 }
 
+// ---------------------------------------------------------------- b2 no invisible wall in the river
+{ // every solid that stops a floating hull in open water (>= 2.5 m from the bank) has something drawn at the waterline within 6 m of it (the middle of a wide pier is 5 m from its walls): a pier, a pontoon, a boat, a wall. A collider that is wider than its pillar (or has none) is a wall of water.
+  const drawn = new Set(), key = (x, z) => Math.floor(x) + ',' + Math.floor(z);
+  ctx.scene.traverse((m) => {
+    if (!m.isMesh || m.isInstancedMesh || !m.geometry || !m.geometry.attributes.position) return;
+    const pos = m.geometry.attributes.position, ix = m.geometry.index, e = m.matrixWorld.elements, n = ix ? ix.count : pos.count, V = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    for (let t = 0; t + 2 < n; t += 3) {
+      let ymin = 1e9, ymax = -1e9;
+      for (let k = 0; k < 3; k++) { const i = ix ? ix.getX(t + k) : t + k, x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = V[k]; v[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; v[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; v[2] = e[2] * x + e[6] * y + e[10] * z + e[14]; ymin = Math.min(ymin, v[1]); ymax = Math.max(ymax, v[1]); }
+      const k0 = idx((V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3); if (k0 < 0 || wlx[k0] !== wlx[k0]) continue;
+      const w = wlx[k0]; if (!(ymin < w + 0.3 && ymax > w + 0.3)) continue;      // (touches or crosses the surface; the walls of a boat hull, a pontoon, a pier)
+      for (let a = 0; a < 3; a++) { const p = V[a], q = V[(a + 1) % 3], l = Math.hypot(q[0] - p[0], q[2] - p[2]), nn = Math.max(1, Math.ceil(l)); for (let i = 0; i <= nn; i++) drawn.add(key(p[0] + (q[0] - p[0]) * i / nn, p[2] + (q[2] - p[2]) * i / nn)); }
+    }
+  });
+  const bad = new Map();
+  for (let k = 0; k < solid.length; k++) {
+    if (!solid[k] || !isWet(k) || Dwet[k] < 2.5) continue;
+    const x = cx(k), z = cz(k); if (!L.waterwayAt(x, z)) continue;      // (a waterway: the ponds of the gardens have islands, rocks and trees of their own)
+    let near = false;
+    for (let dz = -6; dz <= 6 && !near; dz++) for (let dx = -6; dx <= 6; dx++) if (drawn.has(key(x + dx, z + dz))) { near = true; break; }
+    if (!near) { const c = Math.floor(x / 20) + ',' + Math.floor(z / 20), e = bad.get(c) || { n: 0, x, z, ids: new Set() }; e.n++; bad.set(c, e); }
+  }
+  const total = [...bad.values()].reduce((a, e) => a + e.n, 0);
+  check('b no invisible wall in the river: every solid cell of open water has a drawn wall within 6 m (' + total + ' cells without)', () => {
+    assert.equal(total, 0, total + ' blocked water cells with nothing drawn near them, e.g. ' + [...bad.values()].sort((a, b) => b.n - a.n).slice(0, 6).map((e) => e.n + ' at ' + e.x.toFixed(0) + ', ' + e.z.toFixed(0)).join('; '));
+  });
+}
+
 // ---------------------------------------------------------------- c  the bodies of water
 {
   const bodies = []; // per body of wet cells: the boat-free bodies inside it (only the bodies of a WATERWAY of WATERWAYS: a garden pond or a basin is not a transport water)
