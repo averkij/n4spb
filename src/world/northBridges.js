@@ -9,6 +9,7 @@ import * as L from './layout.js';
 import { Parts } from './landmarksD/kit.js';
 import { GROUPS_LIST } from './northBridges/groups.js';
 import { knockBays } from './lib/fence-bays.js';
+import { solidPiers } from './bridges/piers.js';      // the drawn piers in the water are solid for a floating hull
 export const OWNS_GROUPS = true;
 
 export function build(ctx) {
@@ -132,7 +133,7 @@ export function build(ctx) {
       collider: (q) => ({ y0: Math.min(q.y, q.ye), y1: Math.max(q.y, q.ye) + 1.2, thick: 0.18, e0: 0.02, e1: 0.02 }),
       rec: () => ({ kind: 'fence', mass: 110, h: 1.15, r: 0.06, anchored: 12, hitK: 0.25, metal: true, minDv: 0 }) });
   }
-  P.build(root, { name: 'north-bridges' }); ctx.addStatic(root);
+  solidPiers(ctx, P.build(root, { name: 'north-bridges' })); ctx.addStatic(root);
   const deckY = (x, z) => {
     for (const r of surfaces) {
       const dx = x - r.x, dz = z - r.z, u = dx * r.c - dz * r.s, v = dx * r.s + dz * r.c;

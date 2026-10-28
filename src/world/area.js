@@ -515,7 +515,10 @@ export const WATER = {
   farCenter: [589, 173],                // Vosstaniya Square (SQUARE)
   farRadius: 6000,                      // the radius of the far scenery
   forcedBanks: [[-2460.8, -1097.5, -2460.7, -1098.7]],      // the 1.2 m corner edge of the Neva polygon beside the Palace Bridge plug
-  openMouths: [[-744, -1034.5, -757.4, -1054.4]],           // the Moika leaves the Fontanka under the 1st Engineer Bridge
+  openMouths: [
+    [-744, -1034.5, -757.4, -1054.4],      // the Moika leaves the Fontanka under the 1st Engineer Bridge
+    [-859.3, -992, -849.4, -997.8],        // the Swan Canal ends on the long north edge of the Moika under the Lower Swan Bridge (the end edge of its polygon; environment/waterways.js splits the Moika edge at its ends)
+  ],
   dataWater: [{ id: 'r15750440', key: 'moat' }],            // the castle moat (the data keeps it as a plain pond)
   slopeReaches: SLOPE_REACHES,
 };

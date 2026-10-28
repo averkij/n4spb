@@ -5,6 +5,11 @@ import { STEP_HEIGHT } from '../../core/physics.js';
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
+/** How much of a bridge deck a FLOATING hull treats as solid below the deck surface (m). The decks of the bridges module are walk ramps registered with thick 2.5 (a car or a walker below must not be caught
+ *  by the deck of a road above it): for a boat that would put the underside 2.5 m under the street, 0.5 m over the water of the Moika and under its hull, so every canal bridge was a wall. The slab of a stone bridge
+ *  is 0.5 m at the springing: a hull passes under a deck whose surface is at least this much plus its own height over the water (docs/water-transport-bridges.md). */
+export const HULL_DECK_SLAB = 0.5;
+
 export function carContact(car, spec, b, out = {}) {
   const s = Math.sin(car.yaw), c = Math.cos(car.yaw);
   const cx = car.x + s * spec.centerZ, cz = car.z + c * spec.centerZ;
@@ -16,7 +21,7 @@ export function carContact(car, spec, b, out = {}) {
   if (b.type === 'ramp') {
     const z = clamp((cx - b.cx) * b.s + (cz - b.cz) * b.c, -b.hd, b.hd);
     top = b.yA + (b.yB - b.yA) * (z / (2 * b.hd) + 0.5);
-    if (top - b.thick >= car.y + spec.hgt) return null;
+    if (top - (car.floats ? Math.min(b.thick, HULL_DECK_SLAB) : b.thick) >= car.y + spec.hgt) return null;
   }
   if (top <= car.y + STEP_HEIGHT || b.y0 >= car.y + spec.hgt) return null;
   const dx = cx - b.cx, dz = cz - b.cz;

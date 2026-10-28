@@ -403,12 +403,14 @@ export const WATER = {
   plugs: PLUGS,
   bridgeZones: BRIDGE_ZONES,
   bridgeShades: BRIDGE_SHADES,
-  clipLines: [],
+  clipLines: [['x', -800], ['x', -720]],  // the part seams of the Fontanka polygons (0:1 .. 0:3 end on x = -800 and x = -720 in the middle of the river): without them each end edge stood as a quay wall across the water, cutting the Fontanka of the east
   farSources: ['neva-up', 'neva-down', 'neva-malaya'],
   farCenter: [-2200, 300],              // the middle of the area (the Neva scenery rings are real positions: the window only says how far the far ring reaches)
   farRadius: 6000,                      // the radius of the far scenery
   forcedBanks: [[-2460.8, -1097.5, -2460.7, -1098.7]],      // the 1.2 m corner edge of the Neva polygon beside the Palace Bridge plug
-  openMouths: [],
+  openMouths: [
+    [-2946.2, 1291.7, -2922.6, 1282.3],      // the Kryukov Canal ends on the long edge of the Griboedov Canal polygon at the Staro-Nikolsky Bridge (environment/waterways.js splits that edge at the ends of the mouth)
+  ],
   dataWater: [{ id: 'r1648982', key: 'nh-inner' }],      // the Kovsh basin of New Holland (a plain pond in the data) is a waterway of the inner canals
   slopeReaches: SLOPE_REACHES,
   // the RIVER records whose data key is null: the Kryukov Canal, the Admiralty and Novo-Admiralty canals round New Holland and the inner canals of the island (East, South)

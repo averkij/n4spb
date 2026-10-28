@@ -204,9 +204,55 @@ function build() {
   for (const dw of AREA_WATER.dataWater) WATER.forEach((w) => { if (w.id === dw.id) w.polys.forEach((p, i) => rings.push({ key: dw.key, o: p.o, id: dw.key + i, kind: 'data' })); });      // WATER.dataWater of the area (the strip: the castle moat r15750440, which the data keeps as a plain pond; ids 'moat0', 'moat1' ...)
   PLUGS.forEach((p, i) => rings.push({ key: p.key, o: p.o, id: 'plug' + i, kind: 'plug' }));
   OWNER_WATER.forEach((p) => rings.push({ key: p.key, o: p.o, id: p.id, kind: 'data', owner: true }));      // (a landmark's own pit: water for the ground / the surface / inRiver, no bank of ours: flags below)
+  // An OPEN MOUTH (below) that is SHORTER than the edge it lies on: the Swan Canal ends on the long straight north edge of the Moika under the Lower Swan Bridge, the Kryukov Canal on the edge of the Griboedov Canal at the
+  // Staro-Nikolsky Bridge. The long edge ran as a quay wall across the mouth (a boat could not enter or leave the canal). It is split at the two ends of the mouth (collinear vertices, the water polygon is unchanged), so that only
+  // the piece along the mouth is open.
+  for (const g of rings) {
+    if (g.owner || g.kind === 'plug') continue;
+    let o = g.o;
+    for (const e of AREA_WATER.openMouths) {
+      const out = []; let cut = false;
+      for (let i = 0; i < o.length; i += 2) {
+        const j = (i + 2) % o.length, ax = o[i], az = o[i + 1], bx = o[j], bz = o[j + 1], dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz, l = Math.sqrt(l2);
+        out.push(ax, az);
+        if (l < 5 || segDist(e[0], e[1], ax, az, bx, bz) >= 1.5 || segDist(e[2], e[3], ax, az, bx, bz) >= 1.5) continue;
+        const ta = Math.max(0, Math.min(1, ((e[0] - ax) * dx + (e[1] - az) * dz) / l2)), tb = Math.max(0, Math.min(1, ((e[2] - ax) * dx + (e[3] - az) * dz) / l2)), t0 = Math.min(ta, tb), t1 = Math.max(ta, tb);
+        if (t0 * l < 1.5 && (1 - t1) * l < 1.5) continue;      // the mouth is the edge: nothing to split
+        for (const t of [t0, t1]) if (t * l >= 1.5 && (1 - t) * l >= 1.5) { out.push(ax + dx * t, az + dz * t); cut = true; }
+      }
+      if (cut) o = out;
+    }
+    g.o = o;
+  }
   for (const g of rings) { g.area = ringArea(g.o); g.waterLeft = g.area > 0; g.n = g.o.length / 2; g.box = boxOf(g.o); }
   const CELL = 64, grid = new Map(), cellsOf = (ax, az, bx, bz, f) => { for (let i = Math.floor(Math.min(ax, bx) / CELL); i <= Math.floor(Math.max(ax, bx) / CELL); i++) for (let j = Math.floor(Math.min(az, bz) / CELL); j <= Math.floor(Math.max(az, bz) / CELL); j++) f(i * 8192 + j); };
   rings.forEach((g, gi) => { for (let i = 0; i < g.n; i++) { const j = (i + 1) % g.n, ax = g.o[i * 2], az = g.o[i * 2 + 1], bx = g.o[j * 2], bz = g.o[j * 2 + 1]; cellsOf(ax, az, bx, bz, (k) => { let a = grid.get(k); if (!a) grid.set(k, (a = [])); a.push([gi, ax, az, bx, bz]); }); } });
+  // HAIRLINES. Where two polygons meet in an open join (the edge of one lies along the edge of the other, within the tolerance of coincides() below) the two edges are rarely the same line: they are 0.1 .. 1.4 m apart, and the
+  // sliver of ground between them is a dry crack IN the water (the Moika / Fontanka mouth at the 1st Engineer Bridge, the Swan Canal mouth, the T of the Griboedov and Kryukov canals at the Krasnogvardeysky Bridge). A swimmer
+  // never notices, but a boat's shore probes read it as a bank and stick on it. The sliver between a short edge and the line it lies along becomes a thin water polygon of its own (key of the short edge, kind 'data'): its edges lie
+  // along the two edges, so it adds water and no bank.
+  {
+    const gaps = [], seen = new Set(), clamp01 = (t) => Math.max(0, Math.min(1, t));
+    rings.forEach((g, gi) => {
+      if (g.owner || g.kind === 'plug') return;      // (a plug's short edge lies on the shore of the Spit: a real bank, see wetBothSides below)
+      for (let i = 0; i < g.n; i++) {
+        const j = (i + 1) % g.n, ax = g.o[i * 2], az = g.o[i * 2 + 1], bx = g.o[j * 2], bz = g.o[j * 2 + 1];
+        if (Math.hypot(bx - ax, bz - az) < 1 || onClipLine(ax, az, bx, bz)) continue;
+        cellsOf(ax, az, bx, bz, (k) => {
+          for (const [oj, cx, cz, dx, dz] of grid.get(k) || []) {
+            if (oj === gi || rings[oj].owner || rings[oj].kind === 'plug') continue;
+            const tol = rings[oj].key === g.key ? 1.8 : 0.8, ex = dx - cx, ez = dz - cz, l2 = ex * ex + ez * ez; if (l2 < 1) continue;
+            if (segDist(ax, az, cx, cz, dx, dz) >= tol || segDist(bx, bz, cx, cz, dx, dz) >= tol) continue;
+            const ta = clamp01(((ax - cx) * ex + (az - cz) * ez) / l2), tb = clamp01(((bx - cx) * ex + (bz - cz) * ez) / l2), pa = [cx + ex * ta, cz + ez * ta], pb = [cx + ex * tb, cz + ez * tb];
+            const gap = [ax, az, bx, bz, pb[0], pb[1], pa[0], pa[1]], area = Math.abs(ringArea(gap)), key = [Math.round((ax + bx + pa[0] + pb[0]) * 2.5), Math.round((az + bz + pa[1] + pb[1]) * 2.5), Math.round(area * 4)].join(':');      // (found from both sides: one polygon)
+            if (area < 0.05 || seen.has(key)) continue;
+            seen.add(key); gaps.push({ key: g.key, o: gap, id: 'join' + gaps.length, kind: 'data' });
+          }
+        });
+      }
+    });
+    for (const q of gaps) { q.area = ringArea(q.o); q.waterLeft = q.area > 0; q.n = 4; q.box = boxOf(q.o); rings.push(q); const gi = rings.length - 1; for (let i = 0; i < 4; i++) { const j = (i + 1) % 4, ax = q.o[i * 2], az = q.o[i * 2 + 1], bx = q.o[j * 2], bz = q.o[j * 2 + 1]; cellsOf(ax, az, bx, bz, (k) => { let arr = grid.get(k); if (!arr) grid.set(k, (arr = [])); arr.push([gi, ax, az, bx, bz]); }); } }
+  }
   // an edge that lies INSIDE another ring of the same waterway is no bank: the overlap seam of two part polygons (the Griboedov canal at the Pikalov / Krasnogvardeysky bridges: the polygons overlap by 7 m, x -2918 .. -2911,
   // and each end edge would otherwise stand as a transverse quay wall in the water)
   const insideSame = (gi, ax, az, bx, bz) => {
