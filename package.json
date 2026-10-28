@@ -1,6 +1,6 @@
 {
   "name": "n4spb-nevsky",
-  "version": "2.3.5",
+  "version": "2.4.0",
   "description": "A walkable anime cel-shaded 3D strip of Saint Petersburg: Moscow Railway Station, Nevsky Prospekt, the district around it, Palace Square, the Hermitage and the Admiralty, with seven metro stations, cars, people, trains, boats and a drivable car; plain three.js, static deploy",
   "private": true,
   "type": "module",
@@ -32,6 +32,7 @@
     "areaboot:north": "node tools/area-boot-test.mjs --page north.html",
     "areahop": "node tools/areas-hop-test.mjs",
     "garage": "node tools/each-area.mjs tools/area-garage-check.mjs",
+    "wildlifeboat": "node tools/area.mjs palace tools/wildlife-boat-test.mjs",
     "water": "node tools/area.mjs palace tools/water-reachable-test.mjs && node tools/area.mjs smolny tools/water-reachable-test.mjs && node tools/area.mjs admiralty tools/water-reachable-test.mjs && node tools/area.mjs vladimirsky tools/water-reachable-test.mjs",
     "boatpass": "node tools/area.mjs palace tools/boat-passage-test.mjs && node tools/area.mjs smolny tools/boat-passage-test.mjs && node tools/area.mjs admiralty tools/boat-passage-test.mjs && node tools/area.mjs vladimirsky tools/boat-passage-test.mjs",
     "crossplaces": "node tools/each-area.mjs tools/cross-places-test.mjs",

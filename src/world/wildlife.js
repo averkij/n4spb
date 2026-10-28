@@ -20,6 +20,7 @@
 //   boats.js   one descriptor per boat of the map (landmarksC Fontanka boats + environment boats of the Moika / Griboedov / Winter Canal / Neva): roof / railing slots, hull boxes.
 //   ducks.js   six groups of mallards (pairs, a trio, hens with 4-7 ducklings) swimming slow lanes 4-5 m off the quay walls of the Fontanka, the Moika and the Griboedov Canal (validated
 //              lanes: clear of every boat hull of every lap, the landing stages, the bridges and the descents), with a wake each; the groups follow the player like the birds.
+//   threat.js  the vehicle the player drives (ctx.drive: the motor boat, a car) as the water birds see it: speed + heading decide who flies away (docs/water-transport-birds-flee-boats.md).
 //   world.js   placement tests (play area union, building / trunk / solid (physics columns) / carriageway / water / obelisk steps / bridge pavement), perch list (lamp tops, parapet posts of
 //              every embankment, Neva roll, lions, tree tops, cornices), ground level (square paving, pavements +0.12, low steps read from the physics, humped bridge deck), water points.
 // Sources: docs/research/people.md section O10 (species, looks, behaviour) and S8 (counts), west-life-furniture.md section 8 (birds per zone), fontanka.md (parapet posts), west-canals-bridges.md
@@ -46,6 +47,7 @@ import { makeWorld } from './wildlife/world.js';
 import { buildBirds } from './wildlife/birds.js';
 import { buildDucks } from './wildlife/ducks.js';
 import { crowdTable } from './wildlife/zones.js';
+import { makeThreat } from './wildlife/threat.js';
 import { ZONES } from './lib/area-tables.js';
 
 export async function build(ctx) {
@@ -56,15 +58,16 @@ export async function build(ctx) {
   const tm = { world: 0, birds: 0, ducks: 0, rest: 0 }, now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());      // build time per part (svc.debug.timing, ms)
   let tk = now();
   const W = makeWorld(ctx);
+  const threat = makeThreat(ctx);      // the vehicle the player drives, as the water birds see it (wildlife/threat.js); refreshed once a frame below
   tm.world = now() - tk; tk = now();
   svc.perches = W.perches;
-  svc.debug = { world: W, flags: [...flags], timing: tm }; tm.worldPhases = W.timing;
+  svc.debug = { world: W, flags: [...flags], timing: tm, threat }; tm.worldPhases = W.timing;
   const parts = [];
   const L = ctx.L;
 
   if (!flags.has('nobirds')) {
     try {
-      const B = buildBirds(ctx, W, say, { noFear, swifts: flags.has('swifts') || flags.has('gallery'), noDirector: flags.has('nodirector') || flags.has('gallery') });
+      const B = buildBirds(ctx, W, say, { noFear, swifts: flags.has('swifts') || flags.has('gallery'), noDirector: flags.has('nodirector') || flags.has('gallery'), threat });
       ctx.add(B.group); parts.push(['birds', B]); tm.birds = now() - tk; tk = now(); tm.birdPhases = B.timing;
       svc.birds = B.birds.filter((b) => !b.dead); svc.flocks = B.flocks; svc.cafes = B.cafes; svc.zones = B.zones; svc.sites = B.sites; svc.debug.birds = B;
       if (flags.has('gallery')) gallery(ctx, W, B);
@@ -72,7 +75,7 @@ export async function build(ctx) {
   }
   if (!flags.has('noducks')) {
     try {
-      const D = buildDucks(ctx, W, say, { noFear, noDirector: flags.has('nodirector') });
+      const D = buildDucks(ctx, W, say, { noFear, noDirector: flags.has('nodirector'), threat });
       if (D.ducks.length) { ctx.add(D.group); parts.push(['ducks', D]); svc.ducks = D.ducks; svc.debug.ducks = D; }
     } catch (e) { console.error('[wildlife] ducks failed:', e); }
     tm.ducks = now() - tk; tk = now();
@@ -95,6 +98,7 @@ export async function build(ctx) {
 
   const off = new Set();
   ctx.onUpdate((dt, t) => {
+    try { threat.update(); } catch (e) { threat.active = false; }
     for (const [name, P] of parts) {
       if (off.has(name)) continue;
       try { P.update(dt, t); } catch (e) { off.add(name); console.error('[wildlife] ' + name + ' update failed, switched off:', e); }

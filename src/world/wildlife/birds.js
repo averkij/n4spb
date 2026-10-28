@@ -5,6 +5,7 @@
 // Flocks react to the player: pigeons lift off together at ~4.5 m, circle for 9-15 s and resettle once the player has left; sparrows scatter into the nearest tree (or a lamp
 // top) and trickle back; crows flee to a lamp top, tree top or cornice 15-50 m away; gulls leave their post / boat for another post, circle over the water and come back
 // (a boat gull lands again on the predicted spot of a moving boat: boat state(t) is a pure function of t).
+// The gulls (quay posts, boat roofs) also go from a boat / car that is HEADING for them from far beyond the walker radius (threat.js); the other species keep the walker's scare, which a car already triggers through W.player.
 // Spawn counts scale with ctx.quality (high / medium / low). Never uses Math.random (ctx.rng); nothing is placed in a building, a trunk, on a carriageway or in the water.
 // Swifts only show at golden hour (sun elevation low, not night): the count follows ctx.sunDir.y and ctx.shared.uNight.
 // WEST (wave 3): the map is 2.4x bigger but the budget (129 birds) is the same, so the animals FOLLOW THE PLAYER: zones.js lists where they like to be (Kazan lawn, Palace Square, the
@@ -18,6 +19,7 @@ import { POIS, ROADS } from '../data/city.js';
 import { collectBoats, BOAT_KEY as BK } from './boats.js';
 import { zoneTable, CROW_HAUNTS } from './zones.js';
 import { makeDirector } from './director.js';
+import { NO_THREAT } from './threat.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -46,6 +48,7 @@ export function buildBirds(ctx, W, say, opts = {}) {
   const birds = [], flocks = [];
   const hero = L.HERO, OB = L.OBELISK, WATER = L.RIVER_Y.water;
   const NOFEAR = !!opts.noFear;
+  const threat = opts.threat || NO_THREAT;      // the vehicle the player drives (threat.js): the gulls of the water (posts, boat roofs) go from a hull that is COMING at them, from further than the walker's radius
   // every boat of the map (Fontanka + Moika + Griboedov + Winter Canal + Neva): descriptors with roof / railing slots (boats.js)
   const boatList = collectBoats(ctx, L);
   const boatTaken = new Set();
@@ -419,6 +422,8 @@ export function buildBirds(ctx, W, say, opts = {}) {
   const playerEye = () => W.player.y + 1.52;
   /** distance to the player used for scaring (3D, so a crow on a lamp ignores people below it) */
   const dist3 = (b) => Math.hypot(b.x - W.player.x, b.z - W.player.z, (b.y + 0.2 - playerEye()) * 1.0);
+  /** a gull (the bird of the quay posts and the boat roofs) that the player's boat / car is heading for; every other species keeps the walker's radius above (a car scares them through W.player as before) */
+  const vScare = (b) => b.sp === 'gull' && threat.active && threat.scares(b.x, b.z, b.y, 4);
   const scareR = (b, perched) => (perched ? b.cfg.perchScare : b.cfg.scare) * (1 + 0.45 * clamp(pSpeed / 4, 0, 1.4));
 
   function updGround(b, t, dt) {
@@ -426,7 +431,7 @@ export function buildBirds(ctx, W, say, opts = {}) {
     // --- fear
     if (!NOFEAR && b.act !== 'launch') {
       if (b.flock) { /* the flock decides */ }
-      else if (dist3(b) < scareR(b, false)) { flee(b, t); return; }
+      else if (dist3(b) < scareR(b, false) || vScare(b)) { flee(b, t); return; }
     }
     // --- scheduled call (crows / gulls): head thrown up, a sound at the start
     if (c.call && t >= b.nextCall && b.act !== 'walk') { if (startCall(b, t)) return; }
@@ -499,7 +504,7 @@ export function buildBirds(ctx, W, say, opts = {}) {
   function updPerch(b, t, dt) {
     const c = b.cfg;
     if (b.perch && b.perch.kind === 'tree' && b.perch.tree && b.perch.tree.crown) b.y = b.perch.y;                  // a garden crown perch rides the LOD of the crown the camera draws (the y getter of wildlife/world.js): the crow stays on the leaves when the level pops (T7 fix round 2)
-    if (!NOFEAR && dist3(b) < scareR(b, true) * (b.perch?.kind === 'tree' ? 0.8 : 1)) { if (flee(b, t, { r0: 18, r1: 70 })) return; }
+    if (!NOFEAR && (dist3(b) < scareR(b, true) * (b.perch?.kind === 'tree' ? 0.8 : 1) || vScare(b))) { if (flee(b, t, { r0: 18, r1: 70 })) return; }
     if (c.call && t >= b.nextCall && b.act !== 'call') startCall(b, t);
     if (b.act === 'call' && t > b.callT0 + b.callDur) { b.act = 'idle'; b.actT0 = t; }
     if (t > b.until) {
@@ -516,7 +521,7 @@ export function buildBirds(ctx, W, say, opts = {}) {
     const bo = b.boat; if (!bo) return;
     const p = boatPos(bo.bt, bo.slot, t); b.x = p.x; b.y = p.y; b.z = p.z; b.yaw = p.yaw + (b.seed - 0.5) * 0.7;
     const c = b.cfg;
-    if (nearBridge(p.x, p.z) || (!NOFEAR && dist3(b) < scareR(b, true))) {
+    if (nearBridge(p.x, p.z) || (!NOFEAR && (dist3(b) < scareR(b, true) || vScare(b)))) {
       const keep = bo; leaveBoat(b);
       if (flee(b, t, { r0: 10, r1: 70 })) return;
       takeBoat(b, keep.bi, keep.slot); return;
