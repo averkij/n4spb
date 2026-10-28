@@ -18,7 +18,7 @@ import * as UNIVERSITY from '../../world/landmarksUniversity/groups.js';
 // ---
 import * as R_MENSHIKOV from '../../world/landmarksMenshikov/groups.js';
 // ---
-// PORT-IMPORT: landmarksAndrew
+import * as ANDREW from '../../world/landmarksAndrew/groups.js';
 // ---
 import * as R_MAKAROVA from '../../world/landmarksMakarova/groups.js';
 // ---
@@ -26,7 +26,7 @@ import * as R_NAVALCORPS from '../../world/landmarksNavalCorps/groups.js';
 // ---
 import * as R_MINING from '../../world/landmarksMining/groups.js';
 // ---
-// PORT-IMPORT: landmarksSredny
+import * as SREDNY from '../../world/landmarksSredny/groups.js';
 // ---
 // PORT-IMPORT: landmarksModernVO
 // ---
@@ -54,7 +54,7 @@ const SOURCES = [
   // ---
   { module: 'landmarksMenshikov', ns: R_MENSHIKOV },
   // ---
-  // PORT-SOURCE: landmarksAndrew
+  { module: 'landmarksAndrew', ns: ANDREW },
   // ---
   { module: 'landmarksMakarova', ns: R_MAKAROVA },
   // ---
@@ -62,7 +62,7 @@ const SOURCES = [
   // ---
   { module: 'landmarksMining', ns: R_MINING },
   // ---
-  // PORT-SOURCE: landmarksSredny
+  { module: 'landmarksSredny', ns: SREDNY },
   // ---
   // PORT-SOURCE: landmarksModernVO
   // ---

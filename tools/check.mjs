@@ -104,7 +104,7 @@ const BUDGET_AREA = {
     //
     landmarksMenshikov: 303e3,      // measured 263,278 (palace, forecourt, Corps, Rumyantsev garden with the obelisk, the descent with its pontoons), + about 15 %
     //
-    // PORT-BUDGET: landmarksAndrew
+    landmarksAndrew: 245e3,      // measured 212,917 (vo-m3: + 15 %)
     //
     landmarksMakarova: 112e3,      // measured 97,043 (all seven sub-groups), + about 15 %
     //
@@ -112,9 +112,9 @@ const BUDGET_AREA = {
     //
     landmarksMining: 76e3,      // measured 65,610 (all three sub-groups), + about 15 %
     //
-    // PORT-BUDGET: landmarksSredny
+    landmarksSredny: 95e3,      // measured 82,349 (vo-m3: + 15 %)
     //
-    // PORT-BUDGET: landmarksModernVO
+    landmarksModernVO: 177e3,      // measured 153,951 (vo-m3: + 15 %)
     //
     // PORT-BUDGET: landmarksKirova
     //
@@ -124,7 +124,7 @@ const BUDGET_AREA = {
     //
     // PORT-BUDGET: landmarksSeaTerminal
     //
-    // PORT-BUDGET: landmarksVOStatues
+    landmarksVOStatues: 176e3,      // measured 153,116 (vo-m3: + 15 %)
   },
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;

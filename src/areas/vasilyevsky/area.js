@@ -30,7 +30,7 @@ import { GROUPS_LIST as G_UNIVERSITY } from '../../world/landmarksUniversity/gro
 // ---
 import { GROUPS_LIST as G_MENSHIKOV } from '../../world/landmarksMenshikov/groups.js';
 // ---
-// PORT-IMPORT: landmarksAndrew
+import { GROUPS_LIST as G_ANDREW } from '../../world/landmarksAndrew/groups.js';
 // ---
 import { GROUPS_LIST as G_MAKAROVA } from '../../world/landmarksMakarova/groups.js';
 // ---
@@ -38,9 +38,9 @@ import { GROUPS_LIST as G_NAVALCORPS } from '../../world/landmarksNavalCorps/gro
 // ---
 import { GROUPS_LIST as G_MINING } from '../../world/landmarksMining/groups.js';
 // ---
-// PORT-IMPORT: landmarksSredny
+import { GROUPS_LIST as G_SREDNY } from '../../world/landmarksSredny/groups.js';
 // ---
-// PORT-IMPORT: landmarksModernVO
+import { GROUPS_LIST as G_MODERNVO } from '../../world/landmarksModernVO/groups.js';
 // ---
 // PORT-IMPORT: landmarksKirova
 // ---
@@ -50,7 +50,7 @@ import { GROUPS_LIST as G_MINING } from '../../world/landmarksMining/groups.js';
 // ---
 // PORT-IMPORT: landmarksSeaTerminal
 // ---
-// PORT-IMPORT: landmarksVOStatues
+import { GROUPS_LIST as G_VOSTATUES } from '../../world/landmarksVOStatues/groups.js';
 // ---
 // PORT-IMPORT: landmarksGavan
 
@@ -75,7 +75,7 @@ export const MODULES = [
   //
   'landmarksMenshikov', // the Menshikov Palace, the First Cadet Corps, the Rumyantsev Garden with the obelisk, the Rumyantsevsky descent (docs/vo-m2.md)
   //
-  // PORT-MODULE: landmarksAndrew
+  'landmarksAndrew', // St Andrew's Cathedral, the Andreevsky market and boulevard, the Vasileostrovskaya pavilion, the Pel house, the Annunciation church (docs/vo-m3.md)
   //
   'landmarksMakarova', // Sportivnaya-2 exits 6 and 7, the Lions pier, St Catherine at the Tuchkov Bridge, the Yakovlev houses, the Lutheran churches, the Brullov house (docs/vo-m2.md)
   //
@@ -83,9 +83,9 @@ export const MODULES = [
   //
   'landmarksMining', // the Mining University, the icebreaker Krasin, the two descents (docs/vo-m2.md)
   //
-  // PORT-MODULE: landmarksSredny
+  'landmarksSredny', // the tram depot and museum, the Gorny Institut pavilions, the Geological Committee, Dom Evangelia, the Frank mansion, the Chernikhov tower (docs/vo-m3.md)
   //
-  // PORT-MODULE: landmarksModernVO
+  'landmarksModernVO', // twelve Art Nouveau hero houses of the island (docs/vo-m3.md)
   //
   // PORT-MODULE: landmarksKirova
   //
@@ -95,7 +95,7 @@ export const MODULES = [
   //
   // PORT-MODULE: landmarksSeaTerminal
   //
-  // PORT-MODULE: landmarksVOStatues
+  'landmarksVOStatues', // the monuments, fountain, churches and University-yard gardens of the island (docs/vo-m3.md)
   //
   'bridges',      // the bridges of the area: the Palace Bridge and the Blagoveshchensky Bridge (the bridge wave adds the Birzhevoy, Tuchkov, Uralsky, Smolensky, Nalichny and Novo-Andreevsky)
   'landmarksPalaceBridge', // the Palace Bridge's two opening bascule leaves (docs/AREAS.md 13.10): `bridges` leaves the central span to it; after streets (the NPC stop lines) and bridges, before traffic / people
@@ -115,7 +115,7 @@ export const LABELS = {
   // ---
   landmarksMenshikov: 'Меншиковский дворец, Румянцевский сад, Кадетский корпус',
   // ---
-  // PORT-LABEL: landmarksAndrew
+  landmarksAndrew: 'Андреевский собор, Андреевский рынок и бульвар, Благовещенская церковь',
   // ---
   landmarksMakarova: 'Спуск со львами, Церковь Св. Екатерины, Лютеранские церкви',
   // ---
@@ -123,9 +123,9 @@ export const LABELS = {
   // ---
   landmarksMining: 'Горный университет, ледокол Красин',
   // ---
-  // PORT-LABEL: landmarksSredny
+  landmarksSredny: 'Трамвайный парк, Геологический комитет, Дом Евангелия, башня Чернихова',
   // ---
-  // PORT-LABEL: landmarksModernVO
+  landmarksModernVO: 'Северный модерн: дома Васильевского острова',
   // ---
   // PORT-LABEL: landmarksKirova
   // ---
@@ -135,7 +135,7 @@ export const LABELS = {
   // ---
   // PORT-LABEL: landmarksSeaTerminal
   // ---
-  // PORT-LABEL: landmarksVOStatues
+  landmarksVOStatues: 'Памятники, фонтаны и церкви Васильевского острова',
   // ---
   landmarksPalaceBridge: 'Дворцовый мост · разводные пролёты',
   drive: 'машина на старте',
@@ -181,7 +181,7 @@ GROUPS.landmarksUniversity = G_UNIVERSITY;
 // ---
 GROUPS.landmarksMenshikov = G_MENSHIKOV;      // every sub-group lies in this territory and in its data
 // ---
-// PORT-GROUPS: landmarksAndrew
+GROUPS.landmarksAndrew = G_ANDREW;      // all six sub-groups lie in the territory
 // ---
 GROUPS.landmarksMakarova = G_MAKAROVA;      // every sub-group lies in this territory and in its data
 // ---
@@ -189,9 +189,9 @@ GROUPS.landmarksNavalCorps = G_NAVALCORPS;      // every sub-group lies in this 
 // ---
 GROUPS.landmarksMining = G_MINING;      // every sub-group lies in this territory and in its data
 // ---
-// PORT-GROUPS: landmarksSredny
+GROUPS.landmarksSredny = G_SREDNY;      // all six sub-groups lie in the territory
 // ---
-// PORT-GROUPS: landmarksModernVO
+GROUPS.landmarksModernVO = G_MODERNVO;      // all twelve houses lie in the territory
 // ---
 // PORT-GROUPS: landmarksKirova
 // ---
@@ -201,7 +201,7 @@ GROUPS.landmarksMining = G_MINING;      // every sub-group lies in this territor
 // ---
 // PORT-GROUPS: landmarksSeaTerminal
 // ---
-// PORT-GROUPS: landmarksVOStatues
+GROUPS.landmarksVOStatues = G_VOSTATUES.filter((g) => g.key !== 'vo-musa-jalil');      // the Musa Jalil monument (-6258, 50) stands 270 m outside the territory: not claimed
 // ---
 // the bridges: the Palace Bridge (both ends lie in the territory) and the Blagoveshchensky Bridge (bridges/groups-sw.js carries its claim); the bridge wave appends the island's other bridges (a groups-vo.js)
 GROUPS.bridges = G_BR.filter((b) => b.key === 'palace').concat(GROUPS_SW.filter((b) => b.key === 'blagoveshchensky'));
@@ -231,7 +231,12 @@ export function makeAreas(h) {
   { name: 'Румянцевский сад · Rumyantsev Garden', c: [-3286, -672], r: 75 },
   { name: 'Румянцевский спуск · Rumyantsev Descent', c: [-3208, -590], r: 45 },
   // ---
-  // PORT-AREAS: landmarksAndrew
+  ..._groupPolys(SUBGROUPS['andrew-cathedral'], 14).map((r) => ({ name: 'Андреевский собор · St Andrew\'s Cathedral', ...r })),
+  ..._groupPolys(SUBGROUPS['andrew-market'], 8).map((r) => ({ name: 'Андреевский рынок · Andreevsky Market', ...r })),
+  ..._groupPolys(SUBGROUPS['andrew-pavilion'], 14).map((r) => ({ name: 'Станция метро «Василеостровская» · Vasileostrovskaya metro', ...r })),
+  ..._groupPolys(SUBGROUPS['andrew-pel'], 6).map((r) => ({ name: 'Дом Пеля · Pel house', ...r })),
+  ..._groupPolys(SUBGROUPS['andrew-annunciation'], 10).map((r) => ({ name: 'Благовещенская церковь · Annunciation Church', ...r })),
+  { name: 'Андреевский бульвар · Andreevsky Boulevard', c: [-3944, -976], r: 120 },
   // ---
   { name: 'Спуск со львами · Lions pier', c: [-2851, -1442], r: 26 },
   { name: 'Церковь Св. Екатерины у Тучкова моста · Church of St Catherine', c: [-3651, -1556], r: 50 },
@@ -249,9 +254,17 @@ export function makeAreas(h) {
   { name: 'Горный университет · Mining University', c: [-4565, 360], r: 75 },
   { name: 'Ледокол «Красин» · Icebreaker Krasin', c: [-4600, 512], r: 48 },
   // ---
-  // PORT-AREAS: landmarksSredny
+  ..._groupPolys(SUBGROUPS['tram-depot'], 10).map((r) => ({ name: 'Василеостровский трамвайный парк · Vasileostrovsky tram depot', ...r })),
+  ..._groupPolys(SUBGROUPS['geolkom'], 8).map((r) => ({ name: 'Геологический комитет · Geological Committee', ...r })),
+  ..._groupPolys(SUBGROUPS['gorny-pavilions'], 12).map((r) => ({ name: 'Станция метро «Горный институт» · Gorny Institut metro', ...r })),
+  ..._groupPolys(SUBGROUPS['dom-evangelia'], 6).map((r) => ({ name: 'Дом Евангелия · Dom Evangelia', ...r })),
+  ..._groupPolys(SUBGROUPS['frank-mansion'], 6).map((r) => ({ name: 'Особняк Франка · Frank mansion', ...r })),
+  ..._groupPolys(SUBGROUPS['chernikhov-tower'], 8).map((r) => ({ name: 'Башня Чернихова · Chernikhov tower', ...r })),
   // ---
-  // PORT-AREAS: landmarksModernVO
+  ..._groupPolys(SUBGROUPS['modernvo-smirnov'], 6).map((r) => ({ name: 'Дом с атлантами · House with the atlantes', ...r })),
+  ..._groupPolys(SUBGROUPS['modernvo-erem82'], 6).map((r) => ({ name: 'Дом со шпилем · House with the spire', ...r })),
+  ..._groupPolys(SUBGROUPS['modernvo-erem46'], 6).map((r) => ({ name: 'Дом со шпицами · House with the spires', ...r })),
+  ..._groupPolys(SUBGROUPS['modernvo-kudryavtsev'], 6).map((r) => ({ name: 'Дом с подсолнухами · House with sunflowers', ...r })),
   // ---
   // PORT-AREAS: landmarksKirova
   // ---
@@ -261,7 +274,9 @@ export function makeAreas(h) {
   // ---
   // PORT-AREAS: landmarksSeaTerminal
   // ---
-  // PORT-AREAS: landmarksVOStatues
+  ..._groupPolys(SUBGROUPS['vo-church-armenian'], 10).map((r) => ({ name: 'Армянская церковь · Armenian Church', ...r })),
+  { name: 'Фонтан «Пётр Первый» · Peter I fountain', c: [-3006.6, -784], r: 14 },
+  { name: 'Раскрытая книга · Open Book', c: [-2946.9, -740.3], r: 10 },
   // ---
   // the Academy of Arts and its neighbours; the embankment road row stands BEFORE the river rows (the Neva quay would be named instead)
   ..._groupPolys(SUBGROUPS['academy-of-arts'], 8).map((r) => ({ name: 'Академия художеств · Academy of Arts', ...r })),
@@ -327,7 +342,7 @@ export const TEST = {
     // ---
     { id: 'w216655164', by: 'landmarksMenshikov', group: 'menshikov-palace' },
     // ---
-    // PORT-CLAIMED: landmarksAndrew
+    { id: 'w84046074', by: 'landmarksAndrew', group: 'andrew-cathedral' },
     // ---
     { id: 'w54949806', by: 'landmarksMakarova', group: 'lutheran-catherine' },
     // ---
@@ -335,9 +350,9 @@ export const TEST = {
     // ---
     { id: 'r2902646', by: 'landmarksMining', group: 'mining-university' },
     // ---
-    // PORT-CLAIMED: landmarksSredny
+    { id: 'w45965990', by: 'landmarksSredny', group: 'geolkom' },
     // ---
-    // PORT-CLAIMED: landmarksModernVO
+    { id: 'w108204300', by: 'landmarksModernVO', group: 'modernvo-smirnov' },
     // ---
     // PORT-CLAIMED: landmarksKirova
     // ---
@@ -347,7 +362,7 @@ export const TEST = {
     // ---
     // PORT-CLAIMED: landmarksSeaTerminal
     // ---
-    // PORT-CLAIMED: landmarksVOStatues
+    { id: 'w111944528', by: 'landmarksVOStatues', group: 'vo-church-armenian' },
     // ---
     { id: 'w362796524', by: 'bridges', group: 'palace' },
   ],      // one row per landmark module and its main sub-group
@@ -478,9 +493,9 @@ export const PRUNE_SERVICES = [
   //
   'landmarksMenshikov',
   //
-  // PORT-PRUNE: landmarksAndrew
+  'landmarksAndrew',
   //
-  // PORT-PRUNE: landmarksSredny
+  'landmarksSredny',
   //
   // PORT-PRUNE: landmarksKirova
 ];
