@@ -5,11 +5,25 @@
 // clustered into pillars; each pillar becomes ONE oriented box (a pier with a pointed or round nose: the minimum-area rectangle of the hull of its outline) or a row of narrow boxes along its long axis where the
 // rectangle would wall off much more than the pillar covers (a concave or very elongated footing). The boxes run from the bed up to 1.6 m over the water: above the hull (SPEC_BOAT.hgt) and far below any deck, so
 // nothing on the deck is touched (the same range as the Anichkov piers, landmarksC/bridge.js: a walker or a car on the deck never meets them). A pillar that a solid already covers (the hand-made Anichkov piers) is left alone.
+// SOFFITS (the same function, second pass): the drawn arch soffits and spandrel faces that dip below the top of the hull (water + SPEC_BOAT.hgt) near the springings of the arch bridges have no collider of their own
+// (the deck ramp counts as a 0.5 m slab, HULL_DECK_SLAB), so a boat could enter the stone there. The surface of every non upward facing triangle is sampled (0.4 m); the samples whose point lies between the water and the
+// hull top, in open water (1 m from the bank), are clustered like the pillars and become boxes of the same range: the water side of the soffit where the hull cannot be anyway. The crown of the arch stays open.
 // The passages between the pillars stay open (no collider outside the drawn footing), and the piers are structure: not knockable (the knock rule is for fences, parapets, railings, benches and lamps).
 import { carContact } from '../drive/collision.js';
+import { SPEC_BOAT } from '../drive/boat/handling.js';
 
-const RISE = 0.5, CELL = 0.8, BANK = 1.2, MIN_EXT = 0.8, MAX_EXT = 80, UP = 1.6, FILL = 0.72, PAD = 0.05;
+const SOFFIT_MIN = 0.6, SAMPLE = 0.4, SOFFIT_BANK = 1.0, SOFFIT_LO = 0.02, RISE = 0.5, CELL = 0.8, BANK = 1.2, MIN_EXT = 0.8, MAX_EXT = 80, UP = 1.6, FILL = 0.72, PAD = 0.05;
 const _probe = { x: 0, z: 0, y: 0, yaw: 0, floats: true }, _tiny = { W: 0.6, len: 0.6, centerZ: 0, hgt: 0.95 }, _out = {};
+
+/** Bridges whose DRAWN soffit is lower than the hull over the whole width of the channel at one place: the soffit collider would wall the water, so these get no soffit boxes (the picture is not touched; a boat can pass through the stone there, a known limit, docs/water-transport-bridges.md).
+ *  mesh name -> why */
+export const LOW_CLEARANCE = {
+  'brg-malo-konyushenny': 'the soffit of the south end sits 0.4 m over the water along a diagonal that runs from bank to bank (the arch profile is drawn along the channel at the Griboedov / Moika junction next to the Teatralny Bridge)',
+};
+
+/** the marker of a pier / soffit collider made by this module: structure under the deck, never a knock record (the audits that count plain solids use isPierBox) */
+export const markPier = (it) => { it.pier = true; return it; };
+export const isPierBox = (it) => !!(it && it.pier === true);
 
 /** the convex hull of [x, z] points (monotone chain), counter clockwise */
 function hullOf(P) {
@@ -47,7 +61,7 @@ function acrossIn(H, ax, az, a, b) {
 /** register the pillars of the meshes `roots` (an array of Object3D, or one); returns { pillars, boxes, covered } */
 export function solidPiers(ctx, roots) {
   const ph = ctx.physics, list = Array.isArray(roots) ? roots : [roots];
-  const stat = { pillars: 0, boxes: 0, covered: 0 };
+  const stat = { pillars: 0, boxes: 0, covered: 0, soffits: 0 };
   const pts = [], cellOf = new Map();
   const wet = (x, z) => ph.waterLevel(x, z) !== null;
   for (const root of list) {
@@ -75,10 +89,49 @@ export function solidPiers(ctx, roots) {
       }
     });
   }
-  if (!pts.length) return stat;
+  boxesFrom(ph, pts, cellOf, true, stat);
+  // ---- second pass: the soffits and spandrel faces that dip below the top of the hull (water + SPEC_BOAT.hgt) in open water
+  const spts = [], scell = new Map(), seen = new Set(), bankOf = new Map();
+  const nearBank = (x, z) => { const k = Math.floor(x / SAMPLE) + ',' + Math.floor(z / SAMPLE); let v = bankOf.get(k); if (v === undefined) { v = false; for (let a = 0; a < 8 && !v; a++) if (!wet(x + Math.cos(a * Math.PI / 4) * SOFFIT_BANK, z + Math.sin(a * Math.PI / 4) * SOFFIT_BANK)) v = true; bankOf.set(k, v); } return v; };
+  for (const root of list) {
+    root.traverse((m) => {
+      if (!m.isMesh || m.isInstancedMesh || !m.geometry || (m.userData && m.userData.submerged) || LOW_CLEARANCE[m.name]) return;
+      const pos = m.geometry.attributes.position, idx = m.geometry.index; if (!pos) return;
+      const e = m.matrixWorld.elements, n = idx ? idx.count : pos.count, V = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      for (let t = 0; t + 2 < n; t += 3) {
+        let ymin = 1e9, ymax = -1e9;
+        for (let k = 0; k < 3; k++) {
+          const i = idx ? idx.getX(t + k) : t + k, x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = V[k];
+          v[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; v[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; v[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
+          if (v[1] < ymin) ymin = v[1]; if (v[1] > ymax) ymax = v[1];
+        }
+        let w0 = ph.waterLevel((V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3);
+        if (w0 === null) for (let k = 0; k < 3 && w0 === null; k++) w0 = ph.waterLevel(V[k][0], V[k][2]);
+        if (w0 === null || !(ymin < w0 + SPEC_BOAT.hgt && ymax > w0 + SOFFIT_LO)) continue;
+        const ux = V[1][0] - V[0][0], uy = V[1][1] - V[0][1], uz = V[1][2] - V[0][2], vx = V[2][0] - V[0][0], vy = V[2][1] - V[0][1], vz = V[2][2] - V[0][2];
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, nl = Math.hypot(nx, ny, nz); if (nl < 1e-9 || ny / nl > 0.3) continue;      // (an upward facing surface is a deck, a kerb or a step: the deck colliders' business)
+        const edge = Math.max(Math.hypot(ux, uy, uz), Math.hypot(vx, vy, vz), Math.hypot(V[2][0] - V[1][0], V[2][1] - V[1][1], V[2][2] - V[1][2])), N = Math.min(400, Math.max(1, Math.ceil(edge / SAMPLE)));
+        for (let a = 0; a <= N; a++) for (let b = 0; a + b <= N; b++) {
+          const f1 = a / N, f2 = b / N, f0 = 1 - f1 - f2, x = V[0][0] * f0 + V[1][0] * f1 + V[2][0] * f2, y = V[0][1] * f0 + V[1][1] * f1 + V[2][1] * f2, z = V[0][2] * f0 + V[1][2] * f1 + V[2][2] * f2;
+          if (y > w0 + SPEC_BOAT.hgt + 0.3 || y < w0 - 0.3) continue;
+          const w = ph.waterLevel(x, z); if (w === null || y < w + SOFFIT_LO || y > w + SPEC_BOAT.hgt || nearBank(x, z)) continue;
+          const gx = Math.floor(x / SAMPLE), gz = Math.floor(z / SAMPLE), gk = gx + ',' + gz; if (seen.has(gk)) continue; seen.add(gk);
+          for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { const i = spts.length; spts.push({ x: (gx + dx) * SAMPLE, z: (gz + dz) * SAMPLE, w, top: w + UP }); const key = Math.floor(spts[i].x / CELL) + ',' + Math.floor(spts[i].z / CELL); (scell.get(key) || scell.set(key, []).get(key)).push(i); }
+        }
+      }
+    });
+  }
+  const before = stat.boxes; boxesFrom(ph, spts, scell, false, stat, SOFFIT_MIN, SPEC_BOAT.hgt); stat.soffits = stat.boxes - before;
+  return stat;
+}
+
+/** the boxes of the clusters of `pts` ({ x, z, w, top }; with `tri` the points come in triples = the corners of one wall triangle, else every point is its own piece): the pillar pipeline of solidPiers, shared with the soffits */
+function boxesFrom(ph, pts, cellOf, tri, stat, minAcross = 0, probeHgt = 0.95) {
+  if (!pts.length) return;
+  _tiny.hgt = probeHgt;      // (the 'already protected' probe: the pillars keep the 0.95 m of the first version, the soffits probe with the real hull height)
   // pillars = points that touch (cells of CELL m, eight neighbours)
   const parent = pts.map((_, i) => i), find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
-  for (let i = 0; i + 2 < pts.length; i += 3) { parent[find(i + 1)] = find(i); parent[find(i + 2)] = find(i); }      // (the three corners of one wall triangle are one piece)
+  if (tri) for (let i = 0; i + 2 < pts.length; i += 3) { parent[find(i + 1)] = find(i); parent[find(i + 2)] = find(i); }      // (the three corners of one wall triangle are one piece)
   for (const [key, ids] of cellOf) {
     const [cx, cz] = key.split(',').map(Number);
     for (let k = 1; k < ids.length; k++) parent[find(ids[k])] = find(ids[0]);
@@ -101,8 +154,9 @@ export function solidPiers(ctx, roots) {
     }
     if (tot && hit / tot >= 0.9) { stat.covered++; continue; }
     const fill = H.length < 3 ? 1 : area(H) / Math.max(ob.area, 1e-6), add = (u0, u1, v0, v1) => {
+      if (v1 - v0 < minAcross) { const m = (v0 + v1) / 2; v0 = m - minAcross / 2; v1 = m + minAcross / 2; }      // (a sliver of stone along an arch springing: not a 0.1 m blade)
       const cu = (u0 + u1) / 2, cv = (v0 + v1) / 2;       // (the rectangle in the frame (ax, az) x (-az, ax); the world point is u * (ax, az) + v * (-az, ax))
-      ph.addBox(cu * ob.ax - cv * ob.az, cu * ob.az + cv * ob.ax, (v1 - v0) + 2 * PAD, (u1 - u0) + 2 * PAD, rot, y0, y1); stat.boxes++;
+      markPier(ph.addBox(cu * ob.ax - cv * ob.az, cu * ob.az + cv * ob.ax, (v1 - v0) + 2 * PAD, (u1 - u0) + 2 * PAD, rot, y0, y1)); stat.boxes++;
     };
     stat.pillars++;
     if (fill >= FILL || ob.u1 - ob.u0 < 2.5) { add(ob.u0, ob.u1, ob.v0, ob.v1); continue; }
@@ -112,5 +166,4 @@ export function solidPiers(ctx, roots) {
       if (ext) add(a, b, ext[0], ext[1]);
     }
   }
-  return stat;
 }

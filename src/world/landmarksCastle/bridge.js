@@ -36,8 +36,6 @@ function railParts(M, bays) {
   return out;
 }
 
-// the soffit of the castle decks: they were solid causeways down to the water of the moat (-1.2) and walled it into pockets; now a 0.6-0.8 m slab (the deck rises 0.14 .. 0.36), so that a boat (hull 0.7 m over the water) sails under them
-const SOFFIT = -0.45;
 export function build(K, M, D, svc) {
   const P = K.P, ph = K.ctx.physics, rbays = [];
   const hump = (t) => 0.14 + 0.22 * (1 - (2 * t - 1) ** 2);
@@ -50,10 +48,10 @@ export function build(K, M, D, svc) {
       for (let k = 0; k < N; k++) {
         const t0 = k / N, t1 = (k + 1) / N, z0 = len * t0, z1 = len * t1, y0 = hump(t0), y1 = hump(t1);
         P.quad(M.sett, [-hw, y0, z0], [hw, y0, z0], [hw, y1, z1], [-hw, y1, z1], [0, 1, 0], [[0, z0 / 2], [2, z0 / 2], [2, z1 / 2], [0, z1 / 2]]);
-        for (const s of [-1, 1]) P.quad(M.marblePink, [s * hw, SOFFIT, z0], [s * hw, SOFFIT, z1], [s * hw, y1, z1], [s * hw, y0, z0], [s, 0, 0]);
-        P.quad(M.graniteDark, [-hw, SOFFIT, z0], [hw, SOFFIT, z0], [hw, SOFFIT, z1], [-hw, SOFFIT, z1], [0, -1, 0]);
+        for (const s of [-1, 1]) P.quad(M.marblePink, [s * hw, -1.3, z0], [s * hw, -1.3, z1], [s * hw, y1, z1], [s * hw, y0, z0], [s, 0, 0]);
+        P.quad(M.graniteDark, [-hw, -1.2, z0], [hw, -1.2, z0], [hw, -1.2, z1], [-hw, -1.2, z1], [0, -1, 0]);
         const c = [a[0] + dx * (t0 + t1) / 2, a[1] + dz * (t0 + t1) / 2];
-        ph.addWalkBox(c[0], c[1], hw * 2, len / N + 0.05, rot, Math.max(y0, y1), SOFFIT);
+        ph.addWalkBox(c[0], c[1], hw * 2, len / N + 0.05, rot, Math.max(y0, y1), -1.3);
       }
     } finally { P.pop(); }
     for (const s of [-1, 1]) {

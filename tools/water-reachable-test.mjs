@@ -29,6 +29,7 @@ const { createHandling } = await import('../src/world/drive/handling.js');
 const { SPEC } = await import('../src/world/drive/model.js');
 const { MASS, tuningFor } = await import('../src/world/drive/cars/tuning.js');
 const { HOOKS } = await import('../src/world/lib/area-tables.js');
+const { isPierBox } = await import('../src/world/bridges/piers.js');
 const hyp = Math.hypot, DEG = 180 / Math.PI;
 const { floorZones: BRIDGE_FLOORS_FN } = await import('../src/world/environment/river.js'), BRIDGE_FLOORS = BRIDGE_FLOORS_FN();
 const modOf = (it) => { const i = ph.items.indexOf(it); for (const [n, [a, b]] of Object.entries(marks)) if (i >= a && i < b) return n; return '?'; };
@@ -142,7 +143,7 @@ check('1 no wall of colliders cuts a body of water: every connected body of wate
 check('1 the solids that stand in water (a collider on a water cell that stops a walker on the bed) are structures, never a fence line: no fence-kind record and no thin long wall on a water cell', () => {
   const ex = [];
   for (const it of ph.items) {
-    if (it.type !== 'box' && it.type !== 'cyl') continue; if (it.fence) { /* checked below */ }
+    if (it.type !== 'box' && it.type !== 'cyl') continue; if (isPierBox(it)) continue;      // (the pier / soffit boxes of bridges/piers.js are bridge structure by construction: a drawn pillar or the stone of an arch springing, never a fence line)
     const x = it.cx, z = it.cz; if (!L.inPlay(x, z, -5) || waterAt(x, z) === null) continue;
     const bed = L.heightAt(x, z); if (it.y1 <= bed + 0.45 || it.y0 >= bed + 1.7) continue;
     const thin = it.type === 'box' && Math.min(it.hw, it.hd) * 2 <= 1.1 && Math.max(it.hw, it.hd) * 2 >= 4;
@@ -459,8 +460,7 @@ if (AREA === 'palace') {
 // The Troitsky Bridge (module landmarksTroitsky, docs/AREAS.md 13.8) is audited WHOLE, not only what is thin and tall: the 554 m deck lies over the Neva, so every solid it made must be breakable
 // (a railing panel, a granite parapet section, a barrier kerb piece, a candelabrum, a contact-wire pole), whatever its size, except the structure listed here; and the MOVING leaf has no physics item at all:
 // its rails and kerbs are knock records whose box is a dynamic one (the record's own source), checked through the dynamic providers.
-/** a pier collider that bridges/piers.js made from the drawn pillars: a box from the bed (y -8) up to 1.6 m over the water, in the river (structure, never knockable like the Anichkov piers; the audit below is about what a car or a walker can knock) */
-const isPierBox = (it) => it.type === 'box' && it.y0 === -8 && waterAt(it.cx, it.cz) !== null && it.y1 - waterAt(it.cx, it.cz) <= 1.65;
+// (isPierBox: the pier colliders of bridges/piers.js carry the marker `pier`; structure in the river, never knockable)
 const TROITSKY_STRUCTURE = [
   { why: 'the two granite obelisks with rostra at the south entrance (monument blocks 2 x 2 m, 8 m tall, on the Mars Field embankment beside the roadway: they keep no one from the water)', ok: (it) => it.type === 'box' && Math.abs(it.hw - 1) < 1e-6 && Math.abs(it.hd - 1) < 1e-6 && it.y1 === 8 },
 ];

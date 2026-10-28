@@ -27,7 +27,8 @@ ph.refreshDynamic();      // the dynamic solids (the bascule leaves of the Troit
 const { createBoatHandling, SPEC_BOAT } = await import('../src/world/drive/boat/handling.js');
 const { carContact } = await import('../src/world/drive/collision.js');
 const { BRIDGE_ZONES } = await import('../src/world/environment/waterways.js');
-const DEG = Math.PI / 180, R_FREE = 1.5, HULL = SPEC_BOAT.hgt;
+const { LOW_CLEARANCE: LOW_CLEARANCE_BRIDGES } = await import('../src/world/bridges/piers.js');
+const DEG = Math.PI / 180, R_FREE = Number(process.env.RFREE || 1.5), HULL = SPEC_BOAT.hgt;
 
 // ---------------------------------------------------------------- the 1 m grid of the play area
 const P = L.WORLD.play, RES = 1, X0 = Math.floor(P.x0), Z0 = Math.floor(P.z0), NX = Math.ceil(P.x1 - X0), NZ = Math.ceil(P.z1 - Z0);
@@ -88,6 +89,21 @@ function components(ok) {
   return { comp, sizes, boxes };
 }
 const FREE = components((k) => D[k] >= R_FREE), WETC = components(isWet), FREEX = components((k) => DX[k] >= R_FREE);
+// UNREACHABLE WATER: a body of water that no boat can reach, listed here with the reason (it is not a transport water: nothing is claimed about it, the checks a / c skip it). Only a body that is NOT joined to the main water by any wet cell counts;
+// a name in this table is the waterway key of EVERY sampled cell of the body, and the body must be small (a lake of the map is no excuse).
+const UNREACHABLE = { moat: 'the moat of the Mikhailovsky Castle: a separate 1.2 m deep body (1506 m2) behind the Fontanka quay, ringed by its own causeway decks (landmarksCastle/bridge.js); no connection to the Fontanka' };
+const isolated = new Map();      // WETC component -> { key, size, reason }
+{
+  let main = 1; for (let c = 1; c < WETC.sizes.length; c++) if (WETC.sizes[c] > WETC.sizes[main]) main = c;
+  const keys = new Map();
+  for (let k = 0; k < WETC.comp.length; k++) {
+    const c = WETC.comp[k]; if (!c || c === main || WETC.sizes[c] > 20000) continue;
+    let e = keys.get(c); if (!e) keys.set(c, (e = { n: 0, ks: new Set() })); if (e.n++ % 25) continue; e.ks.add(L.waterwayAt(cx(k), cz(k)) || 'pond');
+  }
+  for (const [c, e] of keys) { const ks = [...e.ks]; if (ks.length === 1 && UNREACHABLE[ks[0]]) isolated.set(c, { key: ks[0], size: WETC.sizes[c], reason: UNREACHABLE[ks[0]] }); }
+  for (const [c, v] of isolated) console.log(`     unreachable water: body ${c}, ${v.size} m2 (${v.key}): ${v.reason}`);
+}
+const isolatedAt = (x, z, r) => { for (let dz = -r; dz <= r; dz += 2) for (let dx = -r; dx <= r; dx += 2) { const c = WETC.comp[idx(x + dx, z + dz)]; if (c && isolated.has(c)) return isolated.get(c); } return null; };
 const keyAt = (k) => L.waterwayAt(cx(k), cz(k)) || (isWet(k) ? 'pond' : '?');
 console.log(`grid ${NX} x ${NZ} m: ${nWet} wet cells, ${solid.reduce((a, b) => a + b, 0)} of them stopped by a solid for a floating hull; ${FREE.sizes.length - 1} bodies of boat-free water (>= ${R_FREE} m clear), ${WETC.sizes.length - 1} bodies of water`);
 
@@ -161,7 +177,7 @@ function route(a, b, pad = 70) {
     for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
       const i = (l % W) + di, j = (l / W | 0) + dj; if (i < 0 || j < 0 || i >= W || j >= H) continue;
       const ln = j * W + i, kn = glob(ln); if (D[kn] < R_FREE) continue;
-      const step = (di && dj ? Math.SQRT2 : 1) * (1 + 10 * Math.pow(Math.max(0, (4 - D[kn]) / 4), 2)), nd = d + step;
+      const step = (di && dj ? Math.SQRT2 : 1) * (1 + 14 * Math.pow(Math.max(0, (7 - D[kn]) / 7), 2)), nd = d + step;
       if (nd < dist[ln]) { dist[ln] = nd; prev[ln] = l; push([nd, ln]); }
     }
   }
@@ -197,16 +213,34 @@ function sail(path, { maxT = 0, thr = 0.6 } = {}) {
 }
 
 // ---------------------------------------------------------------- a  every bridge
-const report = [], quiet = [];      // quiet: the decks that are only partly inside the territory or stand over a pond (a pond is no transport water: the Tauride garden ponds are separate bodies)
-for (const c of crossings) {
-  if (ONLY && c.id !== ONLY) continue;
-  if (c.key === 'pond') { quiet.push(c.id + ' (not over a waterway)'); continue; }
-  const d = c.w / 2 + 22, A = sectionCell(c, -1, d), B = sectionCell(c, 1, d);
-  const where = `${c.id} (${c.key}, ${c.src}) at ${c.c[0].toFixed(0)}, ${c.c[1].toFixed(0)}`;
+const report = [];
+/** the principal axis of the wet cells within 40 m of (x, z): the way the water runs (th), or null when there is hardly any */
+function waterAxis(x, z) {
+  let sx = 0, sz = 0, sxx = 0, szz = 0, sxz = 0, n = 0;
+  for (let dz = -40; dz <= 40; dz += 2) for (let dx = -40; dx <= 40; dx += 2) if (isWet(idx(x + dx, z + dz))) { sx += dx; sz += dz; sxx += dx * dx; szz += dz * dz; sxz += dx * dz; n++; }
+  if (n < 30) return null;
+  const mx = sx / n, mz = sz / n; return 0.5 * Math.atan2(2 * (sxz / n - mx * mz), (sxx / n - mx * mx) - (szz / n - mz * mz));
+}
+const unverified = [];      // { id, why }: a crossing the oracle could NOT sail, with the reason (printed in full: nothing is skipped silently)
+for (const c0 of crossings) {
+  if (ONLY && c0.id !== ONLY) continue;
+  let c = c0;
+  if (c.key === 'pond') { unverified.push({ id: c.id, why: 'over a pond / basin, not a waterway (not transport water)' }); continue; }
+  { const iso = isolatedAt(c.c[0], c.c[1], Math.min(12, Math.max(4, c.len / 2))); if (iso) { unverified.push({ id: c.id, why: 'UNREACHABLE water (' + iso.key + ', ' + iso.size + ' m2): ' + iso.reason.split(':')[0] }); continue; } }
+  // the cluster axis of a deck is a guess (a chain of decks along a river clusters into one long deck): the first try is that axis, the second the way the water runs
+  const sections = (o) => { const d = o.w / 2 + 22; return { d, A: sectionCell(o, -1, d), B: sectionCell(o, 1, d) }; };
+  let S = sections(c);
+  if (c.src === 'deck' && !(S.A.cell && S.B.cell)) {
+    const th = waterAxis(c.c[0], c.c[1]);
+    if (th !== null) { const o = { ...c, lx: Math.cos(th), lz: Math.sin(th), ax: -Math.sin(th), az: Math.cos(th), len: 30, retried: true }, S2 = sections(o); if ((S2.A.cell && S2.B.cell) || (S2.A.wet && S2.B.wet && !(S.A.wet && S.B.wet))) { c = o; S = S2; } }
+  }
+  const { d, A, B } = S;
+  const where = `${c.id} (${c.key}, ${c.src}${c.retried ? ', across the way the water runs' : ''}) at ${c.c[0].toFixed(0)}, ${c.c[1].toFixed(0)}`;
   const here = wetNear(c.c[0], c.c[1], Math.min(12, c.len / 2));
-  if (!here && !A.wet && !B.wet) { (c.src === 'deck' ? quiet : report).push(c.src === 'deck' ? c.id : `${where}: no water in the territory`); continue; }
+  if (!here && !A.wet && !B.wet) { if (c.src === 'deck') unverified.push({ id: c.id, why: 'no water in the territory at the deck' }); else report.push(`${where}: no water in the territory`); continue; }
   if (!A.cell || !B.cell) {
-    if (!A.wet || !B.wet) { if (c.src === 'deck') { quiet.push(c.id); continue; } report.push(`${where}: PARTIAL, ${!A.wet && !B.wet ? 'both sides' : !A.wet ? 'the -along side' : 'the +along side'} lie outside the territory (no water cell in the section ${d.toFixed(0)} m from the centre)`); continue; }
+    if (!A.wet || !B.wet) { const why = `PARTIAL, ${!A.wet && !B.wet ? 'both sides' : !A.wet ? 'the -along side' : 'the +along side'} lie outside the territory (no water cell in the section ${d.toFixed(0)} m from the centre)`; if (c.src === 'deck') unverified.push({ id: c.id, why }); else report.push(`${where}: ${why}`); continue; }
+    if (c.src === 'deck') { unverified.push({ id: c.id, why: `no ${R_FREE} m clear water at the section ${d.toFixed(0)} m from the deck on a side (${A.wet} / ${B.wet} wet cells): a narrow or winding channel, the derived deck axis is not reliable here` }); continue; }
     check(`a ${where}: a boat fits in the water on both sides`, () => assert.fail(`no ${R_FREE} m clear water at the section ${d.toFixed(0)} m ${!A.cell ? 'before' : 'after'} the bridge (${A.wet} / ${B.wet} wet cells in it): a solid or a narrow channel`));
     continue;
   }
@@ -227,8 +261,26 @@ for (const c of crossings) {
     assert.equal(run.off, 0, `${run.off} frames off the water`);
   });
 }
+{ // New Holland: the footbridges (landmarksNewHolland, services.landmarksNewHolland.bridges) cross the water of the Admiralty canals; the water under every one of them must be part of the MAIN body of boat-free water
+  // (an explicit assertion: the generic deck search above can miss or mis-orient them, and a footbridge whose column or soffit walls the water would otherwise go unnoticed)
+  const NH = ctx.services.landmarksNewHolland, foot = (NH && NH.bridges) || [];
+  if (foot.length) {
+    let mainFree = 1; for (let f = 1; f < FREE.sizes.length; f++) if (FREE.sizes[f] > FREE.sizes[mainFree]) mainFree = f;
+    check(`a New Holland: the ${foot.length} footbridges (${foot.map((b) => b.id).join(', ')}) are crossed by the main body of boat-free water (${FREE.sizes[mainFree]} m2)`, () => {
+      assert.ok(foot.length >= 4, 'expected the footbridges of New Holland (4 or more), the module publishes ' + foot.length);
+      const bad = [];
+      for (const b of foot) {
+        const ux = Math.cos(b.rot), uz = -Math.sin(b.rot), n = Math.ceil(b.len); let wet = 0, free = 0, inMain = 0, walled = 0;
+        for (let i = 0; i <= n; i++) { const t = -b.len / 2 + b.len * i / n, k = idx(b.x + ux * t, b.z + uz * t); if (!isWet(k)) continue; wet++; if (FREE.comp[k]) { free++; if (FREE.comp[k] === mainFree) inMain++; } else if (solid[k] && Dwet[k] >= R_FREE) walled++; }      // (the cells within 1.5 m of the quay are no boat-free water by definition)
+        if (free < 3 || inMain !== free || walled) bad.push(`${b.id} at ${b.x.toFixed(0)}, ${b.z.toFixed(0)}: ${inMain} of ${free} boat-free cells of the span (${wet} wet, ${walled} walled by a solid in open water) lie in the main free body`);
+        else report.push(`${b.id} (New Holland footbridge, ${b.kind}) at ${b.x.toFixed(0)}, ${b.z.toFixed(0)}: ${free} boat-free cells of the span (${wet} wet), all in the main free body`);
+      }
+      assert.equal(bad.length, 0, bad.join('; '));
+    });
+  }
+}
 console.log(report.map((s) => '     ' + s).join('\n'));
-if (quiet.length) console.log(`     ${quiet.length} decks over the water that lie only partly in the territory or over a pond, not sailed: ${quiet.join(', ')}`);
+if (unverified.length) console.log(`     ${unverified.length} UNVERIFIED crossings (not sailed, each with its reason):\n` + unverified.map((u) => `       ${u.id}: ${u.why}`).join('\n'));
 
 // ---------------------------------------------------------------- b  the pillars
 const BRIDGE_MESH = /bridge|^brg-|troitsky|palace/i, NOT_PILLAR = /leaf|weight|boat|swan|duck|pontoon|env-piers|quay/i;
@@ -346,12 +398,52 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
   });
 }
 
+// ---------------------------------------------------------------- e  the plane scan: no stone in the hull's reach
+{ // every point where a drawn bridge surface (soffit, spandrel face, pier, deck edge) crosses the plane 0.62 m over the water (the gunwale: SPEC_BOAT.hgt is 0.7) and has open water around it (1.5 m or more from the bank: the shore probes keep the hull's centre 1.35 m off the bank, a stone strip nearer than that is out of reach, the colliders start at 1 m) must stop a floating hull
+  // (carContact with the hull's collision height): else a boat enters the stone near the springings of an arch bridge. A bridge that is a known low-clearance one (bridges/piers.js LOW_CLEARANCE: its drawn soffit is lower than the hull over the whole width of the channel; making it solid would wall the water) is excluded here and listed below.
+  const LOW_CLEARANCE = new Set(Object.keys(LOW_CLEARANCE_BRIDGES));
+  const tiny = { W: 0.6, len: 0.6, centerZ: 0, hgt: HULL }, car = { x: 0, z: 0, y: 0, yaw: 0, floats: true }, out = {};
+  const stops = (x, z, w) => { car.x = x; car.z = z; car.y = w; for (const b of ph.querySolids(x, z, 1.5)) if (carContact(car, tiny, b, out)) return true; return false; };
+  const openWater = (x, z, r) => { for (let a = 0; a < 16; a++) if (ph.waterLevel(x + Math.cos(a * Math.PI / 8) * r, z + Math.sin(a * Math.PI / 8) * r) === null) return false; return true; };      // (water all round at r metres)
+  const bare = new Map(), seenE = new Set(); let tested = 0, pondPts = 0;
+  ctx.scene.updateMatrixWorld(true);
+  ctx.scene.traverse((m) => {
+    if (!m.isMesh || m.isInstancedMesh || !m.geometry || (m.userData && m.userData.submerged) || !m.geometry.attributes.position) return;
+    if (!BRIDGE_MESH.test(m.name) && !BRIDGE_MESH.test(String(m.parent && m.parent.name))) return;
+    if (NOT_PILLAR.test(m.name)) return;
+    const owner = m.name || '?', pos = m.geometry.attributes.position, ix = m.geometry.index, e = m.matrixWorld.elements, n = ix ? ix.count : pos.count, V = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    for (let t = 0; t + 2 < n; t += 3) {
+      for (let k = 0; k < 3; k++) { const i = ix ? ix.getX(t + k) : t + k, x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = V[k]; v[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; v[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; v[2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
+      let w = NaN; for (const q of [[(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3], [V[0][0], V[0][2]], [V[1][0], V[1][2]], [V[2][0], V[2][2]]]) { const l = ph.waterLevel(q[0], q[1]); if (l !== null) { w = l; break; } }
+      if (w !== w) continue;
+      const pl = w + 0.62, d = [V[0][1] - pl, V[1][1] - pl, V[2][1] - pl], cross = [];
+      for (let a = 0; a < 3; a++) { const b = (a + 1) % 3; if ((d[a] > 0) !== (d[b] > 0)) { const f = d[a] / (d[a] - d[b]); cross.push([V[a][0] + (V[b][0] - V[a][0]) * f, V[a][2] + (V[b][2] - V[a][2]) * f]); } }
+      if (cross.length < 2) continue;
+      const [p, q] = cross, l = Math.hypot(q[0] - p[0], q[1] - p[1]), nn = Math.max(1, Math.ceil(l / 0.4));
+      for (let i = 0; i <= nn; i++) {
+        const x = p[0] + (q[0] - p[0]) * i / nn, z = p[1] + (q[1] - p[1]) * i / nn, k = idx(x, z); if (!isWet(k) || !openWater(x, z, 1.4)) continue;
+        if (!L.waterwayAt(x, z)) { pondPts++; continue; }      // (a pond / basin of a garden: no transport water, no boat reaches it)
+        const gk = Math.floor(x * 2) + ',' + Math.floor(z * 2); if (seenE.has(gk)) continue; seenE.add(gk); tested++;
+        if (!stops(x, z, wl[k])) { const r = bare.get(owner) || { n: 0, x, z }; r.n++; bare.set(owner, r); }
+      }
+    }
+  });
+  for (const [o, why] of Object.entries(LOW_CLEARANCE_BRIDGES)) if (bare.has(o)) console.log(`     known low-clearance bridge ${o} (no soffit collider, not part of check e): ${why}`);
+  const list = [...bare.entries()].sort((a, b) => b[1].n - a[1].n);
+  console.log(`     plane scan 0.62 m over the water: ${tested} points of drawn bridge surface in open water of the waterways (${pondPts} more over ponds, not transport water, skipped), ${list.reduce((a, [, r]) => a + r.n, 0)} without a collider that stops the hull${list.length ? ' (' + list.slice(0, 6).map(([o, r]) => o + ' ' + r.n + ' e.g. at ' + r.x.toFixed(1) + ', ' + r.z.toFixed(1)).join('; ') + ')' : ''}`);
+  check(`e plane scan: every point of a drawn bridge surface 0.62 m over open water stops a floating hull (${tested} points)`, () => {
+    const bad = list.filter(([o]) => !LOW_CLEARANCE.has(o));
+    assert.equal(bad.length, 0, bad.length + ' meshes with stone in reach of the hull and no collider: ' + bad.slice(0, 8).map(([o, r]) => `${o}: ${r.n} points, e.g. at ${r.x.toFixed(1)}, ${r.z.toFixed(1)}`).join('; '));
+  });
+}
+
 // ---------------------------------------------------------------- c  the bodies of water
 {
   const bodies = []; // per body of wet cells: the boat-free bodies inside it (only the bodies of a WATERWAY of WATERWAYS: a garden pond or a basin is not a transport water)
   const inWet = new Map(), isWaterway = new Set();
   for (let k = 0; k < WETC.comp.length; k++) if (WETC.comp[k] && !isWaterway.has(WETC.comp[k]) && L.waterwayAt(cx(k), cz(k))) isWaterway.add(WETC.comp[k]);
   for (let k = 0; k < FREE.comp.length; k++) { const f = FREE.comp[k]; if (!f) continue; const w = WETC.comp[k]; if (!isWaterway.has(w)) continue; let m = inWet.get(w); if (!m) inWet.set(w, (m = new Set())); m.add(f); }
+  for (const w of [...inWet.keys()]) if (isolated.has(w)) inWet.delete(w);      // (unreachable water: listed above, not a transport water)
   for (const [w, set] of inWet) bodies.push({ w, size: WETC.sizes[w], box: WETC.boxes[w], free: [...set].map((f) => ({ f, size: FREE.sizes[f], box: FREE.boxes[f] })).sort((a, b) => b.size - a.size) });
   bodies.sort((a, b) => b.size - a.size);
   const keysOf = (box) => { const ks = new Set(); for (let i = 0; i < 40; i++) { const k = idx(box[0] + (box[1] - box[0]) * (i % 8 + 0.5) / 8, box[2] + (box[3] - box[2]) * (Math.floor(i / 8) + 0.5) / 5); if (isWet(k)) ks.add(keyAt(k)); } return [...ks]; };
