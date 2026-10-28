@@ -6,13 +6,15 @@
 // high for the 2.5-2.8 m bridges), the open two-deck tour boat (wooden benches, orange life buoys) and the speedboat (white, red / navy canopy). MOORED ones lie alongside the piers
 // (outer long side, bow up-stream) and the quay walls; MOVING ones run back and forth on short reaches of the Moika (Green - Pevchesky, Red - Blue), the Griboedov Canal south of the
 // Kazansky Bridge, the Winter Canal and the Neva (a hydrofoil + a tram): position, heading and bobbing are pure functions of t, a U-turn at each end of the reach.
-// No colliders (the quay is solid: nobody can reach the water; the stair flights are decoration, as on the Fontanka). Everything is instanced / merged: ~8 draw calls.
+// COLLIDERS (docs/water-transport-boat-collisions.md): every pontoon is a float block (lib/craft-solids.js addFloatBlock: stops the player's motor boat, a walker on the deck is not touched) and every boat, moored or moving,
+// is a kinematic solid hull box (craftSolids: the pose is the same pure function of t that poses the mesh, the velocity comes with it). Everything is instanced / merged: ~8 draw calls.
 // SERVICE (ctx.services.environment.boats): [{ id, type, key, moving, state(t) -> { x, z, yaw, speed } }], piers: [{ x, z, w, d, yaw, key, y }]
 import * as THREE from 'three';
 import * as L from '../layout.js';
 import { PIERS } from '../data/city.js';
 import { WATERWAYS, keepOut } from './waterways.js';
 import { Acc, hash2 } from './util.js';
+import { craftSolids, addFloatBlock } from '../lib/craft-solids.js';
 
 const C = (h) => new THREE.Color(h);
 
@@ -155,6 +157,7 @@ export function buildBoats(ctx, root, quay) {
       place(-len / 2 + 3, 0, top + 2.62, 3.5, 0.16, Math.min(2.9, wid - 0.2), '#3d6f46');
     }
     out.piers.push({ x: p.cx, z: p.cz, len, wid, yaw, key: p.key, y: p.y + 0.32, id: p.id });
+    addFloatBlock(ctx.physics, p.cx, p.cz, len + 0.04, wid + 0.4, yaw, p.y);                  // the deck + floats + the tyre fenders (0.2 m beyond each long side): a boat cannot ride over a pontoon
   }
   function bankSide(p) {                                                              // +1 when the nearest bank lies on the +v side of the pier frame
     let best = null;
@@ -227,9 +230,16 @@ export function buildBoats(ctx, root, quay) {
       if (spin > 0) yaw += Math.PI * spin * spin * (3 - 2 * spin);
       return { x, z, yaw, speed };
     };
-    list.push({ type: R.type, key: R.key, y: WATERWAYS[R.key].water, moving: true, state, size: sz, id: R.id });
+    list.push({ type: R.type, key: R.key, y: WATERWAYS[R.key].water, moving: true, state, size: sz, id: R.id, v: R.v });
     moving.push(list[list.length - 1]);
   }
+  // the hulls as solids (the same pose function as the mesh): hull box = the model's length x beam times the size, up to the roof
+  const craft = craftSolids(ctx);
+  list.forEach((b, i) => {
+    const G = types[b.type], sz = b.size || 1;
+    craft.add({ id: b.id || ('moored' + i), kind: b.type, key: b.key, y: b.y, w: G.len * sz, d: G.wid * sz, h: G.h * sz, moving: !!b.moving, speed: b.v,
+      pose: b.moving ? (t, o) => { const s = b.state(t); o.x = s.x; o.z = s.z; o.rot = s.yaw; } : (t, o) => { o.x = b.x; o.z = b.z; o.rot = b.yaw; } });
+  });
   // instanced meshes
   const byType = { tram: [], open: [], speed: [], meteor: [] };
   for (const b of list) byType[b.type].push(b);

@@ -6,12 +6,14 @@
 // ends (z -330 and z +120).  Position, heading and bobbing are PURE FUNCTIONS of t (no state): state(t) is published for the other modules.
 // WAKE: a V of white foam behind every moving boat (decal, no outline), a foam fringe along the waterline.
 // PIERS: a steel pontoon 15 x 3 m (green canopy kiosk, white railing with orange life buoys, benches) beside every stair flight of environment's quay (`quay.stairs`), with one boat moored
-// along its outer side, bow up the stream.  Boats are not colliders (the player cannot reach the water: the quay is solid).
+// along its outer side, bow up the stream.  COLLIDERS (docs/water-transport-boat-collisions.md): every boat, moving or moored, is a kinematic solid hull box (lib/craft-solids.js: the pose is the same pure function of t
+// that poses the mesh) and every pontoon is a float block (a boat cannot ride over it; the walker's deck floor is environment/quay.js).
 import * as THREE from 'three';
 import * as L from '../layout.js';
 import { Parts } from './kit.js';
 import { toWorld } from './frame.js';
 import { batchGroup } from '../../core/batch2.js';
+import { craftSolids, addFloatBlock } from '../lib/craft-solids.js';
 
 const WATER = L.RIVER_Y.water;
 const LANE = 16.15;
@@ -203,7 +205,7 @@ function buildPier(ctx, K, quayStair, idx) {
   const w = (lx, lz) => new THREE.Vector3(lx, 0, lz).applyMatrix4(g.matrixWorld);
   const mid = w(len / 2 + 0.5, wid + 2.45), nxt = w(len / 2 + 0.5 + 1, wid + 2.45);
   let hx = nxt.x - mid.x, hz = nxt.z - mid.z; if (hz > 0) { hx = -hx; hz = -hz; }
-  return { group: g, x: mid.x, z: mid.z, hx, hz, idx, centre: w(len / 2, wid / 2) };
+  return { group: g, x: mid.x, z: mid.z, hx, hz, idx, centre: w(len / 2, wid / 2), len, wid, rot: g.rotation.y };
 }
 
 // ------------------------------------------------------------------------------------------------ build
@@ -233,6 +235,8 @@ export function buildBoats(K, M, ctx) {
     boats.push({ id: i, kind, ph, g, s0: ph * loop.total, bob: i * 1.7 });
   });
   const stateOf = (b, t) => { const st = loop.state(b.s0 + speed * t); return st; };
+  const craft = craftSolids(ctx), hullOf = (kind) => { const sp = SPECS[kind]; return { w: sp.B, d: sp.Ln, h: sp.free + sp.cabinH + 0.2 }; };      // the hull box: beam x length (the long axis is the local z), up to the roof (the bow screen is 0.5 m over it, thin)
+  for (const b of boats) craft.add({ id: 'c-' + b.id, kind: b.kind, key: 'fontanka', y: WATER, ...hullOf(b.kind), moving: true, speed, pose: (t, o) => { const st = stateOf(b, t); o.x = st.x; o.z = st.z; o.rot = Math.atan2(st.hx, st.hz); } });
   ctx.onUpdate((dt, t) => {
     const cam = ctx.camera.position;
     if ((mooredTick = (mooredTick + 1) % 30) === 0) for (const g of moored) { const dx = g.position.x - cam.x, dz = g.position.z - cam.z, on = dx * dx + dz * dz < BOAT_FAR2; if (g.visible !== on) g.visible = on; }
@@ -255,6 +259,9 @@ export function buildBoats(K, M, ctx) {
       const p = buildPier(ctx, K, s, i);
       piersRoot.add(p.group);      // (round 3: a landing stage never moves: it batches with the static city (far proxies) instead of ~4 draws each at every distance under the dynamic root)
       const g = wrap(MOORED[i % MOORED.length], false); g.position.set(p.x, WATER, p.z); g.rotation.y = Math.atan2(p.hx, p.hz); rootB.add(g); moored.push(g);
+      const mrot = g.rotation.y;
+      craft.add({ id: 'cm-' + i, kind: MOORED[i % MOORED.length], key: 'fontanka', y: WATER, ...hullOf(MOORED[i % MOORED.length]), moving: false, pose: (t, o) => { o.x = p.x; o.z = p.z; o.rot = mrot; } });
+      if (L.inPlay(p.centre.x, p.centre.z, -30)) addFloatBlock(ctx.physics, p.centre.x, p.centre.z, p.len + 0.04, p.wid + 0.4, p.rot, WATER);      // (the deck of the steppable pontoon is a walker floor in quay.js; this is what stops the player's boat)
       piers.push({ x: p.centre.x, z: p.centre.z, tx: s.tx, tz: s.tz, nx: s.nx, nz: s.nz, boat: MOORED[i % MOORED.length], stair: { x: s.x, z: s.z } });
     } catch (e) { console.warn('[landmarksC] pier', i, e && e.message); }
   });
