@@ -9,6 +9,7 @@ import { K, MON, STAIR } from './frame.js';
 import { krusensternFig } from './figure.js';
 import { figureMats } from '../lib/figures.js';
 import * as L from '../layout.js';
+import { knockBays, unitPanel, unitBox } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the eight railing panels are breakable bays; the eight cast-iron posts stay solid
 
 const Y_TOP = 0.15;
 const oct = (h, c) => [[-h + c, -h], [h - c, -h], [h, -h + c], [h, h - c], [h - c, h], [-h + c, h], [-h, h - c], [-h, -h + c]];
@@ -84,18 +85,19 @@ function railing(Q, tu0, tu1, tv0, tv1) {
   };
   for (const x of xs) for (const z of zs) { if (x === xs[1] && z === zs[1]) continue; post(x, z); }
   // panels: between consecutive posts of each side
-  const panel = (xa, za, xb, zb) => {
-    const len = Math.hypot(xb - xa, zb - za) - 0.2, dx = (xb - xa) / (len + 0.2), dz = (zb - za) / (len + 0.2), mx = (xa + xb) / 2, mz = (za + zb) / 2;
-    const ax = mx - dx * len / 2, az = mz - dz * len / 2, bx = mx + dx * len / 2, bz = mz + dz * len / 2, nx = dz, nz = -dx;
-    P.quad(M.wheelPanel, [ax, y0 + 0.08, az], [bx, y0 + 0.08, bz], [bx, y0 + hh, bz], [ax, y0 + hh, az], [nx, 0, nz], [[0, 0], [1, 0], [1, 1], [0, 1]]);
-    P.quad(M.wheelPanel, [bx, y0 + 0.08, bz], [ax, y0 + 0.08, az], [ax, y0 + hh, az], [bx, y0 + hh, bz], [-nx, 0, -nz], [[1, 0], [0, 0], [0, 1], [1, 1]]);
-    P.box(M.ironRail, Math.min(ax, bx) - 0.02, Math.max(ax, bx) + 0.02, y0 + hh - 0.06, y0 + hh, Math.min(az, bz) - 0.04, Math.max(az, bz) + 0.04, 'b', 1);
-  };
+  const bays = [];
+  const panel = (xa, za, xb, zb) => { const A = K.W(xa, za), B = K.W(xb, zb); bays.push({ x0: A.x, z0: A.z, x1: B.x, z1: B.z, y: y0 }); };      // (the wheel panel + its top bar: the parts of the knock bays below)
   for (let i = 0; i < 2; i++) {
     panel(xs[i], zs[0], xs[i + 1], zs[0]); panel(xs[i], zs[2], xs[i + 1], zs[2]);
     panel(xs[0], zs[i], xs[0], zs[i + 1]); panel(xs[2], zs[i], xs[2], zs[i + 1]);
   }
   { const ring = [[tu0 + eps, tv0 + eps], [tu1 - eps, tv0 + eps], [tu1 - eps, tv1 - eps], [tu0 + eps, tv1 - eps], [tu0 + eps, tv0 + eps]].map(([u, v]) => { const w = K.W(u, v); return [w.x, w.z]; }); Q.svc.fences.push({ id: 'krusenstern-railing', pts: ring, h: hh, kind: 'iron' }); }
-  // colliders: four thin boxes on the edges
-  for (const [a, b] of [[[tu0 + eps, tv0 + eps], [tu1 - eps, tv0 + eps]], [[tu0 + eps, tv1 - eps], [tu1 - eps, tv1 - eps]], [[tu0 + eps, tv0 + eps], [tu0 + eps, tv1 - eps]], [[tu1 - eps, tv0 + eps], [tu1 - eps, tv1 - eps]]]) K.wall(ph, a, b, Y_TOP - 0.1, Y_TOP + 1.3, 0.3);
+  // colliders: the panels are breakable bays (the water is near: this railing keeps nobody off the Neva), the posts are small solid blocks of cast iron
+  knockBays(Q.ctx, { name: 'lmnaval-krusenstern-railing', bays, far: 280,
+    parts: [{ geo: unitPanel(0.08, hh, { u1: 1 }), mat: M.wheelPanel, name: 'panel', stretch: true, inset: 0.1, shadow: false, receive: false, noOutline: true },
+      { geo: unitBox(hh - 0.06, hh, -0.04, 0.04, { uLen: 3, uvs: 1 }), mat: M.ironRail, name: 'bar', stretch: true, inset: 0.1, shadow: false, receive: false }],
+    collider: { y0: Y_TOP - 0.1, y1: Y_TOP + 1.3, thick: 0.3, e0: 0, e1: 0 },
+    rec: () => ({ kind: 'fence', mass: 160, h: 1.1, anchored: 14, hitK: 0.35, metal: true, minDv: 0 }) });
+  Q.extraTris = (Q.extraTris || 0) + bays.length * 6;
+  for (const x of xs) for (const z of zs) { if (x === xs[1] && z === zs[1]) continue; const w = K.W(x, z); ph.addBox(w.x, w.z, 0.24, 0.24, K.rot, Y_TOP - 0.1, Y_TOP + 1.3); }
 }

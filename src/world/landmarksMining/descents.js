@@ -52,7 +52,7 @@ export async function build(K) {
       FP.stairs(ph, (uW + uE) / 2, wT + TR * N / 2, uE - uW, TR * N, 0, 0, yL, N);
       FP.walk(ph, (uW + uE) / 2, 22.56, uE - uW + 0.2, 0.22, 0, 0, -6);      // (review 2026-10-09) the head edge of the ring runs from w 22.70 (west) to 22.57 (east) while the flight starts at 22.65: a floor strip closes the 8 cm crack at the east end of the head
       FP.walk(ph, (uW + uE) / 2, (wL + 30.6) / 2, uE - uW, 30.6 - wL, 0, yL, yL - 3);
-      FP.box(ph, 0, 31.1, 24, 0.5, 0, -6, 1.25);                          // (review 2026-10-09: a jump (vy 4.2, apex 0.74 m) cleared the old top yL + 0.7 from the landing and from the steps: the barrier now ends at the height of the generic quay colliders)
+      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the invisible barrier along the water edge of the landing is GONE (water is reachable: the walker steps off the landing into the Neva); the source's note: (review 2026-10-09: a jump (vy 4.2, apex 0.74 m) cleared the old top yL + 0.7 from the landing and from the steps: the barrier now ends at the height of the generic quay colliders)
       const c = FP.W(0, 27.0); svc.crowd.push({ x: c.x, z: c.z, r: 7, n: 6, kind: 'quay', y: yL, name: 'Спуск к Неве у Горного университета' });
       const v = FP.W(0, 29.8), t = FP.W(0, -6); svc.photoSpots.push({ name: 'Спуск к Неве: портик над пилонами', x: v.x, z: v.z, yaw: L.yawToward(v.x, v.z, t.x, t.z), pitch: 14, y: yL });
     } finally { P.pop(); }
@@ -206,7 +206,7 @@ export async function build(K) {
     }
     // the river edge: a barrier from the bed up to +1.25 (the top tread lies at -0.175 and physics skips a box whose top is not above feet + 0.45; a jump has vy 4.2 / g 12 = apex 0.74 m, so +0.7 was cleared by a
     // jump from the first two treads and from street level at the G corner (review 2026-10-09, jump probe); +1.25 is the height of the generic quay colliders and cannot be cleared from any tread), outside the ring
-    ph.addBox((G[0] + A[0]) / 2 - ex * sg * 0.3, (G[1] + A[1]) / 2 - ez * sg * 0.3, gl + 0.8, 0.5, Math.atan2(-(A[1] - G[1]), A[0] - G[0]), -6, 1.25);
+    // (n4spb: the invisible barrier along the river edge of D2 is GONE as well, see D1: water is reachable)
     const mid = ring.reduce((a, p) => [a[0] + p[0] / ring.length, a[1] + p[1] / ring.length], [0, 0]);
     svc.crowd.push({ x: mid[0], z: mid[1], r: 7, n: 5, kind: 'quay', y: yL, name: 'Амфитеатр у ледокола' });
     const sv = FS.W(33.0, 40.0); const tg = FS.W(0, 40); svc.photoSpots.push({ name: 'Ледокол «Красин» с амфитеатра', x: sv.x, z: sv.z, yaw: L.yawToward(sv.x, sv.z, tg.x, tg.z), pitch: 4, y: 0 });

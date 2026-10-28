@@ -7,6 +7,8 @@ import * as L from '../layout.js';
 import { S as FS, coverOf } from './frame.js';
 import { bust } from '../lib/figures.js';
 import { plantTrees } from './trees.js';
+import { partsGeos } from './inst.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the two benches are knock records
 
 export async function build(K) {
   const { ctx, P, M, svc } = K, ph = ctx.physics, FM = M.FM, cover = coverOf(ctx), label = ctx.services.labels;
@@ -48,16 +50,19 @@ export async function build(K) {
   });
   // ------------------------------------------------------------------------------------------ the two benches (wooden, a back, iron ends), facing the river (-X)
   step('benches', () => {
-    P.push(FS.x, 0, FS.z, FS.rot);
-    try {
-      for (const [X, Z] of [[13.8, 11.0], [16.8, 7.8]]) {
-        P.box(M.wood, X - 0.25, X + 0.2, 0.42, 0.47, Z - 0.85, Z + 0.85, 'b', 1);
-        P.box(M.wood, X + 0.18, X + 0.22, 0.5, 0.95, Z - 0.85, Z + 0.85, 'b', 1);
-        for (const dz of [-0.8, 0.8]) { P.box(M.benchIron, X - 0.22, X + 0.2, 0, 0.42, Z + dz - 0.03, Z + dz + 0.03, 'b'); P.box(M.benchIron, X + 0.17, X + 0.21, 0.42, 0.98, Z + dz - 0.03, Z + dz + 0.03, 'b'); }
-        const w = FS.W(X, Z); svc.benches.push({ x: w.x, z: w.z, rotY: FS.rot + Math.PI / 2 * 0 + Math.PI / 2, len: 1.7 });
-        FS.box(ph, X, Z, 0.7, 1.8, 0, 0, 1.0);
-      }
-    } finally { P.pop(); }
+    // one bench at the origin of frame S (the foot at y 0), placed twice: the instances turn with the frame (rotY = FS.rot)
+    const geo = partsGeos((Q) => {
+      Q.box(M.wood, -0.25, 0.2, 0.42, 0.47, -0.85, 0.85, 'b', 1);
+      Q.box(M.wood, 0.18, 0.22, 0.5, 0.95, -0.85, 0.85, 'b', 1);
+      for (const dz of [-0.8, 0.8]) { Q.box(M.benchIron, -0.22, 0.2, 0, 0.42, dz - 0.03, dz + 0.03, 'b'); Q.box(M.benchIron, 0.17, 0.21, 0.42, 0.98, dz - 0.03, dz + 0.03, 'b'); }
+    });
+    const spots = [], items = [];
+    for (const [X, Z] of [[13.8, 11.0], [16.8, 7.8]]) {
+      const w = FS.W(X, Z); svc.benches.push({ x: w.x, z: w.z, rotY: FS.rot + Math.PI / 2 * 0 + Math.PI / 2, len: 1.7 });
+      spots.push({ x: w.x, y: 0, z: w.z, rotY: FS.rot });
+      items.push(FS.box(ph, X, Z, 0.7, 1.8, 0, 0, 1.0));
+    }
+    K.extraTris += knockFurniture(ctx, 'lmMin-benches', geo, spots, items, FURNITURE_REC.bench, 260);
   });
   // ------------------------------------------------------------------------------------------ the glazed ticket shelter w693966848 (a closed building: glass walls, low pitched grey roof)
   step('shelter', () => {

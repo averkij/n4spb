@@ -2,9 +2,12 @@
 // 0.55 m, openwork panels with scrolls, barley-twist posts with urns every 2.6 m).  A fence follows a world polyline; gates cut gaps (open = a passage with two taller posts, closed = a double leaf and a
 // collider); the ironwork is ONE alpha-tested quad per run (white strokes painted in art.js: bars every 12-14 cm, tips, rails, scroll bands), so a 470 m fence costs a few hundred triangles + the posts
 // (instanced).  Colliders: thin boxes along the kept runs (2.2 m high) so that nobody walks through the railing.
+// n4spb: every kept run is a row of bays of one post pitch (the plinth wall, its cap and the ironwork panel are instances of the bay, one thin collider + one knock record each: a car breaks a bay off at the foot, the gap is passable);
+// the posts stay instanced, the gate piers stay solid granite (structures), a closed gate is a bay of its own.
 import * as THREE from 'three';
 import { revolve, tbox } from './geo.js';
 import { partsGeos, addInstanced } from './inst.js';
+import { knockBays, splitBays, unitPanel, unitBox } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the fence runs and the closed gate leaves are rows of BREAKABLE bays
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const mat = (x, y, z, rot, s) => new THREE.Matrix4().compose(_v.set(x, y, z), _q.setFromAxisAngle(_up, rot), _s.set(s, s, s));
@@ -51,7 +54,7 @@ export function ironFence(K, o) {
     cuts.push({ g, c, w, s: best.s, ux: best.s.ux, uz: best.s.uz, x: best.s.a[0] + best.s.ux * best.t, z: best.s.a[1] + best.s.uz * best.t });
   }
   cuts.sort((p, q) => p.c - q.c);
-  const runs = [], postSet = new Set(), posts = [], gposts = [];
+  const runs = [], postSet = new Set(), posts = [], gposts = [], bays = [], gateBays = [];
   const addPost = (x, z, big = false) => { const k = Math.round(x * 10) + ',' + Math.round(z * 10); if (postSet.has(k)) return; postSet.add(k); (big ? gposts : posts).push([x, z]); };
   let si = 0;
   for (const s of segs) {
@@ -62,18 +65,8 @@ export function ironFence(K, o) {
     for (const [k0, k1] of keep) {
       const ax = s.a[0] + s.ux * (k0 - s.s0), az = s.a[1] + s.uz * (k0 - s.s0), len = k1 - k0, rot = Math.atan2(-s.uz, s.ux);
       runs.push([[ax, az], [ax + s.ux * len, az + s.uz * len]]);
-      P.push(ax, 0, az, rot);
-      if (base.h > 0) {
-        if (base.tu) tbox(P, base.mat, 0, len, 0, bh + si * 0.0012, -base.w / 2, base.w / 2, base.tu, base.tv, 'b');
-        else P.box(base.mat, 0, len, 0, bh + si * 0.0012, -base.w / 2, base.w / 2, 'b', base.uvs ?? 2.2);
-        if (base.cap) P.box(base.cap, 0, len, bh + si * 0.0012, bh + 0.05 + si * 0.0012, -base.w / 2 - 0.03, base.w / 2 + 0.03, 'b', 1);
-      }
-      // the ironwork: ONE double-sided cutout quad, u 0..len / tile, v 0..1
-      const n = len / o.tile;
-      P.quad(o.panel, [0, bh, 0], [len, bh, 0], [len, bh + top, 0], [0, bh + top, 0], [0, 0, 1], [[0, 0], [n, 0], [n, 1], [0, 1]]);
-      P.pop();
+      bays.push(...splitBays(ax, az, ax + s.ux * len, az + s.uz * len, every, { y: 0 }));      // (the plinth wall, its cap and the ironwork panel: the parts of knockBays below)
       if (o.posts) { const k = Math.max(1, Math.round(len / every)); for (let i = 0; i <= k; i++) addPost(ax + s.ux * len * i / k, az + s.uz * len * i / k); }
-      ph.addBox(ax + s.ux * len / 2, az + s.uz * len / 2, len + 0.1, 0.32, rot, 0, o.colH ?? 2.2);
     }
     si++;
   }
@@ -81,13 +74,7 @@ export function ironFence(K, o) {
   for (const c of cuts) {
     const hw = c.w / 2, a = [c.x - c.ux * hw, c.z - c.uz * hw], b = [c.x + c.ux * hw, c.z + c.uz * hw], rot = Math.atan2(-c.uz, c.ux), open = c.g.open !== false;
     for (const q of [a, b]) addPost(q[0], q[1], true);
-    if (!open) {
-      P.push(a[0], 0, a[1], rot);
-      const lw = c.w / 2 - 0.05;
-      for (const x0 of [0.05, c.w / 2]) P.quad(M.gateLeaf, [x0, 0.15, 0], [x0 + lw, 0.15, 0], [x0 + lw, 2.35, 0], [x0, 2.35, 0], [0, 0, 1], [[0, 0], [lw / 1.6, 0], [lw / 1.6, 1], [0, 1]]);
-      P.pop();
-      ph.addBox(c.x, c.z, c.w + 0.1, 0.32, rot, 0, 2.4);
-    }
+    if (!open) gateBays.push({ x0: a[0], z0: a[1], x1: b[0], z1: b[1], y: 0, w: c.w });      // a shut gate: a double leaf, a bay of its own (below)
     gates.push({ id: c.g.id, x: c.x, z: c.z, w: c.w, open, name: c.g.name || null });
   }
   // the instanced posts (one InstancedMesh per material of the post geometry)
@@ -100,7 +87,27 @@ export function ironFence(K, o) {
     const geo = partsGeos((Q) => fn(Q, M)), ms = list.map(([x, z]) => mat(x, y, z, 0, sc));
     tris += addInstanced(ctx, K.root, 'lmmensh-posts-' + (o.id || 'f'), geo, ms).tris;
   }
-  for (const [x, z] of gposts) ph.addCylinder(x, z, 0.28, 0, 2.5);
+  for (const [x, z] of gposts) ph.addCylinder(x, z, 0.28, 0, 2.5);      // the gate piers: granite structures
+  if (bays.length) {
+    const parts = [];
+    if (base.h > 0) {
+      parts.push({ geo: unitBox(0, bh, -base.w / 2, base.w / 2, { uLen: every, uvs: base.tu ?? base.uvs ?? 2.2 }), mat: base.mat, name: 'base', stretch: true });
+      if (base.cap) parts.push({ geo: unitBox(bh, bh + 0.05, -base.w / 2 - 0.03, base.w / 2 + 0.03, { uLen: every, uvs: 1 }), mat: base.cap, name: 'cap', stretch: true });
+    }
+    parts.push({ geo: unitPanel(bh, bh + top, { u1: every / o.tile }), mat: o.panel, name: 'panel', stretch: true, shadow: false, receive: false, noOutline: true });
+    knockBays(ctx, { name: 'lmmensh-fence-' + (o.id || 'f'), bays, parts, far: 320,
+      collider: { y0: 0, y1: o.colH ?? 2.2, thick: 0.32, e0: 0.05, e1: 0.05 },
+      rec: () => ({ kind: 'fence', mass: 700, h: bh + top, anchored: 24, hitK: 0.6, metal: true, minDv: 0 }) });
+    tris += bays.length * (12 + 2 + 2);
+  }
+  if (gateBays.length) {
+    const lw = (g) => g.w / 2 - 0.05, leaf = unitPanel(0.15, 2.35, { u1: lw(gateBays[0]) / 1.6 });
+    knockBays(ctx, { name: 'lmmensh-gate-' + (o.id || 'f'), bays: gateBays, far: 320,
+      parts: [{ geo: leaf, mat: M.gateLeaf, name: 'leaf-a', noOutline: true, ats: (bay) => [0.05 / bay.w], sx: (bay) => lw(bay), shadow: false, receive: false }, { geo: leaf, mat: M.gateLeaf, name: 'leaf-b', noOutline: true, ats: () => [0.5], sx: (bay) => lw(bay), shadow: false, receive: false }],
+      collider: { y0: 0, y1: 2.4, thick: 0.32, e0: 0.05, e1: 0.05 },
+      rec: () => ({ kind: 'fence', mass: 400, h: 2.4, anchored: 20, hitK: 0.5, metal: true, minDv: 0 }) });
+    tris += gateBays.length * 4;
+  }
   K.extraTris += tris;
   return { runs, gates, tris };
 }

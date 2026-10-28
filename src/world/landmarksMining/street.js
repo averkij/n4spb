@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import * as L from '../layout.js';
 import { P as FP, coverOf } from './frame.js';
+import { partsGeos } from './inst.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the chain bollards and the two ornate lamps are knock records
 
 export async function build(K) {
   const { ctx, P, M, svc } = K, ph = ctx.physics, cover = coverOf(ctx);
@@ -51,12 +53,13 @@ export async function build(K) {
   });
   step('draw', () => {
     const y0 = 0.1;
-    for (const [x, z] of posts) {
-      P.cyl(M.bollard, [x, y0, z], [x, y0 + 0.68, z], 0.1, 0.075, 8, true);
-      P.cyl(M.bollard, [x, y0 + 0.68, z], [x, y0 + 0.74, z], 0.115, 0.115, 8, true);
-      P.geo(M.bollard, sph, x, y0 + 0.84, z, 0, 0, 0, 0.095, 0.095, 0.095);
-      ph.addCylinder(x, z, 0.1, 0, 0.9);
-    }
+    const bGeo = partsGeos((Q) => {
+      Q.cyl(M.bollard, [0, 0, 0], [0, 0.68, 0], 0.1, 0.075, 8, true);
+      Q.cyl(M.bollard, [0, 0.68, 0], [0, 0.74, 0], 0.115, 0.115, 8, true);
+      Q.geo(M.bollard, sph, 0, 0.84, 0, 0, 0, 0, 0.095, 0.095, 0.095);
+    });
+    K.extraTris += knockFurniture(ctx, 'lmMin-bollards', bGeo, posts.map(([x, z]) => ({ x, y: y0, z, rotY: 0 })), posts.map(([x, z]) => ph.addCylinder(x, z, 0.1, 0, 0.9)),
+      { kind: 'bollard', mass: 60, h: 0.85, r: 0.11, anchored: 30, hitK: 0.4, metal: true }, 260);      // (the chains between the posts stay drawn, they have no collider)
     svc.bollards = posts.length;
     // chains: two swags between neighbours within 6 m (sag 0.25 m, 5 straight links each)
     for (let i = 0; i + 1 < posts.length; i++) {
@@ -79,25 +82,37 @@ export async function build(K) {
       P.geo(M.gold, sph, x, y + 0.74 * s, z, 0, 0, 0, 0.04 * s, 0.05 * s, 0.04 * s);
     };
     // the carriageway of this world's OSM reaches w ~ 8.5 at the portico and w ~ 6 beyond the cheeks (net.cover), so the lamps stand 3 m beyond the outer cheek ends on the strip in front of the links
+    const lampSpots = [], lampItems = [];
     for (const [u, w, id] of [[-25.2, 2.6, 'n8754378141'], [25.2, 2.6, 'n8754378142']]) {
       let p = FP.W(u, w), pw = w;
       for (; pw > 0.5 && !free(p.x, p.z, 1.2); pw -= 0.3) p = FP.W(u, pw - 0.3);
       if (!free(p.x, p.z, 1.2)) continue;
       const x = p.x, z = p.z, y0 = 0.1;
-      P.cyl(M.lampPost, [x, y0, z], [x, y0 + 0.25, z], 0.5, 0.42, 10, true);                     // round step
-      P.cyl(M.lampPost, [x, y0 + 0.25, z], [x, y0 + 0.9, z], 0.42, 0.26, 10, false);             // bulbous ribbed base
-      P.cyl(M.lampPost, [x, y0 + 0.9, z], [x, y0 + 1.25, z], 0.26, 0.2, 10, false);
-      P.cyl(M.lampPost, [x, y0 + 1.25, z], [x, y0 + 5.0, z], 0.12, 0.08, 8, true);               // the shaft
-      for (const yy of [1.3, 1.7, 4.6]) P.cyl(M.gold, [x, y0 + yy, z], [x, y0 + yy + 0.07, z], 0.15, 0.15, 8, true);
-      const rot = FP.rot;
-      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {                                // the cross of four arms with four lanterns + one on top
-        const c = Math.cos(rot), s2 = Math.sin(rot), ax = x + (dx * c + dz * s2) * 0.85, az = z + (-dx * s2 + dz * c) * 0.85;
-        P.cyl(M.lampPost, [x, y0 + 4.55, z], [ax, y0 + 4.75, az], 0.04, 0.03, 5, false);
-        lantern(ax, y0 + 4.78, az, 0.85);
-      }
-      lantern(x, y0 + 5.0, z, 1.0);
-      ph.addCylinder(x, z, 0.5, 0, 5.5);
+      lampSpots.push({ x, y: y0, z, rotY: FP.rot });                                              // (the lamp is one geometry list, drawn below: a knock record)
+      lampItems.push(ph.addCylinder(x, z, 0.5, 0, 5.5));
       svc.lamps.push({ id, x, z, h: 6 });
+    }
+    if (lampSpots.length) {
+      const lampGeo = partsGeos((Q) => {
+        const lant = (x, y, z, s = 1) => {
+          Q.cyl(M.lampGlass, [x, y, z], [x, y + 0.5 * s, z], 0.17 * s, 0.15 * s, 6, true);
+          Q.cyl(M.lampCap, [x, y + 0.5 * s, z], [x, y + 0.7 * s, z], 0.2 * s, 0.03 * s, 6, true);
+          Q.cyl(M.lampShade, [x, y - 0.06 * s, z], [x, y, z], 0.1 * s, 0.17 * s, 6, true);
+          Q.geo(M.gold, sph, x, y + 0.74 * s, z, 0, 0, 0, 0.04 * s, 0.05 * s, 0.04 * s);
+        };
+        Q.cyl(M.lampPost, [0, 0, 0], [0, 0.25, 0], 0.5, 0.42, 10, true);                           // round step
+        Q.cyl(M.lampPost, [0, 0.25, 0], [0, 0.9, 0], 0.42, 0.26, 10, false);                       // bulbous ribbed base
+        Q.cyl(M.lampPost, [0, 0.9, 0], [0, 1.25, 0], 0.26, 0.2, 10, false);
+        Q.cyl(M.lampPost, [0, 1.25, 0], [0, 5.0, 0], 0.12, 0.08, 8, true);                         // the shaft
+        for (const yy of [1.3, 1.7, 4.6]) Q.cyl(M.gold, [0, yy, 0], [0, yy + 0.07, 0], 0.15, 0.15, 8, true);
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {                               // the cross of four arms with four lanterns + one on top (turned by the spot's rotY)
+          const ax = dx * 0.85, az = dz * 0.85;
+          Q.cyl(M.lampPost, [0, 4.55, 0], [ax, 4.75, az], 0.04, 0.03, 5, false);
+          lant(ax, 4.78, az, 0.85);
+        }
+        lant(0, 5.0, 0, 1.0);
+      });
+      K.extraTris += knockFurniture(ctx, 'lmMin-lamps', lampGeo, lampSpots, lampItems, FURNITURE_REC.lamp(6.0), 260);
     }
   });
 }

@@ -11,6 +11,7 @@ import * as L from '../layout.js';
 import { FP, colliders } from './frame.js';
 import { lyingLion } from './lionfig.js';
 import { figureMats } from '../lib/figures.js';
+import { knockBays } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the cheek walls are breakable (ghost) bays; the old guard wall along the toe of the stair is gone (water is reachable)
 
 const N = 17, RISE = 2.9 / N, TREAD = 6.15 / N, Y_LOW = -3.6;
 const FLIGHTS = [[-2.8, 2.8], [4.1, 7.0], [-7.0, -4.1]];
@@ -144,15 +145,17 @@ function colliders_(K, CL) {
   }
   // the head sill (flush with the street edge)
   CL.walk(0, 0.075, 14.0, 0.15, 0.035, -0.5);
-  // barrier blocks, pedestals
+  // barrier blocks, pedestals (granite structures: the stepped barrier is three blocks of 1.3 x 1.2 m, each as high as its highest step, no thin wall)
   for (const [ua, ub] of BARRIERS) {
     const uc = (ua + ub) / 2;
     CL.box(uc, (PED_V0 + 0.1) / 2, ub - ua + 0.2, 2.7, -4, Y_PED + 0.1);
-    const nb = 10, bl = (6.15 + PED_V0) / nb;
-    for (let j = 0; j < nb; j++) CL.box(uc, PED_V0 - bl * (j + 0.5), ub - ua, bl, -4, Y_PED - 0.325 * (j + 1));
+    const nb = 3, bl = (6.15 + PED_V0) / nb;
+    for (let j = 0; j < nb; j++) CL.box(uc, PED_V0 - bl * (j + 0.5), ub - ua, bl, -4, Y_PED - 0.325 * (Math.round(j * 10 / nb) + 1));
     CL.box(uc, -6.3, ub - ua, 0.4, -4, -2.1);
   }
-  // cheek walls and the wall along the toe (nobody walks on the water)
-  for (const s of [1, -1]) CL.box(s * 7.25, -3.3, 0.5, 6.9, -4, 0.8);
-  CL.box(0, -6.55, 14.4, 0.5, -4, -2.4);
+  // the cheek walls (0.5 m of granite flush with the water ring, drawn only 0.12 m over the street): breakable ghost bays (the collider is higher than the drawn coping); the guard along the toe of the stair
+  // ("nobody walks on the water") is gone: the walker steps off the last tread into the Neva
+  const cheeks = [1, -1].map((s) => { const a = FP.W(s * 7.25, -3.3 + 3.45), b = FP.W(s * 7.25, -3.3 - 3.45); return { x0: a.x, z0: a.z, x1: b.x, z1: b.z, y: 0, ghost: true }; });
+  knockBays(K.ctx, { name: 'lmMak-lions-cheeks', bays: cheeks, parts: [], far: 260, collider: { y0: -4, y1: 0.8, thick: 0.5, e0: 0, e1: 0 },
+    rec: () => ({ kind: 'fence', mass: 4000, h: 0.8, anchored: 40, hitK: 0.7, minDv: 0 }) });
 }

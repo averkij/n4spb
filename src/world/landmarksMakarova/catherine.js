@@ -13,6 +13,8 @@ import { ringEdges, onEdge } from './kit.js';
 import { wallHoles, cornice, column, pilaster, lathe, gable, hipRect } from './facade.js';
 import { addPolyColliders } from '../lib/massing.js';
 import { angelFig } from './figs.js';
+import { knockBays, unitBox } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the spans of the iron fence and its closed gates are breakable bays; the piers stay solid stone
+import { tiledPanel } from './bays.js';
 
 const Y_EAVE = 17.5, Y_RIDGE = 22.0, Y_CUBE = 22.0, Y_ARM = 15.5, Y_APEX = 20.0;
 const CUBE = { u0: -12.6, u1: 13.1, v0: -10.6, v1: 9.9 };
@@ -298,7 +300,7 @@ function bellFrame(K) {
 
 // ------------------------------------------------------------------------------------------------ the iron fence with piers and the two gates that flank the tower
 function fence(K) {
-  const { P, M } = K;
+  const { P, M } = K, spanBays = [], gateBays = [];
   for (const s of FENCE) {
     const du = s.b[0] - s.a[0], dv = s.b[1] - s.a[1], len = Math.hypot(du, dv), t = Math.atan2(-dv, du), gx = len * s.gate, gw = 3.2;
     // pier positions along the segment: both ends, the gate piers, and intermediate piers about every 4.5 m
@@ -313,22 +315,31 @@ function fence(K) {
     P.push(s.a[0], 0, s.a[1], t);
     try {
       const sorted = [...new Set(piers.map((x) => Math.round(x * 1000) / 1000))].sort((a, b) => a - b);
+      const at = (x) => FC.W(s.a[0] + du * x / len, s.a[1] + dv * x / len);                       // a point of the segment (local x along it) in the world
       for (let i = 0; i < sorted.length - 1; i++) {
         const xa = sorted[i] + 0.28, xb = sorted[i + 1] - 0.28, gate = Math.abs(sorted[i] - (gx - gw / 2)) < 1e-3 && Math.abs(sorted[i + 1] - (gx + gw / 2)) < 1e-3;
         if (xb - xa < 0.2) continue;
-        if (!gate) P.box(M.stone, xa, xb, 0, 0.5, -0.15, 0.15, 'b', 1.6);
-        const y0 = gate ? 0.12 : 0.5, y1 = gate ? 2.5 : 2.3;
-        P.quad(M.bars, [xa, y0, 0], [xb, y0, 0], [xb, y1, 0], [xa, y1, 0], [0, 0, 1], [[0, 0], [(xb - xa) / 1.2, 0], [(xb - xa) / 1.2, (y1 - y0) / 1.0], [0, (y1 - y0) / 1.0]]);
+        const A = at(xa), B = at(xb);
+        (gate ? gateBays : spanBays).push({ x0: A.x, z0: A.z, x1: B.x, z1: B.z, y: 0 });             // (the span: stone base 0.5 m + the bar panel; the gate: the bar panel only)
       }
       for (const x of sorted) {
         const gp = Math.abs(x - (gx - gw / 2)) < 1e-3 || Math.abs(x - (gx + gw / 2)) < 1e-3, hgt = gp ? 3.0 : 2.7;
         P.box(M.pierW, x - 0.28, x + 0.28, 0, hgt - 0.35, -0.28, 0.28, 'b', 1);
         P.cyl(M.pierW, [x, hgt - 0.35, 0], [x, hgt, 0], 0.4, 0.06, 4, true);
+        const pw = at(x); K.ctx.physics.addCylinder(pw.x, pw.z, 0.3, 0, hgt);                      // the stone pier: a solid structure
       }
     } finally { P.pop(); }
     const w0 = FC.W(s.a[0], s.a[1]), w1 = FC.W(s.b[0], s.b[1]);
     K.svc.fences.push({ kind: 'iron', a: [w0.x, w0.z], b: [w1.x, w1.z], gate: s.gate });
   }
+  const rec = (mass, h) => () => ({ kind: 'fence', mass, h, anchored: 24, hitK: 0.5, metal: true, minDv: 0 });
+  knockBays(K.ctx, { name: 'lmMak-church-fence', bays: spanBays, far: 300,
+    parts: [{ geo: unitBox(0, 0.5, -0.15, 0.15, { uLen: 4, uvs: 1.6 }), mat: M.stone, name: 'base', stretch: true }, { geo: tiledPanel(0.5, 2.3, 3.5, 1.0), mat: M.bars, name: 'bars', stretch: true, shadow: false, receive: false, noOutline: true }],
+    collider: { y0: 0, y1: 2.6, thick: 0.4, e0: 0, e1: 0 }, rec: rec(700, 2.3) });
+  knockBays(K.ctx, { name: 'lmMak-church-gate', bays: gateBays, far: 300,
+    parts: [{ geo: tiledPanel(0.12, 2.5, 2.7, 1.0), mat: M.bars, name: 'bars', stretch: true, shadow: false, receive: false, noOutline: true }],
+    collider: { y0: 0, y1: 2.6, thick: 0.4, e0: 0, e1: 0 }, rec: rec(500, 2.4) });
+  K.extraTris += (spanBays.length * 4 + gateBays.length * 2);
 }
 
 // ------------------------------------------------------------------------------------------------ colliders
@@ -337,7 +348,7 @@ function colliders_(K, ring, chapel, gate) {
   addPolyColliders(ctx, polyIn(FC, ring), 0, 24, 0.3);                                   // thin walls: the 9 tower steps end 0.2 m in front of the door wall
   addPolyColliders(ctx, polyIn(FC, chapel), 0, 6.4, 0.4);
   addPolyColliders(ctx, polyIn(FC, gate), 0, 4, 0.4);
-  for (const s of FENCE) { const it = CL.wall(s.a, s.b, 0, 2.6, 0.4); if (it) it.fence = true; }     // the iron fence and its closed gates: a wall for the pedestrians' routes (people/nav.js)
+  // (the iron fence and its closed gates: the knock bays of fence(); each bay's collider is flagged `fence` for the pedestrians' routes, people/nav.js)
   const S = STAIR, c = FC.W((S.u0 + S.u1) / 2, (S.v0 + S.v1) / 2);
   ph.addStairs(c.x, c.z, S.v1 - S.v0 - 0.1, S.u1 - S.u0, FC.rot + Math.PI / 2, 0, S.top, S.n);
   for (const v of [-25.9, -22.7]) for (const u of [-1.2, 9.5]) CL.cyl(u, v, 0.2, 0, 2.6);

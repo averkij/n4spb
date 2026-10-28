@@ -10,6 +10,7 @@
 //           green mesh fence on the hull side, the gangway (white banner with the museum name, no saltire), the grey tent on the casing, the blue ticket tent and the teal umbrella.  Scenery: not walkable.
 import * as L from '../layout.js';
 import { S as FS, SUB, PIER } from './frame.js';
+import { addFloatBlock } from '../lib/craft-solids.js';      // n4spb (docs/water-transport-boat-collisions.md): the floating pier is solid for the motor boat
 
 const WL = -3.4;
 const LV = [2.3, 1.8, 1.4, 1.0, 0.8, 0.0, -1.0, -2.2, -3.4, -4.2, -4.55];
@@ -36,6 +37,15 @@ export function build(Q) {
     stage('pier', () => pier(Q));
     stage('fittings', () => fittings(Q));
   } finally { P.pop(); }
+  // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the hull and the floating pier SIT IN THE WATER and were scenery without any collider (a boat, a car on the bed and a walker went through the submarine). They are solid STRUCTURES now, like the Krasin
+  // hull: the hull in three blocks that follow its plan (bow, parallel body, tapering stern) from below the keel to the casing, the pier (a floating wharf, not walkable) as a float block that stops the motor boat; the quay side (-x) stays open
+  // water between the quay and the hull, and both ends of the pier are open: the water is not walled (water-reachable-test check 1).
+  stage('colliders', () => {
+    const ph = Q.ctx.physics, y0 = WL - SUB.draught - 0.2, y1 = WL + SUB.deck;
+    FS.box(ph, 0, -30, 5.0, 12, y0, y1); FS.box(ph, 0, -8, SUB.beam, 32, y0, y1); FS.box(ph, 0, 19, 3.6, 22, y0, y1);
+    const pc = FS.W((PIER.x0 + PIER.x1) / 2, (PIER.z0 + PIER.z1) / 2);
+    addFloatBlock(ph, pc.x, pc.z, PIER.x1 - PIER.x0, PIER.z1 - PIER.z0, FS.rot, WL);
+  });
   stage('spots', () => spots(Q));
   const c = FS.W(0, 0);
   Q.svc.monuments.push({ id: 'w133084707', name: 'Подводная лодка-музей С-189', x: c.x, z: c.z, h: 15.6 });

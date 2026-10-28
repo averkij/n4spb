@@ -72,8 +72,7 @@ export function build(Q) {
     // the front of the bottom step goes down into the water (a wet skirt under the water line closes every crack to the quay wall)
     P.quad(M.ashlar, [u0, -3.7, v1], [u1, -3.7, v1], [u1, Y_BOT, v1], [u0, Y_BOT, v1], [0, 0, 1], [[0, 0], [6, 0], [6, 0.2], [0, 0.2]]);
     // the tumba has its own solid foot below the landing (the landing slab carries it: nothing to draw)
-    // nobody steps off the bottom step into the river
-    { const c = K.W((u0 + u1) / 2, v1 + 0.35); ph.addBox(c.x, c.z, u1 - u0 + 0.6, 0.5, K.rot, -6, Y_BOT + 0.9); }
+    // (n4spb, docs/AREAS.md 13.7 / docs/vo-m2.md: the source's invisible guard along the bottom step, "nobody steps off the bottom step into the river", is GONE: water is reachable, the walker steps off the last tread into the Neva)
     // the cheek walls of the stair: the inner faces of the end blocks from the water up to the block tops (the steps butt against them)
     endBlocks(Q, true);
     Q.svc.stair.top = 0;

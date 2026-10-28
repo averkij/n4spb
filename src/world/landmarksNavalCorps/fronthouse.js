@@ -14,6 +14,7 @@ import { windowWall } from './facade.js';
 import { ogeePts, shapeOf, archPts, planeShape, frameRing } from './geo.js';
 import { revolve } from './geo.js';
 import { addPolyColliders } from '../lib/massing.js';
+import { knockBays, splitBays, unitBox } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the low iron railing along the church plinth is a row of breakable bays; the stucco fence of 1900 (2.4 m masonry with piers, away from the water) stays solid
 
 const H = 13.4;
 export function build(Q) {
@@ -108,7 +109,9 @@ function fences(Q) {
   try {
     // the low black iron railing along the church plinth: SE face (u 0 .. 27.2 at v 24.7), the SE side-apse facet and the apse facets round to the NE corner, posts every 2.4 m
     const pts = [[-0.2, 24.75], [27.4, 24.75], [30.9, 22.9], [31.0, 19.6], [32.4, 16.5], [32.6, 9.0], [31.0, 6.0]];
-    for (let i = 0; i + 1 < pts.length; i++) rail(Q, pts[i], pts[i + 1]);
+    const rb = [];
+    for (let i = 0; i + 1 < pts.length; i++) rail(Q, pts[i], pts[i + 1], rb);
+    railBays(Q, rb);
     // the fence of 1900 on the 15th-line side of the apses at u 34.2, v -3 .. 27
     const u = 34.2, v0 = -3, v1 = 27, len = v1 - v0;
     P.box(M.ochreWall, u - 0.2, u + 0.2, 0, 2.4, v0, v1, 'b', 3);
@@ -124,14 +127,21 @@ function fences(Q) {
 }
 
 /** a black railing between two plan points (frame C): posts every 2.4 m, two rails; a thin collider */
-function rail(Q, a, b) {
-  const P = Q.P, M = Q.M, len = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(len / 2.4)), dx = (b[0] - a[0]) / len, dz = (b[1] - a[1]) / len;
-  // local +x along the run (dx, dz): rotY = atan2(-dz, dx)
-  P.push(a[0], 0, a[1], Math.atan2(-dz, dx));
-  P.box(M.ironRail, 0, len, 0.82, 0.88, -0.02, 0.02, 'b', 1); P.box(M.ironRail, 0, len, 0.25, 0.3, -0.02, 0.02, 'b', 1);
-  for (let i = 0; i <= n; i++) { const x = i * len / n; P.box(M.ironRail, x - 0.04, x + 0.04, 0, 0.95, -0.04, 0.04, 'b', 1); }
-  for (let x = 0.3; x < len; x += 0.28) P.box(M.ironRail, x - 0.01, x + 0.01, 0.3, 0.82, -0.01, 0.01, 'b', 1);
-  P.pop();
-  C.wall(Q.ctx.physics, a, b, -0.2, 1.0, 0.25);
-  { const A = C.W(a[0], a[1]), B = C.W(b[0], b[1]); Q.svc.fences.push({ id: 'church-railing', pts: [[A.x, A.z], [B.x, B.z]], h: 0.95, kind: 'iron' }); }
+function rail(Q, a, b, rb) {
+  const A = C.W(a[0], a[1]), B = C.W(b[0], b[1]);
+  rb.push(...splitBays(A.x, A.z, B.x, B.z, 2.4, { y: 0 }));      // a bay per post pitch (posts every 2.4 m, two rails, pickets every 0.28 m): the parts of railBays()
+  Q.svc.fences.push({ id: 'church-railing', pts: [[A.x, A.z], [B.x, B.z]], h: 0.95, kind: 'iron' });
+}
+/** the bays of the church railing: a post at each start (and at the end of a run), the two rails stretched over the bay, a picket every 0.28 m; one thin collider + one knock record per bay */
+function railBays(Q, bays) {
+  const M = Q.M, post = new THREE.BoxGeometry(0.08, 0.95, 0.08), picket = new THREE.BoxGeometry(0.02, 0.52, 0.02);
+  post.translate(0, 0.475, 0); picket.translate(0, 0.3 + 0.26, 0);
+  knockBays(Q.ctx, { name: 'lmnaval-church-railing', bays, far: 260,
+    parts: [{ geo: post, mat: M.ironRail, name: 'post', ats: (bay) => (bay.last ? ['start', 'end'] : ['start']), shadow: false, receive: false },
+      { geo: unitBox(0.82, 0.88, -0.02, 0.02, { uLen: 2.4, uvs: 1 }), mat: M.ironRail, name: 'top', stretch: true, shadow: false, receive: false },
+      { geo: unitBox(0.25, 0.3, -0.02, 0.02, { uLen: 2.4, uvs: 1 }), mat: M.ironRail, name: 'bottom', stretch: true, shadow: false, receive: false },
+      { geo: picket, mat: M.ironRail, name: 'picket', ats: (bay) => { const l = Math.hypot(bay.x1 - bay.x0, bay.z1 - bay.z0), out = []; for (let x = 0.14; x < l - 0.05; x += 0.28) out.push(x / l); return out; }, shadow: false, receive: false }],
+    collider: { y0: -0.2, y1: 1.0, thick: 0.25, e0: 0.02, e1: 0.02 },
+    rec: () => ({ kind: 'fence', mass: 90, h: 0.95, anchored: 12, hitK: 0.3, metal: true, minDv: 0 }) });
+  Q.extraTris = (Q.extraTris || 0) + bays.length * 70;
 }

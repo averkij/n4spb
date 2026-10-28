@@ -13,6 +13,8 @@ import { FE, FALL, ringIn, polyIn, colliders } from './frame.js';
 import { ringEdges, onEdge } from './kit.js';
 import { wallHoles, cornice, column, pilaster, lathe } from './facade.js';
 import { apostleFig } from './figs.js';
+import { knockBays } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the two closed iron gates are breakable bays
+import { tiledPanel } from './bays.js';
 import { addPolyColliders } from '../lib/massing.js';
 
 const Y_COR = 11.0, Y_RIDGE = 15.0, Y_PORT = 0.9;
@@ -192,17 +194,21 @@ function drum(K) {
 
 // ------------------------------------------------------------------------------------------------ the two arched iron gates that close the yard at the flanks (private)
 function gates(K) {
-  const { P, M } = K;
+  const { ctx, P, M } = K, gateBays = [];
   for (const uc of [-3.0, 26.0]) {
     P.push(uc, 0, 42.9, 0);
     try {
       // a pier-and-arch frame: a wall 6.2 m wide, 5.6 m tall with a round-arched opening 3.2 m wide (crown 4.2 m), the iron leaves a little behind
       wallHoles(P, { mat: M.stuccoY, x0: -3.1, x1: 3.1, y0: 0, y1: 5.2, uvs: 4, ops: [{ x: 0, y0: 0.05, w: 3.2, h: 2.55, kind: 'arch', glass: M.gateDark, depth: 0.45, sill: false }], reveal: M.stuccoY, depth: 0.45 });
-      P.quad(M.bars, [-1.6, 0.1, 0.0], [1.6, 0.1, 0.0], [1.6, 4.1, 0.0], [-1.6, 4.1, 0.0], [0, 0, 1], [[0, 0], [2.7, 0], [2.7, 4], [0, 4]]);
+      { const a = FE.W(uc - 1.6, 42.9), b = FE.W(uc + 1.6, 42.9); gateBays.push({ x0: a.x, z0: a.z, x1: b.x, z1: b.z, y: 0 }); }      // (the iron leaves: the bar panel of the knock bay below)
       for (const sx of [-1, 1]) P.box(M.lutOrder, sx * 1.7 - 0.2, sx * 1.7 + 0.2, 0, 4.3, 0, 0.12, 'k', 1);
       P.box(M.lutOrder, -3.1, 3.1, 5.0, 5.4, -0.1, 0.4, 'b', 2);
     } finally { P.pop(); }
   }
+  knockBays(ctx, { name: 'lmMak-lutheran-gates', bays: gateBays, far: 300,
+    parts: [{ geo: tiledPanel(0.1, 4.1, 2.7, 1.0), mat: M.bars, name: 'bars', stretch: true, shadow: false, receive: false, noOutline: true }],
+    collider: { y0: 0, y1: 4, thick: 0.4, e0: 0, e1: 0 }, rec: () => ({ kind: 'fence', mass: 600, h: 4, anchored: 24, hitK: 0.5, metal: true, minDv: 0 }) });
+  K.extraTris += gateBays.length * 2;
 }
 
 // ------------------------------------------------------------------------------------------------ colliders
@@ -216,5 +222,5 @@ function colliders_(K, ring) {
   CL.wall([PORT.u0, PORT.v0], [PORT.u0, PORT.v1], 0, 12, 0.4); CL.wall([PORT.u1, PORT.v0], [PORT.u1, PORT.v1], 0, 12, 0.4);   // the wings' inner faces
   CL.walk(PORT.cx, 45.6, PORT.u1 - PORT.u0, PORT.v1 - PORT.v0 - 0.0, Y_PORT, -0.5);
   // the gates are closed (iron leaves): solid
-  for (const uc of [-3.0, 26.0]) { const it = CL.wall([uc - 1.8, 43.0], [uc + 1.8, 43.0], 0, 4, 0.4); if (it) it.fence = true; K.svc.fences.push({ kind: 'gate', ...FE.W(uc, 43.0), private: true }); }
+  for (const uc of [-3.0, 26.0]) K.svc.fences.push({ kind: 'gate', ...FE.W(uc, 43.0), private: true });      // (the leaves are the knock bays of gates())
 }

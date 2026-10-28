@@ -15,6 +15,10 @@ import { APRON_RING } from './groups.js';
 import { tbox } from './geo.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { coverFn } from './surfaces.js';
+import { knockBays, splitBays, unitPanel, unitBox } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the railing, the river curb and the pontoon rails are rows of BREAKABLE bays
+import { addFloatBlock } from '../lib/craft-solids.js';      // n4spb: the two pontoons are solid for the motor boat (docs/water-transport-boat-collisions.md)
+// n4spb: the retaining wall body (masonry, y -3.6 .. the coping) and the granite pylons stay solid structures; the railing on the coping, the curb along the river edge (it kept walkers off the water), and the rails of the two
+// pontoons and their gangways are knock bays (the water is reachable: a car breaks a bay off at the foot, the gap is passable). The cafe on the east pontoon is a closed superstructure (a structure).
 
 export const Y_FLOOR = -1.2, R_W = [-4, 10], R_E = [132, 146], Y_COPE = 0.16;
 /** floor height under local a (frame D) */
@@ -102,7 +106,7 @@ function wall(K, S, cover) {
     P.push(B[0], 0, B[1], Math.atan2(-dz, dx)); P.box(M.wallPinkTop, 0, l, 0.0, 0.1, -0.35, 0.1, 'b', 2.4); P.pop();
   }
   // the pylons (every 5.44 m, 0.55 m square, 1.25 m high, a stepped base, a flat chamfered top) and the railing panels between them
-  const n = Math.round(len / 5.44), pitch = len / n, pylons = [], bays = [];
+  const n = Math.round(len / 5.44), pitch = len / n, pylons = [], bays = [];      // (pitch: the bay length)
   const bad = (a) => { const w = DF.W(a, -0.3); return cover(w.x, w.z) > -0.5; };
   for (let k = 0; k <= n; k++) pylons.push({ a: aA + k * pitch, ok: !bad(aA + k * pitch) });
   for (let k = 0; k < n; k++) { const a0 = pylons[k].a, a1 = pylons[k + 1].a; bays.push({ a0, a1, ok: pylons[k].ok && pylons[k + 1].ok && !bad((a0 + a1) / 2) && !bad(a0 + (a1 - a0) * 0.25) && !bad(a0 + (a1 - a0) * 0.75) }); }
@@ -121,20 +125,29 @@ function wall(K, S, cover) {
   K.extraTris += addInstanced(ctx, K.root, 'lmmensh-pylons', geo, ms).tris;
   // railing panels: u over 5.5 m, v over 0.9 m (A.rings), alpha cut-out, double sided; the rail stands 0.12 above the coping
   let kept = 0;
-  for (const b of bays) if (b.ok) {
-    const l = b.a1 - b.a0 - 0.5, xa = b.a0 + 0.25, y0 = Y_COPE + 0.1, y1 = y0 + 0.92;
-    P.quad(M.rings, [xa, y0, -0.3], [xa + l, y0, -0.3], [xa + l, y1, -0.3], [xa, y1, -0.3], [0, 0, 1], [[0, 0], [l / 5.5, 0], [l / 5.5, 1], [0, 1]]);
-    P.box(M.fenceIron, xa, xa + l, y0 - 0.06, y0 + 0.02, -0.34, -0.26, '', 1);          // the bottom bar
-    kept++;
+  const rb = [];
+  for (const b of bays) {
+    const p0 = DF.W(b.a0, -0.3), p1 = DF.W(b.a1, -0.3);
+    rb.push({ x0: p0.x, z0: p0.z, x1: p1.x, z1: p1.z, y: Y_COPE, ghost: !b.ok, pitch: b.a1 - b.a0 });
+    if (b.ok) kept++;
   }
   S.bays = { n, kept };
-  // collider: the wall (solid from the water to the railing top) along the whole length
-  const c = DF.W(aA + len / 2, -0.25); ph.addBox(c.x, c.z, len + 0.2, 0.9, DF.rot, -3.6, 1.4);
+  // the panel (the ring-and-meander ironwork: u over 5.5 m, v over 0.9 m, alpha cut-out, double sided) between two pylons, 0.25 m in from each; the rail stands 0.1 above the coping; the bottom bar under it
+  knockBays(ctx, { name: 'lmmensh-descent-rail', bays: rb, far: 320,
+    parts: [{ geo: unitPanel(0.1, 1.02, { u1: (pitch - 0.5) / 5.5 }), mat: M.rings, name: 'panel', stretch: true, inset: 0.25, shadow: false, receive: false, noOutline: true },
+      { geo: unitBox(0.04, 0.12, -0.04, 0.04, { uLen: pitch, uvs: 1 }), mat: M.fenceIron, name: 'bar', stretch: true, inset: 0.25, shadow: false, receive: false }],
+    collider: { y0: Y_COPE, y1: 1.4, thick: 0.5, e0: 0, e1: 0 },
+    rec: () => ({ kind: 'fence', mass: 900, h: 1.1, anchored: 26, hitK: 0.6, metal: true, minDv: 0 }) });
+  K.extraTris += kept * 14;
+  // the pylons: 0.6 m granite stumps on the coping (structures: a drawn post stays after its panel breaks)
+  for (const p of pylons) if (p.ok) { const w = DF.W(p.a, -0.3); ph.addBox(w.x, w.z, 0.6, 0.6, DF.rot, Y_COPE, 1.3); }
+  // collider: the wall body (masonry, from the bed to the coping; the railing above it is the bays)
+  const c = DF.W(aA + len / 2, -0.25); ph.addBox(c.x, c.z, len + 0.2, 0.9, DF.rot, -3.6, Y_COPE);
 }
 
 // ------------------------------------------------------------------------------------------------ the river edge: the skirt down to the water, the curb
 function edge(K, S, bu) {
-  const { P, M, ctx } = K, ph = ctx.physics, up = S.CH.upper, WY = S.WY;
+  const { P, M, ctx } = K, ph = ctx.physics, up = S.CH.upper, WY = S.WY, cb = [];
   // gaps for the gangways (frame D a): the east pontoon at a 121, the west one at a 66
   S.gaps = [[119.9, 122.1], [64.9, 67.1]];
   const inGap = (a) => S.gaps.some(([g0, g1]) => a > g0 - 1e-6 && a < g1 + 1e-6);
@@ -157,19 +170,41 @@ function edge(K, S, bu) {
       // the skirt: from below the water to the floor edge
       P.quad(M.wallPink, [a0, WY - 0.3, b0], [a1, WY - 0.3, b1], [a1, y1, b1], [a0, y0, b0], [nxx, 0, nzz], [[0, 0], [l / 2.4, 0], [l / 2.4, (y1 - WY + 0.3) / 1.2], [0, (y0 - WY + 0.3) / 1.2]]);
       if (gap) continue;
-      // the curb on the floor edge: 0.45 wide, 0.28 high (a light granite)
-      const ang = Math.atan2(-dz, dx);
-      P.push(a0, y0, b0, ang);
-      const rise = (y1 - y0) / l;                                    // the curb follows the slope of the floor: a wedge-shaped box would be exact; the ramps are shallow (1:11), a stepped box per segment is fine
-      P.box(M.graniteLight, 0, l, -0.1 + Math.min(0, rise * l), 0.28 + Math.max(0, rise * l), -0.45, 0.06, 'b', 2.2);
-      P.pop();
-      const c = DF.W((a0 + a1) / 2, (b0 + b1) / 2 - 0.15);
-      ph.addBox(c.x, c.z, l + 0.1, 0.7, DF.rot - Math.atan2(dz, dx), Math.min(y0, y1) - 0.3, Math.max(y0, y1) + 1.4);          // rotY = frame rotation - the segment's angle in the (a, b) plane
+      // the curb on the floor edge: 0.45 wide, 0.28 high (a light granite): a row of bays of about 3 m that follow the slope of the floor (the ramps are shallow, 1:11)
+      const nb = Math.max(1, Math.round(l / 3));
+      for (let k = 0; k < nb; k++) {
+        const u0 = k / nb, u1 = (k + 1) / nb, aa0 = a0 + (a1 - a0) * u0, bb0 = b0 + (b1 - b0) * u0, aa1 = a0 + (a1 - a0) * u1, bb1 = b0 + (b1 - b0) * u1, w0 = DF.W(aa0, bb0), w1 = DF.W(aa1, bb1);
+        cb.push({ x0: w0.x, z0: w0.z, x1: w1.x, z1: w1.z, y: floorY(aa0), ye: floorY(aa1) });
+      }
     }
+  }
+  if (cb.length) {
+    knockBays(ctx, { name: 'lmmensh-descent-curb', bays: cb, far: 300,
+      parts: [{ geo: unitBox(-0.1, 0.28, -0.45, 0.06, { uLen: 3, uvs: 2.2 }), mat: M.graniteLight, name: 'curb', stretch: true }],
+      collider: (bay) => ({ y0: Math.min(bay.y, bay.ye) - 0.3, y1: Math.max(bay.y, bay.ye) + 1.4, thick: 0.6, off: -0.2, e0: 0.05, e1: 0.05 }),
+      rec: () => ({ kind: 'fence', mass: 1200, h: 0.4, anchored: 28, hitK: 0.6, minDv: 0 }) });
+    K.extraTris += cb.length * 10;
   }
 }
 
 // ------------------------------------------------------------------------------------------------ pontoons and gangways
+/** a row of steel-rail bays (a post at each start and at the end of a run, a top rail at 1.0 m and a mid rail at 0.5 m stretched over the bay): the shared draw of the pontoon rails and the gangway rails */
+let _railGeos = null;
+function railBays(K, name, bays, collider) {
+  if (!bays.length) return;
+  if (!_railGeos) {
+    const post = new THREE.CylinderGeometry(0.025, 0.025, 1.0, 5, 1, false); post.translate(0, 0.5, 0);
+    const rail = (r) => { const g = new THREE.CylinderGeometry(r, r, 1, 4, 1, false); g.rotateZ(Math.PI / 2); g.translate(0.5, 0, 0); return g; };
+    _railGeos = { post, top: rail(0.02), mid: rail(0.015) };
+  }
+  const G = _railGeos, mat = K.M.steelRail;
+  knockBays(K.ctx, { name, bays, far: 280,
+    parts: [{ geo: G.post, mat, name: 'post', ats: (bay) => (bay.last ? ['start', 'end'] : ['start']), shadow: false, receive: false },
+      { geo: G.top, mat, name: 'top', stretch: true, y: 1.0, shadow: false, receive: false }, { geo: G.mid, mat, name: 'mid', stretch: true, y: 0.5, shadow: false, receive: false }],
+    collider, rec: () => ({ kind: 'fence', mass: 80, h: 1.0, anchored: 12, hitK: 0.3, metal: true, minDv: 0 }) });
+  K.extraTris += bays.length * (10 + 8 + 8) + 10;
+}
+
 /** a river-tram pontoon: the float (white, 0.6 m above the water), a plank deck, steel rails, a gangway to the apron; o: { a, bIn (the inner edge), len, dep, cafe, shelter } */
 function pontoon(K, S, o) {
   const { P, M, ctx } = K, ph = ctx.physics, WY = S.WY, yD = WY + 0.62, a0 = o.a - o.len / 2, a1 = o.a + o.len / 2, b0 = o.bIn, b1 = o.bIn + o.dep;
@@ -178,12 +213,12 @@ function pontoon(K, S, o) {
   P.box(M.deck, a0 - 0.05, a1 + 0.05, yD - 0.06, yD, b0 - 0.05, b1 + 0.05, 'b', 2);
   P.box(M.pile, a0 - 0.08, a1 + 0.08, yD - 0.14, yD - 0.06, b0 - 0.08, b1 + 0.08, 'b', 2);                // a fender rail round the deck edge
   // steel rails on the river sides and the ends (1.0 m, posts every 2 m, two rails), open at the gangway
-  const post = (a, b) => P.cyl(M.steelRail, [a, yD, b], [a, yD + 1.0, b], 0.025, 0.025, 5, false);
-  const rail = (ax, bz, bx, bb) => { P.cyl(M.steelRail, [ax, yD + 1.0, bz], [bx, yD + 1.0, bb], 0.02, 0.02, 4, false); P.cyl(M.steelRail, [ax, yD + 0.5, bz], [bx, yD + 0.5, bb], 0.015, 0.015, 4, false); };
-  const edgeRun = (p0, p1) => { const l = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), n = Math.max(1, Math.round(l / 2)); for (let i = 0; i <= n; i++) post(p0[0] + (p1[0] - p0[0]) * i / n, p0[1] + (p1[1] - p0[1]) * i / n); rail(p0[0], p0[1], p1[0], p1[1]); };
+  // n4spb: the rails are rows of breakable bays of about 2 m (a post at each start and at the end of the run, the two steel rails stretched over the bay, one thin collider + one knock record per bay)
+  const rb = [], edgeRun = (p0, p1) => { const w0 = DF.W(p0[0], p0[1]), w1 = DF.W(p1[0], p1[1]); rb.push(...splitBays(w0.x, w0.z, w1.x, w1.z, 2, { y: yD })); };
   edgeRun([a0 + 0.1, b1 - 0.1], [a1 - 0.1, b1 - 0.1]);
   edgeRun([a0 + 0.1, b0 + 0.1], [a0 + 0.1, b1 - 0.1]); edgeRun([a1 - 0.1, b0 + 0.1], [a1 - 0.1, b1 - 0.1]);
   edgeRun([a0 + 0.1, b0 + 0.1], [o.a - 1.2, b0 + 0.1]); edgeRun([o.a + 1.2, b0 + 0.1], [a1 - 0.1, b0 + 0.1]);
+  railBays(K, 'lmmensh-pontoon-rail-' + o.id, rb, (bay) => ({ y0: bay.y - 0.5, y1: bay.y + 1.2, thick: 0.12, e0: 0, e1: 0 }));
   if (o.cafe) {
     // a closed cafe superstructure 11 x 2.9, 2.5 m high: white walls with a glazing band, the green roof overhanging 0.35
     const ca0 = o.a - 5.6, ca1 = o.a + 5.6, cb0 = b0 + 1.05, cb1 = cb0 + 2.9, wy = yD + 0.05, wh = 2.5;
@@ -205,19 +240,18 @@ function pontoon(K, S, o) {
   const bE = S.upperAt(o.a) - 0.45, yE = floorY(o.a), len = b0 - bE, gw = 1.6;
   P.quad(M.deck, [o.a - gw / 2, yE, bE], [o.a + gw / 2, yE, bE], [o.a + gw / 2, yD, b0], [o.a - gw / 2, yD, b0], [0, 1, 0], [[0, 0], [gw / 2, 0], [gw / 2, len / 2], [0, len / 2]]);
   P.quad(M.deck, [o.a - gw / 2, yE - 0.1, bE], [o.a - gw / 2, yD - 0.1, b0], [o.a + gw / 2, yD - 0.1, b0], [o.a + gw / 2, yE - 0.1, bE], [0, -1, 0]);
+  const gb = [];
   for (const s of [-1, 1]) {
-    const x = o.a + s * (gw / 2 - 0.05);
-    P.cyl(M.steelRail, [x, yE + 1.0, bE], [x, yD + 1.0, b0], 0.02, 0.02, 4, false);
-    for (let i = 0; i <= 4; i++) { const t = i / 4, bb = bE + len * t, yy = yE + (yD - yE) * t; P.cyl(M.steelRail, [x, yy, bb], [x, yy + 1.0, bb], 0.022, 0.022, 4, false); }
+    const x = o.a + s * (gw / 2 - 0.05), nb = 4;
+    for (let k = 0; k < nb; k++) { const w0 = DF.W(x, bE + len * k / nb), w1 = DF.W(x, bE + len * (k + 1) / nb); gb.push({ x0: w0.x, z0: w0.z, x1: w1.x, z1: w1.z, y: yE + (yD - yE) * k / nb, ye: yE + (yD - yE) * (k + 1) / nb, first: k === 0, last: k === nb - 1 }); }
     P.box(M.steelRail, x - 0.04, x + 0.04, yE, yE + 1.06, bE - 0.04, bE + 0.04, 'b', 1);
   }
+  railBays(K, 'lmmensh-gangway-rail-' + o.id, gb, (bay) => ({ y0: Math.min(bay.y, bay.ye) - 0.3, y1: Math.max(bay.y, bay.ye) + 1.1, thick: 0.08, e0: 0.05, e1: 0.05 }));
   // physics: the deck (a walk box), the gangway (a ramp along b), the float edge below the deck is solid water-side
   const c = DF.W(o.a, (b0 + b1) / 2); ph.addWalkBox(c.x, c.z, o.len, o.dep, DF.rot, yD);
+  addFloatBlock(ph, c.x, c.z, o.len + 0.04, o.dep + 0.4, DF.rot, WY);      // n4spb (docs/water-transport-boat-collisions.md): the pontoon is solid for the motor boat (a walker's deck is not touched)
   const g = DF.W(o.a, (bE + b0) / 2); ph.addWalkRamp(g.x, g.z, gw, len + 0.2, DF.rot, yE, yD, 0.6);
-  for (const s of [-1, 1]) { const q = DF.W(o.a + s * (gw / 2 + 0.03), (bE + b0) / 2); ph.addBox(q.x, q.z, 0.08, len + 0.2, DF.rot, Math.min(yE, yD) - 0.3, Math.max(yE, yD) + 1.1); }
-  // the deck edge: thin solid walls (the rails) on the three river sides + the two ends
-  const wall = (aa, ab, ba, bb2) => { const c2 = DF.W((aa + ab) / 2, (ba + bb2) / 2), l = Math.hypot(ab - aa, bb2 - ba); ph.addBox(c2.x, c2.z, aa === ab ? 0.12 : l, aa === ab ? l : 0.12, DF.rot, yD - 0.5, yD + 1.2); };
-  wall(a0, a1, b1, b1); wall(a0, a0, b0, b1); wall(a1, a1, b0, b1); wall(a0, o.a - 0.9, b0, b0); wall(o.a + 0.9, a1, b0, b0);
+  // (the gangway rails and the deck-edge rails: the knock bays above; they were thin solid walls)
   const ep = DF.W(o.a, b0 + 0.8); K.svc.entrances.push({ id: o.id, x: ep.x, z: ep.z, rotY: DF.rot, open: true, name: o.name });
   S.pontoons.push({ id: o.id, a: o.a, b0, b1, y: yD });
 }

@@ -14,6 +14,7 @@ import { ironFence } from './fence.js';
 import { fillPolyFine, ribbon, pairs, distToLine, inRing, coverFn } from './surfaces.js';
 import { partsGeos, addInstanced } from './inst.js';
 import { plantTrees } from './trees.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';      // n4spb (docs/AREAS.md 13.7): the benches and lamps are knock records
 
 const TAU = Math.PI * 2;
 const gw = (a, b) => { const p = GF.W(a, b); return [p.x, p.z]; };
@@ -135,7 +136,7 @@ function benchParts(Q, M) {
 }
 function benches(K, S) {
   const { ctx, M } = K, ph = ctx.physics;
-  const geo = partsGeos((Q) => benchParts(Q, M)), ms = [];
+  const geo = partsGeos((Q) => benchParts(Q, M)), spots = [], items = [];
   const all = FURNITURE.filter((b) => BENCHES.includes(b.id));
   for (const b of all) {
     // face the nearest path (the front +z of the model points to the path): find the nearest point of any path
@@ -145,12 +146,12 @@ function benches(K, S) {
       if (!best || d < best.d) best = { d, x: px, z: pz };
     }
     const rot = best ? Math.atan2(best.x - b.x, best.z - b.z) : 0;
-    ms.push(new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rot), new THREE.Vector3(1, 1, 1)));
-    ph.addBox(b.x, b.z, 2.1, 0.6, rot, 0, 0.9);
+    spots.push({ x: b.x, y: 0, z: b.z, rotY: rot });
+    items.push(ph.addBox(b.x, b.z, 2.1, 0.6, rot, 0, 0.9));
     S.benches.push({ id: b.id, x: b.x, z: b.z, rotY: rot, len: 2.0 });
     K.svc.benches.push({ x: b.x, z: b.z, rotY: rot, len: 2.0, id: b.id });
   }
-  K.extraTris += addInstanced(ctx, K.root, 'lmmensh-benches', geo, ms).tris;
+  K.extraTris += knockFurniture(ctx, 'lmmensh-benches', geo, spots, items, FURNITURE_REC.bench, 260);
 }
 
 // ------------------------------------------------------------------------------------------------ lamps
@@ -165,13 +166,13 @@ function lampParts(Q, M, twin) {
   }
 }
 function lamps(K, S) {
-  const { ctx, M } = K, ph = ctx.physics, gs = [partsGeos((Q) => lampParts(Q, M, false)), partsGeos((Q) => lampParts(Q, M, true))], ms = [[], []];
-  const put = (a, b, twin, rot = 0) => { const p = gw(a, b); ms[twin ? 1 : 0].push(new THREE.Matrix4().compose(new THREE.Vector3(p[0], 0, p[1]), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), GF.rot + rot), new THREE.Vector3(1, 1, 1))); ph.addCylinder(p[0], p[1], 0.22, 0, 5); S.lamps.push({ x: p[0], z: p[1], h: 4.9 }); K.svc.lamps.push({ x: p[0], z: p[1], h: 4.9 }); };
+  const { ctx, M } = K, ph = ctx.physics, gs = [partsGeos((Q) => lampParts(Q, M, false)), partsGeos((Q) => lampParts(Q, M, true))], sp = [[], []], it = [[], []];
+  const put = (a, b, twin, rot = 0) => { const p = gw(a, b); sp[twin ? 1 : 0].push({ x: p[0], y: 0, z: p[1], rotY: GF.rot + rot }); it[twin ? 1 : 0].push(ph.addCylinder(p[0], p[1], 0.22, 0, 5)); S.lamps.push({ x: p[0], z: p[1], h: 4.9 }); K.svc.lamps.push({ x: p[0], z: p[1], h: 4.9 }); };
   // along the N-S alley (pitch ~20 m, alternating sides) and one at each fountain
   for (const [a, b, rot] of [[-5.3, -36, Math.PI], [5.3, -28, 0], [-5.3, -19, Math.PI], [5.3, -12, 0], [-5.3, 14, Math.PI], [5.3, 20, 0], [-5.3, 29, Math.PI], [5.3, 37, 0]]) put(a, b, false, rot);
   put(FOUNT[0].a + 5.6, FOUNT[0].b - 5.6, true, 0.6); put(FOUNT[1].a - 5.6, FOUNT[1].b - 5.6, true, 0.6); put(FOUNT[0].a + 5.6, FOUNT[0].b + 5.6, false, 2.4); put(FOUNT[1].a - 5.6, FOUNT[1].b + 5.6, false, 3.9);
   put(-40, 3.2, false, 0); put(40, -3.2, false, Math.PI);
-  K.extraTris += addInstanced(ctx, K.root, 'lmmensh-lamps', gs[0], ms[0]).tris + addInstanced(ctx, K.root, 'lmmensh-lamps2', gs[1], ms[1]).tris;
+  K.extraTris += knockFurniture(ctx, 'lmmensh-lamps', gs[0], sp[0], it[0], FURNITURE_REC.lamp(4.9), 260) + knockFurniture(ctx, 'lmmensh-lamps2', gs[1], sp[1], it[1], FURNITURE_REC.lamp(4.9), 260);
 }
 
 // ------------------------------------------------------------------------------------------------ trees
