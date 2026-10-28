@@ -62,6 +62,8 @@ export const WATERWAYS = {
   // and the Admiralty / Novo-Admiralty canals round New Holland; the inner canals of New Holland (East, South, the Kovsh basin) are walls + coping only: the loop railing, its colliders, the pier, the stairs and the footbridges are landmarksNewHolland's
   kryukov: { key: 'kryukov', name: 'Крюков канал', water: -2.9, bed: -4.3, wall: 'kryukov', rail: ['vase'], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 22, shadeH: 3.0 },
   admiralty: { key: 'admiralty', name: 'Адмиралтейский канал', water: -2.8, bed: -4.0, wall: 'admiralty', rail: ['moika'], post: 'moika', postW: 0.45, postH: 1.0, bay: 2.4, width: 10, shadeH: 2.8 },
+  // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; row of the source project, 102_3d_piter waterways.js): the Smolenka, the river between the Smolensky cemetery and the Petrograd-side shore, granite walls with a simple bar rail (water level of the Neva)
+  smolenka: { key: 'smolenka', name: 'Смоленка', water: -3.4, bed: -4.4, wall: 'smolenka', rail: ['bars'], post: 'twostep', postW: 0.45, postH: 1.1, bay: 2.7, width: 30, shadeH: 3.2 },
   'nh-inner': { key: 'nh-inner', name: 'Каналы Новой Голландии', water: -2.8, bed: -4.0, wall: 'admiralty', rail: [], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 11, shadeH: 2.8 },
 };
 const SEAM_TOL = 0.8;

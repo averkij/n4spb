@@ -75,6 +75,7 @@ const WALLS = {
   kryukov: { tones: ['#a99b8f', '#9e9086', '#b3a498', '#968880', '#a8978c', '#9c8d84', '#b19c8e'], rows: 6, vein: 0.6 },
   'nh-inner': { tones: ['#a8968c', '#9c8a82', '#b2a096', '#94847c', '#a8928a', '#9e8c84'], rows: 6, vein: 0.5 },
   admiralty: { tones: ['#a39088', '#98867e', '#ad9a90', '#907f78', '#a68e84', '#9a8880'], rows: 6, vein: 0.5 },
+  smolenka: { tones: ['#a29a92', '#98908a', '#aaa198', '#908880', '#a49a90', '#9a928a'], rows: 6, vein: 0.4 },      // Vasilyevsky-Okrug 7: the Smolenka (source project's tones)
   neva: { tones: ['#ab9487', '#b49d90', '#9d8a7e', '#a68f84', '#b8a094', '#a08c80', '#b09584'], rows: 7, vein: 0.8, big: 1 },
 };
 function wallTexture(ctx, key, base = key) {
@@ -449,11 +450,12 @@ function railStyle(key, bank, x, z, nx, s, nz = 0) {
   }
   if (key === 'moika') return x > -1000 ? 'vase' : 'moika';
   if (key === 'winter-canal') return 'lancet';
+  if (key === 'smolenka') return 'bars';                                      // the Smolenka (source project quay.js): plain bars
   if (key === 'admiralty') return 'moika';                                    // the house bank of the Admiralty / Novo-Admiralty canals: the Moika pattern
   if (key === 'kryukov') return z < 500 ? 'moika' : 'vase';                    // the north reach (Moika -> Truda Sq, 12-13 m) the Moika pattern, the middle / south reach the Griboedov-type vase balusters
   return 'vase';
 }
-const POST = { fontanka: 'pyramid', griboedov: 'twostep', moika: 'moika', 'winter-canal': 'pylon', 'swan-canal': 'twostep', kryukov: 'twostep', admiralty: 'twostep', 'nh-inner': 'twostep', neva: null };
+const POST = { fontanka: 'pyramid', griboedov: 'twostep', moika: 'moika', 'winter-canal': 'pylon', 'swan-canal': 'twostep', kryukov: 'twostep', admiralty: 'twostep', smolenka: 'twostep', 'nh-inner': 'twostep', neva: null };
 const RAIL_H = { lattice: 0.88, clover: 0.88, bars: 1.0, vase: 1.0, loops: 1.02, moika: 1.0, lancet: 0.85, arcade: 0.95, trellis: 1.9 };
 const POST_TONES = {
   fontanka: (t) => (t < 0.12 ? '#a58274' : t < 0.45 ? '#a89a96' : '#b2a5a0'),

@@ -95,6 +95,37 @@ const BUDGET_AREA = {
   admiralty: { environment: 1.25e6, streets: 1.27e6, city: 1.55e6, props: 380e3 },      // measured: environment 1,084,289, streets 1,104,532, city 1,342,315, props 329,830
   vladimirsky: { environment: 770e3, streets: 1.3e6, city: 1.65e6, landmarksD: 345e3 },      // measured (node tools/area.mjs vladimirsky tools/check.mjs --area-modules): environment 662,706, streets 1,133,535, city 1,432,842, landmarksD 300,686 (all four sub-groups: the cathedral and the bell tower, the Tolstoy House, the Passage, the library), + about 15 %
   smolny: { streets: 1.25e6, city: 1.42e6, landmarksOktyabrsky: 57e3 },      // measured: streets 1,088,461, city 1,237,047, landmarksOktyabrsky 47,001 (with the Kapodistrias monument, as in the north)
+  // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; foundation, measured with `node tools/area.mjs vasilyevsky tools/check.mjs --area-modules`, + about 15 %): 11.2 km2 with the Neva, the Malaya Neva, the Smolenka and the Gavan harbour
+  // measured: environment 1,152,944, streets 998,740, city 1,254,653, landmarksAcademy 192,706 (all five sub-groups), bridges 49,900, props 272,252. The rows of the ported modules go in the marked slots (measured + 15 %), one line each:
+  vasilyevsky: { environment: 1.33e6, streets: 1.15e6, city: 1.45e6, landmarksAcademy: 222e3,
+    // PORT-BUDGET: landmarksStrelka
+    //
+    // PORT-BUDGET: landmarksUniversity
+    //
+    // PORT-BUDGET: landmarksMenshikov
+    //
+    // PORT-BUDGET: landmarksAndrew
+    //
+    // PORT-BUDGET: landmarksMakarova
+    //
+    // PORT-BUDGET: landmarksNavalCorps
+    //
+    // PORT-BUDGET: landmarksMining
+    //
+    // PORT-BUDGET: landmarksSredny
+    //
+    // PORT-BUDGET: landmarksModernVO
+    //
+    // PORT-BUDGET: landmarksKirova
+    //
+    // PORT-BUDGET: landmarksSmolensky
+    //
+    // PORT-BUDGET: landmarksSevkabel
+    //
+    // PORT-BUDGET: landmarksSeaTerminal
+    //
+    // PORT-BUDGET: landmarksVOStatues
+  },
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;
 const BUDGET = { environment: 500e3, streets: 500e3, city: 600e3, landmarksA: 400e3, landmarksB: 500e3, landmarksC: 500e3, landmarksD: 300e3, traffic: 400e3, props: 300e3, people: 200e3, wildlife: 100e3,

@@ -7,6 +7,7 @@ import * as L from '../layout.js';
 import { GARDEN_RING } from '../landmarksGarden/groups.js';
 import * as G_OKT from '../landmarksOktyabrsky/groups.js';
 import { PAVED_RINGS as ACADEMY_PAVED } from '../landmarksAcademy/groups.js';
+import { PAVED_RINGS as AREA_PAVED } from '../lib/area-tables.js';      // the table of the area module (area-tables.js PAVED_RINGS): [{ module, rings }] of the modules ported for that area
 
 //   landmarksMars:   the paved cour d'honneur of the Marble Palace (the polygon of landmarksMars/palace.js, which lays granite slabs over it): copied from the source's claims.js (102_3d_piter 0568f7af)
 const MARBLE_COURT = [[-1322, -1401.9], [-1288.2, -1417.4], [-1317, -1489.2], [-1350.7, -1473.9], [-1343.9, -1456], [-1370.3, -1441.4], [-1362.9, -1428.4], [-1356.6, -1417.3], [-1353.7, -1418.9], [-1333.7, -1429.8]];
@@ -23,6 +24,7 @@ export function extraClaimRings(ctx) {
   // M7 (docs/AREAS.md section 10): where the AREA claims the Kapodistrias monument (the North: layout.GROUPS.landmarksOktyabrsky holds 'kapodistrias'), plaza.js paves the source's longer ring
   // (the promenade + the apron round the monument, groups.js KAPODISTRIAS_PAVED_RINGS), so the tufts must keep off that ring instead; the strip claims no 'kapodistrias' and keeps PAVED_RINGS as before
   if (list.includes('landmarksAcademy')) for (const r of ACADEMY_PAVED) out.push(r.flat());
+  for (const e of AREA_PAVED) if (list.includes(e.module)) for (const r of e.rings) out.push(r.flat());      // Vasilyevsky-Okrug 7 (src/areas/vasilyevsky/rings.js); empty in the other areas
   if (list.includes('landmarksOktyabrsky')) {
     const kap = (L.GROUPS.landmarksOktyabrsky || []).some((g) => g.key === 'kapodistrias');
     const rings = kap && Array.isArray(G_OKT.KAPODISTRIAS_PAVED_RINGS) ? G_OKT.KAPODISTRIAS_PAVED_RINGS : G_OKT.PAVED_RINGS;
