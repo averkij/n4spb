@@ -256,7 +256,7 @@ for (const a of D.areas) {
   if (a.kind === 'big' || a.kind === 'large') planOf.set(a.k, el('path', { d, 'fill-rule': 'evenodd', fill: a.kind === 'big' ? 'url(#hatch)' : 'url(#hatchL)', stroke: 'none' }, gPlan));
   else if (a.kind === 'small') planOf.set(a.k, el('path', { d, 'fill-rule': 'evenodd', fill: 'none', stroke: '#4a58c8', 'stroke-width': 2.6, 'stroke-dasharray': '1.5 5', 'stroke-linecap': 'round' }, gPlan));
 }
-// the live areas (D.existing, from the registry: P Palace-Liteyny, S Smolninskoye, A Admiralty-Haymarket, V Vladimirsky-Ligovka): the district itself gets a solid orange outline,
+// the live areas (D.existing, from the registry: P Palace-Liteyny, S Smolninskoye, A Admiralty-Haymarket, V Vladimirsky-Ligovka, W Vasilyevsky-Okrug 7): the district itself gets a solid orange outline,
 // the walkable territory of the scene (the registry's play rectangles) a dashed ink outline
 for (const a of D.areas) if (a.live) el('path', { d: a.d, fill: 'rgba(232,89,12,.10)', stroke: '#e8590c', 'stroke-width': 3.4, 'stroke-linejoin': 'round', 'fill-rule': 'evenodd' }, gEx);
 for (const e of D.existing) {

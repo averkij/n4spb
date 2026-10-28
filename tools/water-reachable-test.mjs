@@ -1,5 +1,5 @@
 // tools/water-reachable-test.mjs - THE RULE FOR CHECKING "water is reachable" (CLAUDE.md "World rules", docs/AREAS.md 13.7), CPU only, no GPU, no bake:
-//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky> tools/water-reachable-test.mjs [--quick]            npm run water   (the four live areas)
+//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky|vasilyevsky> tools/water-reachable-test.mjs [--quick]            npm run water   (the five live areas)
 // It builds the REAL modules of the area headlessly (tools/lib/headless-world.mjs: environment, bridges, streets, the landmark modules ... everything that owns colliders; no city / people / traffic) and proves
 // with the area's real colliders, the real Physics + Player and the real car handling (drive/handling.js):
 //   1  no collider and no territory predicate classifies a water cell as blocked: every sampled water cell in the play area is inside the territory, reachable for the car (handling.blocked), has a finite ground
@@ -436,7 +436,7 @@ if (AREA === 'palace') {
     assert(n >= 20 && bad.length === 0, `${bad.length} of ${n} placements read the river bed: ${JSON.stringify(bad)}`);
   });
   // the pier decks and the lower landings of the quay descents: walkable floors at y below the road over the trench; the walker stands on them, so the car does too (placed, or DROPPED onto them from the quay)
-  const floors = ph.items.filter((it) => it.type === 'walk' && chain(it.cx, it.cz) === null && !it.sticky && it.top < 0.03 && L.heightAt(it.cx, it.cz) < -0.2 && it.top > L.heightAt(it.cx, it.cz) + 0.05 && !L.insideBuilding(it.cx, it.cz, 0));
+  const floors = ph.items.filter((it) => it.type === 'walk' && chain(it.cx, it.cz) === null && !it.sticky && it.top < 0.03 && L.heightAt(it.cx, it.cz) < -0.2 && it.top > L.heightAt(it.cx, it.cz) + 0.05 && !L.insideBuilding(it.cx, it.cz, 0) && L.inPlay(it.cx, it.cz, 0));      // (a floor in the data margin outside the territory is not walkable: the play-edge slide holds there; Vasilyevsky-Okrug 7 has the Admiralty quay stairs 30 m outside its rectangles)
   check(`8 a car placed on a pier deck / a lower landing (${floors.length} such floors) stands on it like the walker, and a car that DROPS onto it from the road lands on it (a fall: the 'land' event) instead of falling through to the bed`, () => {
     if (floors.length < 3) { console.log('  (this area has no such floors)'); return; }
     const car = createHandling(ctx, null), bad = []; let n = 0, landed = 0;
