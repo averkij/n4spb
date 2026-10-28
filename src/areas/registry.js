@@ -289,6 +289,85 @@ REGISTRY.admiralty = {
   ],
 };
 
+// Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v): map area 48, the Vasilyevsky island with the okrug 7 / Gavan side - the Strelka with the Exchange and the Rostral columns, the Kunstkamera, the Twelve Collegia, the Menshikov
+// Palace, the Academy of Arts, the Andrew Cathedral, the Smolensky cemetery, the Smolenka and the Sea Terminal - plus the Petrograd-side bank of the Neva and the Neva Bay south of the island. The cut of tools/area-shape.mjs
+// --k 48 --js vasilyevsky (land outline plus water zones, 63 rectangles, 11.23 km2; the names carry the prefix VO because V.. belongs to Vladimirsky). No ST rectangle: no railway station (one purple Zhiguli at the spawn, 13.4).
+REGISTRY.vasilyevsky = {
+  id: 'vasilyevsky', page: 'vasilyevsky.html', bake: 'baked/vasilyevsky/', requireBake: true,
+  title: 'Васильевский–Округ № 7', titleEn: 'Vasilyevsky–Okrug № 7',
+  sights: ['Стрелка Васильевского острова', 'Ростральные колонны', 'Кунсткамера', 'Академия наук', 'Двенадцать коллегий', 'Меншиковский дворец', 'Академия художеств', 'Андреевский собор', 'Смоленское кладбище'],
+  approxMB: 60, dev: false, mapId: 48,
+  remap: {
+    'src/world/data/city.js': 'src/areas/vasilyevsky/data/city.js', 'src/world/area.js': 'src/areas/vasilyevsky/area.js',
+    'src/world/city/known-data.js': 'src/areas/vasilyevsky/known-data.js',
+  },
+  play: [
+      { name: 'VO01', x0: -4560, x1: -4320, z0: -2400, z1: -2320 },
+      { name: 'VO02', x0: -4560, x1: -4080, z0: -2320, z1: -2240 },
+      { name: 'VO03', x0: -4560, x1: -3920, z0: -2240, z1: -2160 },
+      { name: 'VO04', x0: -6880, x1: -6640, z0: -2160, z1: -2080 },
+      { name: 'VO05', x0: -5280, x1: -4800, z0: -2160, z1: -2080 },
+      { name: 'VO06', x0: -4560, x1: -3760, z0: -2160, z1: -2080 },
+      { name: 'VO07', x0: -6960, x1: -6640, z0: -2080, z1: -2000 },
+      { name: 'VO08', x0: -5440, x1: -3520, z0: -2080, z1: -2000 },
+      { name: 'VO09', x0: -7040, x1: -6400, z0: -2000, z1: -1920 },
+      { name: 'VO10', x0: -6240, x1: -6160, z0: -2000, z1: -1920 },
+      { name: 'VO11', x0: -5760, x1: -3520, z0: -2000, z1: -1920 },
+      { name: 'VO12', x0: -7040, x1: -6080, z0: -1920, z1: -1840 },
+      { name: 'VO13', x0: -5920, x1: -3440, z0: -1920, z1: -1840 },
+      { name: 'VO14', x0: -7040, x1: -3360, z0: -1840, z1: -1760 },
+      { name: 'VO15', x0: -2480, x1: -2400, z0: -1840, z1: -1760 },
+      { name: 'VO16', x0: -7040, x1: -3200, z0: -1760, z1: -1680 },
+      { name: 'VO17', x0: -2720, x1: -2320, z0: -1760, z1: -1680 },
+      { name: 'VO18', x0: -7120, x1: -2000, z0: -1680, z1: -1600 },
+      { name: 'VO19', x0: -7120, x1: -1920, z0: -1600, z1: -1520 },
+      { name: 'VO20', x0: -6960, x1: -1920, z0: -1520, z1: -1440 },
+      { name: 'VO21', x0: -6880, x1: -2000, z0: -1440, z1: -1360 },
+      { name: 'VO22', x0: -6720, x1: -2000, z0: -1360, z1: -1200 },
+      { name: 'VO23', x0: -6640, x1: -2000, z0: -1200, z1: -1120 },
+      { name: 'VO24', x0: -6640, x1: -2080, z0: -1120, z1: -1040 },
+      { name: 'VO25', x0: -6640, x1: -2160, z0: -1040, z1: -960 },
+      { name: 'VO26', x0: -6640, x1: -2240, z0: -960, z1: -880 },
+      { name: 'VO27', x0: -6480, x1: -2320, z0: -880, z1: -800 },
+      { name: 'VO28', x0: -6400, x1: -2480, z0: -800, z1: -720 },
+      { name: 'VO29', x0: -6080, x1: -2560, z0: -720, z1: -640 },
+      { name: 'VO30', x0: -6080, x1: -2640, z0: -640, z1: -560 },
+      { name: 'VO31', x0: -6080, x1: -2800, z0: -560, z1: -400 },
+      { name: 'VO32', x0: -6000, x1: -5920, z0: -400, z1: -320 },
+      { name: 'VO33', x0: -5680, x1: -2960, z0: -400, z1: -320 },
+      { name: 'VO34', x0: -5600, x1: -3120, z0: -320, z1: -240 },
+      { name: 'VO35', x0: -5600, x1: -3200, z0: -240, z1: -160 },
+      { name: 'VO36', x0: -5520, x1: -3280, z0: -160, z1: -80 },
+      { name: 'VO37', x0: -5520, x1: -3520, z0: -80, z1: 0 },
+      { name: 'VO38', x0: -5520, x1: -3600, z0: 0, z1: 80 },
+      { name: 'VO39', x0: -5600, x1: -4000, z0: 80, z1: 160 },
+      { name: 'VO40', x0: -5760, x1: -4080, z0: 160, z1: 240 },
+      { name: 'VO41', x0: -5760, x1: -4160, z0: 240, z1: 400 },
+      { name: 'VO42', x0: -6320, x1: -6240, z0: 320, z1: 560 },
+      { name: 'VO43', x0: -5760, x1: -4240, z0: 400, z1: 480 },
+      { name: 'VO44', x0: -6560, x1: -6480, z0: 480, z1: 560 },
+      { name: 'VO45', x0: -5920, x1: -4320, z0: 480, z1: 560 },
+      { name: 'VO46', x0: -6560, x1: -6240, z0: 560, z1: 640 },
+      { name: 'VO47', x0: -6080, x1: -4320, z0: 560, z1: 640 },
+      { name: 'VO48', x0: -6720, x1: -4320, z0: 640, z1: 720 },
+      { name: 'VO49', x0: -6560, x1: -4400, z0: 720, z1: 800 },
+      { name: 'VO50', x0: -6160, x1: -4400, z0: 800, z1: 880 },
+      { name: 'VO51', x0: -6080, x1: -4400, z0: 880, z1: 960 },
+      { name: 'VO52', x0: -6000, x1: -4400, z0: 960, z1: 1040 },
+      { name: 'VO53', x0: -5840, x1: -4480, z0: 1040, z1: 1120 },
+      { name: 'VO54', x0: -6000, x1: -4480, z0: 1120, z1: 1200 },
+      { name: 'VO55', x0: -6080, x1: -4480, z0: 1200, z1: 1280 },
+      { name: 'VO56', x0: -6160, x1: -4560, z0: 1280, z1: 1360 },
+      { name: 'VO57', x0: -6240, x1: -4560, z0: 1360, z1: 1440 },
+      { name: 'VO58', x0: -6320, x1: -4560, z0: 1440, z1: 1520 },
+      { name: 'VO59', x0: -6400, x1: -4480, z0: 1520, z1: 1600 },
+      { name: 'VO60', x0: -6320, x1: -4800, z0: 1600, z1: 1680 },
+      { name: 'VO61', x0: -6240, x1: -5040, z0: 1680, z1: 1760 },
+      { name: 'VO62', x0: -6160, x1: -5040, z0: 1760, z1: 1840 },
+      { name: 'VO63', x0: -5920, x1: -5120, z0: 1840, z1: 1920 },
+  ],
+};
+
 /**
  * Gates between areas: { id, from, to, seg: [[x,z],[x,z]] (the border segment in the FROM area), inward: [nx,nz] (unit vector pointing from the border into the FROM area), zone (m: depth of the
  * prompt zone, walking), arrive: { x0, x1, z0, z1 } (where the player may land in the TO area), reverse (id of the gate back) }.
@@ -313,7 +392,7 @@ export const GATES = [
   // who walks out of one territory into the core of the other is carried over without a question (freeze, blur, progress bar). No segment and no arrival rectangle: he lands at the same x, z, yaw.
   { id: 'e1', kind: 'edge', from: 'palace', to: 'smolny', zone: 40, reverse: 'e2' },
   { id: 'e2', kind: 'edge', from: 'smolny', to: 'palace', zone: 40, reverse: 'e1' },
-  // e3 .. e10 - the four-area graph (docs/AREAS.md 15.y): an edge gate each way for EVERY pair of live areas whose territories (REGISTRY[id].play) overlap, none for a pair that does not. Computed from the rectangles
+  // e3 .. e10 - the four-area graph (e11 .. e14 below add the fifth area) (docs/AREAS.md 15.y): an edge gate each way for EVERY pair of live areas whose territories (REGISTRY[id].play) overlap, none for a pair that does not. Computed from the rectangles
   // (km2 of overlap): palace-smolny 2.09 (e1/e2), palace-admiralty 1.44 (e3/e4), palace-vladimirsky 1.87 (e5/e6), smolny-vladimirsky 2.32 (e7/e8), admiralty-vladimirsky 0.98 (e9/e10); admiralty-smolny 0.00: the two have
   // no common ground, so there is NO gate between them (tools/areas-test.mjs checks the rule both ways: a gate for every overlapping pair, none for a pair that does not overlap).
   // Where three territories overlap (the Moscow station complex ST lies in palace, smolny and vladimirsky) the gate machine takes the first row of the FROM area that triggers, in registry order.
@@ -325,6 +404,13 @@ export const GATES = [
   { id: 'e8', kind: 'edge', from: 'vladimirsky', to: 'smolny', zone: 40, reverse: 'e7' },
   { id: 'e9', kind: 'edge', from: 'admiralty', to: 'vladimirsky', zone: 40, reverse: 'e10' },
   { id: 'e10', kind: 'edge', from: 'vladimirsky', to: 'admiralty', zone: 40, reverse: 'e9' },
+  // e11 .. e14 - the fifth area, Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v): it overlaps palace (0.36 km2: the Palace Bridge, the Spit side of the Admiralty bank) and admiralty (0.88 km2: the Neva between the Senate Square and the Academy of Arts);
+  // smolny and vladimirsky are far away (0.00), so no gate. e12 (to palace) stands BEFORE e14 (to admiralty): in the three-way overlap (x -2720 .. -2000, z -1360 .. -640) the gate machine takes the first row of the FROM area that triggers (tools/gates-test.mjs: the
+  // other order starves e12). The lens of the territories passes the global rule without LENS_RELAX (hops 1500 .. 3840 m, worst dead strip 200 m, bounce share under 3 percent).
+  { id: 'e11', kind: 'edge', from: 'palace', to: 'vasilyevsky', zone: 40, reverse: 'e12' },
+  { id: 'e12', kind: 'edge', from: 'vasilyevsky', to: 'palace', zone: 40, reverse: 'e11' },
+  { id: 'e13', kind: 'edge', from: 'admiralty', to: 'vasilyevsky', zone: 40, reverse: 'e14' },
+  { id: 'e14', kind: 'edge', from: 'vasilyevsky', to: 'admiralty', zone: 40, reverse: 'e13' },
   // g0 - the dev loop (?devgates=1): a gate across the Nevsky approach to Vosstaniya Square (a vertical segment at x = 470, the strip east of it is the "own area") that leads back to the SAME page at
   // the same pose. It exercises the whole hand-off (prompt, preflight, veil, navigation, arrival, memory) before a second area exists, and stays as a test fixture afterwards.
   { id: 'g0', dev: true, from: 'strip', to: 'strip', seg: [[470, 100], [470, 240]], inward: [1, 0], zone: 30, arrive: { x0: 440, x1: 700, z0: 80, z1: 260 }, reverse: 'g0' },
