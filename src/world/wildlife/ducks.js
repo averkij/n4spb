@@ -9,6 +9,7 @@
 // PONDS (T4b of the Tauride remake, docs/AREAS.md 9.1 HOOKS.duckPonds): an area may name ponds of a landmark module: their shore lines give lanes exactly like the bank chains (the water on the left of travel, offset into
 // the water, every sample asked env.waterAt and kept `margin` m off every shore by the hook's exact shore distance, 2.5 m of free water beyond, no bridge deck near), key 'pond', at the ponds' own water level (lane.y).
 // The strip exports no such hook: its lanes are the waterway lanes as before.
+// FLUSH (docs/water-transport-birds-flee-boats.md): a motor boat / car that comes at a group (threat.js) puts it into the air; it lands on a lane 14-130 m away, is AWAY for 14-26 s and flies home once the vehicle is gone.
 import * as THREE from 'three';
 import { birdModel, shadowGeometry } from './models.js';
 import { instanced } from './geom.js';

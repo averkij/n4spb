@@ -5,6 +5,7 @@
 // Flocks react to the player: pigeons lift off together at ~4.5 m, circle for 9-15 s and resettle once the player has left; sparrows scatter into the nearest tree (or a lamp
 // top) and trickle back; crows flee to a lamp top, tree top or cornice 15-50 m away; gulls leave their post / boat for another post, circle over the water and come back
 // (a boat gull lands again on the predicted spot of a moving boat: boat state(t) is a pure function of t).
+// The gulls (quay posts, boat roofs) also go from a boat / car that is HEADING for them from far beyond the walker radius (threat.js); the other species keep the walker's scare, which a car already triggers through W.player.
 // Spawn counts scale with ctx.quality (high / medium / low). Never uses Math.random (ctx.rng); nothing is placed in a building, a trunk, on a carriageway or in the water.
 // Swifts only show at golden hour (sun elevation low, not night): the count follows ctx.sunDir.y and ctx.shared.uNight.
 // WEST (wave 3): the map is 2.4x bigger but the budget (129 birds) is the same, so the animals FOLLOW THE PLAYER: zones.js lists where they like to be (Kazan lawn, Palace Square, the

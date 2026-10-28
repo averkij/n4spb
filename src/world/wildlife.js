@@ -20,6 +20,7 @@
 //   boats.js   one descriptor per boat of the map (landmarksC Fontanka boats + environment boats of the Moika / Griboedov / Winter Canal / Neva): roof / railing slots, hull boxes.
 //   ducks.js   six groups of mallards (pairs, a trio, hens with 4-7 ducklings) swimming slow lanes 4-5 m off the quay walls of the Fontanka, the Moika and the Griboedov Canal (validated
 //              lanes: clear of every boat hull of every lap, the landing stages, the bridges and the descents), with a wake each; the groups follow the player like the birds.
+//   threat.js  the vehicle the player drives (ctx.drive: the motor boat, a car) as the water birds see it: speed + heading decide who flies away (docs/water-transport-birds-flee-boats.md).
 //   world.js   placement tests (play area union, building / trunk / solid (physics columns) / carriageway / water / obelisk steps / bridge pavement), perch list (lamp tops, parapet posts of
 //              every embankment, Neva roll, lions, tree tops, cornices), ground level (square paving, pavements +0.12, low steps read from the physics, humped bridge deck), water points.
 // Sources: docs/research/people.md section O10 (species, looks, behaviour) and S8 (counts), west-life-furniture.md section 8 (birds per zone), fontanka.md (parapet posts), west-canals-bridges.md
