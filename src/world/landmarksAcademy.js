@@ -13,6 +13,8 @@
 // Provenance: copied from 102_3d_piter commit 0568f7af (src/world/landmarksAcademy.js and landmarksAcademy/*); changes for n4spb: (1) a part is built when THE AREA claims its sub-group (layout.GROUPS.landmarksAcademy; Admiralty-Haymarket claims
 // 'academy-of-arts' and 'sphinx-pier' only: the garden, Trezzini Square and the House of Academicians lie outside its data), not when the module's own groups.js lists it; (2) the pier railings and the benches are knock bays / knock records
 // (docs/AREAS.md 13.7, 15.z); (3) water ring / keep-out hand-over through the area table WATER.ownerRings / keepOut (environment/waterways.js).
+// Vasilyevsky-Okrug 7 (docs/vo-m1.md) claims all five sub-groups: garden.js (the cast-iron fence with its closed gate leaves and the hedges = knock bays, the 8 benches = knock records), square.js (the pavement railing = knock bays, the hemispheres and the chained posts = bollard records)
+// are knock-adapted too; the columns of dom.js, the monuments and pedestals of the garden / square, the granite benches of the pier stay solid structures.
 export const OWNS_GROUPS = true;
 
 import * as THREE from 'three';
