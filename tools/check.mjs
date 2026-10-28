@@ -102,15 +102,15 @@ const BUDGET_AREA = {
     //
     // PORT-BUDGET: landmarksUniversity
     //
-    // PORT-BUDGET: landmarksMenshikov
+    landmarksMenshikov: 303e3,      // measured 263,278 (palace, forecourt, Corps, Rumyantsev garden with the obelisk, the descent with its pontoons), + about 15 %
     //
     // PORT-BUDGET: landmarksAndrew
     //
-    // PORT-BUDGET: landmarksMakarova
+    landmarksMakarova: 112e3,      // measured 97,043 (all seven sub-groups), + about 15 %
     //
-    // PORT-BUDGET: landmarksNavalCorps
+    landmarksNavalCorps: 83e3,      // measured 71,622 (all four sub-groups), + about 15 %
     //
-    // PORT-BUDGET: landmarksMining
+    landmarksMining: 76e3,      // measured 65,610 (all three sub-groups), + about 15 %
     //
     // PORT-BUDGET: landmarksSredny
     //
