@@ -20,8 +20,16 @@ node build-intro.mjs      # -> intro-data.json (git-ignored)
 node build-streets.mjs    # adds the named street chains, label anchors and each area's border streets to intro-data.json
 node build-overlap.mjs    # the area overlap rules of docs/AREAS.md section 12: walkable territory (fp), overlap zones (ext), water (wz), shared junctions, bridges between areas
 node assemble.mjs         # -> ../intro-draft.html
+node check-edits.mjs      # (optional) the edits of edits.json did what they promise (merged areas present, live areas at their registry mapId, territory reach); exit 1 on a failure
 node shot-intro.mjs out "" 1500 900   # a PNG of the page through Edge (puppeteer-core from the repo's node_modules)
 ```
+
+## Manual edits (edits.json)
+
+The 111 districts are cut and merged by hand in `edits.json`; the page shows 106 areas.
+
+* `merge`: `{ names, ru, en, stable? }` unions the districts `names` (plain names without "округ"; the FIRST one keeps the OSM id, the city district and the label point) into one area called `ru` / `en`. By default the removed districts shift the index `k` of every later area down by one; `"stable": true` fills the freed slot with the LAST district instead, so the `k` of all other areas stays (the registry `mapId` of the live areas, `docs/AREAS.md`, `tools/area-shape.mjs --k` depend on it; any merge that frees a slot below a live area needs it). Done: Дворцовый–Литейный, Владимирский–Лиговка, Адмиралтейский–Сенной (all live) and **Васильевский–Округ № 7 / Vasilyevsky–Okrug № 7** (5.76 km2, `large`; stable: Коломяги moved from 106 to 50). The new area is a Василеостровский район area (district of the first name; OSM puts Округ № 7 itself into the Адмиралтейский район, so that district goes from 6 to 5 areas and 17.0 to 13.5 km2).
+* `cut`: `{ street, end?, to?, maxM? }`, read by `build-overlap.mjs`. It closes the gap between the END of a named street (the chain end that lies furthest in the compass direction `end`: n, s, e, w, ne, nw, se, sw; every end when omitted) and the nearest water cell within `maxM` (default 300 m; `to` may also be a `[lon, lat]` point) with a barrier line, as if the street ran on to the coast. The block faces of the overlap build (`R2`) are the faces of the street network; where a street stops short of the shore the two sides are ONE face, owned by whichever district has most of its cells, and every neighbour of that face reaches 320 m into the whole of it. Done: Большой проспект В.О., `end: sw`, 200 m to the Gulf shore. Before, the shore strip of Gavan west of it was one face with the south-west tip of Okrug 7 and the territory of Okrug 7 (the red line on hover) ran 1.75 km west along the harbour as a ragged tentacle; now the merged area reaches at most 370 m beyond its land. The land cells (the district rasters) are not touched by a cut, so no area changes its km2.
 
 `raw/` and `intro-data.json` are git-ignored (about 25 MB of Overpass responses). Data: OpenStreetMap contributors (ODbL).
 

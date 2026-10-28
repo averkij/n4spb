@@ -156,7 +156,7 @@ for (const e of moAll) {
 }
 log('municipal districts in the city:', mos.length);
 
-// ---------- manual edits of the area division (edits.json): merges of neighbouring districts
+// ---------- manual edits of the area division (edits.json): merges of neighbouring districts (the 'cut' edits, street ends closed to the coast, are applied by build-overlap.mjs)
 function unionRings(rA, rB) {
   const key = (p) => p[0].toFixed(7) + ',' + p[1].toFixed(7);
   const ccw = (r) => (ringAreaM2(r) > 0 ? r : r.slice().reverse());
@@ -178,7 +178,12 @@ for (const mg of EDITS.merge || []) {
   if (parts.some((p) => !p)) { log('edit: merge skipped, not found:', mg.names.join(' + ')); continue; }
   const before = parts.map((p) => p.rings.outer.length);
   let rings = parts[0].rings;
-  for (const p of parts.slice(1)) { rings = unionRings(rings, p.rings); mos.splice(mos.indexOf(p), 1); }
+  for (const p of parts.slice(1)) {
+    rings = unionRings(rings, p.rings);
+    const at = mos.indexOf(p);
+    // "stable": the last district fills the freed slot, so the index k of every other area (the registry mapId of the live areas, docs/AREAS.md, tools --k) does not move; without it the later areas shift down by one
+    if (mg.stable) { const last = mos.pop(); if (last !== p) mos[at] = last; } else mos.splice(at, 1);
+  }
   parts[0].rings = rings; parts[0].rawName = mg.ru; parts[0].nameEnOsm = mg.en || '';
   log('edit: merged', mg.names.join(' + '), '->', mg.ru, '| outer rings', before.join('+'), '->', rings.outer.length);
 }
