@@ -1,5 +1,5 @@
 // tools/wildlife-boat-test.mjs - the WATER BIRDS FLY AWAY from a vehicle that comes at them (wildlife/threat.js, ducks.js flush, birds.js gulls), CPU only, no GPU, no bake:
-//   node tools/area.mjs palace tools/wildlife-boat-test.mjs [--quick]            npm run wildlife-boat
+//   node tools/area.mjs palace tools/wildlife-boat-test.mjs [--quick]            npm run wildlifeboat
 // It builds the REAL modules of the area headlessly (tools/lib/headless-world.mjs: environment, bridges, the landmark modules, the baked city, wildlife), then the REAL drive module (cars + the motor
 // boat) with a real Player (the setup of tools/boat-test.mjs) and drives the boat at the birds with the real water, steps every update of the page but the drive's own.
 //   1  the threat geometry (threat.js): a hull 17 m/s coming straight at a bird scares it from 55 m, not from 75 m; a boat passing 30 m off, a drifting one 30 m away and one running away do not; a drifting
