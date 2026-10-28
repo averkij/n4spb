@@ -137,6 +137,14 @@ const KNOWN_UNCLAIMED = {
     w232367034: { module: 'landmarksJ', why: 'part of r1251285, see above' },
   },
 };
+// Vasilyevsky-Okrug 7, cluster M2 (docs/vo-m2.md); the rows are added with Object.assign so that the clusters of the other ports merge without a conflict
+Object.assign(OWNER_SKIPS.vasilyevsky ||= {}, {
+  w216655313: 'landmarksMakarova draws the bell frame of St Catherine (a 2.6 m frame of 12 cm steel posts and thin rails, 41 m2) with its triangle centroids within 1 m of the outline or under the 1.5 m band: nothing of it counts as the building, but it is drawn on the footprint (catherine.js bellFrame; the claim keeps the generic city from drawing a solid block there)',
+  w82802180: 'landmarksNavalCorps claims the 42 m2 shed in courtyard H2 of the Naval Cadet Corps on purpose (the source project removes it from the generic city and draws nothing in its place: groups.js note)',
+});
+Object.assign(KNOWN_UNCLAIMED.vasilyevsky ||= {}, {
+  r4164970: { module: 'landmarksNavalCorps', why: 'the outline of the Optina compound (Lieutenant Schmidt emb. 27/2, skip: 1: the generic city draws only its parts) is not claimed by design (groups.js): the module claims and draws its parts, the church r17488566 and the front house r4164973, which lie inside the outline' },
+});
 
 // ---------------------------------------------------------------- engine
 const THREE = await import('three');

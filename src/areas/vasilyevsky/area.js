@@ -28,15 +28,15 @@ import { GROUPS_LIST as G_STRELKA } from '../../world/landmarksStrelka/groups.js
 // ---
 import { GROUPS_LIST as G_UNIVERSITY } from '../../world/landmarksUniversity/groups.js';
 // ---
-// PORT-IMPORT: landmarksMenshikov
+import { GROUPS_LIST as G_MENSHIKOV } from '../../world/landmarksMenshikov/groups.js';
 // ---
 // PORT-IMPORT: landmarksAndrew
 // ---
-// PORT-IMPORT: landmarksMakarova
+import { GROUPS_LIST as G_MAKAROVA } from '../../world/landmarksMakarova/groups.js';
 // ---
-// PORT-IMPORT: landmarksNavalCorps
+import { GROUPS_LIST as G_NAVALCORPS } from '../../world/landmarksNavalCorps/groups.js';
 // ---
-// PORT-IMPORT: landmarksMining
+import { GROUPS_LIST as G_MINING } from '../../world/landmarksMining/groups.js';
 // ---
 // PORT-IMPORT: landmarksSredny
 // ---
@@ -73,15 +73,15 @@ export const MODULES = [
   //
   'landmarksAcademy', // the Academy of Arts, the Egyptian sphinx pier, the Academic Garden, Trezzini Square, the House of Academicians (docs/AREAS.md 15.z; the garden, the square and the House of Academicians are knock-adapted in docs/vo-m1.md)
   //
-  // PORT-MODULE: landmarksMenshikov
+  'landmarksMenshikov', // the Menshikov Palace, the First Cadet Corps, the Rumyantsev Garden with the obelisk, the Rumyantsevsky descent (docs/vo-m2.md)
   //
   // PORT-MODULE: landmarksAndrew
   //
-  // PORT-MODULE: landmarksMakarova
+  'landmarksMakarova', // Sportivnaya-2 exits 6 and 7, the Lions pier, St Catherine at the Tuchkov Bridge, the Yakovlev houses, the Lutheran churches, the Brullov house (docs/vo-m2.md)
   //
-  // PORT-MODULE: landmarksNavalCorps
+  'landmarksNavalCorps', // the Naval Cadet Corps, the Krusenstern monument and stair, the Dormition church, the submarine S-189 (docs/vo-m2.md)
   //
-  // PORT-MODULE: landmarksMining
+  'landmarksMining', // the Mining University, the icebreaker Krasin, the two descents (docs/vo-m2.md)
   //
   // PORT-MODULE: landmarksSredny
   //
@@ -113,15 +113,15 @@ export const LABELS = {
   // ---
   landmarksUniversity: 'Кунсткамера, Академия наук, Двенадцать коллегий',
   // ---
-  // PORT-LABEL: landmarksMenshikov
+  landmarksMenshikov: 'Меншиковский дворец, Румянцевский сад, Кадетский корпус',
   // ---
   // PORT-LABEL: landmarksAndrew
   // ---
-  // PORT-LABEL: landmarksMakarova
+  landmarksMakarova: 'Спуск со львами, Церковь Св. Екатерины, Лютеранские церкви',
   // ---
-  // PORT-LABEL: landmarksNavalCorps
+  landmarksNavalCorps: 'Морской кадетский корпус, Крузенштерн, подлодка С-189',
   // ---
-  // PORT-LABEL: landmarksMining
+  landmarksMining: 'Горный университет, ледокол Красин',
   // ---
   // PORT-LABEL: landmarksSredny
   // ---
@@ -179,15 +179,15 @@ GROUPS.landmarksStrelka = G_STRELKA;
 // ---
 GROUPS.landmarksUniversity = G_UNIVERSITY;
 // ---
-// PORT-GROUPS: landmarksMenshikov
+GROUPS.landmarksMenshikov = G_MENSHIKOV;      // every sub-group lies in this territory and in its data
 // ---
 // PORT-GROUPS: landmarksAndrew
 // ---
-// PORT-GROUPS: landmarksMakarova
+GROUPS.landmarksMakarova = G_MAKAROVA;      // every sub-group lies in this territory and in its data
 // ---
-// PORT-GROUPS: landmarksNavalCorps
+GROUPS.landmarksNavalCorps = G_NAVALCORPS;      // every sub-group lies in this territory and in its data
 // ---
-// PORT-GROUPS: landmarksMining
+GROUPS.landmarksMining = G_MINING;      // every sub-group lies in this territory and in its data
 // ---
 // PORT-GROUPS: landmarksSredny
 // ---
@@ -226,15 +226,28 @@ export function makeAreas(h) {
   { name: 'Памятник Ломоносову · Lomonosov monument', c: [-2777.2, -905.9], r: 22 },
   ...h._named(/Двенадцати коллегий/i, 14, { c: [-2910, -1030], r: 60 }).map((r) => ({ name: 'Двенадцать коллегий · Twelve Collegia (University)', ...r })),
   // ---
-  // PORT-AREAS: landmarksMenshikov
+  { name: 'Меншиковский дворец · Menshikov Palace', c: [-3099, -721], r: 62 },
+  { name: 'Первый кадетский корпус · First Cadet Corps', c: [-3178, -819], r: 70 },
+  { name: 'Румянцевский сад · Rumyantsev Garden', c: [-3286, -672], r: 75 },
+  { name: 'Румянцевский спуск · Rumyantsev Descent', c: [-3208, -590], r: 45 },
   // ---
   // PORT-AREAS: landmarksAndrew
   // ---
-  // PORT-AREAS: landmarksMakarova
+  { name: 'Спуск со львами · Lions pier', c: [-2851, -1442], r: 26 },
+  { name: 'Церковь Св. Екатерины у Тучкова моста · Church of St Catherine', c: [-3651, -1556], r: 50 },
+  { name: 'Дома Яковлевых · Yakovlev houses', c: [-3392, -1500], r: 45 },
+  { name: 'Лютеранская церковь Св. Екатерины · Lutheran Church of St Catherine', c: [-3460, -1041], r: 45 },
+  { name: 'Дом Брюллова · Brullov house', c: [-3565, -1396], r: 35 },
+  { name: 'Лютеранская церковь Св. Михаила · Lutheran Church of St Michael', c: [-3791, -1325], r: 45 },
+  { name: 'Станция Спортивная · Sportivnaya exits', c: [-3773, -1695], r: 25 },
   // ---
-  // PORT-AREAS: landmarksNavalCorps
+  { name: 'Морской кадетский корпус · Naval Cadet Corps', c: [-4047.5, -336.6], r: 90 },
+  { name: 'Памятник Крузенштерну · Krusenstern monument', c: [-3984, -242], r: 35 },
+  { name: 'Подводная лодка С-189 · Submarine S-189', c: [-4236, 26], r: 50 },
+  { name: 'Успенская церковь · Dormition church', c: [-4240, -110], r: 45 },
   // ---
-  // PORT-AREAS: landmarksMining
+  { name: 'Горный университет · Mining University', c: [-4565, 360], r: 75 },
+  { name: 'Ледокол «Красин» · Icebreaker Krasin', c: [-4600, 512], r: 48 },
   // ---
   // PORT-AREAS: landmarksSredny
   // ---
@@ -312,15 +325,15 @@ export const TEST = {
     // ---
     { id: 'r3296328', by: 'landmarksUniversity', group: 'kunstkamera' },
     // ---
-    // PORT-CLAIMED: landmarksMenshikov
+    { id: 'w216655164', by: 'landmarksMenshikov', group: 'menshikov-palace' },
     // ---
     // PORT-CLAIMED: landmarksAndrew
     // ---
-    // PORT-CLAIMED: landmarksMakarova
+    { id: 'w54949806', by: 'landmarksMakarova', group: 'lutheran-catherine' },
     // ---
-    // PORT-CLAIMED: landmarksNavalCorps
+    { id: 'r1242815', by: 'landmarksNavalCorps', group: 'naval-corps' },
     // ---
-    // PORT-CLAIMED: landmarksMining
+    { id: 'r2902646', by: 'landmarksMining', group: 'mining-university' },
     // ---
     // PORT-CLAIMED: landmarksSredny
     // ---
@@ -463,7 +476,7 @@ export const PRUNE_SERVICES = [
   //
   'landmarksUniversity',
   //
-  // PORT-PRUNE: landmarksMenshikov
+  'landmarksMenshikov',
   //
   // PORT-PRUNE: landmarksAndrew
   //
