@@ -114,14 +114,21 @@ function fences(Q) {
     railBays(Q, rb);
     // the fence of 1900 on the 15th-line side of the apses at u 34.2, v -3 .. 27
     const u = 34.2, v0 = -3, v1 = 27, len = v1 - v0;
-    P.box(M.ochreWall, u - 0.2, u + 0.2, 0, 2.4, v0, v1, 'b', 3);
-    for (let v = v0; v <= v1 + 0.01; v += 3.5) P.box(M.ochreWall, u - 0.3, u + 0.3, 0, 2.7, v - 0.3, v + 0.3, 'b', 1);
-    P.box(M.houseCream, u - 0.25, u + 0.25, 2.4, 2.45, v0, v1, 'b', 3);
-    for (let v = v0 + 0.3; v < v1; v += 0.18) P.box(M.ironRail, u - 0.02, u + 0.02, 2.45, 3.25, v, v + 0.03, 'b', 1);
-    P.box(M.ironRail, u - 0.03, u + 0.03, 3.2, 3.27, v0, v1, 'b', 1);
-    { const a = C.W(u, v0), b = C.W(u, v1); void a; void b; }
-    C.wall(ph, [u, v0], [u, v1], -0.2, 3.3, 0.5);
-    { const a = C.W(u, v0), b = C.W(u, v1); Q.svc.fences.push({ id: 'compound-fence-1900', pts: [[a.x, a.z], [b.x, b.z]], h: 3.3, kind: 'stucco', gates: [] }); }
+    // n4spb (the owner's rule: every fence and wall breaks, docs/AREAS.md 13.7): the stucco fence of 1900 is a row of 3.3 m bays: the ochre body, the cream cap, the iron grille and its top bar are stretched parts,
+    // the pier at the start of each bay (and at the end of the last) and the pickets (every 0.18 m) are placed parts; one thin collider + one anchored knock record per bay, a car breaks a bay off at the foot
+    const a = C.W(u, v0), b = C.W(u, v1), bays = splitBays(a.x, a.z, b.x, b.z, 3.5, { y: 0 });
+    const pier = new THREE.BoxGeometry(0.6, 2.7, 0.6), pick = new THREE.BoxGeometry(0.04, 0.8, 0.03);
+    pier.translate(0, 1.35, 0); pick.translate(0, 2.45 + 0.4, 0);
+    knockBays(Q.ctx, { name: 'lmnaval-compound-fence', bays, far: 300,
+      parts: [{ geo: unitBox(0, 2.4, -0.2, 0.2, { uLen: 3, uvs: 3 }), mat: M.ochreWall, name: 'wall', stretch: true },
+        { geo: pier, mat: M.ochreWall, name: 'pier', ats: (bay) => (bay.last ? ['start', 'end'] : ['start']) },
+        { geo: unitBox(2.4, 2.45, -0.25, 0.25, { uLen: 3, uvs: 1 }), mat: M.houseCream, name: 'cap', stretch: true },
+        { geo: unitBox(3.2, 3.27, -0.03, 0.03, { uLen: 3, uvs: 1 }), mat: M.ironRail, name: 'top', stretch: true, shadow: false, receive: false },
+        { geo: pick, mat: M.ironRail, name: 'picket', ats: (bay) => { const l = Math.hypot(bay.x1 - bay.x0, bay.z1 - bay.z0), out = []; for (let x = 0.3; x < l - 0.2; x += 0.18) out.push(x / l); return out; }, shadow: false, receive: false }],
+      collider: { y0: -0.2, y1: 3.3, thick: 0.5, e0: 0.02, e1: 0.02 },
+      rec: () => ({ kind: 'fence', mass: 900, h: 3.3, anchored: 24, hitK: 0.5, metal: false, minDv: 0 }) });
+    Q.extraTris = (Q.extraTris || 0) + bays.length * (12 + 12 + 12 + 2 * 12) + bays.length * 19 * 12;
+    Q.svc.fences.push({ id: 'compound-fence-1900', pts: [[a.x, a.z], [b.x, b.z]], h: 3.3, kind: 'stucco', gates: [] });
     void len;
   } finally { P.pop(); }
 }

@@ -11,6 +11,7 @@ import * as L from '../layout.js';
 import { FR } from './frame.js';
 import { cached, figureMats, bust } from '../lib/figures.js';
 import { fenceLine, panelBays, band, panel } from './wall.js';
+import { knockBays, unitBox, splitBays } from '../lib/fence-bays.js';
 import { fillPolyClipped, coverFn } from './surfaces.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
@@ -96,16 +97,20 @@ function plot(K) {
 
 // ------------------------------------------------------------------------------------------------ plaster walls (2.4 m, grey cap, pilasters every 8 m) with fence colliders
 function wallRun(K, pts, o = {}) {
-  const { P, M, ctx } = K, ph = ctx.physics, h = o.h || 2.4, t = o.t || 0.4;
+  const { M, ctx } = K, h = o.h || 2.4, t = o.t || 0.4, bays = [];
   for (let i = 0; i + 1 < pts.length; i++) {
     const A = pts[i], B = pts[i + 1], len = Math.hypot(B[0] - A[0], B[1] - A[1]); if (len < 0.3) continue;
-    P.push(A[0], 0, A[1], Math.atan2(-(B[1] - A[1]), B[0] - A[0]));
-    P.box(M.plasterPink, 0, len, 0, h, -t / 2, t / 2, 'b', 2);
-    P.box(M.cap, -0.05, len + 0.05, h, h + 0.12, -t / 2 - 0.06, t / 2 + 0.06, 'b', 2);
-    for (let s = 4; s < len - 1; s += 8) P.box(M.plasterPink, s - 0.25, s + 0.25, 0, h + 0.05, -t / 2 - 0.08, t / 2 + 0.08, 'b', 2);
-    P.pop();
-    ph.addBox((A[0] + B[0]) / 2, (A[1] + B[1]) / 2, len, t, Math.atan2(-(B[1] - A[1]), B[0] - A[0]), 0, h).fence = true;
+    bays.push(...splitBays(A[0], A[1], B[0], B[1], 8, { y: 0 }));
   }
+  // n4spb (the owner's rule: every wall breaks; docs/AREAS.md 13.7, the pattern of landmarksKirova/eryard.js): the plaster body, the grey cap and the pilaster (one per 8 m bay, at its middle) are the parts
+  // of breakable bays (a thin collider flagged `fence`, one anchored knock record per bay: a car breaks a bay off at the foot, the gap is passable)
+  const pil = new THREE.BoxGeometry(0.5, h + 0.05, t + 0.16); pil.translate(0, (h + 0.05) / 2, 0);
+  knockBays(ctx, { name: 'lmsredn-yard-wall', bays, far: 300,
+    parts: [{ geo: unitBox(0, h, -t / 2, t / 2, { uLen: 8, uvs: 2 }), mat: M.plasterPink, name: 'wall', stretch: true },
+      { geo: unitBox(h, h + 0.12, -t / 2 - 0.06, t / 2 + 0.06, { uLen: 8, uvs: 1 }), mat: M.cap, name: 'cap', stretch: true, inset: -0.05 },
+      { geo: pil, mat: M.plasterPink, name: 'pilaster', at: 'mid', when: (b) => Math.hypot(b.x1 - b.x0, b.z1 - b.z0) > 5 }],
+    collider: { y0: 0, y1: h, thick: t, e0: 0, e1: 0 },
+    rec: () => ({ kind: 'fence', mass: 1500, h, anchored: 28, hitK: 0.5, metal: false, minDv: 0 }) });
 }
 function walls(K) {
   const xz = (a, b) => D.xz(a, b);

@@ -51,9 +51,8 @@ open water and both ends of the 218 m pier are open (the water is not walled: ch
   the glazed Sportivnaya pavilions; the Rumyantsev garden toilet block (a small OSM building redrawn as a kiosk: its four walls are building walls);
 - columns, portico pedestals, monuments and pedestals: the obelisk base, the two fountains, the Surikov and Repin busts, the music pavilion, the Krusenstern tumba and pedestal, the Amundsen pedestal, the lion pedestals and the stepped granite
   barriers of the Lions pier (three blocks of 1.3 x 1.2 m each, no thin wall), the end blocks of the Krusenstern stair, the bastions and side walls of Mining D1 (1.2 m of granite);
-- the retaining wall body of the Rumyantsevsky apron (y -3.6 .. the coping, masonry; the railing above it is the bays), its 0.6 m granite pylons, the gate piers of the iron fences, the stone piers of St Catherine's fence, the cast-iron posts of the
-  Krusenstern railing (small blocks, not walls);
-- the 1900 stucco fence of the Optina compound (30 m, 2.4 m masonry with piers, away from the water: -4215, -130; a masonry courtyard wall);
+- the retaining wall body of the Rumyantsevsky apron (y -3.6 .. the coping, masonry; the railing above it is the bays), (its 0.6 m granite pylons and the cast-iron posts of the Krusenstern railing are knock records since the fix A of AREAS.md 15.v) the gate piers of the iron fences, the stone piers of St Catherine's fence;
+- (the 1900 stucco fence of the Optina compound is a row of breakable bays since the fix A of AREAS.md 15.v);
 - the tree trunks (cylinders 4.5 m high), the Amundsen pedestal, the cafe superstructure on the east pontoon (11 x 2.9 m closed), the steel bell frame posts.
 `water-reachable-test` check 6 (every thin tall collider within 12 m of water is a knock record) passes with NO `ALLOW` row.
 
