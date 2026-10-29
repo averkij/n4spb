@@ -1,4 +1,4 @@
-// PROVENANCE: copied verbatim from src/world/landmarksSmolensky/kit.js of this repository (itself copied from the source project 102_3d_piter, commit 0568f7af); only the texture / material / mesh name prefix lmsmol- became lmdek- (the texture cache is scene-wide) and the module name in the log lines. The header below is the original one.
+// PROVENANCE: copied from src/world/landmarksSmolensky/kit.js of this repository (itself copied from the source project 102_3d_piter, commit 0568f7af); the texture / material / mesh name prefix lmsmol- became lmdek- (the texture cache is scene-wide) and the module name in the log lines, and ONE functional change (marked 'n4spb' in the file): Parts.bucket throws on an undefined material key (one added line, marked in the file). The header below is the original one.
 // COPY of landmarksOktyabrsky/kit.js (itself a copy of landmarksKarpovka; modules never import each other); used by landmarksSmolensky (Parts collector, geometry helpers, ground ribbons, instancing, trees).
 // landmarksSmolensky/kit.js - geometry collector, facade frames, mitred bands and the stucco-facade vocabulary of the Nevsky landmark houses.
 //

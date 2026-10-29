@@ -11,9 +11,9 @@ are copies of `landmarksSmolensky` carry a PROVENANCE line (they are copies of t
 |---|---|
 | Entry | `src/world/landmarksDekabristov.js` (`OWNS_GROUPS = true`, parts built only when the area claims their sub-group; publishes `ctx.services.landmarksDekabristov`, merges monuments / photo spots into `ctx.services.landmarks`) |
 | Files | 29 in `src/world/landmarksDekabristov/` + the entry, 3,269 lines: 13 copies (`kit geo util surfaces inst treegeo leafmat forest atlas gravemat gravearch gravefield floor`, 2,111 lines) and 16 new (1,104 lines) plus the 54-line entry (`groups sites site plan plots fence furniture mon mats art data lutheran armenian siege garden volodin`) |
-| Triangles (`node tools/area.mjs dekabristov tools/check.mjs --area-modules`) | **86,706** (single-module run 88,486); `BUDGET_AREA.dekabristov.landmarksDekabristov` = 100e3 (measured + 15 %). Parts (static meshes + instances, `svc.parts`): lutheran 13.9 k, armenian 3.9 k, siege 15.7 k, garden 9.2 k, volodin 5.3 k; the rest are the instanced trees (far blobs of the first pack) and grave cells. Cluster budgets of the brief: A (Lutheran + Armenian) <= 90 k, B (siege) <= 45 k, C (garden + Volodin) <= 35 k: all met with a wide margin |
-| Colliders | 7,738 in all: Lutheran 3,651 graves + 1,872 trunks / bushes, Armenian 309 + 147, siege 159 trunks + 18 memorial boxes, garden 362 trunks, Volodin 165 trunks; plus the bay colliders of the fences (1,100 breakable bays). Graves per part <= 4 k as asked (3,651) |
-| Knock records | about 1,150 in a single-module run: fence / railing / rim bays about 1,120, benches 12, bins 9, lanterns 6 |
+| Triangles (`node tools/area.mjs dekabristov tools/check.mjs --area-modules`) | **86,678** (single-module run 88,458; re-measured after the 16-direction shrub fix of the integration round, the first delivery said 86,706 / 88,486); `BUDGET_AREA.dekabristov.landmarksDekabristov` = 100e3 (measured + 15 %). Parts (static meshes + instances, `svc.parts`): lutheran 13.9 k, armenian 3.9 k, siege 15.7 k, garden 9.2 k, volodin 5.3 k; the rest are the instanced trees (far blobs of the first pack) and grave cells. Cluster budgets of the brief: A (Lutheran + Armenian) <= 90 k, B (siege) <= 45 k, C (garden + Volodin) <= 35 k: all met with a wide margin |
+| Colliders | **7,731** in the area build (`check.mjs --area-modules`), 7,827 in a single-module run (the two contexts differ; the first delivery's 7,738 mixed them, and the 16-direction shrub fix of the integration round dropped a few more shrub colliders). The split below is the first measurement (approximate; the groups add up to about 6,680 graves, trunks and bushes, the rest are the fence bays): Lutheran 3,651 graves + 1,872 trunks / bushes, Armenian 309 + 147, siege 159 trunks + 18 memorial boxes, garden 362 trunks, Volodin 165 trunks; plus the bay colliders of the fences (1,117 breakable bays in the single-module run). Graves per part <= 4 k as asked (3,651) |
+| Knock records | 1,144 in a single-module run (re-measured): fence / railing / rim bays 1,117, benches 12, bins 9, lanterns 6 |
 | Build time | 0.9 s (single module), 1.1 s in the claims audit |
 
 ### What is drawn, per part (claim key, OSM ids)
@@ -68,7 +68,7 @@ and every tree trunk. The flat parts (kerbs 0.14 m, mounds, floor lights, the pl
 
 ## Checks (all CPU, `node tools/area.mjs dekabristov ...`)
 
-* `check.mjs landmarksDekabristov`: OK. `check.mjs --area-modules`: RESULT OK, 12 modules, landmarksDekabristov 86,706 triangles, 7,738 colliders (budget 100e3).
+* `check.mjs landmarksDekabristov`: OK. `check.mjs --area-modules`: RESULT OK, landmarksDekabristov 86,678 triangles, 7,731 colliders (budget 100e3; re-measured in the fix round, the first delivery had 86,706 / 7,738).
 * `landmarks-groups-check.mjs`: OK. `claims-draw-audit.mjs`: OK (43 warnings, all the foundation's Smolensky alley ways; none of ours; our module draws 3 floor-decal centroids inside the church footprint w111944528, not graded).
 * `water-reachable-test.mjs --quick`: 15 passed, 1 failed (check 9, the bridges of cluster B, as above).
 * `knock-stands-test.mjs`: 7 checks passed (the area places no kiosk / cart; the foundation's skips apply). `views-check.mjs --land`: 21 poses, 0 failing (the 17 of the foundation + our 4).

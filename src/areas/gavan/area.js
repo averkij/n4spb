@@ -3,10 +3,10 @@
 //  with the Shkipersky canal and its bridge, the Gavan workers' town, the Sevkabel Port, the Kirov Palace of Culture, Erarta, the Sea Terminal - with the Neva Bay and the coast of the Gulf of Finland round it. The play rectangles
 //  (src/areas/registry.js REGISTRY.gavan.play) follow the territory policy B600: the land outline of the map plus the water-zone cells within 600 m of the land (tools/area-shape.mjs --k 49 --water-band 600 --js gavan, G01 .. G54), and
 //  the hand-added rectangles G55 .. G59 (the Nalichny Bridge reach and the Smolenka pockets); the data cut straight from the source project by tools/area-data-cut.mjs.
-//  THE MODULES: this is the SKELETON (the Vasilyevsky foundation protocol). Ready: the base modules of the engine and every already ported module whose groups lie in this territory (Kirova 4 of 4, Sevkabel 7 of 8 without the
-//  Baltic cranes, ModernVO erem82 + Kollan, Sredny tram depot + Dom Evangelia + Gorny pavilions, VOStatues Musa Jalil + Lenin at the Pokrovskaya hospital + the polar explorers, the Sea Terminal itself, the Novo-Andreevsky and Nalichny bridges).
-//  Slots (one marker line each, filled by the port clusters): landmarksGavan (the Kronshpits, the Shkipersky canal and bridge, the harbour crane / tower / guardhouse / club, the workers' town, the fire reserve, the church), landmarksPribaltiyskaya
-//  (the hotel, Peter I, the Creators of the Fleet, Nakhimov, the Kirov memorial, Waterville), the Shkipersky and WHSD decks of the bridges module, the `gavan` waterway key (PORT-WATER below), the rest of the Sea Terminal (D-2, torpedo boat, Lenexpo).
+//  THE MODULES (built in the order of MODULES below): the base modules of the engine; the area's own landmarks (landmarksGavan: the Kronshpits, the Shkipersky canal and bridge, Galerny Harbour with its crane, water tower,
+//  guardhouse and yacht club, the workers' town, the fire reserve, the church; landmarksPribaltiyskaya: the hotel, Peter I, the Creators of the Fleet, Nakhimov, the Kirov memorial, Waterville); the already ported modules whose groups lie in this
+//  territory (Kirova 4 of 4, Sevkabel 7 of 8 without the Baltic cranes, ModernVO erem82 + Kollan, Sredny tram depot + Dom Evangelia + Gorny pavilions, VOStatues Musa Jalil + Lenin at the Pokrovskaya hospital + the polar explorers, the Sea Terminal
+//  itself); the bridges (the Novo-Andreevsky footbridge, the Nalichny Bridge, the Shkipersky Bridge, the WHSD decks and crossings: bridges/groups-mo.js); the `gavan` waterway key (WATER below). Not ported: the rest of the Sea Terminal (D-2, torpedo boat, Lenexpo).
 //  This area contains NO railway station: no `rail`, no landmarksA / B / C, and ONE purple Zhiguli (docs/AREAS.md 13.4). The territory has no metro network module either.
 //  gavan.html remaps ./src/world/area.js to this file with an import map (tools/area.mjs does the same for the headless tools). PURE DATA: no three.js, no import of layout.js (layout.js imports this
 //  file) and NO import of another area's module (the remap would hand back this very file). Same export names as src/world/area.js; the engine tables at the end are read through src/world/lib/area-tables.js.
@@ -19,7 +19,7 @@
 //    // PORT-AREAS: <module>    -> the rows of the HUD location table (makeAreas)
 //    // PORT-CLAIMED: <module>  -> `{ id: '<OSM id>', by: '<module>', group: '<key>' },`        (TEST.claimed: one row per module)
 //    // PORT-PRUNE: <module>    -> `'<module>',` inside PRUNE_SERVICES (a module whose `entrances` should clear the trees)
-//    // PORT-WATER: <what>      -> a row of the WATER tables that waits for a shared-engine waterway key (the engine cluster)
+//    // PORT-WATER: <what>      -> a row of the WATER tables that waited for a shared-engine waterway key (the engine cluster; no marker line is left)
 //  and the rings of a module (water pits, keep-outs, paved ground) go to src/areas/gavan/rings.js (its own protocol, PORT-IMPORT / PORT-SOURCE).
 // ============================================================================
 import { GROUPS_VO } from '../../world/bridges/groups-vo.js';
@@ -68,7 +68,7 @@ export const MODULES = [
   //
   'landmarksVOStatues', // the monuments of the island that lie here: Musa Jalil, Lenin at the Pokrovskaya hospital, the polar explorers
   //
-  'bridges',      // the bridges of the area: the Novo-Andreevsky footbridge and the Nalichny Bridge (docs/vo-br.md); the Shkipersky Bridge and the WHSD decks follow with the engine cluster
+  'bridges',      // the bridges of the area: the Novo-Andreevsky footbridge and the Nalichny Bridge (docs/vo-br.md), the Shkipersky Bridge, the WHSD decks and the park footbridges over it (bridges/groups-mo.js)
   'props',        // benches, bins, kiosks, bus shelters, tourist stalls, billboards, flower baskets
   'traffic',      // moving cars, buses, trolleybuses + parked cars
   'people',       // pedestrians, tourists, groups with guides, cyclists, scooters
@@ -328,7 +328,7 @@ const SLOPE_REACHES = [];
  *   farSources  all four scenery rings: the Neva upstream, the Neva Bay downstream, the Malaya Neva and the Gulf of Finland (the Gulf ring is where the territory's west and south water lies)
  *   dataRings   the Malaya Neva (the north-west corner), the Gulf of Finland (VO_SEA of environment/vo-sea.js) and the Neva Bay south of the island (neva-down) are DATA water inside the data region: real banks, a floor of
  *               the water level, `inRiver` true, so a walker wades and a car drives in (CLAUDE.md: water is reachable). Without them the sea would be a drawn surface over solid ground (scout-sea.md 1.3)
- *   dataWater   the Smolenka (r1576084 and its mouth arms r1576086) is a waterway of its own ('smolenka'); Galerny Harbour (w10890576) and the Shkipersky canal (r1648985) get the key 'gavan' with the engine cluster (PORT-WATER)
+ *   dataWater   the Smolenka (r1576084 and its mouth arms r1576086) is a waterway of its own ('smolenka'); Galerny Harbour (w10890576) and the Shkipersky canal (r1648985) get the key 'gavan' (waterways.js, quay.js, water.js, bridges/sites.js, wildlife/world.js)
  *   riverKeys   the keyless RIVER record of the Smolenka is drawn as 'smolenka'
  *   ownerRings / keepOut   collected from the landmark modules by ./rings.js (one line per module there)
  */
@@ -338,7 +338,7 @@ export const WATER = {
   bridgeShades: BRIDGE_SHADES,
   clipLines: [['x', -5370], ['x', -6070], ['x', -5000], ['z', 1370], ['z', 1720], ['z', 1770]],
   farSources: ['neva-up', 'neva-down', 'neva-malaya', 'vo-sea'],
-  farCenter: [-7900, 100],              // the middle of the area (the Neva scenery rings are real positions: the window only says how far the far ring reaches)
+  farCenter: [-7900, 100],              // the centre of the far scenery window, NOT the bbox centre of the play rectangles ((-7280, -160): 620 m east); the Neva scenery rings are real positions, the window only says how far the far ring reaches
   farRadius: 6000,                      // the radius of the far scenery
   forcedBanks: [],
   openMouths: [],

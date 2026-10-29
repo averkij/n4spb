@@ -3,10 +3,10 @@
 //  land fill, Pribaltiyskaya Square with the hotel and the monuments of Peter I, the Creators of the Fleet and Admiral Nakhimov, the cruiser Kirov memorial, the Golden City quarter, the Nalichny and Shipbuilders' bridges, the mouth of the
 //  Smolenka with the four Smolensky bridges, the Western High-Speed Diameter - with the Gulf of Finland off the coast. 8.9 km2 of play rectangles (src/areas/registry.js REGISTRY.morskoy.play, territory policy B600: the land outline of the map plus
 //  the water cells within 600 m of the land, tools/area-shape.mjs --k 47 --water-band 600 --js morskoy: 49 rectangles M01 .. M49), the data cut straight from the source project by tools/area-data-cut.mjs.
-//  THE MODULES (this file is the SKELETON: the foundation of the area, built exactly like the Vasilyevsky one, f313091): the base modules of the engine, the polar explorers monument (landmarksVOStatues, filtered to the one piece that stands here),
-//  the bridges that Vasilyevsky already ported and that lie in the overlap (the Nalichny Bridge with its four corner stairs and the Novo-Andreevsky footbridge) and the water of the data (the Smolenka mouth with the Kovsh, the Gulf of Finland).
-//  STILL TO PORT, in the slots below: landmarksMarineFacade (the port, the galleries, the liners, the Golden City spire), landmarksPribaltiyskaya (the hotel, Peter I, the Creators of the Fleet, the Kirov memorial, Nakhimov), the bridges of the
-//  Smolenka mouth (Shipbuilders', 1st - 4th Smolensky) and the WHSD with its crossings (bridgesMo). This area contains NO railway station: no `rail`, no landmarksA / B / C, no metro module, and ONE purple Zhiguli at the spawn (docs/AREAS.md 13.4).
+//  THE MODULES (built in the order of MODULES below): the base modules of the engine; landmarksMarineFacade (the port, the galleries, the liners, the Golden City spire); landmarksPribaltiyskaya (the hotel, Peter I, the Creators of the Fleet, the Kirov
+//  memorial, Nakhimov); the polar explorers monument (landmarksVOStatues, filtered to the one piece that stands here); the bridges (the Nalichny Bridge with its four corner stairs and the Novo-Andreevsky footbridge that Vasilyevsky already ported, the
+//  Shipbuilders' Bridge and the 1st - 4th Smolensky bridges of the Smolenka mouth, the WHSD with its crossings: bridges/groups-mo.js) and the water of the data (the Smolenka mouth with the Kovsh, the Gulf of Finland).
+//  This area contains NO railway station: no `rail`, no landmarksA / B / C, no metro module, and ONE purple Zhiguli at the spawn (docs/AREAS.md 13.4).
 //  morskoy.html remaps ./src/world/area.js to this file with an import map (tools/area.mjs does the same for the headless tools). PURE DATA: no three.js, no import of layout.js (layout.js imports this file) and NO import of another area's
 //  module (the remap would hand back this very file). Same export names as src/world/area.js; the engine tables at the end are read through src/world/lib/area-tables.js.
 //
@@ -50,7 +50,7 @@ export const MODULES = [
   'landmarksPribaltiyskaya', // the Pribaltiyskaya hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, the Kirov memorial, Waterville
   //
   'landmarksVOStatues', // the monument to all polar explorers (the one piece of the module that stands in this territory, docs/vo-m3.md)
-  'bridges',      // the bridges of the area: the Nalichny Bridge and the Novo-Andreevsky footbridge (docs/vo-br.md); the Shipbuilders' and Smolensky bridges and the WHSD follow (bridgesMo)
+  'bridges',      // the bridges of the area: the Nalichny Bridge and the Novo-Andreevsky footbridge (docs/vo-br.md); the Shipbuilders' and Smolensky bridges of the Smolenka mouth and the WHSD with its crossings (bridgesMo: bridges/groups-mo.js)
   'props',        // benches, bins, kiosks, bus shelters, tourist stalls, billboards, flower baskets
   'traffic',      // moving cars, buses, trolleybuses, trams + parked cars
   'people',       // pedestrians, tourists, groups with guides, cyclists, scooters
@@ -235,7 +235,7 @@ export const TEST = {
 // ---------------------------------------------------------------- WATER (environment/waterways.js)
 /** Bridge crossings of the quay. c: centre, axis: bearing (deg) of the deck axis (direction of travel across the water), w: width of the deck measured ALONG the water (= the gap in the
  *  parapet / collider), len: length of the span (the abutments reach 8 m beyond it). `own`: a bridge the bridges module draws (the quay leaves the parapet / collider open and publishes the zone);
- *  the others get an invisible fallback deck (walk box + parapet boxes). The two rows below are copies of Vasilyevsky's (the bridges lie in the overlap, docs/vo-br.md); the bridges of the Smolenka mouth follow in the slot. */
+ *  the others get an invisible fallback deck (walk box + parapet boxes). The first rows are copies of Vasilyevsky's (the bridges lie in the overlap, docs/vo-br.md), then the bridges of the Smolenka mouth (bridgesMo). */
 const BRIDGE_ZONES = [
   { id: 'nalichny', name: 'Наличный мост', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7, own: true },
   { id: 'novo-andreevsky', name: 'Ново-Андреевский мост', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3, own: true, foot: true },

@@ -5,10 +5,10 @@
 //  most of it is water (the Gulf and the Malaya Neva, drawn from the scenery rings that this table lists as data rings: WATER below).
 //  THE DATA is NOT cut from the source project's baked data alone: the island's west two thirds (the land fill, the north shore) were never baked there. src/areas/dekabristov/data = the source bake 0568f7af + a scratch bake with five
 //  regions DK1 .. DK5 fetched from OpenStreetMap (docs/research/dekabristov-data.md holds the recipe and the fetch log), cut by tools/area-data-cut.mjs.
-//  THE MODULES: the base modules of the engine, the Smolensky Orthodox Cemetery (the seam: the same cemetery stands in the Vasilyevsky area, 2.45 km2 of the two territories overlap, the same four bridges stand in both: Uralsky, Smolensky,
-//  Nalichny, Novo-Andreevsky), the three monuments of the island that landmarksVOStatues draws (the Armenian church of the Resurrection, the Komitas monument, the monument to the polar explorers) and the bridges. The island's own landmark
-//  modules are ported later into the marked slots below (landmarksDekabristov: the Lutheran / Armenian cemeteries, the siege cemetery, the Decembrists' garden and the Light-and-Music fountain square; landmarksPrimorskaya: the metro
-//  pavilion, the Metro Museum, the square; landmarksFill: the construction-site dressing of the fill).
+//  THE MODULES (built in the order of MODULES below): the base modules of the engine, the Smolensky Orthodox Cemetery (the seam: the same cemetery stands in the Vasilyevsky area, 2.45 km2 of the two territories overlap), the three monuments of the island
+//  that landmarksVOStatues draws (the Armenian church of the Resurrection, the Komitas monument, the monument to the polar explorers), the island's own landmark modules (landmarksDekabristov: the Lutheran / Armenian cemeteries, the siege cemetery,
+//  the Decembrists' garden and the Light-and-Music fountain square; landmarksPrimorskaya: the metro pavilion, the Metro Museum signboard, the square, the Smolenka bank stairs; landmarksFill: the construction-site dressing of the fill) and the
+//  bridges (the Uralsky, Smolensky, Nalichny and Novo-Andreevsky bridges that Vasilyevsky ported, plus the Shipbuilders' Bridge, the four Smolensky bridges of the mouth, the Betancourt and Serny bridges and the WHSD: bridges/groups-mo.js).
 //  This area contains NO railway station: no `rail`, no landmarksA / B / C, and ONE purple Zhiguli at the spawn (docs/AREAS.md 13.4). The territory has no metro network module either.
 //  dekabristov.html remaps ./src/world/area.js to this file with an import map (tools/area.mjs does the same for the headless tools). PURE DATA: no three.js, no import of layout.js (layout.js imports this file) and NO import of another
 //  area's module (the remap would hand back this very file). Same export names as src/world/area.js; the engine tables at the end are read through src/world/lib/area-tables.js.
@@ -60,7 +60,7 @@ export const MODULES = [
   //
   'landmarksFill', // the land fill dressed as a young district under construction: planned roadbeds, site plots with frames and cranes, container yards, a batching plant, hoardings, floodlight masts
   //
-  'bridges',      // the bridges of the area: the Uralsky, Smolensky, Nalichny and Novo-Andreevsky bridges (the same four as in Vasilyevsky)
+  'bridges',      // the bridges of the area: the Uralsky, Smolensky, Nalichny and Novo-Andreevsky bridges (as in Vasilyevsky), the Shipbuilders' and the four Smolensky bridges of the mouth, the Betancourt and Serny bridges, the WHSD (bridges/groups-mo.js)
   'props',        // benches, bins, kiosks, bus shelters, tourist stalls, billboards, flower baskets
   'traffic',      // moving cars, buses, trolleybuses, trams + parked cars
   'people',       // pedestrians, tourists, groups with guides, cyclists, scooters
@@ -177,6 +177,7 @@ export function makeAreas(h) {
   { name: 'Музей Петербургского метрополитена · Museum of the Petersburg Metro', c: [-6496, -1754], r: 24 },
   ...PRIM_PITS.map((p) => ({ name: 'Спуск к Смоленке · Stairs to the Smolenka', c: p.c, r: 7 })),
   // ---
+  { name: 'ЖК «Морской Каскад» · Morskoy Kaskad residential complex', c: [-7740, -2233], r: 90 },      // OSM w100413963 (the generic city draws it): the view Digit0 looks at it, the HUD named the island before
   { name: 'Новый намыв · New land fill', poly: FILL_RING },
   // ---
   { name: 'Станция метро «Приморская» · Primorskaya metro', c: [-6337, -1818], r: 45 },

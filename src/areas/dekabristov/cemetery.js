@@ -33,7 +33,7 @@ export const SIEGE_RING = [
 ];
 
 // Two more rings for the HUD rows of landmarksDekabristov (area.js makeAreas): NOT cemeteries, not part of inCemetery (the crowd rule stays as it was). Copied vertex for vertex from the GREEN records of the data:
-//   GARDEN   the Decembrists' Garden, GREEN w16237335 (park, 33 vertices, 57 137 m2);  VOLODIN  the square of Alexander Volodin, GREEN r10331754 (park, 10 vertices, 21 763 m2)
+//   GARDEN   the Decembrists' Garden, GREEN w16237335 (park, 21 vertices, 57 137 m2);  VOLODIN  the square of Alexander Volodin, GREEN r10331754 (park, 10 vertices, 21 763 m2)
 export const GARDEN_RING = [
   -6389.3, -2420, -6408.9, -2415.9, -6406.7, -2406, -6422.8, -2402.8, -6461, -2413.9, -6434.4, -2502.1, -6426.1, -2531.9, -6366.2, -2516.2, -6339.2, -2512, -6310.6, -2510.2, -6096.5, -2506.1,
   -6089.2, -2505.3, -6082.4, -2501.5, -6077.9, -2494.6, -6044.1, -2430.2, -6178.7, -2364.9, -6210.3, -2392.5, -6248.8, -2382, -6222.3, -2332.6, -6254.9, -2317.6, -6361, -2287.2,
