@@ -50,7 +50,7 @@ roads, signs, banks, shadows and near/distant camera turns. Validate walking and
 the red car, destination preloading and region boundaries in both the old centre
 and the changed district (the strip: Vosstaniya Square at one end, the Admiralty at the other). Use `drive-bench.mjs` for FPS; preview FPS is irrelevant.
 
-Every `src/` edit invalidates the shipping bake. A full development reload then
+Every edit of a file in the dependency closure of an area invalidates that area's shipping bake (revisions are per area, docs/BAKE-REVISIONS.md). A full development reload then
 falls back to procedural construction. Do not mistake that fallback time for
 deployed loading performance, and do not force an old bake after changing world
 geometry, claims, field data, navigation or materials. `baked=force` is only a

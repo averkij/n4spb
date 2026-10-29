@@ -2,6 +2,9 @@
 
 > **Full-city numbers.** Every figure, timing, triangle count, region count and bake size in this file was measured on the whole 102_3d_piter city (up to 82 km2 of play area, 53-57 regions, a 450 MiB bake) before it was cut down to the Nevsky strip (4.9 km2, see [STRIP.md](STRIP.md)). Sections about islands, Krestovsky, Vasilievsky, Petrograd, the Moskovsky corridor and their tools (`islands-*`, `coverage-check`, `south-extension-check`, ...) describe code and docs that are no longer in this repository: the links to `ISLANDS-2026.md`, `SOUTH-EXTENSION.md`, `SEVKABEL-CULTURE.md` and `coverage.html` below are dead and kept only as history. The method (what costs what, how to measure) still applies; re-measure on the strip before quoting a number.
 
+> **Bake revisions.** Every "source hash", "static revision" and "bake revision" below is the ONE global revision of the time (a hash of all of `src/`). Since 2026-10-29 each live area has its own revision, the hash of its dependency closure (docs/AREAS.md section 4, docs/BAKE-REVISIONS.md); the measurements and the `/__baked_revision` 404 notes stay as they were. `tools/bake-manifest-check.mjs` now checks every area against its own closure.
+
+
 ## 2026-10-15/16: walking and driving rounds 2 and 3 (far field, outline proxies, people scheduling, instanced ranges)
 
 Goal (user): comfortable walking and driving in the old centre, ≥ 30 FPS at medium quality on the
