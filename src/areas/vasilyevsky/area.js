@@ -2,9 +2,10 @@
 //  AREA DEFINITION - Vasilyevsky-Okrug 7 (Васильевский–Округ № 7; docs/AREAS.md section 15.v): the fifth area of the world map (maps/intro-draft.html, area 48): the Vasilyevsky island with the okrug 7 / Gavan side,
 //  the Petrograd-side bank of the Neva (z -2400 .. -1840) and the Neva Bay south of the island. 11.2 km2 of play rectangles (src/areas/registry.js REGISTRY.vasilyevsky.play, cut from the map outline by
 //  tools/area-shape.mjs --k 48 --js vasilyevsky: land outline plus water zones, 63 rectangles VO01 .. VO63), the data cut straight from the source project by tools/area-data-cut.mjs.
-//  THIS IS THE FOUNDATION (wave 1): the base modules of the engine, the Academy of Arts with its sphinx pier / garden / Trezzini Square / House of Academicians (landmarksAcademy: all five sub-groups), the Palace and
-//  Blagoveshchensky bridges and the water of the data (the Neva, the Smolenka, the Gavan harbour, the Gulf shore). The landmark modules of the island (Strelka, University, Menshikov, Andrew, Makarova, Naval Corps, Mining,
-//  Sredny, ModernVO, VOStatues, Smolensky, Kirova, Sevkabel, Sea Terminal) are ported into the marked slots below ("// PORT-...: <module>"), one line each, by the later waves.
+//  THE MODULES (all ported, docs/AREAS.md 15.v, docs/vo-m1..m4.md, docs/vo-br.md): the base modules of the engine, the Academy of Arts with its sphinx pier / garden / Trezzini Square / House of Academicians (landmarksAcademy: all five sub-groups),
+//  the landmark modules of the island (Strelka, University, Menshikov, Andrew, Makarova, Naval Corps, Mining, Sredny, ModernVO, Kirova, Smolensky, Sevkabel, Sea Terminal, VOStatues), the Palace Bridge with its two bascule leaves and the other
+//  bridges of the island (Blagoveshchensky, Birzhevoy, Tuchkov, Uralsky, Smolensky, Nalichny, Novo-Andreevsky) and the water of the data (the Neva, the Malaya Neva, the Smolenka, the Gavan harbour, the Gulf shore). NOT ported: landmarksGavan
+//  (its slot below stays empty), the Musa Jalil monument (270 m outside the territory) and the torpedo boat of the Sea Terminal (no ground around it in the data cut).
 //  This area contains NO railway station: no `rail`, no landmarksA / B / C, and ONE purple Zhiguli at the spawn (docs/AREAS.md 13.4). The territory has no metro network module either.
 //  vasilyevsky.html remaps ./src/world/area.js to this file with an import map (tools/area.mjs does the same for the headless tools). PURE DATA: no three.js, no import of layout.js (layout.js imports this
 //  file) and NO import of another area's module (the remap would hand back this very file). Same export names as src/world/area.js; the engine tables at the end are read through src/world/lib/area-tables.js.
@@ -98,7 +99,7 @@ export const MODULES = [
   //
   'landmarksVOStatues', // the monuments, fountain, churches and University-yard gardens of the island (docs/vo-m3.md)
   //
-  'bridges',      // the bridges of the area: the Palace Bridge and the Blagoveshchensky Bridge (the bridge wave adds the Birzhevoy, Tuchkov, Uralsky, Smolensky, Nalichny and Novo-Andreevsky)
+  'bridges',      // the bridges of the area: the Palace, Blagoveshchensky, Birzhevoy, Tuchkov, Uralsky, Smolensky, Nalichny and Novo-Andreevsky bridges (docs/vo-br.md)
   'landmarksPalaceBridge', // the Palace Bridge's two opening bascule leaves (docs/AREAS.md 13.10): `bridges` leaves the central span to it; after streets (the NPC stop lines) and bridges, before traffic / people
   'props',        // benches, bins, kiosks, bus shelters, tourist stalls, billboards, flower baskets
   'traffic',      // moving cars, buses, trolleybuses, trams + parked cars
@@ -337,23 +338,23 @@ export function makeViews({ yawToward }) {
     { key: 'Digit1', label: 'Стрелка · Биржа', x: -2508.4, z: -1293.1, yaw: yawToward(-2508.4, -1293.1, -2609.8, -1232.7), pitch: 8 },
     { key: 'Digit2', label: 'Дворцовый мост · Дворцовая набережная', x: -2337, z: -848, yaw: yawToward(-2337, -848, -2495, -1075), pitch: 4 },
     { key: 'Digit3', label: 'Академия художеств', x: -3407.5, z: -497.9, yaw: yawToward(-3407.5, -497.9, -3431, -597), pitch: 10 },
-    { key: 'Digit4', label: 'Ростральные колонны · Стрелка', x: -2433.8, z: -1217.6, yaw: yawToward(-2433.8, -1217.6, -2481.4, -1190.1), pitch: 8 },
-    { key: 'Digit5', label: 'Кунсткамера · Университетская набережная', x: -2579.1, z: -979.2, yaw: yawToward(-2579.1, -979.2, -2612.7, -1012.8), pitch: 8 },
+    { key: 'Digit4', label: 'Ростральные колонны · Стрелка', x: -2481.4, z: -1230.1, yaw: yawToward(-2481.4, -1230.1, -2481.4, -1190.1), pitch: 8 },
+    { key: 'Digit5', label: 'Кунсткамера · Университетская набережная', x: -2614.7, z: -962.8, yaw: yawToward(-2614.7, -962.8, -2612.7, -1012.8), pitch: 8 },
     { key: 'Digit6', label: 'Двенадцать коллегий · Университет', x: -2871.1, z: -1068.9, yaw: yawToward(-2871.1, -1068.9, -2910, -1030), pitch: 8 },
     { key: 'Digit7', label: 'Меншиковский дворец', x: -3137.7, z: -759.9, yaw: yawToward(-3137.7, -759.9, -3098.8, -721), pitch: 8 },
     { key: 'Digit8', label: 'Андреевский собор · Большой проспект', x: -3784.6, z: -753, yaw: yawToward(-3784.6, -753, -3802.7, -820.6), pitch: 10 },
     { key: 'Digit9', label: 'Морской кадетский корпус · Крузенштерн', x: -4064.7, z: -353.7, yaw: yawToward(-4064.7, -353.7, -4047, -336), pitch: 12 },
-    { key: 'Digit0', label: 'Горный университет', x: -4519.5, z: 359, yaw: yawToward(-4519.5, 359, -4567, 359), pitch: 8 },
+    { key: 'Digit0', label: 'Горный университет', x: -4521, z: 341, yaw: yawToward(-4521, 341, -4567, 359), pitch: 8 },
     { key: 'ShiftDigit1', label: 'Смоленское кладбище · церковь Смоленской иконы', x: -5616, z: -1468, yaw: yawToward(-5616, -1468, -5616, -1523), pitch: 8 },
     { key: 'ShiftDigit2', label: 'Дворец культуры имени Кирова', x: -5420.3, z: -194.1, yaw: yawToward(-5420.3, -194.1, -5444, -153), pitch: 8 },
     { key: 'ShiftDigit3', label: 'Севкабель Порт', x: -6140.8, z: 866.9, yaw: yawToward(-6140.8, 866.9, -6172, 921), pitch: 8 },
-    { key: 'ShiftDigit4', label: 'Морской вокзал', x: -6539.1, z: 783.9, yaw: yawToward(-6539.1, 783.9, -6519, 709), pitch: 6 },
-    { key: 'ShiftDigit5', label: 'Ледокол «Красин»', x: -4554.1, z: 524.3, yaw: yawToward(-4554.1, 524.3, -4600, 512), pitch: 6 },
+    { key: 'ShiftDigit4', label: 'Морской вокзал', x: -6519, z: 759, yaw: yawToward(-6519, 759, -6519, 709), pitch: 6 },
+    { key: 'ShiftDigit5', label: 'Ледокол «Красин»', x: -4624, z: 550, yaw: yawToward(-4624, 550, -4600, 512), pitch: 6 },
     { key: 'ShiftDigit6', label: 'Водонапорная башня Чернихова · Средний проспект', x: -4796.9, z: 444.2, yaw: yawToward(-4796.9, 444.2, -4850, 430), pitch: 10 },
     // the Places list only
     { key: 'Place.lions', label: 'Спуск со львами · набережная Макарова', x: -2817.4, z: -1408.4, yaw: yawToward(-2817.4, -1408.4, -2851, -1442), pitch: 6 },
     { key: 'Place.customs', label: 'Таможня · Пушкинский Дом', x: -2824.5, z: -1332.4, yaw: yawToward(-2824.5, -1332.4, -2797, -1380), pitch: 8 },
-    { key: 'Place.tuchkov', label: 'Тучков мост · набережная Макарова', x: -3672.5, z: -1697.6, yaw: yawToward(-3672.5, -1697.6, -3700, -1650), pitch: 6 },
+    { key: 'Place.tuchkov', label: 'Тучков мост · набережная Макарова', x: -3715, z: -1723, yaw: yawToward(-3715, -1723, -3725, -1773), pitch: 6 },
     // the Egyptian sphinx pier on Universitetskaya Embankment: the west sphinx six metres to the right, the stair pit to the Neva ahead, the Academy of Arts behind the camera
     { key: 'Place.sphinxes', label: 'Египетские сфинксы · Университетская набережная', x: -3407.5, z: -497.9, yaw: yawToward(-3407.5, -497.9, -3386.8, -504.1), pitch: 6 },
   ];
@@ -399,8 +400,8 @@ export const TEST = {
     'Place.lions', 'Place.customs', 'Place.tuchkov', 'Place.sphinxes'],
   mustHaveAreas: [
     { x: -2420, z: -975, has: 'дворцовый' }, { x: -3378.7, z: -507.7, has: 'сфинкс' }, { x: -3420, z: -502, has: 'университетская' },
-    { x: -2433.8, z: -1217.6, has: 'стрелка' }, { x: -2579.1, z: -979.2, has: 'кунсткамера' }, { x: -3137.7, z: -759.9, has: 'меншиков' }, { x: -4519.5, z: 359, has: 'горный' },
-    { x: -5420.3, z: -194.1, has: 'кирова' }, { x: -6140.8, z: 866.9, has: 'севкабель' }, { x: -6539.1, z: 783.9, has: 'морской вокзал' },
+    { x: -2481.4, z: -1230.1, has: 'стрелка' }, { x: -2614.7, z: -962.8, has: 'кунсткамера' }, { x: -3137.7, z: -759.9, has: 'меншиков' }, { x: -4521, z: 341, has: 'горный' },
+    { x: -5420.3, z: -194.1, has: 'кирова' }, { x: -6140.8, z: 866.9, has: 'севкабель' }, { x: -6519, z: 759, has: 'морской вокзал' },
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
   roadsNear: { at: [-3400, -520], r: 90, min: 3 },
@@ -418,7 +419,7 @@ const PLUGS = [{ key: 'neva', o: [-2315.3, -885.3, -2320, -892.2, -2330, -906.8,
 
 /** Bridge crossings of the quay. c: centre, axis: bearing (deg) of the deck axis (direction of travel across the water), w: width of the deck measured ALONG the water (= the gap in the
  *  parapet / collider), len: length of the span (the abutments reach 8 m beyond it). `own`: a bridge the bridges module draws (the quay leaves the parapet / collider open and publishes the zone);
- *  the others get an invisible fallback deck (walk box + parapet boxes). The bridge wave adds the rows of the island's bridges here. */
+ *  the others get an invisible fallback deck (walk box + parapet boxes). The island's bridges have their rows below (docs/vo-br.md). */
 const BRIDGE_ZONES = [
   { id: 'palace', name: 'Дворцовый мост', key: 'neva', c: [-2322, -884], axis: 143, w: 30, len: 255, own: true },
   // the bridges of the island (bridges/groups-vo.js): the quay stays open over the drawn deck (c, axis, w, len = the OSM deck polygons, the rows of the source project's BRIDGE_SHADES); the bridges module closes the rest with wing walls
@@ -441,6 +442,10 @@ const BRIDGE_SHADES = [
   { id: 'nalichny-deck', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7 },
   { id: 'novo-andreevsky-deck', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3 },
 ];
+
+/** bridge sites (bridges/sites.js) left out of this area: the Hermitage Bridge over the Winter Canal (centre (-1919, -1137), deck 16.5 m wide) stands in the data margin, 81 m beyond the east edge of the play rectangles (VO23 ends at x -2000),
+ *  so its deck would be built, its quay opened and its pavements walked in a place the player can never reach (it passes sites.js siteInArea only because its centre lies in the data extent) */
+export const BRIDGE_SITES_OFF = ['hermitage'];
 
 /** reaches: key of the waterway, test(x, z, nx, nz) on a bank point (landward normal n), run = horizontal length of the slope, kerb = banquette top above the water, lip = step from the banquette to the slope */
 const SLOPE_REACHES = [];
@@ -481,23 +486,70 @@ export const WATER = {
 export const PAVED_RINGS = RINGS_PAVED;
 
 // ---------------------------------------------------------------- PEOPLE / WILDLIFE
-/** the hot spots of the zone weight field: [x, z, amplitude, sigma] (the Spit, the Rostral columns, the Academy and the sphinxes; the ported modules add theirs) */
+/** the hot spots of the zone weight field: [x, z, amplitude, sigma]. The foundation's four rows (the Spit, the Rostral columns, the sphinx pier, the Academy of Arts) and the gathering places of the ported modules: every row sits on a
+ *  crowd / photo spot that the module itself publishes (services.<module>.crowd / .photoSpots, docs/vo-m1..m4.md; amplitude from the crowd size n: ~0.1 per person, a queue or a metro door higher, a quiet corner lower; sigma from the radius r),
+ *  inside the play rectangles (every row is inPlay with an 8 m margin, checked in the fix round). Admiralty's rows are the pattern. */
 const PEOPLE_HOT = [
   [-2495, -1298, 2.0, 60],        // the Spit: the Birzhevaya Square garden, the descent to the Neva
   [-2481, -1190, 1.4, 30],        // the Rostral columns
   [-3378, -507, 1.5, 25],         // the sphinx pier
   [-3431, -597, 1.0, 40],         // the Academy of Arts
+  // ---- the Spit and the Universitetskaya embankment (docs/vo-m1.md)
+  [-2453, -1326, 1.0, 14], [-2851, -1441, 0.8, 14], [-2783, -1423, 0.6, 14],        // the Spit's granite descent / pier (landmarksStrelka), the Lions pier, Pushkin House (the Customs house)
+  [-2593, -995, 1.4, 26], [-2691, -925, 1.0, 20], [-2770, -895, 0.8, 14], [-2785, -840, 0.6, 16],        // the Kunstkamera front, the Academy of Sciences portico, the Lomonosov monument, the Twelve Collegia
+  [-3495, -702, 0.7, 20], [-3532, -487, 0.6, 14],        // the Academic Garden column, the Trezzini monument (landmarksAcademy)
+  // ---- the Menshikov palace, the Rumyantsev garden, the Cadet Corps (docs/vo-m2.md)
+  [-3086, -699, 1.3, 20], [-3121, -688, 1.1, 14], [-3280, -662, 1.0, 24], [-3304, -703, 0.6, 16], [-3220, -590, 0.9, 22],        // the palace forecourt, the ticket queue, the obelisk garden, the garden pavilion, the pontoons of the apron
+  // ---- the Andreevsky market, boulevard and cathedral, the Vasileostrovskaya metro (docs/vo-m3.md)
+  [-3708, -671, 1.3, 24], [-3753, -749, 1.1, 22], [-3769, -678, 0.6, 14], [-3828, -796, 1.2, 28],        // the market court and its north front, the Pel house corner, the boulevard at the Bolshoy prospekt
+  [-3892, -899, 0.9, 18], [-3969, -1031, 0.9, 18], [-3947, -972, 0.8, 14], [-4041, -1168, 0.8, 16],        // the two boulevard fountains, the Korchmin and the Konka monuments
+  [-4080, -1145, 2.0, 22],        // the Vasileostrovskaya metro pavilion (two doors)
+  [-4337, -1473, 0.9, 22], [-4361, -1529, 0.7, 16],        // the Annunciation church forecourt and its garden circle
+  [-3774, -1686, 1.4, 14], [-3682, -1540, 0.6, 14], [-3445, -1001, 0.6, 14],        // the Sportivnaya exits 6 / 7, the church of St Catherine, the Lutheran church (landmarksMakarova)
+  // ---- the Naval Cadet Corps, the Mining University and the Krasin (docs/vo-m2.md)
+  [-3990, -250, 0.9, 24], [-4256, -1, 0.8, 16],        // the Krusenstern monument, the S-189 promenade
+  [-4564, 361, 1.5, 22], [-4545, 374, 0.8, 14], [-4614, 475, 1.2, 22],        // the Mining stair and colonnade, the descent to the Neva, the Krasin amphitheatre and quay
+  // ---- the Sredny prospekt (docs/vo-m3.md)
+  [-5036, -5, 1.5, 22], [-4981, -660, 0.8, 16], [-5019, -742, 0.7, 18],        // the Gorny Institut plaza, the Geological Committee stair, the tram depot apron
+  // ---- Kirov Palace of Culture, Erarta, the Vasileostrovets garden (docs/vo-m4.md)
+  [-5426, -110, 1.3, 22], [-5508, 18, 1.0, 24], [-5248, -179, 0.9, 22], [-5297, -259, 0.6, 14], [-5301, 59, 0.6, 12],        // the DK portal apron, Erarta (its stair and cafe crowds, (-5574, 19), lie 66 m beyond the west border, VO37 / VO38 end at x -5520: the row stands at the nearest inside point), the Roerich plaza, the playground, the Sobchak monument
+  // ---- the Smolensky cemetery (docs/vo-m4.md)
+  [-5586, -1325, 2.2, 16],        // the queue to the chapel of St Xenia (four pilgrim groups, ~34 people)
+  [-5602, -1509, 0.9, 16], [-5603, -1386, 0.6, 12], [-5488, -1530, 0.9, 16], [-5484, -1556, 0.7, 16],        // the Smolensk church portico, the Trinity chapel, the Holy Gates, the Resurrection church
+  // ---- Sevkabel Port (docs/vo-m4.md): the hall, its yard, the sea square and the promenade lie mostly beyond the stepped west border (VO49 .. VO52 end at x -6160 .. -6000; the sea square (-6246, 853), the inner alley (-6134, 903) and the promenade
+  //      (-6191, 946) are outside), so the rows stand on the nearest inside land: the gate and the yard edge by the hall, the pier plaza edge, the Istkabel courtyard, the Brusnitsyn lane
+  [-6140, 868, 1.5, 34], [-6138, 852, 0.7, 12], [-6064, 948, 0.8, 22], [-5900, 990, 0.8, 22], [-5685, 1073, 0.5, 16],
+  // ---- the Sea Terminal (docs/vo-m4.md): the Sea Glory square, the car park front (the north-west end, (-6568, 587), is outside)
+  [-6371, 685, 1.3, 28], [-6300, 640, 0.9, 24], [-6469, 614, 0.8, 26],
 ];
 /** The pigeon / sparrow zones, in priority order. A row is { tag, kind: 'pigeon' | 'sparrow', x, z, ...overrides of { spread, n, r, w, name, min } } (wildlife/zones.js documents the fields) */
 const PIGEON_ZONES = [
   { tag: 'strelka', kind: 'pigeon', x: -2495, z: -1298, spread: 24, n: 3, w: 2.6, r: 5, name: 'Голуби на Стрелке · Pigeons on the Spit' },
   { tag: 'sphinx', kind: 'pigeon', x: -3378, z: -507, spread: 14, n: 1, w: 1.4, r: 4, name: 'Голуби у сфинксов · Pigeons at the sphinxes' },
   { tag: 'strelka', kind: 'sparrow', x: -2500, z: -1280, spread: 16, n: 1, w: 1.5, r: 3, name: 'Воробьи на Стрелке · Sparrows on the Spit' },
+  // ---- the ported modules (the same hot spots as PEOPLE_HOT): the pavements where people stand and feed them
+  { tag: 'kunstkamera', kind: 'pigeon', x: -2593, z: -995, spread: 18, n: 2, w: 1.8, r: 4.5, name: 'Голуби у Кунсткамеры · Pigeons at the Kunstkamera' },
+  { tag: 'lomonosov', kind: 'pigeon', x: -2770, z: -895, spread: 14, n: 1, w: 1.2, r: 4, name: 'Голуби у памятника Ломоносову · Pigeons at the Lomonosov monument' },
+  { tag: 'menshikov', kind: 'pigeon', x: -3086, z: -699, spread: 16, n: 1, w: 1.3, r: 4, name: 'Голуби у Меншиковского дворца · Pigeons at the Menshikov Palace' },
+  { tag: 'rumyantsev', kind: 'pigeon', x: -3280, z: -662, spread: 22, n: 2, w: 1.6, r: 4.5, name: 'Голуби в Румянцевском саду · Pigeons in the Rumyantsev Garden' },
+  { tag: 'andrew', kind: 'pigeon', x: -3708, z: -671, spread: 20, n: 2, w: 1.7, r: 4.5, name: 'Голуби у Андреевского рынка · Pigeons at the Andreevsky Market' },
+  { tag: 'boulevard', kind: 'pigeon', x: -3892, z: -899, spread: 22, n: 2, w: 1.5, r: 4.5, name: 'Голуби на Андреевском бульваре · Pigeons on the Andreevsky Boulevard' },
+  { tag: 'mining', kind: 'pigeon', x: -4564, z: 361, spread: 16, n: 1, w: 1.2, r: 4, name: 'Голуби у Горного университета · Pigeons at the Mining University' },
+  { tag: 'erarta', kind: 'pigeon', x: -5508, z: 18, spread: 14, n: 1, w: 1.0, r: 4, name: 'Голуби у Эрарты · Pigeons by Erarta' },
+  { tag: 'xenia', kind: 'pigeon', x: -5586, z: -1325, spread: 12, n: 1, w: 1.4, r: 3.5, name: 'Голуби у часовни Ксении Блаженной · Pigeons at the chapel of St Xenia' },
+  { tag: 'sevkabel', kind: 'pigeon', x: -6140, z: 868, spread: 22, n: 2, w: 1.4, r: 4.5, name: 'Голуби во дворе Севкабеля · Pigeons in the Sevkabel yard' },
+  { tag: 'seaglory', kind: 'pigeon', x: -6371, z: 685, spread: 20, n: 1, w: 1.1, r: 4, name: 'Голуби на площади Морской Славы · Pigeons on the Sea Glory Square' },
+  { tag: 'rumyantsev', kind: 'sparrow', x: -3304, z: -703, spread: 14, n: 1, w: 1.5, r: 3, name: 'Воробьи в Румянцевском саду · Sparrows in the Rumyantsev Garden' },
+  { tag: 'boulevard', kind: 'sparrow', x: -3969, z: -1031, spread: 14, n: 1, w: 1.3, r: 3, name: 'Воробьи на Андреевском бульваре · Sparrows on the Andreevsky Boulevard' },
 ];
 /** the districts a crow likes: crows start on a tree top there when the player is not about (the Smolensky cemetery, the Rumyantsev garden, the Menshikov garden). At least one row is needed where crows live */
 const CROW_HAUNTS = [{ x: -5850, z: -1400, r: 430 }, { x: -3495, z: -702, r: 120 }, { x: -3270, z: -660, r: 90 }];
 /** the tourist crowds the ambience hears (core/audio.js 'crowd' loop): by zone tag { tag: [r (metres of full level), f (fade length), level 0..1] } */
-const CROWDS = { strelka: [45, 50, 0.8], sphinx: [22, 30, 0.6] };
+const CROWDS = {
+  strelka: [45, 50, 0.8], sphinx: [22, 30, 0.6],
+  kunstkamera: [28, 35, 0.6], lomonosov: [14, 25, 0.45], menshikov: [20, 30, 0.55], rumyantsev: [24, 35, 0.5], andrew: [28, 40, 0.6], boulevard: [24, 35, 0.5],
+  mining: [24, 35, 0.6], erarta: [18, 30, 0.55], xenia: [14, 25, 0.7], sevkabel: [34, 45, 0.75], seaglory: [26, 35, 0.5],
+};
 
 /**
  * ZONES: where the populations gather and the other place-bound lists of the world modules (each key may be left out: the module then does nothing for it); see Admiralty's area.js for the fields.
@@ -525,7 +577,7 @@ export const ZONES = {
 const DEG = Math.PI / 180;
 /**
  * GARAGE (docs/AREAS.md 13.4): the four cars stand ONLY at the central station, the Moscow station; this territory does not contain it, so it holds ONE car, the purple Zhiguli (`lada`), near the Spit.
- *   poses  { coupe, truck, lada, roadster: { x, z, yaw (radians; 0 faces +Z, 99 deg = east; the pose stands on the Spit beside the one-way carriageway of Birzhevaya Square, 8 m from its lane) } }  a car without a pose is not built
+ *   poses  { coupe, truck, lada, roadster: { x, z, yaw (radians; 0 faces +Z, 99 deg = east; the pose stands on the Spit beside the one-way carriageway of Birzhevaya Square; tools/area-garage-check.mjs measures the nearest point of the footprint 3.8 m from the driven lane) } }  a car without a pose is not built
  *   spawn  { x, z, yaw }  the default place of the first car (drive.js SPAWN)
  */
 export const GARAGE = {
