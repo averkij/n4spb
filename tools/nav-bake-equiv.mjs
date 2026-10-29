@@ -6,7 +6,7 @@
 // the Anichkov deck nodes, the crossings, the entrances, benches, stops, spots, stats and 40 routes always.
 // The bake on disk: the page is opened with ?baked=force, so a STALE bake is accepted (the committed strip bake is stale since M1 and stays so until the bake of M8; the stale products only
 // feed the 'old' path of the page, and the structure is compared anyway), but the area's manifest must exist: the North has no committed bake, so run a scratch bake first
-//   node tools/bake-scene.mjs --area north        (GPU; writes assets/baked/north/; a scratch bake moves the global revision, do not commit it)
+//   node tools/bake-scene.mjs --area north        (GPU; writes assets/baked/north/; a scratch bake changes the products and the manifest of that area only (per-area revision), do not commit it)
 //   node tools/nav-bake-equiv.mjs --area north
 // A missing manifest is reported as FAIL before the browser starts. Needs the GPU / a browser (shot.mjs).
 import { spawnSync } from 'node:child_process';
