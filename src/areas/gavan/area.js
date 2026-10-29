@@ -34,7 +34,7 @@ import { makeHooks, makeHeightPatches } from '../north/hooks.js';      // shared
 // ---
 // PORT-IMPORT: landmarksGavan
 // ---
-// PORT-IMPORT: landmarksPribaltiyskaya
+import { GROUPS_LIST as G_PRIBALTIYSKAYA } from '../../world/landmarksPribaltiyskaya/groups.js';
 // ---
 
 /** Area id: <html data-area> must equal it (main.js refuses to run a page whose area module is another one) and the registry (src/areas/registry.js) lists it. */
@@ -52,7 +52,7 @@ export const MODULES = [
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
   // PORT-MODULE: landmarksGavan
   //
-  // PORT-MODULE: landmarksPribaltiyskaya
+  'landmarksPribaltiyskaya', // the Pribaltiyskaya hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, the Kirov memorial, Waterville
   //
   'landmarksKirova', // the Kirov Palace of Culture, Erarta museum, the Vasileostrovets garden, the Sobchak monument
   //
@@ -77,7 +77,7 @@ export const MODULES = [
 export const LABELS = {
   // PORT-LABEL: landmarksGavan
   // ---
-  // PORT-LABEL: landmarksPribaltiyskaya
+  landmarksPribaltiyskaya: 'Прибалтийская, памятник Петру I, крейсер «Киров»',
   // ---
   landmarksKirova: 'Дворец культуры Кирова, Эрарта, сад Василеостровец',
   // ---
@@ -129,7 +129,7 @@ const only = (list, keys) => list.filter((g) => keys.includes(g.key));
 export const GROUPS = {};
 // PORT-GROUPS: landmarksGavan
 // ---
-// PORT-GROUPS: landmarksPribaltiyskaya
+GROUPS.landmarksPribaltiyskaya = G_PRIBALTIYSKAYA;      // all six: the hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, Waterville and the Kirov memorial (it lies 35 m beyond the rectangles, 100 % inside the 120 m data margin, like kirova-erarta of vasilyevsky)
 // ---
 GROUPS.landmarksKirova = G_KIROVA;      // all four groups: the DK, Erarta, the Vasileostrovets garden, the Sobchak monument
 // ---
@@ -159,7 +159,10 @@ export function makeAreas(h) {
   // ---
   // PORT-AREAS: landmarksGavan
   // ---
-  // PORT-AREAS: landmarksPribaltiyskaya
+  { name: 'Памятник Петру I · Peter I monument', c: [-7477, -791], r: 40 },
+  { name: 'Гостиница «Прибалтийская» · Pribaltiyskaya Hotel', c: [-7600, -735], r: 175 },
+  { name: 'Памятник крейсеру «Киров» · Cruiser Kirov monument', c: [-7970, -1075], r: 65 },
+  { name: 'Сквер Малые Гаванцы · Malye Gavantsy Square', poly: [-7233.7, -713.7, -7231.8, -709.9, -7237, -707.7, -7239.4, -707.5, -7241.6, -708.5, -7243.1, -709.9, -7258.8, -742.9, -7262.3, -747.4, -7267.2, -750.5, -7273.1, -753.2, -7279, -753.6, -7285.3, -751.8, -7291.1, -748.2, -7294.3, -743.6, -7296, -738.9, -7296.5, -733, -7295.2, -726.5, -7279.6, -693.3, -7279.7, -690.6, -7280.8, -687.8, -7282.7, -685.8, -7331.3, -662.8, -7355, -710.6, -7359, -713.4, -7361.8, -714.2, -7379.7, -716.5, -7404.9, -771.5, -7397.4, -774.9, -7395.4, -771.2, -7376.8, -780.1, -7374.4, -786.2, -7381.7, -789.9, -7384.1, -795.1, -7251.1, -857, -7248.6, -851.9, -7242.8, -854, -7242.5, -856.6, -7241.4, -858.8, -7232.4, -864, -7176.9, -737.9, -7177.5, -735.6, -7179.6, -733.9, -7199.5, -724.9, -7201.4, -728.9], margin: 4 },      // the park r19581548 (the source's GREEN polygon)
   // ---
   { name: 'Дворец культуры имени Кирова · Kirov Palace of Culture', c: [-5449, -145], r: 90 },
   { name: 'Эрарта · Erarta Museum', c: [-5593, 25], r: 58 },
@@ -247,7 +250,7 @@ export const TEST = {
   claimed: [
     // PORT-CLAIMED: landmarksGavan
     // ---
-    // PORT-CLAIMED: landmarksPribaltiyskaya
+    { id: 'w17559880', by: 'landmarksPribaltiyskaya', group: 'pribaltiyskaya-hotel' },
     // ---
     { id: 'w45966107', by: 'landmarksKirova', group: 'kirova-dk' },
     // ---
@@ -268,6 +271,9 @@ export const TEST = {
   mustHaveAreas: [
     { x: -5420.3, z: -194.1, has: 'кирова' }, { x: -5556.7, z: 8.8, has: 'эрарта' }, { x: -6140.8, z: 866.9, has: 'севкабель' }, { x: -5623, z: 1106, has: 'брусницын' },
     { x: -6371.5, z: 685.3, has: 'морской вокзал' }, { x: -6300, z: 640, has: 'морской славы' },
+    // ---
+    { x: -7516.6, z: -772.5, has: 'прибалтийская' }, { x: -7464.1, z: -796.1, has: 'петру' }, { x: -7309, z: -804, has: 'малые гаванцы' },
+    // ---
     // PORT-AREAS rows of the port clusters add their own sights here
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data

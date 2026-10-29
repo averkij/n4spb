@@ -16,7 +16,7 @@ import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair p
 // ---
 // PORT-IMPORT: landmarksMarineFacade
 // ---
-// PORT-IMPORT: landmarksPribaltiyskaya
+import * as PRIBALTIYSKAYA from '../../world/landmarksPribaltiyskaya/groups.js';      // five paved rings (the hotel platform and plaza, the Kirov platform); no water ring, no keep-out: the module is inland
 // ---
 // PORT-IMPORT: bridgesMo
 // ---
@@ -26,7 +26,7 @@ const SOURCES = [
   // ---
   // PORT-SOURCE: landmarksMarineFacade
   // ---
-  // PORT-SOURCE: landmarksPribaltiyskaya
+  { module: 'landmarksPribaltiyskaya', ns: PRIBALTIYSKAYA },
   // ---
   // PORT-SOURCE: bridgesMo
   // ---
