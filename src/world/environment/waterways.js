@@ -67,6 +67,8 @@ export const WATERWAYS = {
   admiralty: { key: 'admiralty', name: 'Адмиралтейский канал', water: -2.8, bed: -4.0, wall: 'admiralty', rail: ['moika'], post: 'moika', postW: 0.45, postH: 1.0, bay: 2.4, width: 10, shadeH: 2.8 },
   // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; row of the source project, 102_3d_piter waterways.js): the Smolenka, the river between the Smolensky cemetery and the Petrograd-side shore, granite walls with a simple bar rail (water level of the Neva)
   smolenka: { key: 'smolenka', name: 'Смоленка', water: -3.4, bed: -4.4, wall: 'smolenka', rail: ['bars'], post: 'twostep', postW: 0.45, postH: 1.1, bay: 2.7, width: 30, shadeH: 3.2 },
+  // Gavan (docs/gdm-G.md; row of the source project, 102_3d_piter waterways.js line 74): Galerny Harbour and the Shkipersky canal, big cream granite blocks, no railing (the quay is open, the walls of the moles / stairs belong to landmarksGavan), water level of the Neva
+  gavan: { key: 'gavan', name: 'Галерная гавань', water: -3.4, bed: -4.5, wall: 'gavan', rail: [], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.7, width: 40, shadeH: 3.0 },
   'nh-inner': { key: 'nh-inner', name: 'Каналы Новой Голландии', water: -2.8, bed: -4.0, wall: 'admiralty', rail: [], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 11, shadeH: 2.8 },
 };
 const SEAM_TOL = 0.8;
