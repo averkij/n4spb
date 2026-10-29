@@ -13,13 +13,11 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov'];
 /** closure sizes (hashed files) of the design round's scanner at v3.1.0: palace 591, smolny 414, vladimirsky 447, admiralty 614, vasilyevsky 764. The band is wide upwards: the whole-folder rules over-include. */
 const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasilyevsky: 764,
-  // gavan / morskoy / dekabristov (docs/AREAS.md 15.g): there was no design-round scanner for them. These are the sizes MEASURED at the skeleton stage (area module + base modules, before any landmark module is ported:
-  // gavan 527, morskoy 375, dekabristov 410 hashed files). The port rounds add the landmark modules, so the upper band of these three is widened (SCOUT_UP) until the ports have landed: then set the rows to the
-  // measured sizes of the finished areas and drop the SCOUT_UP rows.
-  gavan: 527, morskoy: 375, dekabristov: 410 };
-const SCOUT_UP = { gavan: 3, morskoy: 3, dekabristov: 3 };
-/** areas whose bake does not exist yet, so no headless page load could be recorded (node tools/closure-groundtruth.mjs <id> --record needs a published bake). TODO(lead): record the three fixtures after the bake of all eight areas and EMPTY this list. */
-const NO_FIXTURE_YET = ['gavan', 'morskoy', 'dekabristov'];
+  // gavan / morskoy / dekabristov (docs/AREAS.md 15.g): no design-round scanner existed for them; these are the hashed-file counts of the finished areas at v4.0.0 (the bake log of the first bake of all eight areas).
+  gavan: 589, morskoy: 431, dekabristov: 468 };
+const SCOUT_UP = {};
+/** areas whose bake does not exist yet, so no headless page load could be recorded (node tools/closure-groundtruth.mjs <id> --record needs a published bake): none since the bake of v4.0.0 (the three fixtures are recorded). */
+const NO_FIXTURE_YET = [];
 const CHANGE = '\n// edit by closure-real-test\n';
 
 export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
