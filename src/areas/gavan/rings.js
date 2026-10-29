@@ -11,9 +11,10 @@
 //  `paved: false` on a source = the module's PAVED_RINGS are already wired elsewhere; the water rings and the keep-outs are always taken.
 //
 //  What is wired here and what is still a slot:
-//    ready   landmarksKirova (paved ground of the garden), landmarksSevkabel (keep-outs of the pier and the hall quay, paved ground of the hall yard), landmarksSeaTerminal (follows its ON list),
-//            landmarksSredny (the Brush paver plaza), bridges (the four corner stairs of the Nalichny Bridge: water rings, keep-outs, paved ground)
-//    slots   landmarksGavan (the east-mole stair ring `east-mole-stair` (key 'gavan'), 4 keep-outs, 6 paved rings: scout-gavan.md 3.1), landmarksPribaltiyskaya (5 paved rings)
+//    ready   landmarksKirova (paved ground of the garden), landmarksSevkabel (keep-outs of the pier and the hall quay, paved ground of the hall yard), landmarksSeaTerminal (ALL four groups: the D-2 plaza and the d2-bow keep-out
+//            join the terminal's rings), landmarksSredny (the Brush paver plaza), bridges (the four corner stairs of the Nalichny Bridge: water rings, keep-outs, paved ground),
+//            landmarksGavan (the east-mole stair ring `east-mole-stair` (key 'gavan'), 4 keep-outs, 6 paved rings)
+//    slots   landmarksPribaltiyskaya (5 paved rings)
 //    ModernVO and VOStatues hand nothing over (their groups.js export no ring).
 // ============================================================================
 import * as KIROVA from '../../world/landmarksKirova/groups.js';
@@ -24,23 +25,26 @@ import * as SEATERMINAL from '../../world/landmarksSeaTerminal/groups.js';
 // ---
 import * as SREDNY from '../../world/landmarksSredny/groups.js';
 // ---
-// PORT-IMPORT: landmarksGavan
+import * as GAVAN from '../../world/landmarksGavan/groups.js';      // the east-mole stair ring (key 'gavan'), 4 keep-outs, 6 paved rings
 // ---
 import * as PRIBALTIYSKAYA from '../../world/landmarksPribaltiyskaya/groups.js';      // five paved rings (the hotel platform and plaza, the Kirov platform); no water ring, no keep-out: the module is inland
 // ---
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js)
 // ---
 
+const SEA_KEYS = SEATERMINAL.GROUPS_ALL.map((g) => g.key);      // the claim of area.js (GROUPS.landmarksSeaTerminal = GROUPS_ALL)
+const SEA_ALL = { KEEP_OUT: SEATERMINAL.keepOutFor(SEA_KEYS), PAVED_RINGS: SEATERMINAL.pavedRingsFor(SEA_KEYS) };
+
 const SOURCES = [
   { module: 'landmarksKirova', ns: KIROVA },
   // ---
   { module: 'landmarksSevkabel', ns: SEVKABEL },      // the baltic-cranes group is not claimed here, but the rings belong to the hall and the pier, which are
   // ---
-  { module: 'landmarksSeaTerminal', ns: SEATERMINAL },
+  { module: 'landmarksSeaTerminal', ns: SEA_ALL },      // Gavan claims all four groups: the D-2 plaza ring + the d2-bow keep-out and the torpedo-boat lawn join the terminal's (Vasilyevsky keeps the default `ON` list)
   // ---
   { module: 'landmarksSredny', ns: SREDNY },
   // ---
-  // PORT-SOURCE: landmarksGavan
+  { module: 'landmarksGavan', ns: GAVAN },
   // ---
   { module: 'landmarksPribaltiyskaya', ns: PRIBALTIYSKAYA },
   // ---

@@ -34,6 +34,7 @@ const LOOK = {
   kryukov: ['#1b3a52', '#2c5272', '#4a5a48', '#3a4232', '#21383e', 1.15],
   admiralty: ['#1d3a52', '#2d5270', '#4a5c4a', '#3a4432', '#22393f', 1.2],
   smolenka: ['#1a3a68', '#2a5690', '#46685c', '#3a4a46', '#22404a', 0.85],      // Vasilyevsky-Okrug 7: the Smolenka (source project)
+  gavan: ['#1b3b66', '#2b5788', '#46685a', '#3a4a46', '#22404a', 0.9],      // Gavan: Galerny Harbour and the Shkipersky canal (source project)
   'nh-inner': ['#1d3a52', '#2d5270', '#4a5c4a', '#3a4432', '#22393f', 1.2],
   // the ponds of the Tauride Garden (landmarksTauride/ponds.js, T4a): greenish and slightly turbid, olive near the banks, small chop; the duckweed mat of the Small Pond is patched into this shader by ponds.js.
   // T4b: darker and more teal, a less olive shallow, a calmer chop (the T4a GPU QA read the narrow arms as pale speckled gravel from the air; ponds.js also damps the iso-lines and the glints for this key)

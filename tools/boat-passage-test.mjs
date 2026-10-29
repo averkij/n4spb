@@ -508,6 +508,10 @@ const ROUTES = {
     { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (north)', from: [-4560, 440], to: [-6535, 520] },
     { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (south, round the west tip)', from: [-4560, 440], to: [-6620, 660] },
   ],
+  gavan: [
+    // the Kronshpits mouth (between the two moles, c -6957 402), the Shkipersky canal and the Shkipersky Bridge (-7010 -31: the walk box ends at the soffit, the bents stand 22 m apart) into Galerny Harbour
+    { name: 'the Gulf off the Kronshpits mouth -> the Shkipersky canal -> Galerny Harbour (under the Shkipersky Bridge)', from: [-6955, 480], to: [-7120, -150] },
+  ],
 }[AREA] || [];
 {
   const SNAP = 60, nearestFree = (x, z) => { let best = null; for (let dz = -SNAP; dz <= SNAP; dz += 1) for (let dx = -SNAP; dx <= SNAP; dx += 1) { const k = idx(x + dx, z + dz); if (k >= 0 && D[k] >= R_FREE) { const d2 = dx * dx + dz * dz; if (!best || d2 < best.d2) best = { k, d2 }; } } return best && best.k; };

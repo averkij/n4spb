@@ -575,6 +575,20 @@
      "water": -3.2,
      "width": 61
     },
+    "gavan": {
+     "bay": 2.7,
+     "bed": -4.5,
+     "key": "gavan",
+     "name": "Галерная гавань",
+     "post": "twostep",
+     "postH": 1,
+     "postW": 0.45,
+     "rail": [],
+     "shadeH": 3,
+     "wall": "gavan",
+     "water": -3.4,
+     "width": 40
+    },
     "griboedov": {
      "bay": 2.7,
      "bed": -4.3,

@@ -8,7 +8,9 @@ import * as L from '../layout.js';
 import { D, SUB, STARS, coverFn } from './frame.js';
 import { gridGeo, extrudeShape, polyShape } from './geo.js';
 import { fenceRun, barrierPts } from './fence.js';
-import { partsGeos, addInstanced, mat4 } from './inst.js';
+import { partsGeos, addInstanced, mat4, kBays } from './inst.js';
+import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';      // n4spb (docs/AREAS.md 13, 15.v): the path lamps are knock records
+import { splitBays, unitBox } from '../lib/fence-bays.js';      // n4spb: the hedge is a row of breakable bays
 
 const WL = SUB.wl;
 const LV = [2.1, 1.5, 0.9, 0.4, 0.12, -0.12, -0.8, -1.8, -2.8, -3.5, -3.8];            // levels relative to the waterline: casing edge .. keel
@@ -236,8 +238,11 @@ function yard(K) {
     K.svc.yardFence = n;
     // the clipped conifer hedge 1.8 m tall along the SE side of the plot (the Lenexpo fence line (-6624.5,-31.6) -> (-6524.8,-78.8)), 1.2 m inside it (plot side = NNW)
     const a = [-6624.5, -31.6], b = [-6524.8, -78.8], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len, px = uz, pz = -ux;
-    P.push(a[0] + px * 1.2, 0, a[1] + pz * 1.2, Math.atan2(-uz, ux)); P.box(M.hedge, 0, len, 0, 1.8, -0.4, 0.4, 'b', 2); P.pop();
-    const bx = ctx.physics.addBox((a[0] + b[0]) / 2 + px * 1.2, (a[1] + b[1]) / 2 + pz * 1.2, len, 0.9, Math.atan2(-uz, ux), 0, 1.8); bx.fence = true;
+    // n4spb (docs/AREAS.md 13.7; the Kirova hedges): the 100 m hedge is a row of breakable bays of about 3.1 m (collider 0.9 x 1.8 m as the source's fence box, one knock record each); the source drew one box + one solid fence box
+    kBays(K, { name: 'lmseate-d2-hedge', bays: splitBays(a[0] + px * 1.2, a[1] + pz * 1.2, b[0] + px * 1.2, b[1] + pz * 1.2, 3.1, { y: 0 }), far: 300,
+      parts: [{ geo: unitBox(0, 1.8, -0.4, 0.4, { uLen: 3.1, uvs: 2 }), mat: M.hedge, name: 'hedge', stretch: true }],
+      collider: { y0: 0, y1: 1.8, thick: 0.9, e0: 0, e1: 0 },
+      rec: () => ({ kind: 'fence', mass: 450, h: 1.8, anchored: 14, hitK: 0.3, metal: false, minDv: 0 }) });
     K.svc.fences.push({ id: 'd2-hedge', pts: [a, b], solid: true });
   } finally { P.push(D.x, 0, D.z, D.rot); }
 }
@@ -309,13 +314,14 @@ function lamps(K) {
     p.col(M.lampPole, 0, 0, 0, 0.25, 0.14, 0.1, 8, true); p.col(M.lampPole, 0, 0, 0.25, 4.9, 0.065, 0.05, 8, true); p.col(M.lampPole, 0, 0, 4.8, 4.98, 0.13, 0.13, 8, true);
     const g = new THREE.SphereGeometry(0.27, 10, 8); p.geo(M.lampGlobe, g, 0, 5.28, 0); g.dispose();
   });
-  const spots = [[10.9, -42], [10.9, -19], [10.9, 4], [10.9, 27], [4.5, -50], [-27.5, -12]], mats = [];
+  const spots = [[10.9, -42], [10.9, -19], [10.9, 4], [10.9, 27], [4.5, -50], [-27.5, -12]], at = [], items = [];
   for (const [a, b] of spots) {
     const w = D.W(a, b);
     if (cover(w.x, w.z) > -1.0 || L.inRiver(w.x, w.z)) continue;
-    mats.push(mat4(w.x, 0, w.z, 0, 1)); ctx.physics.addCylinder(w.x, w.z, 0.12, 0, 5.4); K.svc.lamps.push({ x: w.x, z: w.z, h: 5.3 });
+    at.push({ x: w.x, y: 0, z: w.z, rotY: 0 }); items.push(ctx.physics.addCylinder(w.x, w.z, 0.12, 0, 5.4)); K.svc.lamps.push({ x: w.x, z: w.z, h: 5.3 });
   }
-  const r = addInstanced(ctx, K.root, 'lmseate-lamps', parts, mats); K.extraTris += r.tris;
+  // n4spb (docs/AREAS.md 13, 15.v): the path lamps are knock records (the source drew static instances over solid cylinders)
+  K.extraTris += knockFurniture(ctx, 'lmseate-lamps', parts, at, items, FURNITURE_REC.lamp(5.4), 300);
 }
 
 // ------------------------------------------------------------------------------------------------ colliders: the hull (three boxes along the axis), the tower, the pavilion walls, the cradles, the stone, the exhibits; the yard is walkable

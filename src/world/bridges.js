@@ -135,12 +135,24 @@ export async function build(ctx) {
   const decks = list.filter((b) => b.B && b.B.deckAt);
   // B.bounds (world AABB round the deck, set by the builders) prefilters the ~10^6 start-up queries of nav / lamps / parking / props; a deck without bounds is always asked
   const dB = decks.map((d) => d.B.bounds || null), nD = decks.length;
+  // Gavan (docs/gdm-G.md; the source project's bridges.js `EXT`): decks that another module draws and a vehicle rides (the Shkipersky bridge is landmarksGavan's). Its `bridge.deckY` is asked at call time
+  // (lazily); inert for every page whose area does not claim the module (the table is filtered by the area's GROUPS: no row, no list entry, no deck query).
+  const claimsOf = (m) => ((ctx.L && ctx.L.GROUPS && ctx.L.GROUPS[m]) || []).length > 0;
+  const EXT = [{ id: 'shkipersky', name: 'Шкиперский мост', nameEn: 'Shkipersky Bridge (landmarksGavan)', x: -7009.5, z: -31.0, r: 24, svc: 'landmarksGavan' }].filter((e) => claimsOf(e.svc));
+  const extY = (x, z) => {
+    for (let i = 0; i < EXT.length; i++) {
+      const e = EXT[i]; if (Math.abs(x - e.x) > e.r || Math.abs(z - e.z) > e.r) continue;
+      const s = ctx.services[e.svc], f = s && s.bridge && s.bridge.deckY; if (typeof f !== 'function') continue;
+      const y = f(x, z); if (y !== null && y !== undefined) return y;
+    }
+    return null;
+  };
   const deckY = (x, z) => {
     for (let i = 0; i < nD; i++) {
       const b = dB[i]; if (b && (x < b[0] || x > b[2] || z < b[1] || z > b[3])) continue;
       const y = decks[i].B.deckAt(x, z); if (y !== null) return y;
     }
-    return null;
+    return EXT.length ? extY(x, z) : null;
   };
   const lc = ctx.services.landmarksC && ctx.services.landmarksC.bridge;
   if (lc && typeof lc.deckY === 'function' && !lc.deckY.__bridges) {
@@ -151,6 +163,7 @@ export async function build(ctx) {
   // bridges ({ x, y, z, h, kind, id }), spans = their axes ({ id, a, b, hw })
   const pub = [];
   for (const b of list) { pub.push({ id: b.id, name: b.name, nameEn: b.nameEn, x: b.x, z: b.z }); for (const a of (b.B && b.B.anchors) || []) pub.push({ id: b.id, name: b.name, nameEn: b.nameEn, x: a.x, z: a.z, part: true }); }
+  for (const e of EXT) pub.push({ id: e.id, name: e.name, nameEn: e.nameEn, x: e.x, z: e.z, external: e.svc });      // the 190 m prefilter of traffic / people must reach the decks of other modules too
   const masts = [], spans = [];
   for (const b of list) { for (const m of (b.B && b.B.masts) || []) masts.push({ id: b.id, ...m }); if (b.B && b.B.span) spans.push({ id: b.id, ...b.B.span }); }
   const pits = [];      // the wide corner stairs (bridges/stairs.js): { id, x, z, landing: { x, z, y }, top: { y }, site, bridge } for people / photo spots

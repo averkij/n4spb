@@ -130,7 +130,7 @@ const BUDGET_AREA = {
   // Gavan / Morskoy / Dekabristov Island (docs/AREAS.md 15.g; foundation, NOT measured yet): every row is the scouts' estimate (D:/git2/n4spb-work/gdm/scout-*.md section 'Triangles') + about 30 %, the base modules from the prototype builds of
   // scout-sea.md (environment 0.81 M / 0.93 M / 1.08 M for k=49 / 47 / 51, B600 territories). The port rounds replace each row by its measured value + 15 % (the PORT-BUDGET marker lines: one per module, replaced by the real row; the separating `//` line stays).
   gavan: { environment: 1.7e6, streets: 1.0e6, city: 650e3, props: 260e3,      // estimates: environment 1.0 - 1.3 M, streets ~0.75 M, city 0.42 - 0.50 M (2,009 buildings), props ~0.2 M
-    // PORT-BUDGET: landmarksGavan
+    landmarksGavan: 70e3,      // measured 60,323 (node tools/area.mjs gavan tools/check.mjs --area-modules, all seven groups, knock bays included) + 15 %
     //
     landmarksPribaltiyskaya: 122e3,      // measured 105,378 (hotel, Peter I, Creators of the Fleet, Kirov memorial, Nakhimov, Waterville; lamps / benches / planters / the Kirov wall are knock records) + 15 %
     //
@@ -138,7 +138,7 @@ const BUDGET_AREA = {
     //
     landmarksSevkabel: 250e3,      // estimate ~190 k (192,892 in vasilyevsky minus the Baltic Shipyard cranes) + 30 %
     //
-    landmarksSeaTerminal: 65e3,      // estimate ~50 k (29,383 in vasilyevsky + D-2 + boat + hoarding) + 30 %
+    landmarksSeaTerminal: 73e3,      // measured 63,258 (the terminal + D-2 + torpedo boat + Lenexpo hoarding; 29,383 in vasilyevsky: the terminal alone) + 15 %
     //
     landmarksModernVO: 34e3, landmarksSredny: 72e3, landmarksVOStatues: 33e3,      // estimates ~26 k / ~55 k / ~25 k (the groups that lie in this territory) + 30 %
     //
