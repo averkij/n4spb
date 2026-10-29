@@ -99,7 +99,12 @@ check(`area ${AREA}: ${edges.length} edge gate(s) lead into it`, () => assert.ok
 const CARS = ['coupe', 'truck', 'lada', 'roadster'];
 const DAMAGE = [[0, 0, 0, 0], [0.3, 0, 0.1, 0]];
 // the trigger poses of each gate: on the streets (where a car drives) and a thin sample of poses anywhere (off-road, in a park: the arrival moves the car along the ring or to the HERO, still in the car)
-const SC = new Map(edges.map((g) => [g, [...triggers(g, 20, [8, 22, 40]), ...triggers(g, 60, [8, 40], true).filter((_, i) => i % 5 === 0).slice(0, 14)]]));
+// A trigger pose needs a lattice point within v * 0.1 m (0.8 / 2.2 / 4 m) of the place where the machine first offers the gate, so the number of poses depends on the lattice, not only on the geometry: on a thin overlap strip (the palace / vasilyevsky
+// strip of e11: the Palace Bridge head and the University embankment; 3 poses at step 20, 7 at step 10, 13 at step 5) a coarse lattice misses most triggers that exist. The bar stays MIN_POSES; the lattice is refined (20, 10, 5, 2.5 m) only
+// until it is met, so a gate that has enough poses at step 20 is sampled exactly as before.
+const MIN_POSES = 6, STEPS = [20, 10, 5, 2.5], STEP_OF = new Map();
+function streetPoses(g) { let out = []; for (const step of STEPS) { STEP_OF.set(g, step); out = triggers(g, step, [8, 22, 40]); if (out.length >= MIN_POSES) break; } return out; }
+const SC = new Map(edges.map((g) => [g, [...streetPoses(g), ...triggers(g, 60, [8, 40], true).filter((_, i) => i % 5 === 0).slice(0, 14)]]));
 let total = 0, bad = 0;
 const rows = [];
 for (const id of CARS) {
@@ -129,8 +134,8 @@ for (const id of CARS) {
       const placedOk = !inCar || off <= 40.5;      // (placeVehicle searches up to 40 m for a free spot)
       if (!inCar || !dmgOk || !placedOk) { stat.fail++; bad++; if (!firstFail) firstFail = `${id} at (${sc.x.toFixed(0)}, ${sc.z.toFixed(0)}) yaw ${sc.yaw.toFixed(0)} v ${sc.v}: ok=${ok} active=${d.active} vehicle=${v.id} how=${h.how} dmgOk=${dmgOk} placedOk=${placedOk}`; }
     });
-    rows.push(`  ${id.padEnd(8)} ${g.id} ${g.from} -> ${g.to}: ${stat.n} arrivals (${SC.get(g).filter((q) => q.road).length} street poses): ${stat.direct} direct, ${stat.ring} ring, ${stat.hero} hero; farthest car placement ${stat.maxPlaced.toFixed(0)} m; ${stat.fail} without the car`);
-    check(`${id} ${g.id} ${g.from} -> ${g.to}: the player is IN the ${id} after the arrival (${stat.n} trigger poses, damage carried)`, () => { assert.ok(stat.n >= 6, 'only ' + stat.n + ' poses'); assert.equal(stat.fail, 0, `${stat.fail} arrivals without the car; first: ${firstFail}`); });
+    rows.push(`  ${id.padEnd(8)} ${g.id} ${g.from} -> ${g.to}: ${stat.n} arrivals (${SC.get(g).filter((q) => q.road).length} street poses, lattice ${STEP_OF.get(g)} m): ${stat.direct} direct, ${stat.ring} ring, ${stat.hero} hero; farthest car placement ${stat.maxPlaced.toFixed(0)} m; ${stat.fail} without the car`);
+    check(`${id} ${g.id} ${g.from} -> ${g.to}: the player is IN the ${id} after the arrival (${stat.n} trigger poses, damage carried)`, () => { assert.ok(stat.n >= MIN_POSES, 'only ' + stat.n + ' poses (lattice step ' + STEP_OF.get(g) + ')'); assert.equal(stat.fail, 0, `${stat.fail} arrivals without the car; first: ${firstFail}`); });
   }
 }
 console.log(rows.join('\n'));

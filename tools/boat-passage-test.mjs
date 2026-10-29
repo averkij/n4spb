@@ -10,6 +10,10 @@
 //      over it, >= 2 m from the bank, in clusters of >= 0.8 m) is covered by a solid that stops a floating hull; and a boat driven at each pillar from open water gets a 'hit' and never ends inside the drawn footing.
 //   c  THE WATER BODIES: the free water of the area as connected components. Water that joins (one connected body of wet cells: the Neva, the Moika, the Fontanka, the canals ...) must be ONE body of boat-free
 //      water; a pocket of boat-free water in it must be smaller than a boat's turning space (400 m2), else the bridge / pier / wall that cuts it is named.
+//      And (c2) the BODIES of transport water in the territory: besides the main body there may only be a reach that the territory edge cuts off from the main water where the real water continues outside (a body of
+//      >= POCKET_MAX m2: a river or a canal that leaves the play area and comes back) and the UNREACHABLE table; a body of 400 .. POCKET_MAX m2 is a POCKET that only the territory edge separates from the
+//      main water (the Sea Terminal basins of Vasilyevsky were two of them: the edge ran across the open water of the bay), and it fails: the edge must be moved over the water (docs/AREAS.md 15.v).
+//   d  THE NAMED ROUTES (ROUTES, per area): a boat sails the real boat handling from one named place to another over the whole territory (Vasilyevsky: from the Mining University reach to the Sea Terminal basins).
 // A pose in water is never a failure; a wall of water is.
 import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
@@ -476,6 +480,55 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
     for (const b of bodies) for (const f of b.free.slice(1)) if (f.size >= 400) { const c = closest(f.f, b.free[0].f); if (anyCellX(f.f) === anyCellX(b.free[0].f)) { console.log(`     (a pocket of ${f.size} m2 at [${f.box.map((v) => v.toFixed(0)).join(', ')}] joins the main part only outside the territory: the edge of the play area cuts it)`); continue; } cut.push(`water body ${b.w} (${b.size} m2): a boat-free part of ${f.size} m2 at [${f.box.map((v) => v.toFixed(0)).join(', ')}] is cut off from the main part of ${b.free[0].size} m2${c.d < 1e9 ? '; the barrier is near ' + c.x.toFixed(0) + ', ' + c.z.toFixed(0) + ' (' + c.d.toFixed(0) + ' m apart)' : ''}`); }
     assert.equal(cut.length, 0, cut.slice(0, 8).join('\n     '));
   });
+}
+// ---------------------------------------------------------------- c2  the pockets that only the territory edge separates
+const POCKET_MAX = 20000;      // m2: a separate body of transport water below this is a pocket, from here on it is a reach (a river / canal) that the edge of the play area cuts
+{
+  let mainW = 1; for (let c = 1; c < WETC.sizes.length; c++) if (WETC.sizes[c] > WETC.sizes[mainW]) mainW = c;
+  const isWay = new Map();      // WETC body -> the waterway keys of a sample of its cells (a pond / basin that no waterway touches is not transport water)
+  for (let k = 0; k < WETC.comp.length; k++) { const w = WETC.comp[k]; if (!w || w === mainW || WETC.sizes[w] < 400) continue; let e = isWay.get(w); if (!e) isWay.set(w, (e = { n: 0, keys: new Set() })); if (e.n++ % 25) continue; const key = L.waterwayAt(cx(k), cz(k)); if (key) e.keys.add(key); }
+  const pockets = [], reaches = [];
+  for (const [w, e] of isWay) {
+    if (!e.keys.size || isolated.has(w)) continue;
+    const row = `body ${w}: ${WETC.sizes[w]} m2 in [${WETC.boxes[w].map((v) => v.toFixed(0)).join(', ')}], ${[...e.keys].join(', ')}`;
+    (WETC.sizes[w] < POCKET_MAX ? pockets : reaches).push(row);
+  }
+  for (const r of reaches) console.log(`     (a separate reach of transport water, cut by the territory edge, the real water continues outside: ${r})`);
+  check(`c2 every body of transport water is the main body, a reach of >= ${POCKET_MAX} m2 that the edge cuts, or listed unreachable: no pocket of 400 .. ${POCKET_MAX} m2 that only the territory edge separates from the main water`, () => {
+    assert.equal(pockets.length, 0, pockets.length + ' separate bodies of water: ' + pockets.slice(0, 6).join('; ') + ' (the territory edge runs across the open water: add the water to the play rectangles)');
+  });
+}
+
+// ---------------------------------------------------------------- d  the named routes
+// A route is sailed by the real boat handling over the 1 m grid of boat-free water (route() + sail() above). The ends snap to the nearest boat-free cell within SNAP metres.
+const ROUTES = {
+  vasilyevsky: [
+    { name: 'the Mining University reach of the Neva -> the Sea Terminal basin (west pocket)', from: [-4560, 440], to: [-6656, 683] },
+    { name: 'the Mining University reach of the Neva -> the Sea Terminal basin (east pocket)', from: [-4560, 440], to: [-6505, 769] },
+    { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (north)', from: [-4560, 440], to: [-6535, 520] },
+    { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (south, round the west tip)', from: [-4560, 440], to: [-6620, 660] },
+  ],
+}[AREA] || [];
+{
+  const SNAP = 60, nearestFree = (x, z) => { let best = null; for (let dz = -SNAP; dz <= SNAP; dz += 1) for (let dx = -SNAP; dx <= SNAP; dx += 1) { const k = idx(x + dx, z + dz); if (k >= 0 && D[k] >= R_FREE) { const d2 = dx * dx + dz * dz; if (!best || d2 < best.d2) best = { k, d2 }; } } return best && best.k; };
+  for (const r of ROUTES) {
+    if (QUICK) continue;
+    const a = nearestFree(r.from[0], r.from[1]), b = nearestFree(r.to[0], r.to[1]);
+    check(`d route ${r.name}: both ends are boat-free water (within ${SNAP} m of ${r.from} and ${r.to}) and one body`, () => {
+      assert.ok(a !== null && b !== null, `no ${R_FREE} m clear water within ${SNAP} m of ${a === null ? r.from : r.to}`);
+      assert.equal(FREE.comp[a], FREE.comp[b], `two bodies of boat-free water: #${FREE.comp[a]} (${FREE.sizes[FREE.comp[a]]} m2) at ${cx(a).toFixed(0)}, ${cz(a).toFixed(0)} and #${FREE.comp[b]} (${FREE.sizes[FREE.comp[b]]} m2) at ${cx(b).toFixed(0)}, ${cz(b).toFixed(0)}`);
+    });
+    if (a === null || b === null || FREE.comp[a] !== FREE.comp[b]) continue;
+    const path = route(a, b, 1500);      // (a window round the two ends: the way round the island is long)
+    check(`d route ${r.name}: a route over the whole territory exists and the boat sails it (${path ? path.length : 0} m): no hit, no stuck, on the water`, () => {
+      assert.ok(path, 'no route');
+      const run = sail(path);
+      console.log(`     route ${r.name}: ${path.length} m, sailed in ${run.t.toFixed(0)} s, ${run.scrapes} scrapes, ${run.hits.length} hits, ${run.off} frames off the water`);
+      assert.ok(run.reached, `${run.stuck ? 'stuck' : 'timeout'} at ${run.x.toFixed(1)}, ${run.z.toFixed(1)} (${Math.hypot(run.x - cx(path[path.length - 1]), run.z - cz(path[path.length - 1])).toFixed(0)} m from the end)`);
+      assert.equal(run.hits.length, 0, `${run.hits.length} hits: ${JSON.stringify(run.hits.slice(0, 3))}`);
+      assert.equal(run.off, 0, `${run.off} frames off the water`);
+    });
+  }
 }
 console.log(fails ? `\n${fails} FAILED of ${checks + fails}` : `\nALL ${checks} PASSED`);
 process.exit(fails ? 1 : 0);

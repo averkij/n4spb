@@ -26,6 +26,7 @@ import { WATER as AREA_WATER } from '../lib/area-tables.js';
 
 import { NEVA_DOWNSTREAM } from './neva-downstream.js';
 import { NEVA_MALAYA } from './neva-malaya.js';
+import { VO_SEA } from './vo-sea.js';
 
 // ---- the Neva scenery beyond the data. tools/strip-data-clip.mjs clips RIVER / WATER to the extent grown by DATA_MARGIN: the data region is DATA_RECTS. Beyond it the real OSM polygons of the Neva continue the river:
 // upstream (north-east) the 'Нева' polygon of data/east-water.js, downstream (west) the ring of the Bolshaya Neva of neva-downstream.js. They are drawn outside DATA_RECTS and inside FAR_WIN, the box round Vosstaniya Square
@@ -43,6 +44,8 @@ const FAR_SOURCES = [
   // the Malaya Neva (neva-malaya.js) joins the Neva INSIDE the data region (the mouth edge is the closing edge of the data polygon of the Neva), where no data polygon holds it: `inData` = it is drawn there too (water and
   // shore walls; only clipped to FAR_WIN), and the mouth edge, which both rings share, is an open join (no wall on either side)
   { name: 'neva-malaya', rings: [NEVA_MALAYA], box: null, inData: !AREA_WATER.dataRings.some((d) => d.source === 'neva-malaya') },      // (an area that lists the ring in WATER.dataRings (source) has it as DATA water inside the data region: the scenery starts beyond it)
+  // the Gulf of Finland (vo-sea.js; Vasilyevsky-Okrug 7 lists it in WATER.dataRings, so it is DATA water inside the data region and the scenery starts beyond it, as with the Malaya Neva)
+  { name: 'vo-sea', rings: [VO_SEA], box: null, inData: !AREA_WATER.dataRings.some((d) => d.source === 'vo-sea') },
 ].filter((s) => AREA_WATER.farSources.includes(s.name));
 const keyOf = (r) => r.key || AREA_WATER.keyByName[r.name] || AREA_WATER.riverKeys[r.name] || null;      // (WATER.keyByName / WATER.riverKeys of the area: a keyless RIVER record by its name: the canals of the south-west, the Obvodny canal of Vladimirsky-Ligovka; none in the other areas)
 
