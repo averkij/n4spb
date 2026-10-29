@@ -96,7 +96,7 @@ npm run touch                              # the touch controls' pure logic (cur
 GPU (one job at a time, nothing else running on the GPU; headless Edge through puppeteer-core, `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`):
 
 ```sh
-npm run bakeplan                           # CPU: which areas are stale and why (node tools/bake-scene.mjs --plan); docs/BAKE-REVISIONS.md
+node tools/bake-scene.mjs --plan            # CPU: which areas are stale and why (node tools/bake-status.mjs: the status of each); docs/BAKE-REVISIONS.md
 npm run bake                               # LAST step after an edit that staled an area: bakes the stale live areas only; BAKE_VERBOSE=1, run it in the background (minutes)
 npm run bakecheck                          # node tools/bake-manifest-check.mjs: per area: manifest == revision of the area's closure, the map src/core/baked-revision.js, product names / sizes / sha256, no *.part
 npm run bakedcheck                         # node tools/baked-check.mjs medium|performance: hydrated nav, routes, field, teleport to the Admiralty, all regions

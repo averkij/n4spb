@@ -49,7 +49,7 @@ The intersection of all five is the ENGINE (at least 250 files): an edit there s
 | `assets/baked/<id>/manifest.json` | fetched by browsers on every load. `{format:1, scheme:2, area, revision, closure:{files,bytes}, files:{key:name}, sizes:{key:{raw,gzip}}, sha256:{key:hex of the gzip}}`. `format` stays 1 and every new field is additive; the loader reads only `revision`, `files` and `sizes[k].raw` |
 | `assets/baked/<id>/inputs.json` | never fetched by a browser, about 25 KB, informational and never part of a verdict: `{format:1, area, revision, scheme, files:{path: sha256[0:12]}, bakeSeconds}`. It is how the check lists WHICH files changed since the bake, and the source of the time estimate of `--plan`. A missing file is a warning |
 | `src/core/baked-revision.js` | GENERATED, never edit: `BAKED_REVISIONS = { admiralty, palace, smolny, vasilyevsky, vladimirsky }` (one line each, alphabetical) and `BAKED_REVISION`, the revision of THIS page (`document.documentElement.dataset.area`; `'none'` for an unknown or parked area and in Node, which never matches a manifest). Written only by `renderRevisionModule(map)` (`tools/lib/revision-module.mjs`), and the check compares the text byte for byte |
-| `assets/baked/.bake.lock` | exists while a bake runs (pid inside; `O_EXCL`). A leftover one after a crash: delete it by hand if no bake is running |
+| `assets/baked/.bake.lock` | exists while a bake runs (the pid inside; created exclusively, so a second bake refuses to start). A lock whose process is gone is taken over; one with unreadable content: delete it by hand if no bake is running |
 
 The map is built from the manifests of all areas, so a bake of one area changes one line. The parked areas (`strip`, `north`) get no entry: the strip falls back to a procedural build, the North shows the error card, exactly as
 before. The loader `src/core/baked-world.js` and `src/main.js` are NOT part of the change of 2026-10-29 (they are in the hash of every area: editing them would stale every bake); `/__baked_revision` answered 404 on a static
@@ -58,54 +58,61 @@ host before and the loader falls back to the generated constant.
 The gate preflight (`src/core/gates.js`, runtime-only) compares the manifest revision of the TARGET area with `BAKED_REVISIONS[target]`, not with the constant of the page it runs on (the old comparison would report every
 cross-area hop as stale). A cached origin page with an older map fails safe: the hop shows the "stale" toast.
 
-## 3. Status of an area and how to read `--plan`
+## 3. Status of an area and how to read it
 
-`areaStatus(root, id)` (`tools/lib/bake-status.mjs`) is one of:
+`node tools/bake-status.mjs [--area id[,id]] [--json] [--no-sha]` (CPU only, no `node_modules`, no git, no GPU; exit 0 when every shown area is FRESH, else 1; a parked area only when named) prints one line per area.
+`areaStatus` / `statusesOf` in `tools/lib/bake-status.mjs` give one of:
 
 | Status | Meaning | Remedy |
 |---|---|---|
-| FRESH | the manifest verifies and its revision equals the revision of the tree | nothing |
-| STALE | `verifyArea` fails: the closure hashes to another revision than the manifest, or the bake is damaged (section 8) | re-bake the area |
+| FRESH | the manifest verifies and its revision equals the revision of the closure on the tree; the map `baked-revision.js` carries it; the directory holds nothing else | nothing |
+| STALE | the manifest does not describe a complete, current bake: the closure hashes to another revision, or another `scheme` / `area` / `format`, or a required product is missing, mis-named, of the wrong size or sha256 | a GPU bake of the area |
 | MISSING | no manifest | bake it |
-| UNSYNCED | the manifest is fresh but `BAKED_REVISIONS[id]` is not its revision (an interrupted publish, a hand edit) | `node tools/baked-revision-sync.mjs` (CPU, no GPU; `bake-scene` does it by itself at start) |
+| UNSYNCED | the manifest IS the current bake, but the map `src/core/baked-revision.js` does not carry its revision (an interrupted publish, a hand edit), or the directory holds products of another revision or `.part` / `.tmp` files | `node tools/baked-revision-sync.mjs --purge` (CPU, no GPU; `bake-scene` does it by itself at start) |
+| ERROR | the closure cannot be computed (a `ClosureError`: an unclassified dependency); fail closed | read the message, section 8 |
 
-`node tools/bake-scene.mjs --plan` (CPU only, works in CI: puppeteer is imported after the planning) prints per area the status, the closure size, the files changed since the bake (the diff against `inputs.json`), the estimated
-minutes (the observed `bakeSeconds`, else 5) and the command. `--plan --check` exits 1 if anything is not FRESH. Shape of a line (the same text as the failure of the check):
+`node tools/bake-scene.mjs --plan` (CPU only: puppeteer is imported after the planning, so it works in CI) prints the same lines plus the `PLAN:` line: which areas the next bake takes and why, the estimated GPU-minutes (the
+observed `bakeSeconds` of `inputs.json`, else 5 per area) and the command, the areas it skips, the areas it will sync without a GPU, and whether `node_modules/three` matches the lock. `--plan --check` exits 1 if anything is not
+FRESH. Shape of a stale line (the same text is in the failure of `bake-manifest-check`):
 
 ```
-[vasilyevsky] STALE: manifest a1... but closure (764 files) hashes to b2... ; changed since the bake: src/world/landmarksSmolensky/x.js, vasilyevsky.html (+3). Re-bake: node tools/bake-scene.mjs --area vasilyevsky (~5 GPU-min)
+[vasilyevsky] STALE: manifest a1b2c3d4e5f6... but closure (764 files) hashes to b2c3d4e5f6a1... ; changed since the bake: src/world/landmarksSmolensky/x.js, vasilyevsky.html (+3). Re-bake: node tools/bake-scene.mjs --area vasilyevsky (~5 GPU-min)
 ```
 
-Read it this way: if the changed list names only files of one area, that area is the only one to re-bake; if it names an engine / lib file, all five are STALE and the round costs the full bake; if it names nothing (no
-`inputs.json`) look at section 8. Order of questions before a bake: `--plan` first, always.
+Read it this way: if the changed list names only files of one area, that area is the only one to re-bake; if it names an engine / lib file, all five are STALE and the round costs the full bake; `changed files unknown (no
+inputs.json)` means the list is not available (it is informational only: the verdict never depends on it); `no digest changed since the bake (the tooling or the scheme)` means the files are the baked ones and the bake is stale
+for another reason (a `BAKE_SCHEME` bump, a damaged product: the `also:` part names it). Ask `--plan` first, always.
 
 ## 4. Daily workflow
 
 ```
-node tools/bake-scene.mjs --plan            what is stale and why, ~minutes   (npm run bakeplan)
+node tools/bake-status.mjs                  where every live area stands, in a second                      (CPU)
+node tools/bake-scene.mjs --plan            what the next bake takes and why, ~minutes                      (CPU)
 node tools/bake-scene.mjs                   bake the STALE or MISSING live areas; "all fresh" and exit 0 when there are none   (npm run bake)
-node tools/bake-scene.mjs --area smolny     those areas if stale; fresh: "fresh, use --force"; a parked area only by name
-node tools/bake-scene.mjs --area all        the stale live areas
-node tools/bake-scene.mjs --area all --force  everything again (toolchain or GPU change; npm run bake:all)
-node tools/bake-manifest-check.mjs [--area id]   the gate of the CI, all failures at once   (npm run bakecheck)
-node tools/baked-revision-sync.mjs [--check|--purge]   regenerate the map from the manifests / only verify it / remove orphan products   (npm run revsync)
-node tools/closure-lint.mjs                 the rules vs the whole of src/   (npm run closurelint)
+node tools/bake-scene.mjs --area smolny     those areas if they need it; fresh: "use --force"; a parked area only by name
+node tools/bake-scene.mjs --area all        the stale live areas (same as no flags)
+node tools/bake-scene.mjs --area all --force  everything again (toolchain or GPU change); --force always needs --area
+node tools/bake-scene.mjs --require-clean   refuse when a file of a selected closure has uncommitted changes (default: a warning)
+node tools/bake-manifest-check.mjs [--area id] [--no-sha]   the gate of the CI, all failures at once   (npm run bakecheck)
+node tools/baked-revision-sync.mjs [--check|--purge]   regenerate the map from the manifests / only verify it / also remove orphan products and unfinished files
+node tools/closure-lint.mjs                 the rules vs the whole of src/
 ```
 
 1. Make the change; run the CPU checks of the area as usual.
 2. `--plan`. If it says an area you did not mean to touch is STALE, the change reached shared code: either that is intended (then the round re-bakes it) or move the edit (section 7).
 3. `node tools/bake-scene.mjs` (one browser, the GPU lock of the session). Each area is published as soon as it succeeds, so an interrupted multi-area bake leaves valid areas and reports the rest stale; if any live area is
-   still STALE the script exits 3 and prints the command.
+   still STALE after the run the script exits 3 and prints the command. Exit codes: 0 done or nothing to do, 1 a failure, 2 usage, 3 the bake ran but a live area is still stale.
 4. `node tools/bake-manifest-check.mjs` must print `RESULT: OK`; then commit the bake of EVERY area your change made stale, in the same round (otherwise the CI is red), with the version bump of `CLAUDE.md`.
 
 **Preflight before any GPU time:** the closure of every selected area must compute (this proves the dynamic-import allowlist), `node_modules/three/package.json` must have the version of the lock, and the lock file `.bake.lock` must
 be free. **Before the publish of an area:** the served-file audit (every repository file the bake server served must be in the closure or in `ALLOW_SERVED`; a violation aborts that area and names the file and the rule to
-add), a re-digest of the closure (a file edited DURING the bake aborts that area and names it), the 8 required products exist with the recorded sizes.
+add), a re-digest of the closure (a file edited DURING the bake aborts that area and names it), the 8 required products exist with the recorded sizes; then the sha256 of each product is recorded.
 
-Order of publication per area (`tools/lib/bake-publish.mjs`): `inputs.json`, then `manifest.json` (the commit point), then the merged `src/core/baked-revision.js`, then the purge of the area's old products (non-recursive, its own
-directory). A crash between the manifest and the map leaves UNSYNCED (repaired by the sync tool); a crash between the map and the purge leaves old products, which the check reports as orphans (`--purge` removes them).
+Order of publication per area (`publishArea` in `tools/lib/bake-publish.mjs`): `inputs.json`, then `manifest.json` (the commit point), then the merged `src/core/baked-revision.js`, then the purge of the area's old products
+(files only, its own directory). A crash between the manifest and the map leaves UNSYNCED (repaired by the sync tool); a crash between the map and the purge leaves old products, which are also UNSYNCED (`--purge` removes them).
+The fault-injection tests (`bake-plan-test`) stop `publishArea` after each step and require that the state left behind is reported, never trusted.
 
-Dev servers (`tools/serve.mjs`, `shot`, `area-dev`, the drive and probe tools) answer `/__baked_revision` through `tools/lib/dev-revision.mjs`: the area comes from the `Referer` (`/` and `/index.html` are the palace,
+Dev servers (`tools/serve.mjs`, `shot`, `area-dev`, the drive and probe tools) answer `/__baked_revision` through `tools/lib/dev-revision.mjs` (`handleBakedRevision(req, res, root)`): the area comes from the `Referer` (`/` and `/index.html` are the palace,
 `/<name>.html` the area with that page) and the answer is the revision of the LIVE tree, cached by a stat signature of the closure files (a request stats the files and re-walks only when one differs, never per request). The loader accepts the baked path only when
 the manifest revision equals BOTH that answer and `BAKED_REVISION` of the page, so a development edit of a file in the closure shows as a stale bake (the procedural fallback; `?baked=force` is the labelled bypass for performance work
 on code that does not change what the bake contains). A closure that cannot be scanned right now (a missing import while somebody is editing) is answered with revision `unscannable`, never with a stale-looking good one. No Referer
@@ -164,7 +171,7 @@ The revision hashes the SOURCE. It cannot see a change in how the source is turn
 not the lock entry. After such a change the old products are still "fresh" by the hash and wrong by the tool. Procedure:
 
 1. Raise `BAKE_SCHEME` in `tools/baked-revision.mjs` (it is in every preimage and in every manifest, `scheme`).
-2. `node tools/bake-scene.mjs --area all --force` (about 25 GPU-minutes; `npm run bake:all`).
+2. `node tools/bake-scene.mjs --area all --force` (about 25 GPU-minutes).
 3. Run the oracle: `node tools/bake-product-compare.mjs` against the previous products if the change was meant to be neutral; then `bake-manifest-check`, then the version bump and commit.
 
 `bake-manifest-check` refuses a manifest whose `scheme` differs from `BAKE_SCHEME`, so a forgotten re-bake cannot be deployed. A change of the SOURCE of the tools only (docs, tests, lints) needs nothing.
@@ -177,30 +184,37 @@ not the lock entry. After such a change the old products are still "fresh" by th
 * Runtime-only files (`gates.js`, `handoff.js`, `version.js`, `registry.js`) never stale anything: gate rectangles, prompt texts and the version are free.
 * The closure of an area is also a map of its dependencies: `node tools/closure-lint.mjs` reports (not a gate) a live area whose closure reaches the exclusive `src/areas/<other>/` files of another.
 
-## 8. Troubleshooting `bake-manifest-check`
+## 8. Troubleshooting `bake-manifest-check` and the bake
 
-The check computes `revisionsOf(root)` once and, for each live area (a parked one only with `--area`), runs `verifyArea`, then checks the map against the manifests. It collects ALL failures and prints a result line such as
-`RESULT: FAIL: stale: vasilyevsky, palace; fresh: smolny, admiralty, vladimirsky`. Exit 1 on any failure. What each failure means:
+The check computes the status of every live area (a parked one only with `--area`), checks the map against the manifests and prints ALL failures, one line per area and one `[map]` line per map problem, then
+`RESULT: FAIL: stale: vasilyevsky, palace; unsynced: smolny; map: 1 problem; fresh: admiralty, vladimirsky` (or `RESULT: OK (fresh: ...; N complete products; M MiB gzip)`). Exit 1 on any failure, 2 on usage. What each failure means:
 
 | Failure | Cause | Remedy |
 |---|---|---|
-| `STALE: manifest A but closure (N files) hashes to B` | a file of the closure changed after the bake. The `changed since the bake:` list is the diff against `inputs.json` | `node tools/bake-scene.mjs --area <id>`. If the list is empty or names a file you did not touch: line endings (CRLF is normalised, but a binary with a text extension is not), a stray edit, or a `package-lock.json` change of the three entry |
-| `no manifest` | the area was never baked, or its directory was removed | bake it |
-| wrong `area` in the manifest | the files of another area were copied into this directory | re-bake the area; never copy bakes between directories |
-| wrong `scheme` | the bake was made by an older toolchain (section 6) | `--area all --force` after the `BAKE_SCHEME` bump |
-| a required product is missing | one of the 8 products (`field roof street-textures street-kerbs street-surfaces city-base nav-medium nav-low`) is not in the directory (an interrupted copy, `git` checkout without LFS-like trouble) | restore from git, or re-bake |
-| a product has the wrong name | not exactly `<key>.<revision>.bin.gz`: renamed by hand, or a product of another revision referenced by the manifest | re-bake; do not rename |
-| wrong size / wrong `sha256` | the file differs from the manifest (`sizes[k].gzip`, `sha256[k]` of the gzip): a truncated or edited product, a text-mode checkout | restore from git (`git checkout -- assets/baked/<id>`), or re-bake |
-| leftover `.part` / `.tmp` | a bake died mid-download (`.gitignore` ignores `*.part`) | delete them; re-bake if a product is missing |
-| orphan product | a product of another revision remains in the directory (the purge never ran: crash after the map) | `node tools/baked-revision-sync.mjs --purge` |
-| `BAKED_REVISIONS` has a wrong entry, a missing area or an extra live key | the map does not equal `{id: manifest.revision}` of the live areas | `node tools/baked-revision-sync.mjs` (regenerates it; no GPU) |
-| `baked-revision.js` text differs from `renderRevisionModule(map)` | the generated file was edited by hand | run the sync tool; never edit the file |
-| `inputs.json` missing | warning only; the changed-file list is not available | bake again, or ignore |
-| `Missing(file, importer)` / `unclassified import()` / `unknown specifier` (a `ClosureError`) | the scanner met something it cannot place (section 5) | read the message: fix the import or add the row |
+| `STALE: manifest A but closure (N files) hashes to B ; changed since the bake: ...` | a file of the closure changed after the bake. The list is the diff against `inputs.json` | `node tools/bake-scene.mjs --area <id>`. If the list is empty or names a file you did not touch: a stray edit, a `package-lock.json` change of the three entry (`package-lock.json (three)`), or a binary file with a text extension (only CRLF is normalised) |
+| `MISSING: no manifest in assets/<dir>` | the area was never baked, or its directory was removed | bake it |
+| `the manifest says area "x" but it lives in the directory of y` | the files of another area were copied into this directory | re-bake the area; never copy bakes between directories |
+| `manifest scheme none (a bake of the global-revision era)` or `scheme 1 but the tools are at BAKE_SCHEME 2` | the bake was made by an older toolchain (section 6) | `--area all --force` after the `BAKE_SCHEME` bump |
+| `missing required product <key>` / `product file <name> does not exist` | one of the 8 products (`field roof street-textures street-kerbs street-surfaces city-base nav-medium nav-low`) is not in the manifest or not in the directory (a file deleted by hand, an interrupted copy) | restore from git, or re-bake |
+| `product <key> is named "x", expected <key>.<revision>.bin.gz` | renamed by hand, or a product of another revision referenced by the manifest | re-bake; do not rename |
+| `product <name> is N bytes, the manifest says M` / `does not match its sha256 (damaged or replaced)` | the file differs from the manifest (`sizes[k].gzip`, `sha256[k]` of the gzip): a truncated or edited product, a text-mode checkout | `git checkout -- assets/baked/<id>`, or re-bake |
+| `UNSYNCED: ... unfinished file x.part` / `orphan product ...` | a bake died mid-download, or the purge after the publish never ran. The bake itself is fine | `node tools/baked-revision-sync.mjs --purge` (no GPU) |
+| `UNSYNCED: ... src/core/baked-revision.js says X for <id>, the manifest says Y` | the map does not carry the manifest's revision (crash between the manifest and the map) | `node tools/baked-revision-sync.mjs` |
+| `[map] ... has an entry for <id>, which is not a live area (extra key)` / `<id> is missing but its manifest says ...` / `has an entry but no usable manifest` | the map is not `{id: manifest.revision}` of the live areas | `node tools/baked-revision-sync.mjs` (regenerates it; no GPU) |
+| `[map] ... is not exactly what the generator writes (hand-edited?)` / `is not the generated per-area map` | the generated file was edited by hand, or is still the legacy single constant | run the sync tool; never edit the file |
+| `warning: the manifest has no sha256 section` | a manifest written before the sha256 field | informational; the next bake writes it |
+| `ERROR: the closure cannot be computed: <Kind>: ...` (a `ClosureError`: `Missing`, `Unclassified`, `Unsupported`, `StaleRule`, `Rule`, `NoModules`, `NoModuleScript`, `ImportMap`, `Escape`, `Lock`, `UnknownArea`) | the scanner met something it cannot place. `Missing`: an import target that does not exist with that spelling (the message names the importer). `Unclassified`: a computed `import()` or a loaded asset without a row (5.3, 5.4). `Unsupported`: a bare or absolute specifier, a non-script import. `StaleRule`: a row whose expression is gone. `Lock`: `package-lock.json` has no `node_modules/three` entry | read the message, which names the file and the line: fix the import or add / remove the row; `node tools/closure-lint.mjs` shows all of them at once |
 
-`bake-scene.mjs` messages: `.bake.lock exists` (a bake runs, or it crashed: delete the file if no bake is running); `three version X, lock says Y` (run `npm ci`); `served-file audit: <file> is not in the closure of <area>`
-(a file loaded by the bake page that the scanner does not know: add a rule, 5.4, or an `ALLOW_SERVED` entry for a harmless file); `the closure changed during the bake: <files>` (someone edited the tree while the bake ran:
-bake again, in a worktree that nobody touches).
+Messages of `bake-scene.mjs`:
+
+* `another bake is running (assets/baked/.bake.lock, pid N). If no bake is running, delete that file.`
+* `preflight: node_modules/three is X but package-lock.json locks Y: the bake would load another three.js than the revision names (npm ci)` (or `node_modules/three is not installed`).
+* `WARNING <id>: N files of its closure have uncommitted changes (...): commit the bake together with them` (an error with `--require-clean`): the bake is made from the working tree, so the revision names files that are not committed yet.
+* `served-file audit of <id> failed (nothing published)` followed by `<file> was served to the page of <id> but is not in its closure`: a file the bake page loaded that the scanner does not know. For `src/` add the rule to `DYNAMIC_IMPORTS` /
+  `RUNTIME_ASSETS` (5.3, 5.4); for a harmless runtime file add it to `ALLOW_SERVED` in `tools/lib/closure-rules.mjs`. Then run `closure-groundtruth`.
+* `the source changed during the bake of <id> (A -> B): <files>; refusing to publish stale assets`: someone edited the closure while the bake ran. Bake again, in a worktree nobody touches.
+* `bake-scene: NOT published: ...` and then `the areas published before it stay valid; re-run node tools/bake-scene.mjs for the rest`.
+* `bake-scene: --force needs --area <id[,id]> or --area all`, `unknown area "x"`, `area "x" is planned`: usage errors, exit 2.
 
 ## 9. Tests
 

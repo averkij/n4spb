@@ -7,7 +7,7 @@ State of this repository (cut from `102_3d_piter`, 2026-10-16). What the strip i
 * The engine (`src/core/`, `src/main.js`, `index.html`) is the full engine of the original, unchanged in behaviour: renderer with outlines and bloom, toon materials, batching, LOD, region streaming of baked products, physics, WebAudio.
 * The world is the build list in `src/main.js` (`MODULES`): environment, landmarksNorth (partial), streets, city, rail, landmarksA..J, landmarksBelinsky, landmarksK, landmarksCastle, landmarksOktyabrsky, bridges (partial, about 24 sites), metro (7 stations),
   props, traffic, people, wildlife, drive. Data: `src/world/data/city*.js` (eight region parts clipped to the strip), `data/metro.js`, `data/east-water.js`.
-* The shipping bake `assets/baked/` is produced by `npm run bake`. **An area's bake is stale after an edit of any file in that area's dependency closure** (`npm run bakeplan` says which areas; docs/BAKE-REVISIONS.md), and the repository carries a bake only at deployable checkpoints (`npm run bakecheck` says whether the committed one matches the source).
+* The shipping bake `assets/baked/` is produced by `npm run bake`. **An area's bake is stale after an edit of any file in that area's dependency closure** (`node tools/bake-scene.mjs --plan` says which areas; docs/BAKE-REVISIONS.md), and the repository carries a bake only at deployable checkpoints (`npm run bakecheck` says whether the committed one matches the source).
 
 ## Rules that still bind (read before editing)
 

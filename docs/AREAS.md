@@ -120,9 +120,10 @@ node tools/north-people-hooks-test.mjs [--scene]   the garden ring and cap row, 
 node tools/import-lint.mjs                relative imports exist with EXACTLY the spelling used (Windows develops, Linux hosts), module lists have files
 node tools/runtime-only-lint.mjs          only main.js imports the runtime-only files
 node tools/baked-revision-test.mjs        the per-area hash on fixture trees (order, CRLF, exclusions, isolation of areas, remap, dynamic rules, a pinned golden revision)
-node tools/closure-lint.mjs               the closure rules vs the whole of src/: every computed import() and loaded asset classified, orphans listed, the regex import scanner a subset of the tokenizer (npm run closurelint)
+node tools/closure-lint.mjs               the closure rules vs the whole of src/: every computed import() and loaded asset classified, orphans listed, the regex import scanner a subset of the tokenizer
 node tools/closure-real-test.mjs          the real tree: which areas an edit of a file moves, closure size bands, the recorded page loads inside the closure
 node tools/closure-mutation-test.mjs      9 broken scanners must all be killed by the tests above (the oracle can fail)
+node tools/bake-status.mjs                the status of every live area (FRESH / STALE / MISSING / UNSYNCED / ERROR), CPU, a second; node tools/baked-revision-sync.mjs [--check|--purge] repairs an UNSYNCED area without a GPU
 node tools/bake-manifest-check-test.mjs   fabricated bake directories: one case per failure of the check
 node tools/bake-plan-test.mjs             which areas a bake selects, the exit codes, fault injection of the publish
 node tools/dev-revision-test.mjs          the dev-server /__baked_revision (Referer to area, stat-signature cache); tools/dev-servers-lint.mjs: no tool bypasses it
@@ -226,9 +227,9 @@ accumulation, not the per-scene floor: every crossing is a cold start of ~25-30 
 ### 6.1 Bake and deploy
 
 * `node tools/bake-scene.mjs` with no flags (or `--area stale`) bakes the STALE or MISSING live areas and says "all fresh" when there are none; `--area a[,b]` bakes those areas if stale (fresh: "use `--force`"; a parked area
-  only by name); `--area all` = the stale live areas; `--force` re-bakes the selected areas even if fresh, so `--area all --force` is the full bake (a toolchain or GPU change: also bump `BAKE_SCHEME`); `--plan` (CPU only) prints per
-  area the status (FRESH / STALE / MISSING / UNSYNCED), the closure size, the files changed since the bake, the estimated GPU-minutes and the command; `--plan --check` exits 1 if anything is not FRESH.
-  (`npm run bake` = no flags, `bake:all` = `--area all --force`, `bakeplan` = `--plan`.) The page, the output directory and the manifest come from the registry: `assets/baked/` for the strip (parked), `assets/baked/<id>/` for the
+  only by name); `--area all` = the stale live areas; `--force` (with `--area`) re-bakes the selected areas even if fresh, so `--area all --force` is the full bake (a toolchain or GPU change: also bump `BAKE_SCHEME`); `--plan` (CPU only) prints per
+  area the status (FRESH / STALE / MISSING / UNSYNCED / ERROR), the closure size, the files changed since the bake, the estimated GPU-minutes and the command; `--plan --check` exits 1 if anything is not FRESH.
+  (`npm run bake` = no flags; `--force` always needs `--area`; `node tools/bake-status.mjs` prints the status of every area in a second, CPU only.) The page, the output directory and the manifest come from the registry: `assets/baked/` for the strip (parked), `assets/baked/<id>/` for the
   others. A `planned` area is skipped (asked for by name it is an error, exit 2). The bake runs the areas one after another in one browser with the GPU lock of the session. The manifest is
   `{ format: 1, scheme, area, revision, closure, files, sizes, sha256 }` (the new fields are additive; the loader reads `revision`, `files`, `sizes`), next to an informational `inputs.json`.
 * **One revision per area, published per area** (`tools/baked-revision.mjs`, section 4). Before any GPU time the bake checks that the closures compute, that `node_modules/three` has the version of the lock and takes
