@@ -142,7 +142,7 @@ const BUDGET_AREA = {
     //
     landmarksModernVO: 34e3, landmarksSredny: 72e3, landmarksVOStatues: 33e3,      // estimates ~26 k / ~55 k / ~25 k (the groups that lie in this territory) + 30 %
     //
-    bridges: 130e3,      // estimate 0.07 - 0.10 M (WHSD 63.5 k + Shkipersky 3.2 k + Novo-Andreevsky 3.6 k) + 30 %
+    bridges: 83e3,      // measured 71,830 (gdm cluster B: the WHSD part of this extent + 300 m: at-grade stretch, cutting, viaduct to the Korabelny pylon 36,688; Nalichny, Novo-Andreevsky; the Palace Bridge that every area builds 14,540; the Shkipersky Bridge of cluster G is not in it yet) + 15 %
   },
   morskoy: { environment: 1.3e6, streets: 720e3, city: 350e3, props: 130e3,      // estimates: environment 0.6 - 1.5 M (prototype 0.93 M), streets 0.45 - 0.55 M, city ~0.27 M (1,175 buildings), props ~0.1 M
     // PORT-BUDGET: landmarksMarineFacade
@@ -151,9 +151,9 @@ const BUDGET_AREA = {
     //
     landmarksVOStatues: 13e3,      // estimate < 10 k (the polar explorers' monument only) + 30 %
     //
-    bridges: 260e3,      // estimate 130 - 200 k (arch bridges + Nalichny + Novo-Andreevsky + WHSD at grade) + 30 %
+    bridges: 92e3,      // measured 79,384 (gdm cluster B bridgesMo: Nalichny, Novo-Andreevsky, Korablestroiteley, 1st - 4th Smolensky, the WHSD from the portals to z 580 incl. the at-grade stretch 30,382; the Palace Bridge that every area builds 14,540) + 15 %
     //
-    // PORT-BUDGET: bridgesMo
+    // (bridgesMo is in the `bridges` row above)
   },
   dekabristov: { environment: 1.5e6, streets: 1.04e6, city: 650e3, props: 200e3,      // estimates: environment 1.0 - 1.2 M (prototype 1.08 M), streets 0.6 - 0.8 M, city 0.5 - 0.7 M (589 buildings after the DK1..DK5 fetch: likely far less), props ~0.15 M
     landmarksSmolensky: 320e3,      // measured in vasilyevsky 277,547 (the same six groups: overlap parity, docs/AREAS.md 15.g) + 15 %
@@ -166,7 +166,7 @@ const BUDGET_AREA = {
     //
     // PORT-BUDGET: landmarksFill
     //
-    bridges: 325e3,      // estimate 0.15 - 0.25 M (Uralsky, Smolensky, Nalichny, Novo-Andreevsky + the Smolenka mouth bridges) + 30 %
+    bridges: 102e3,      // measured 88,356 (gdm cluster B: Uralsky, Smolensky, Nalichny, Novo-Andreevsky, Korablestroiteley, 1st - 4th Smolensky, the WHSD portals, Betancourt 18,306, Serny, the WHSD fairway bridge 5,066; the Palace Bridge that every area builds 14,540) + 15 %
   },
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;

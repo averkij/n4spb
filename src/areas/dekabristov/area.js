@@ -144,6 +144,15 @@ export function makeAreas(h) {
   { name: 'Смоленский мост · Smolensky Bridge', c: [-5286.9, -1645.8], r: 26 },
   { name: 'Наличный мост · Nalichny Bridge', c: [-6702.1, -1707.9], r: 48 },
   { name: 'Ново-Андреевский мост · Novo-Andreevsky Bridge', c: [-6328.8, -1603.0], r: 20 },
+  // bridgesMo (docs/gdm-B.md)
+  { name: 'Мост Кораблестроителей · Korablestroiteley Bridge', c: [-7532.2, -1948], r: 52 },
+  { name: '1-й Смоленский мост · 1st Smolensky Bridge', c: [-8059.5, -2005.4], r: 20 },
+  { name: '2-й Смоленский мост · 2nd Smolensky Bridge', c: [-8008.7, -2182.8], r: 20 },
+  { name: '3-й Смоленский мост · 3rd Smolensky Bridge', c: [-7955.6, -1975.4], r: 34 },
+  { name: '4-й Смоленский мост · 4th Smolensky Bridge', c: [-7903.2, -2151], r: 34 },
+  { name: 'Мост Бетанкура · Betancourt Bridge', c: [-4813, -2778], r: 80 },
+  { name: 'Серный мост · Serny Bridge', c: [-4930.1, -2552], r: 22 },
+  { name: 'Мост через Петровский фарватер (ЗСД) · WHSD bridge over the Petrovsky fairway', c: [-7540, -3800], r: 220 },
   // ---
   { name: 'Смоленская церковь · Smolensk Icon Church', c: [-5612, -1525], r: 50 },
   { name: 'Святые ворота · Holy Gates of the cemetery', c: [-5502.6, -1529.6], r: 30 },
@@ -229,11 +238,14 @@ export const TEST = {
     // PORT-CLAIMED: landmarksFill
     // ---
     { id: 'r5574920', by: 'bridges', group: 'nalichny' },
+    { id: 'r5574927', by: 'bridges', group: 'korablestroiteley' },
+    { id: 'w409159831', by: 'bridges', group: 'betancourt' },
   ],      // one row per landmark module and its main sub-group
   viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'ShiftDigit1', 'ShiftDigit2', 'ShiftDigit3', 'ShiftDigit4', 'Place.polar', 'Place.uralsky'],
   mustHaveAreas: [
     { x: -6702.1, z: -1707.9, has: 'наличный' }, { x: -5612, z: -1525, has: 'смоленская церковь' }, { x: -5444, z: -1731, has: 'армянская' }, { x: -5017.3, z: -1745.1, has: 'комитас' },
     { x: -6686, z: -1607.2, has: 'полярник' }, { x: -5586, z: -1325, has: 'ксении' }, { x: -6337, z: -1818, has: 'приморская' },
+    { x: -7532.2, z: -1948, has: 'кораблестроител' }, { x: -7903.2, z: -2151, has: '4-й смоленский' }, { x: -4813, z: -2778, has: 'бетанкур' },
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
   roadsNear: { at: [-6400, -1800], r: 90, min: 3 },

@@ -111,6 +111,14 @@ export function buildWhsd(env) {
         if (!w) cols.push({ x: p[0], z: p[2], r: r0, y1: yTop });
         if (w) P.cyl(conc, [p[0], -3.6, p[2]], [p[0], -2.6, p[2]], r0 + 0.5, r0 + 0.35, 10, true);                  // a collar at the water line
       }
+      if (w) {
+        // n4spb: the twin columns of a pier in the water stand on ONE pile cap (a 10.7 x 4 m block from the bed to 0.8 m over the water, round the two collars): without it the 2.3 m gap between the two collars is a slot that a boat can
+        // enter (boat-passage-test b: the pair is ONE pillar of the oracle, a boat driven through the slot ends inside its footing); the open water between the piers (55 m along the deck, 21 m between the decks) is untouched
+        const hq = 3.2 + r0 + 0.6, hu = 2.0, y0 = -5.0, y1 = -2.6, tx = a.tx, tz = a.tz, nx = d.so * a.nx, nz = d.so * a.nz;      // (lateral axis = the outer normal times the side sign, along = the tangent)
+        const c = at(d, i, 0, 0), K = (u, v, y) => [c[0] + tx * u + nx * v, y, c[2] + tz * u + nz * v];
+        for (const [u0, v0, u1, v1, nrm] of [[-hu, -hq, hu, -hq, [-nx, 0, -nz]], [hu, -hq, hu, hq, [tx, 0, tz]], [hu, hq, -hu, hq, [nx, 0, nz]], [-hu, hq, -hu, -hq, [-tx, 0, -tz]]]) P.quad(conc, K(u0, v0, y0), K(u1, v1, y0), K(u1, v1, y1), K(u0, v0, y1), nrm);
+        P.quad(conc, K(-hu, -hq, y1), K(hu, -hq, y1), K(hu, hq, y1), K(-hu, hq, y1), [0, 1, 0]);
+      }
     }
   }
 

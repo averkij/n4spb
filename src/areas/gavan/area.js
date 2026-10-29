@@ -161,6 +161,7 @@ export function makeAreas(h) {
   return [
   { name: 'Наличный мост · Nalichny Bridge', c: [-6702.1, -1707.9], r: 48 },
   { name: 'Ново-Андреевский мост · Novo-Andreevsky Bridge', c: [-6328.8, -1603.0], r: 20 },
+  { name: 'ЗСД · Western High-Speed Diameter', road: NAMES.streets.zsd },      // bridgesMo (docs/gdm-B.md)
   // ---
   // PORT-AREAS: landmarksGavan
   // ---
