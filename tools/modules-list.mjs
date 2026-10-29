@@ -6,15 +6,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-/** Every module of the page's MODULES list, in order (area: default process.env.AREA or 'strip'). */
-export function mainModules(area = process.env.AREA || 'strip') {
-  const file = area === 'strip' ? 'src/main.js' : `src/areas/${area}/area.js`;
-  const src = fs.readFileSync(path.join(root, file), 'utf8');
+/** The MODULES list of a source text (`file` is only for the messages); `min` is the least plausible count (the real areas have far more; a test fixture may pass 1). */
+export function modulesFromSource(src, file, min = 5) {
   const m = src.match(/export const MODULES = \[([\s\S]*?)\n\];/);
   if (!m) throw new Error(`modules-list: MODULES not found in ${file}`);
   const list = [...m[1].matchAll(/^\s*'([A-Za-z0-9_]+)'/gm)].map((x) => x[1]);
-  if (list.length < 5) throw new Error(`modules-list: MODULES of ${file} parsed to ${list.length} names`);
+  if (list.length < min) throw new Error(`modules-list: MODULES of ${file} parsed to ${list.length} names`);
   return list;
+}
+/** Every module of the page's MODULES list, in order (area: default process.env.AREA or 'strip'). */
+export function mainModules(area = process.env.AREA || 'strip') {
+  const file = area === 'strip' ? 'src/main.js' : `src/areas/${area}/area.js`;
+  return modulesFromSource(fs.readFileSync(path.join(root, file), 'utf8'), file);
 }
 /** The dynamic modules (no static street furniture / ground surfaces of their own). */
 export const DYNAMIC = ['metro', 'traffic', 'people', 'wildlife', 'drive'];
