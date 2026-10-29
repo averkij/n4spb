@@ -1165,6 +1165,21 @@ The start screen of the app becomes a MAP of Saint Petersburg (`maps/intro-draft
 * Unnamed or missing border streets in the data: a few border segments have no street name in the border list.
 * The municipal borders are the official ones; some are odd and will be re-cut together with the split / merge of areas.
 
+### 12.4 World map edits after the first live areas (2026-10-29, tooling only: `maps/intro-draft-src/`, no game file, no version bump)
+
+The owner's request: "merge the Kolomna and Yekateringofsky areas; also merge Semyonovsky and Izmaylovskoye and add to these merged area parts of Moskovskaya zastava and Volkovskoye (cut the top parts from them by Ligovsky prospekt)". Done in `edits.json` (README of `maps/intro-draft-src/` has the mechanics), the page `maps/intro-draft.html` is rebuilt (104 areas, was 106):
+
+| area (k) | before | after | note |
+|---|---|---|---|
+| Коломна–Екатерингофский / Kolomna–Yekateringofsky (42) | Коломна 1.97 + Екатерингофский 3.00 km2 (both `small`) | 4.97 km2, `large` (1.26 x B) | stable merge, Kolomna keeps k = 42; the Kolomna sights and the three Kalinkin bridges are one area (14 sights, 64 % in the source project) |
+| Семёновский–Измайловский / Semyonovsky–Izmaylovsky (45) | Семёновский 1.59 + Измайловское 3.08 km2 | 8.61 km2 (exact 8.76), `big` (2.2 x B, "split about 2") | stable merge, Semyonovsky keeps k = 45; plus 3.98 km2 carved from 6 and 90; 21 sights (Moskovskiye Vorota moved here from 6); one outer ring, no hole |
+| Московская застава (6) | 9.83 km2 (exact 9.98) | 6.68 km2 (exact 6.81), 3.16 km2 carved | still `big`; the north-west wedge between the Izmaylovskoye / Semyonovsky south border, the street and the street's end bearing is gone |
+| Волковское (90) | 11.28 km2 (exact 11.34) | 10.48 km2 (exact 10.53), 0.82 km2 carved | still `big`; the sliver west of the street |
+
+Land total 1380.4 km2 before and after (nothing lost). The merges are `"stable": true` because the live areas sit above the freed slots (registry mapIds 46 47 48 49 51 96 97 98 do not move, `tools/area-shape.mjs --k` keeps working for them): the district at the end of the list fills the freed k, so **k = 43 is now Юнтолово (was 105) and k = 44 Лахта-Ольгино (was 104)**; every other k is unchanged. The overlap territory (red line on the page, `fp`) of the neighbours was recomputed by the chain: Admiralty-Haymarket 5.77 -> 5.63 km2, Vladimirsky-Ligovka 7.35 -> 6.98 km2 (derived numbers of the page only; the live scenes' `play` rectangles come from the registry and did not change).
+
+The carve (new edit kind `carve`): the cut line is the centerline of Лиговский проспект (96 OSM ways = the dual carriageways, binned by latitude every 25 m, 211 bins, 6.07 km, carriageways at most 113 m apart, monotone in latitude), extended past its southern end (in Moskovskaya zastava, bearing 35 degrees south of west) to the western border of the district; "west" = the side that touches Semyonovsky and Izmaylovskoye. The polygons are cut and unioned by `maps/intro-draft-src/carve.py` (Python 3.12 + shapely 2.1, full double precision, no snapping): the three results tile what the four sources covered exactly (overlap 0, gap 3e-14 km2). `node maps/intro-draft-src/check-edits.mjs` pins all of it; `node maps/intro-draft-src/plot-areas.mjs 42,45,6,90 out.png` draws it (the cut follows the street). The build now also lists G, M and D (Gavan, Morskoy, Dekabristov) as live areas on the page (letters in `LIVE_LETTER`, badge colour in the template; W grew 11.23 -> 11.66 km2 with its newer rectangles); that part of the rebuild is its own commit. Open: whether the merged Semyonovsky-Izmaylovsky (8.61 km2) should later be split, and what the next live area of this group is.
+
 ## 13. The first two areas of the world map: Palace-Liteyny and Smolninskoye (v1.0.0, 2026-10-25)
 
 The strip and the North were re-cut to two areas of the map of section 12. Ids `palace` (Дворцовый–Литейный, map area 98, page `index.html`, the start page of the app) and `smolny` (Смольнинское, map area 96, page `smolny.html`).

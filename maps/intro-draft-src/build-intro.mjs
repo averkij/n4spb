@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { here, raw, geomOf, dpRing, dp, ringAreaM2, bboxOf, extentM, toM, rpt, r5, chainWays, ringsFromWays, inRings, clipPolyline } from './lib.mjs';
+import { here, raw, geomOf, dpRing, dp, ringAreaM2, bboxOf, extentM, toM, rpt, r5, chainWays, ringsFromWays, inRings, clipPolyline, pyCarve } from './lib.mjs';
 
 const BBOX = [59.55, 29.40, 60.25, 30.90];     // S W N E
 const W = BBOX[1], S = BBOX[0], E = BBOX[3], N = BBOX[2];
@@ -188,6 +188,81 @@ for (const mg of EDITS.merge || []) {
   log('edit: merged', mg.names.join(' + '), '->', mg.ru, '| outer rings', before.join('+'), '->', rings.outer.length);
 }
 
+// ---------- 'carve' edits: the part of the districts `from` that lies on one side of a street goes to the area `into` (edits.json; polygon work in carve.py = Python + shapely)
+// The cut line is the CENTERLINE of the named street (its dual carriageways collapse), extended along both end bearings far beyond every district involved.
+const CARVE_REPORT = [];
+function streetCenterline(name, extM) {
+  const ways = [];
+  for (const f of ['main_roads', 'secondary', 'tertiary']) for (const e of raw(f).elements || []) if (e.tags && e.tags.name === name && e.geometry) ways.push(geomOf(e.geometry));
+  if (!ways.length) throw new Error('carve: no way named ' + name + ' in raw/{main_roads,secondary,tertiary}.json');
+  const KYm = toM([0, 1])[1], KXm2 = toM([1, 0])[0];
+  // each way must be monotone in latitude (a reversal over REV_M would fold the street onto itself and the binning by latitude would be wrong)
+  const REV_M = 30; let worstRev = 0;
+  for (const w of ways) {
+    // reversal of a way = min(largest fall back from a running maximum, largest rise from a running minimum): 0 for a monotone way in either direction
+    let mx = -Infinity, mn = Infinity, dd = 0, ru = 0;
+    for (const p of w) { const y = p[1] * KYm; mx = Math.max(mx, y); mn = Math.min(mn, y); dd = Math.max(dd, mx - y); ru = Math.max(ru, y - mn); }
+    worstRev = Math.max(worstRev, Math.min(dd, ru));
+  }
+  if (worstRev > REV_M) throw new Error('carve: ' + name + ' is not monotone in latitude (a way turns back by ' + worstRev.toFixed(0) + ' m)');
+  // dense samples (every ~10 m) binned by latitude (25 m); the longitude of a bin = the mean of its samples
+  const bins = new Map();
+  for (const w of ways) for (let i = 0; i + 1 < w.length; i++) {
+    const a = w[i], b = w[i + 1], L = Math.hypot((b[0] - a[0]) * KXm2, (b[1] - a[1]) * KYm), n = Math.max(1, Math.ceil(L / 10));
+    for (let k = 0; k <= n; k++) { const t = k / n, bi = Math.round((a[1] + (b[1] - a[1]) * t) * KYm / 25); let l = bins.get(bi); if (!l) bins.set(bi, l = []); l.push(a[0] + (b[0] - a[0]) * t); }
+  }
+  const keys = [...bins.keys()].sort((p, q) => q - p);                       // north to south
+  let spread = 0, gap = 0;
+  const line = keys.map((k, i) => {
+    const l = bins.get(k); spread = Math.max(spread, (Math.max(...l) - Math.min(...l)) * KXm2);
+    if (i) gap = Math.max(gap, keys[i - 1] - k);
+    return [l.reduce((s, v) => s + v, 0) / l.length, k * 25 / KYm];
+  });
+  if (gap > 3) throw new Error('carve: ' + name + ' has a gap of ' + gap + ' bins (25 m) in its centerline');
+  if (spread > 150) throw new Error('carve: ' + name + ': a bin mixes ways ' + spread.toFixed(0) + ' m apart (not just two carriageways)');
+  // extend both ends along the bearing of their last ~800 m
+  const ext = (pts, atEnd) => {
+    const p = atEnd ? pts[pts.length - 1] : pts[0]; let acc = 0, q = p;
+    for (let i = 1; i < pts.length && acc < 800; i++) { const a = atEnd ? pts[pts.length - i] : pts[i - 1], b = atEnd ? pts[pts.length - i - 1] : pts[i]; if (!b) break; acc += Math.hypot((b[0] - a[0]) * KXm2, (b[1] - a[1]) * KYm); q = b; }
+    const dx = (p[0] - q[0]) * KXm2, dy = (p[1] - q[1]) * KYm, L = Math.hypot(dx, dy);
+    return { pt: [p[0] + dx / L * extM / KXm2, p[1] + dy / L * extM / KYm], bearing: Math.round(Math.atan2(dx, dy) * 180 / Math.PI) };
+  };
+  const eN = ext(line.slice().reverse(), true), eS = ext(line, true);
+  const full = [eN.pt, ...line, eS.pt];
+  return { line, full, ways: ways.length, bins: line.length, spread: Math.round(spread), northBearing: eN.bearing, southBearing: eS.bearing, lengthM: Math.round(line.slice(1).reduce((s, p, i) => s + Math.hypot((p[0] - line[i][0]) * KXm2, (p[1] - line[i][1]) * KYm), 0)) };
+}
+for (const cv of EDITS.carve || []) {
+  const into = mos.find((m) => plainName(m.rawName) === cv.into);
+  const from = cv.from.map((n) => mos.find((m) => plainName(m.rawName) === n));
+  if (!into) throw new Error('carve: the target area ' + cv.into + ' is not an area (check the merge that creates it)');
+  if (from.some((p) => !p)) throw new Error('carve: not found: ' + cv.from.filter((n, i) => !from[i]).join(', '));
+  const cl = streetCenterline(cv.street, 40000);
+  const side = cv.side || 'west';
+  if (side !== 'west' && side !== 'east') throw new Error('carve: side must be west or east');
+  // the half-plane polygon: the extended line + two corners 1 degree beyond the far side (the line is monotone in latitude, so the ring is simple)
+  const f = cl.full, lonFar = side === 'west' ? Math.min(...f.map((p) => p[0])) - 1 : Math.max(...f.map((p) => p[0])) + 1;
+  const ring = [...f, [lonFar, f[f.length - 1][1]], [lonFar, f[0][1]], f[0]];
+  const res = pyCarve({ op: 'carve', west: ring, parts: from.map((m) => ({ name: plainName(m.rawName), geom: m.rings })), target: into.rings });
+  const km = (v) => Math.round(v * 1000) / 1000;
+  log('edit: carve', cv.street, '(' + cl.ways + ' ways, ' + cl.bins + ' bins, ' + cl.lengthM + ' m, monotone in latitude, carriageways at most ' + cl.spread + ' m apart; end bearings N ' + cl.northBearing + ', S ' + cl.southBearing + ' deg) ->', cv.into);
+  const rep = { street: cv.street, into: cv.into, side, from: [], cut: res.cut.map((l) => l.map(rpt)), northBearing: cl.northBearing, southBearing: cl.southBearing, lengthM: cl.lengthM };
+  from.forEach((m, i) => {
+    const r = res.parts[i];
+    if (r.westKm2 <= 0) throw new Error('carve: ' + r.name + ' has nothing on the ' + side + ' side of ' + cv.street);
+    rep.from.push({ name: r.name, srcKm2: km(r.srcKm2), carvedKm2: km(r.westKm2), restKm2: km(r.restKm2), restPieces: r.restPieces, carvedPieces: r.westPieces });
+    log('  ', r.name, 'km2 (exact)', km(r.srcKm2), '->', km(r.restKm2), 'left +', km(r.westKm2), 'to', cv.into, '| pieces: left', r.restPieces, 'carved', r.westPieces);
+    m.rings = r.rest;
+  });
+  into.rings = res.target;
+  rep.targetKm2 = km(res.targetKm2); rep.targetOuter = res.targetOuter; rep.targetHolesBefore = res.targetHolesBefore; rep.targetHolesAfter = res.targetHolesAfter;
+  rep.exactOverlapKm2 = res.overlapKm2; rep.exactGapKm2 = res.gapKm2; rep.exactExtraKm2 = res.extraKm2;
+  log('  ', cv.into, 'km2 (exact)', rep.targetKm2, '| outer rings', res.targetOuter, '| holes', res.targetHolesBefore, '->', res.targetHolesAfter, '| exact overlap / gap / extra km2', res.overlapKm2.toExponential(2), res.gapKm2.toExponential(2), res.extraKm2.toExponential(2));
+  if (res.targetHolesAfter > res.targetHolesBefore) throw new Error('carve: the union of ' + cv.into + ' has ' + (res.targetHolesAfter - res.targetHolesBefore) + ' new hole(s): the borders do not meet exactly (snap needed)');
+  if (cv.expectOuter != null && res.targetOuter !== cv.expectOuter) throw new Error('carve: ' + cv.into + ' has ' + res.targetOuter + ' outer rings, expected ' + cv.expectOuter);
+  if (res.overlapKm2 > 1e-6 || res.gapKm2 > 1e-6 || res.extraKm2 > 1e-6) throw new Error('carve: the pieces do not tile exactly (overlap ' + res.overlapKm2 + ', gap ' + res.gapKm2 + ', extra ' + res.extraKm2 + ' km2)');
+  CARVE_REPORT.push(rep);
+}
+
 
 // rayon of each
 for (const m of mos) {
@@ -327,7 +402,7 @@ if (srcCov) {
 }
 
 // ---------- output per area
-const out = { meta: { cell: CELL, B_KM2, B_LO, B_HI, bbox: BBOX }, areas: [], rayons: [], existing: [], layers: {} };
+const out = { meta: { cell: CELL, B_KM2, B_LO, B_HI, bbox: BBOX }, areas: [], rayons: [], existing: [], layers: {}, edits: { carve: CARVE_REPORT } };
 const rayNames = [...new Set(mos.map((m) => m.rayon))];
 const order = ['Центральный район', 'Адмиралтейский район', 'Василеостровский район', 'Петроградский район', 'Московский район', 'Фрунзенский район', 'Невский район', 'Красногвардейский район', 'Калининский район', 'Выборгский район', 'Приморский район', 'Кировский район', 'Красносельский район', 'Колпинский район', 'Пушкинский район', 'Петродворцовый район', 'Курортный район', 'Кронштадтский район'];
 rayNames.sort((a, b) => (order.indexOf(a) + 100) % 100 - (order.indexOf(b) + 100) % 100);
