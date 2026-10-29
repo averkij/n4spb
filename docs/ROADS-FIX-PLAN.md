@@ -153,7 +153,7 @@ Cross-owner contracts: SURF exposes (a) `buildAreas(..., net)` optional 5th arg,
 * wires-test: S1 changes hL of ways with trolleybus wires (spans use facade rosettes, contact wires the kerb lane): run it after S1 and after F6.
 * Traffic / lane graph: S1 and F1 do not touch lanes; S7(c) changes one OSM way geometry (check drive-test).
 * People nav (`people/nav.js`) and props build from `net.ways` hL/hR: the former pavement medians become asphalt = walkers cross the merged roadway only at the zebras (the west already works this way). Run `node tools/check.mjs people props`.
-* Baked data: every src edit invalidates it; the page falls back to the procedural build (about 10 s slower) until the final `npm run bake`.
+* Baked data: a src edit invalidates the areas whose import closure contains it (docs/BAKE-REVISIONS.md); the page falls back to the procedural build (about 10 s slower) until the final `npm run bake`.
 * S1 pairing guard may leave a handful of paired roads unmerged (rank 1-2 pairs with different names, 12 pairs east): accepted residue, listed by the audit as `median gap<7.5`.
 * F1 relocation can move poles up to 14 m from the stop line: acceptable (the head faces the approach), but the stop-line paint is unchanged.
 

@@ -6,6 +6,6 @@ export const BAKED_REVISIONS = {
   vasilyevsky: 'd4dfd3ab134a72f0290c',
   vladimirsky: '14970360cb4fc427e1de',
 };
-const AREA = typeof document !== 'undefined' ? document.documentElement.dataset.area : undefined;
+const AREA = typeof document !== 'undefined' ? document.documentElement?.dataset?.area : undefined;       // (Node tools stub a bare document: no documentElement there -> 'none')
 /** the revision of THIS page's area; 'none' for an unknown or parked area, which never matches a manifest */
 export const BAKED_REVISION = (AREA && BAKED_REVISIONS[AREA]) || 'none';

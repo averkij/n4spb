@@ -10,7 +10,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function modulesFromSource(src, file, min = 5) {
   const m = src.match(/export const MODULES = \[([\s\S]*?)\n\];/);
   if (!m) throw new Error(`modules-list: MODULES not found in ${file}`);
-  const list = [...m[1].matchAll(/^\s*'([A-Za-z0-9_]+)'/gm)].map((x) => x[1]);
+  // fail closed: every token of the array must be a quoted module name (any quote, any layout); anything else (a spread, a computed entry, a form this parser does not know) is an error,
+  // because a module that is built but never enters the closure would let its later edits slip past the bake revision
+  const body = m[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const name = /(['"`])[A-Za-z0-9_]+\1/g;
+  const list = [...body.matchAll(/(['"`])([A-Za-z0-9_]+)\1/g)].map((x) => x[2]);
+  const rest = body.replace(name, '').replace(/[\s,]/g, '');
+  if (rest) throw new Error(`modules-list: MODULES of ${file} holds something that is not a plain quoted name: ${JSON.stringify(rest.slice(0, 60))}`);
   if (list.length < min) throw new Error(`modules-list: MODULES of ${file} parsed to ${list.length} names`);
   return list;
 }

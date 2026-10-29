@@ -25,7 +25,7 @@ export function renderRevisionModule(map) {
   return `${HEADER}
 export const BAKED_REVISIONS = {
 ${ids.map((id) => `  ${keyText(id)}: '${map[id]}',\n`).join('')}};
-const AREA = typeof document !== 'undefined' ? document.documentElement.dataset.area : undefined;
+const AREA = typeof document !== 'undefined' ? document.documentElement?.dataset?.area : undefined;       // (Node tools stub a bare document: no documentElement there -> 'none')
 /** the revision of THIS page's area; 'none' for an unknown or parked area, which never matches a manifest */
 export const BAKED_REVISION = (AREA && BAKED_REVISIONS[AREA]) || 'none';
 `;

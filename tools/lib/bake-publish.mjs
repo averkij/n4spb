@@ -29,7 +29,7 @@ export function purgeProducts(dir, keep) {
 
 /** delete the .part / .tmp files of a directory (a crashed bake); the caller holds the bake lock */
 export function removeUnfinished(dir) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) if (e.isFile() && /.(part|tmp)$/.test(e.name)) fs.unlinkSync(path.join(dir, e.name));
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) if (e.isFile() && /\.(part|tmp)$/.test(e.name)) fs.unlinkSync(path.join(dir, e.name));
 }
 
 /**
