@@ -291,7 +291,7 @@ REGISTRY.admiralty = {
 
 // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v): map area 48, the Vasilyevsky island with the okrug 7 / Gavan side - the Strelka with the Exchange and the Rostral columns, the Kunstkamera, the Twelve Collegia, the Menshikov
 // Palace, the Academy of Arts, the Andrew Cathedral, the Smolensky cemetery, the Smolenka and the Sea Terminal - plus the Petrograd-side bank of the Neva and the Neva Bay south of the island. The cut of tools/area-shape.mjs
-// --k 48 --js vasilyevsky (land outline plus water zones, 63 rectangles, 11.23 km2, plus 8 hand-added water rectangles VO64 .. VO71, 0.33 km2, and 4 of shore land VO72 .. VO75, 0.064 km2; the names carry the prefix VO because V.. belongs to Vladimirsky). No ST rectangle: no railway station (one purple Zhiguli at the spawn, 13.4).
+// --k 48 --js vasilyevsky (land outline plus water zones, 63 rectangles, 11.23 km2, plus 8 hand-added water rectangles VO64 .. VO71, 0.33 km2, 4 of shore land VO72 .. VO75, 0.064 km2, and 3 of Gulf water VO76 .. VO78, 0.038 km2; the names carry the prefix VO because V.. belongs to Vladimirsky). No ST rectangle: no railway station (one purple Zhiguli at the spawn, 13.4).
 REGISTRY.vasilyevsky = {
   id: 'vasilyevsky', page: 'vasilyevsky.html', bake: 'baked/vasilyevsky/', requireBake: true,
   title: 'Васильевский–Округ № 7', titleEn: 'Vasilyevsky–Okrug № 7',
@@ -380,6 +380,10 @@ REGISTRY.vasilyevsky = {
       { name: 'VO73', x0: -6240, x1: -6080, z0: 880, z1: 960 },
       { name: 'VO74', x0: -6160, x1: -6000, z0: 960, z1: 1040 },
       { name: 'VO75', x0: -6080, x1: -5840, z0: 1040, z1: 1120 },
+      // VO76 .. VO78: six cells (0.038 km2: five of the Gulf, one of the terminal's mole that they would enclose) round the west tip of the Sea Terminal (x -6742, z 635): they join the two Gulf inlets of the terminal (the berth slips at x -6660 .. -6580, z 640 .. 680 and at x -6560 .. -6510, z 480 .. 560) to the Bay band inside the territory (the Gulf ring VO_SEA, environment/vo-sea.js).
+      { name: 'VO76', x0: -6720, x1: -6560, z0: 480, z1: 560 },
+      { name: 'VO77', x0: -6800, x1: -6560, z0: 560, z1: 640 },
+      { name: 'VO78', x0: -6800, x1: -6720, z0: 640, z1: 720 },
   ],
 };
 

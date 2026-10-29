@@ -458,13 +458,15 @@ export const WATER = {
   bridgeZones: BRIDGE_ZONES,
   bridgeShades: BRIDGE_SHADES,
   clipLines: [['x', -4420], ['x', -4430], ['x', -5370], ['x', -6070], ['x', -5000], ['z', 1370], ['z', 1720], ['z', 1770]],      // the part seam of the Bolshaya Neva polygons 2:0 / 2:1 across the bay south of the island: their rims overlap by 10 m (2:0 ends on x = -4430, 2:1 begins on x = -4420) and each stood as a quay wall across the water (1.4 km of wall)
-  farSources: ['neva-up', 'neva-down', 'neva-malaya'],
+  farSources: ['neva-up', 'neva-down', 'neva-malaya', 'vo-sea'],
   farCenter: [-4500, -200],             // the middle of the area (the Neva scenery rings are real positions: the window only says how far the far ring reaches)
   farRadius: 6000,                      // the radius of the far scenery
   forcedBanks: [[-2460.8, -1097.5, -2460.7, -1098.7]],      // the 1.2 m corner edge of the Neva polygon beside the Palace Bridge plug
-  openMouths: [],
+  openMouths: [[-6741.7, 634.8, -6842.3, 2102.6]],      // the closing edge of the Neva Bay polygon = the east edge of the Gulf ring (vo-sea.js): water on both sides, no quay wall (1.5 km of it stood across the open water)
   dataWater: [{ id: 'r1576084', key: 'smolenka' }, { id: 'r1576086', key: 'smolenka' }, { id: 'r1576116', key: 'neva' }],
   dataRings: [{ id: 'malaya-neva', key: 'neva', source: 'neva-malaya' },
+    // the Gulf of Finland west of the island (environment/vo-sea.js, the ring VO_SEA of the source): the sea beyond the Sea Terminal and the Gavan, so that the western horizon is water, not flat ground; clipped to the data region like the Malaya Neva
+    { id: 'gulf', key: 'neva', source: 'vo-sea' },
     // the Neva Bay south of the island: the data polygons of the Bolshaya Neva end on the lines z 1370 / 1720 / 1770 (the part seams of the source bake), but the territory goes on to z 1920 (the wedge of rectangles VO56 .. VO63 round the bay):
     // three patches of water fill the gap down to the data region's border (z 2640), so that the bay is water to the edge of the play area (the cut lines are clip lines, no wall)
     { id: 'bay-a', key: 'neva', ring: [-7840, 1370, -6070, 1370, -6070, 2640, -7840, 2640] },

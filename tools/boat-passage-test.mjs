@@ -505,6 +505,8 @@ const ROUTES = {
   vasilyevsky: [
     { name: 'the Mining University reach of the Neva -> the Sea Terminal basin (west pocket)', from: [-4560, 440], to: [-6656, 683] },
     { name: 'the Mining University reach of the Neva -> the Sea Terminal basin (east pocket)', from: [-4560, 440], to: [-6505, 769] },
+    { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (north)', from: [-4560, 440], to: [-6535, 520] },
+    { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (south, round the west tip)', from: [-4560, 440], to: [-6620, 660] },
   ],
 }[AREA] || [];
 {
