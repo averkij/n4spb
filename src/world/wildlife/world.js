@@ -13,7 +13,7 @@ import { BUILDINGS, AREAS, PARKING } from '../data/city.js';
 const hash2 = (a, b) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const ringHas = (o, x, z) => { let ins = false; for (let i = 0, j = o.length - 2; i < o.length; j = i, i += 2) { const xi = o[i], zi = o[i + 1], xj = o[j], zj = o[j + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) ins = !ins; } return ins; };
 /** crown height of a post above the street (quay.js: base y 0.14 + the post body; the pyramid peak is a point: the bird sits on its flat shoulder) */
-const POST_Y = { fontanka: 1.30, griboedov: 1.24, 'swan-canal': 1.24, moika: 1.12, 'winter-canal': 1.09, zhdanovka: 1.24, kryukov: 1.24, admiralty: 1.24, smolenka: 1.24 };
+const POST_Y = { fontanka: 1.30, griboedov: 1.24, 'swan-canal': 1.24, moika: 1.12, 'winter-canal': 1.09, zhdanovka: 1.24, kryukov: 1.24, admiralty: 1.24, smolenka: 1.24, gavan: 1.24 };
 
 export function makeWorld(ctx) {
   const { L } = ctx, svc = ctx.services, phys = ctx.physics;

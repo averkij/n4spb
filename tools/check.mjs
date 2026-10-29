@@ -127,6 +127,46 @@ const BUDGET_AREA = {
     //
     landmarksVOStatues: 176e3,      // measured 153,116 (vo-m3: + 15 %)
   },
+  // Gavan / Morskoy / Dekabristov Island (docs/AREAS.md 15.g): every row is the MEASURED value of `node tools/area.mjs <area> tools/check.mjs --area-modules` (the integration round of the area-gdm effort) + about 15 %.
+  gavan: { environment: 1.10e6, streets: 796e3, city: 704e3, props: 165e3,      // measured in `check --area-modules` (954,192 / 691,718 / 612,005 / 142,752) + 15 %
+    landmarksGavan: 70e3,      // measured 60,323 (node tools/area.mjs gavan tools/check.mjs --area-modules, all seven groups, knock bays included) + 15 %
+    //
+    landmarksPribaltiyskaya: 121e3,      // measured 104,868 (hotel, Peter I, Creators of the Fleet, Kirov memorial, Nakhimov, Waterville; lamps / benches / planters / the Kirov wall are knock records) + 15 %
+    //
+    landmarksKirova: 218e3,      // measured in vasilyevsky 189,336 (the same module and groups) + 15 %
+    //
+    landmarksSevkabel: 206e3,      // measured 178,458 (192,892 in vasilyevsky minus the Baltic Shipyard cranes) + 15 %
+    //
+    landmarksSeaTerminal: 73e3,      // measured 63,258 (the terminal + D-2 + torpedo boat + Lenexpo hoarding; 29,383 in vasilyevsky: the terminal alone) + 15 %
+    //
+    landmarksModernVO: 12.1e3, landmarksSredny: 55e3, landmarksVOStatues: 22.4e3,      // measured 10,507 / 47,595 / 19,406 (the groups that lie in this territory) + 15 %
+    //
+    bridges: 83e3,      // measured 71,830 (gdm cluster B: the WHSD part of this extent + 300 m: at-grade stretch, cutting, viaduct to the Korabelny pylon 36,688; Nalichny, Novo-Andreevsky; the Palace Bridge that every area builds 14,540; the Shkipersky Bridge of cluster G is not in it yet) + 15 %
+  },
+  morskoy: { environment: 877e3, streets: 562e3, city: 395e3, props: 94e3,      // measured in `check --area-modules` (762,270 / 488,284 / 343,223 / 81,186) + 15 %
+    landmarksMarineFacade: 104e3,      // measured 89,587 in the area build (89,945 alone; the source 89,591: the fence pieces, gallery glass, masts, kiosks and booths are knock bays / records, same drawing) + 15 %
+    //
+    landmarksPribaltiyskaya: 121e3,      // measured 104,868 (the same module and six groups as in gavan) + 15 %
+    //
+    landmarksVOStatues: 11.2e3,      // measured 9,746 (the polar explorers' monument only) + 15 %
+    //
+    bridges: 92e3,      // measured 79,384 (gdm cluster B bridgesMo: Nalichny, Novo-Andreevsky, Korablestroiteley, 1st - 4th Smolensky, the WHSD from the portals to z 580 incl. the at-grade stretch 30,382; the Palace Bridge that every area builds 14,540) + 15 %
+    //
+    // (bridgesMo is in the `bridges` row above)
+  },
+  dekabristov: { environment: 1.172e6, streets: 718e3, city: 712e3, props: 141e3,      // measured in `check --area-modules` (1,018,384 / 623,561 / 618,655 / 122,448) + 15 %
+    landmarksSmolensky: 320e3,      // measured in vasilyevsky 277,547 (the same six groups: overlap parity, docs/AREAS.md 15.g) + 15 %
+    //
+    landmarksVOStatues: 17e3,      // measured 14,748 (the Armenian church, the Komitas monument, the polar explorers) + 15 %
+    //
+    landmarksDekabristov: 100e3,      // measured 86,676 in `check --area-modules` (the cemeteries, the siege memorial, the garden, the Volodin fountain: docs/gdm-D1.md) + 15 %
+    //
+    landmarksPrimorskaya: 3.4e3,      // measured 2,898 (the glazed vestibule hall + block, the square furniture, the two Smolenka bank flights) + 15 %
+    //
+    landmarksFill: 47.1e3,      // measured 40,932 (planned roadbeds, 21 sites: frames / foundation fields / cranes / yards / the batching plant, 473 hoarding bays, 489 knock records) + 15 %
+    //
+    bridges: 102e3,      // measured 88,356 (gdm cluster B: Uralsky, Smolensky, Nalichny, Novo-Andreevsky, Korablestroiteley, 1st - 4th Smolensky, the WHSD portals, Betancourt 18,306, Serny, the WHSD fairway bridge 5,066; the Palace Bridge that every area builds 14,540) + 15 %
+  },
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;
 const BUDGET = { environment: 500e3, streets: 500e3, city: 600e3, landmarksA: 400e3, landmarksB: 500e3, landmarksC: 500e3, landmarksD: 300e3, traffic: 400e3, props: 300e3, people: 200e3, wildlife: 100e3,

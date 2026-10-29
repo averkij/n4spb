@@ -23,6 +23,9 @@ const ALL = [
     note: 'perimeter fences only; the pavilions stay the generic city\'s by decision of the lead' },
 ];
 export const GROUPS_LIST = ALL.filter((g) => ON.includes(g.key));
+// Gavan (docs/gdm-G.md): the claim is PER AREA. `ON` above is the default of Vasilyevsky (the terminal alone); an area that claims more takes GROUPS_ALL for its GROUPS.landmarksSeaTerminal and builds its rings with
+// pavedRingsFor(keys) / keepOutFor(keys) (src/areas/gavan/rings.js): the D-2, the torpedo boat and the Lenexpo fence lie in Gavan's territory. The exports of the default (GROUPS_LIST, PAVED_RINGS, KEEP_OUT) are unchanged.
+export const GROUPS_ALL = ALL;
 
 // Ground that this module paves or lays itself (claims.js: no trunks, hedges, beds or grass tufts there; listed only while the module is in the build list):
 //  * the asphalt floor under / in front of the NE deck (frame T u 3.4 .. 117.5, v -21 .. -0.3),
@@ -31,13 +34,15 @@ export const GROUPS_LIST = ALL.filter((g) => ON.includes(g.key));
 const tw = (u, v) => [-6542.4 + 0.87327 * u - 0.48723 * v, 652.9 + 0.48723 * u + 0.87327 * v];
 const bw = (a, b) => { const c = Math.cos(-0.5236), s = Math.sin(-0.5236); return [-6565.1 + c * a + s * b, 354.5 - s * a + c * b]; };
 const dw = (a, b) => { const c = Math.cos(-1.1361), s = Math.sin(-1.1361); return [-6600.65 + c * a + s * b, -59.75 - s * a + c * b]; };
-export const PAVED_RINGS = [
+export const pavedRingsFor = (on) => [
   [tw(3.4, -21), tw(117.5, -21), tw(117.5, -0.3), tw(3.4, -0.3)],
-  ...(ON.includes('torpedo-boat') ? [[bw(-4.9, -13), bw(8.9, -13), bw(8.9, 13), bw(-4.9, 13)]] : []),
-  ...(ON.includes('d2-narodovolets') ? [Array.from({ length: 12 }, (_, i) => { const a = i / 12 * Math.PI * 2, p = dw(-32.9 + Math.cos(a) * 3.2, -4.8 + Math.sin(a) * 3.2); return p; })] : []),
+  ...(on.includes('torpedo-boat') ? [[bw(-4.9, -13), bw(8.9, -13), bw(8.9, 13), bw(-4.9, 13)]] : []),
+  ...(on.includes('d2-narodovolets') ? [Array.from({ length: 12 }, (_, i) => { const a = i / 12 * Math.PI * 2, p = dw(-32.9 + Math.cos(a) * 3.2, -4.8 + Math.sin(a) * 3.2); return p; })] : []),
 ];
+export const PAVED_RINGS = pavedRingsFor(ON);
 // no generated landing stage, boat or pontoon at the five berths in front of the terminal and at the quay corner of the D-2 (the hull stands on land, the bow is 6 m from the Gavan quay)
-export const KEEP_OUT = [
+export const keepOutFor = (on) => [
   { id: 'berths', c: [-6510.4, 776.1], ax: [0.8733, 0.4872], hl: 125, hw: 30 },
-  ...(ON.includes('d2-narodovolets') ? [{ id: 'd2-bow', c: [-6638, -44], r: 22 }] : []),
+  ...(on.includes('d2-narodovolets') ? [{ id: 'd2-bow', c: [-6638, -44], r: 22 }] : []),
 ];
+export const KEEP_OUT = keepOutFor(ON);

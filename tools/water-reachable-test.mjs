@@ -1,5 +1,5 @@
 // tools/water-reachable-test.mjs - THE RULE FOR CHECKING "water is reachable" (CLAUDE.md "World rules", docs/AREAS.md 13.7), CPU only, no GPU, no bake:
-//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky|vasilyevsky> tools/water-reachable-test.mjs [--quick]            npm run water   (the five live areas)
+//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky|vasilyevsky|gavan|morskoy|dekabristov> tools/water-reachable-test.mjs [--quick]            npm run water   (the eight live areas)
 // It builds the REAL modules of the area headlessly (tools/lib/headless-world.mjs: environment, bridges, streets, the landmark modules ... everything that owns colliders; no city / people / traffic) and proves
 // with the area's real colliders, the real Physics + Player and the real car handling (drive/handling.js):
 //   1  no collider and no territory predicate classifies a water cell as blocked: every sampled water cell in the play area is inside the territory, reachable for the car (handling.blocked), has a finite ground
@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
 
 const QUICK = process.argv.includes('--quick');
+const GDM = ['gavan', 'morskoy', 'dekabristov'].includes(process.env.AREA || '');      // the three areas of the area-gdm effort (the one-post-bay skip of pickFence is keyed to them)
 const AREA = process.env.AREA || 'palace';
 let checks = 0, fails = 0;
 const ONLY = process.env.ONLY || null;      // ONLY=<text>: run only the checks whose name contains the text (a development aid)
@@ -224,6 +225,7 @@ function pickFence(filter = () => true, tries = 400, loose = false, stable = fal
   for (let i = 0; i < fs.length && tries > 0; i++) {
     const r = stable ? fs[i] : fs[(i * 7919) % fs.length]; if (!filter(r)) continue; tries--;
     const w = towardWater(r); if (!w) continue;
+    if (!loose && GDM && (r.w || 2) < 0.5) continue;      // (gdm cluster B) a one-post bay (w ~ 0: the lone post at the gate of a quay descent whose steps run down 8 m and more) is no fence line: the water IS reachable by the steps, but not within the 4.5 m of the walks below
     const len = r.w || 2, ex = new Set(r.items);
     // the neighbours of the same fence line are allowed (the walk is straight at the bay), nothing else may stand in the way, on either side
     const near = ph.querySolids(r.x, r.z, 4); for (const it of near) if (it.fence) ex.add(it);
@@ -341,6 +343,7 @@ const ALLOW = [
   { why: 'the barrier kerbs of the humped long decks of Vasilyevsky-Okrug 7 (Birzhevoy, Tuchkov: a 0.3 m kerb in slices of about 3 m, standing 0.25 m below the deck and kerbH over it: at most 1.3 m between the foot and the top of a slice on the slope, a kerb and not a 2 m wall; the deck itself lies up to 4 m over the street, so the old absolute top limit of 2.5 m does not fit them)', ok: (m, it, t) => m === 'bridges' && t.thin <= 0.31 && t.len >= 1.4 && t.len <= 3.01 && it.y1 - it.y0 <= 1.3 },
   { why: 'the lawn hedges of the environment, cut open where a foot path leads onto a bridge (bridges/gaps.js openHedgeGaps: the same 0.7 m x 1.1 m box, two pieces)', ok: (m, it, t) => m === 'bridges' && it.y0 === 0 && Math.abs(it.y1 - 1.1) < 0.01 && t.thin >= 0.6 && t.thin <= 0.8 },
   { why: 'the two granite obelisks at the south entrance of the Troitsky Bridge (monument blocks 2 x 2 m, 8 m tall, on the Mars Field embankment: a structure, not a fence; the audit below names them)', ok: (m, it) => m === 'landmarksTroitsky' && it.type === 'box' && it.y1 >= 7 },
+  { why: 'the two through trusses of the Shkipersky Bridge (landmarksGavan/bridge.js: the galvanised Mabey trusses, 24.4 m x 0.55 m x 2.7 m, ARE the structure of the bridge, decision docs/gdm-G.md; the W-beam, the divider and the outer rail beside them are knock bays)', ok: (m, it, t) => m === 'landmarksGavan' && it.y1 >= 2.5 && t.thin <= 0.6 && t.len >= 20 && t.len <= 26 },
   { why: 'the café terrace fences of props/stands.js (1 m, a terrace beside a building)', ok: (m) => m === 'props' },
   { why: 'the bollard rings round the Kutuzov / Barclay monuments (landmarksF)', ok: (m, it) => m === 'landmarksF' && it.type === 'cyl' },
 ];
@@ -447,7 +450,7 @@ if (AREA === 'palace') {
       car.reset(f.cx, f.cz, 0); if (Math.abs(car.y - (f.top + 0.03)) > 1e-6) { bad.push(['place', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2)]); continue; }
       if (big) for (let t = 0; t < 1; t += 1 / 60) car.step(1 / 60, idle);
       if (big && car.y < f.top - 0.3) bad.push(['stay', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2)]);
-      if (big) {
+      if (big && !floorItems.includes(f)) {      // (the floor of an undrawn OSM bridge lies AT the road level: nothing to drop from, so no 'land' event)
         car.reset(f.cx, f.cz, 0); car.y = 0.03; let ev = false;      // dropped from the road level
         for (let t = 0; t < 3; t += 1 / 60) { car.step(1 / 60, idle); if (car.events.some((e) => e.type === 'land')) ev = true; }
         if (car.y < f.top - 0.3 || car.fall) bad.push(['drop', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2), th]); else if (ev) landed++;
@@ -455,7 +458,7 @@ if (AREA === 'palace') {
       const p = walker(f.cx, f.cz); p.pos.y = f.top + 0.3; for (let t = 0; t < 1; t += 1 / 60) { p.time += 1 / 60; p.update(1 / 60); }
       if (Math.abs(p.pos.y - f.top) > 0.1) bad.push(['walker', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +p.pos.y.toFixed(2)]);
     }
-    assert(n >= 3 && bad.length === 0 && (landed >= 1 || !floors.some((q) => Math.min(q.hw, q.hd) >= 3.5)), `${bad.length} of ${n} floors failed (${landed} landings with the event): ${JSON.stringify(bad.slice(0, 5))}`);
+    assert(n >= 3 && bad.length === 0 && (landed >= 1 || !floors.some((q) => Math.min(q.hw, q.hd) >= 3.5 && !floorItems.includes(q))), `${bad.length} of ${n} floors failed (${landed} landings with the event): ${JSON.stringify(bad.slice(0, 5))}`);
   });
 }
 
@@ -551,9 +554,13 @@ if (built.includes('landmarksTauride')) {
     if (S.kind === 'walk' && S.item && !S.item.sticky && S.y <= 0.3) { if (S.y > 0.03) return S.y; if (th < -0.2 && S.y > th + 0.05) return S.y + 0.03; }
     return th < -0.2 ? th + 0.03 : 0.03;
   };
-  const DRIVABLE = new Set(['primary', 'secondary', 'tertiary', 'unclassified', 'residential']);
-  const bridges = ROADS.filter((r) => r.bridge && !r.tunnel && DRIVABLE.has(r.hw) && /мост/i.test(r.name || ''));
-  check(`9 every named drivable OSM bridge of the area (${bridges.length} ways) has a surface at the level of the road over every water cell of its way: the car never drops to the bed`, () => {
+  const DRIVABLE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link']);
+  // every drivable bridge=yes way, named or not (the Makarova embankment overpasses of k51 are called "набережная Макарова" or carry no name: the old /мост/i filter did not see them)
+  // Two embankment ways of the Griboedov canal (palace + admiralty, the Kazan bridge region) are drivable bridge=yes ways over water that no module draws: found by the widened filter, they predate the three new areas and
+  // changing them would change two old areas (the owner decides): listed here so that the widened check stays green for them and fails for every NEW case. See docs/AREAS.md 15.g (fix round).
+  const KNOWN_OLD = new Set(['w243947052', 'w307823510']);
+  const bridges = ROADS.filter((r) => r.bridge && !r.tunnel && DRIVABLE.has(r.hw) && !KNOWN_OLD.has(r.id));
+  check(`9 every drivable OSM bridge of the area (${bridges.length} ways) has a surface at the level of the road over every water cell of its way: the car never drops to the bed`, () => {
     const bad = []; let wet = 0;
     for (const r of bridges) {
       let fall = 0, first = null;

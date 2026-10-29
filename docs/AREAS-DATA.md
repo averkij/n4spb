@@ -159,3 +159,9 @@ read the same registry remap, so the headless tools see the same table.
 Add a registry row (`play` rectangles with names), run the cut with `--area <id> --out src/areas/<id>/data`, `node tools/area-data-test.mjs --area <id>`; the band-parity check compares the first
 rectangle with the strip's OLD rectangle, so it only applies to an area that overlaps the strip (otherwise the band is empty and the check is vacuous). Keep the commit of the source in the header: the
 copies of the source's landmark modules (`landmarksNorthFull`, ...) are pinned to the same commit.
+
+## 9. Dekabristov Island: data from a merged source (the one exception)
+
+`src/areas/dekabristov/data` is cut from a MERGED directory: the source bake 0568f7af plus a scratch bake with five regions DK1 .. DK5 fetched from OpenStreetMap on 2026-10-29 (the source never baked the island's west two thirds). The
+header of `city.js` says "git commit unknown" and `area-data-test` skips the regeneration check for this area. Recipe, region list and fetch log: [research/dekabristov-data.md](research/dekabristov-data.md). Never re-cut the other areas
+from the merged directory (15 of its old part files differ from the source).

@@ -10,9 +10,14 @@ import { DYNAMIC_IMPORTS, isAllowedServed } from './lib/closure-rules.mjs';
 import { createRevisionContext, revisionsOf, liveAreas } from './baked-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky'];
+const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov'];
 /** closure sizes (hashed files) of the design round's scanner at v3.1.0: palace 591, smolny 414, vladimirsky 447, admiralty 614, vasilyevsky 764. The band is wide upwards: the whole-folder rules over-include. */
-const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasilyevsky: 764 };
+const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasilyevsky: 764,
+  // gavan / morskoy / dekabristov (docs/AREAS.md 15.g): no design-round scanner existed for them; these are the hashed-file counts of the finished areas at v4.0.0 (the bake log of the first bake of all eight areas).
+  gavan: 589, morskoy: 431, dekabristov: 468 };
+const SCOUT_UP = {};
+/** areas whose bake does not exist yet, so no headless page load could be recorded (node tools/closure-groundtruth.mjs <id> --record needs a published bake): none since the bake of v4.0.0 (the three fixtures are recorded). */
+const NO_FIXTURE_YET = [];
 const CHANGE = '\n// edit by closure-real-test\n';
 
 export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
@@ -30,25 +35,25 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
   const closuresOf = () => closures || (closures = Object.fromEntries(LIVE.map((id) => [id, scanner.closureOf(root, id, base)])));
   const exclusive = (id) => { const cl = closuresOf(); const only = cl[id].hashed.filter((f) => /\.js$/.test(f) && LIVE.every((o) => o === id || !cl[o].seen.has(f))); return only.find((f) => f.startsWith('src/world/') && !f.includes('/data/')) || only[0]; };
 
-  check('the five live areas of the registry', () => assert.deepEqual(liveAreas(root, base).map((r) => r.id), LIVE));
-  check('all five revisions are distinct 20-hex strings', () => {
+  check('the live areas of the registry (five old ones + gavan, morskoy, dekabristov)', () => assert.deepEqual(liveAreas(root, base).map((r) => r.id), LIVE));
+  check('all revisions are distinct 20-hex strings', () => {
     const r = baseline(); for (const id of LIVE) assert.match(r[id], /^[0-9a-f]{20}$/, id);
-    assert.equal(new Set(Object.values(r)).size, 5);
+    assert.equal(new Set(Object.values(r)).size, LIVE.length);
   });
   check('an exclusive source file of each area moves only that area', () => {
     for (const id of LIVE) { const f = exclusive(id); assert(f, `${id} has no exclusive file`); assert.deepEqual(moves(appended(f)), [id], `${f} (exclusive to ${id})`); }
   });
   check('a comment appended to a vasilyevsky-only file moves only vasilyevsky', () => {
     const f = exclusive('vasilyevsky'); assert.deepEqual(moves(appended(f)), ['vasilyevsky'], f);
-    assert.deepEqual(moves(appended('src/world/landmarksKirova/garden.js')), ['vasilyevsky'], 'the Kirova garden is vasilyevsky-only');
+    assert.deepEqual(moves(appended('src/world/landmarksKirova/garden.js')), ['vasilyevsky', 'gavan'], 'the Kirova garden is listed by vasilyevsky and gavan only (docs/AREAS.md 15.g: the Kirov Palace of Culture lies in both territories)');
   });
   check('the data of palace, smolny.html and index.html each move only their own area', () => {
     assert.deepEqual(moves(appended('src/areas/palace/data/city.js')), ['palace']);
     assert.deepEqual(moves(appended('smolny.html')), ['smolny']);
     assert.deepEqual(moves(appended('index.html')), ['palace']);
-    for (const [id, page] of [['vladimirsky', 'vladimirsky.html'], ['admiralty', 'admiralty.html'], ['vasilyevsky', 'vasilyevsky.html']]) assert.deepEqual(moves(appended(page)), [id], page);
+    for (const [id, page] of [['vladimirsky', 'vladimirsky.html'], ['admiralty', 'admiralty.html'], ['vasilyevsky', 'vasilyevsky.html'], ['gavan', 'gavan.html'], ['morskoy', 'morskoy.html'], ['dekabristov', 'dekabristov.html']]) assert.deepEqual(moves(appended(page)), [id], page);
   });
-  check('engine files move all five: claims.js, baked-world.js, main.js, and the lock entry of three', () => {
+  check('engine files move every live area: claims.js, baked-world.js, main.js, and the lock entry of three', () => {
     assert.deepEqual(moves(appended('src/world/lib/claims.js')), LIVE);
     assert.deepEqual(moves(appended('src/core/baked-world.js')), LIVE);
     assert.deepEqual(moves(appended('src/main.js')), LIVE);
@@ -57,7 +62,7 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
     const other = JSON.parse(base.text('package-lock.json')); other.packages['node_modules/puppeteer-core'] = { ...(other.packages['node_modules/puppeteer-core'] || {}), version: '0.0.1' };
     assert.deepEqual(moves({ 'package-lock.json': JSON.stringify(other, null, 2) }), [], 'an unrelated lock entry moves nothing');
   });
-  check('hashed from outside src/: vendor/rapier and the car logo move all five', () => {
+  check('hashed from outside src/: vendor/rapier and the car logo move every live area', () => {
     assert.deepEqual(moves(appended('vendor/rapier/rapier.js')), LIVE);
     assert.deepEqual(moves({ 'assets/bibliotochka.png': Buffer.concat([base.bytes('assets/bibliotochka.png'), Buffer.from([0])]) }), LIVE);
   });
@@ -68,9 +73,9 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
     assert.deepEqual(moves(appended('strip.html')), []);
     assert.deepEqual(moves(appended('north.html')), []);
   });
-  check('closure sizes are within 0.85x .. 1.25x of the design-round scanner; the engine (in all five) has at least 250 files', () => {
+  check('closure sizes are within 0.85x .. 1.25x of the design-round scanner; the engine (in every area) has at least 250 files', () => {
     const cl = closuresOf();
-    for (const id of LIVE) { const n = cl[id].hashed.length; assert(n >= SCOUT[id] * 0.85 && n <= SCOUT[id] * 1.25, `${id}: ${n} files (expected about ${SCOUT[id]})`); }
+    for (const id of LIVE) { const n = cl[id].hashed.length; assert(n >= SCOUT[id] * 0.85 && n <= SCOUT[id] * (SCOUT_UP[id] || 1.25), `${id}: ${n} files (expected about ${SCOUT[id]})`); }
     const engine = cl.palace.hashed.filter((f) => LIVE.every((id) => cl[id].seen.has(f)));
     assert(engine.length >= 250, `engine ${engine.length}`);
   });
@@ -90,6 +95,7 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
   check('every file that a recorded headless page load fetched is inside the closure of its area', () => {
     for (const id of LIVE) {
       const f = path.join(root, 'tools/fixtures/closure-loads', `${id}.json`);
+      if (NO_FIXTURE_YET.includes(id) && !fs.existsSync(f)) continue;   // pending (see NO_FIXTURE_YET); a fixture that does exist is checked like the others
       assert(fs.existsSync(f), `the recorded load of ${id} is missing (node tools/closure-groundtruth.mjs ${id} --record)`);
       const rec = JSON.parse(fs.readFileSync(f, 'utf8')), seen = closuresOf()[id].seen;
       assert(rec.files.length > 100, `${id}: only ${rec.files.length} recorded files`);

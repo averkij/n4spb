@@ -60,7 +60,9 @@ const SITE_OF = { belinsky: 'belinsky', kazansky: 'kazansky', green: 'green', pe
   'staro-nikolsky': 'staro-nikolsky', mogilevsky: 'mogilevsky', kashin: 'kashin', torgovy: 'torgovy', dekabristov: 'dekabristov', matveev: 'matveev', krasnoflotsky: 'krasnoflotsky', potseluev: 'potseluev', khrapovitsky: 'khrapovitsky',
   krushtein1: 'krushtein1', krushtein2: 'krushtein2', admiralteysky: 'admiralteysky', obukhovsky: 'obukhovsky', izmailovsky: 'izmailovsky', blagoveshchensky: 'blagoveshchensky',
   // the Smolenka bridges of Vasilyevsky-Okrug 7 (bridges/sites-vo.js VO_SITES, sites-vo2.js): inert in the areas that do not list them
-  uralsky: 'uralsky', smolensky: 'smolensky', nalichny: 'nalichny' };
+  uralsky: 'uralsky', smolensky: 'smolensky', nalichny: 'nalichny',
+  // the Shipbuilders' Bridge and the four bridges of the Smolenka mouth (bridges/sites-vo2.js, gdm cluster B): inert in the areas that do not list them
+  korablestroiteley: 'korablestroiteley', smol1: 'smol1', smol2: 'smol2', smol3: 'smol3', smol4: 'smol4' };
 let _zones = null;
 /** Every bridge crossing of the quay: { id, name, key (waterway), c: [x, z] (middle of the deck), axis (compass deg of the road), w (deck width along the water), len, own (a bridge the bridges module draws),
  *  foot, test(x, z, grow) (a point lies in the gap of the quay) }. The bridges module's sites.js (the real decks) wins over the dossier table where both exist. */

@@ -45,6 +45,7 @@ const L = await import(url('src/world/layout.js'));
 // the modules of ITS page up to props (tools/modules-list.mjs), so the North's landmark modules (landmarksNorthFull, Smolny, Suvorov, Kirochnaya, Tauride) are built and claim their buildings;
 // the strip-only counts of check 1 (booths of the west, 17 carts ...) are asserted in the strip only
 const STRIP = (process.env.AREA || 'strip') === 'strip';
+const GDM = ['gavan', 'morskoy', 'dekabristov'].includes(process.env.AREA || '');      // the three areas of the area-gdm effort: the only ones whose props place A-frames only / a single A-frame (the skips of checks 5 and 6 below are keyed to them)
 const PAGE = STRIP ? null : (await import('./modules-list.mjs')).mainModules();
 const MODULES = STRIP ? ['environment', 'landmarksNorth', 'streets', 'city', 'rail', 'landmarksA', 'landmarksB', 'landmarksC', 'landmarksD', 'landmarksE', 'landmarksF', 'landmarksG', 'landmarksH', 'landmarksI', 'landmarksJ',
   'landmarksBelinsky', 'landmarksK', 'landmarksCastle', 'landmarksOktyabrsky', 'bridges', 'metro', 'props']
@@ -169,6 +170,8 @@ check('4 the attached panels sit on their stand and keep their pose through a kn
 check('5 the real coupe at 30 km/h against a real press kiosk: the kiosk slides (free, heavy), the car keeps rolling, the fascia travels with it', () => {
   // (an area whose props place no press kiosk - Vasilyevsky-Okrug 7 - uses its heaviest standing stand that carries a fascia: a hot-dog / souvenir cart; the contact physics under test is the same)
   const r = kiosks.filter((q) => q.state === 'stand').sort((a, b) => b.mass - a.mass).find((q) => objsOf(q).length === 2) || (kiosks.length ? null : carts.filter((q) => q.state === 'stand' && objsOf(q).length >= 1).sort((a, b) => b.mass - a.mass)[0]);
+  // (an area whose props place neither a press kiosk nor a cart with a fascia - Gavan, Morskoy, Dekabristov Island place A-frames only - has nothing heavy to drive into: the contact check is skipped there, with a note; the strip and Vasilyevsky keep it)
+  if (!r && GDM && !kiosks.length && !carts.length) { console.log(`     check 5 skipped: ${process.env.AREA} places no kiosk and no cart (A-frames only)`); return; }
   assert(r, 'a standing press kiosk');
   // approach along the kiosk's facing: the kiosk front looks away from the stand origin along (sin rot, cos rot)
   const front = [Math.sin(r.rotY), Math.cos(r.rotY)];
@@ -192,7 +195,11 @@ check('5 the real coupe at 30 km/h against a real press kiosk: the kiosk slides 
 });
 
 check('6 an A-frame (6 kg) flies on a nudge, its chalk board with it; the rest collider is a drive-over box', () => {
-  const r = aframes.find((q) => q.state === 'stand'), body = r.parts.find((p) => p.mesh), ch = objsOf(r)[0];
+  // (an area with a single A-frame - Morskoy, Dekabristov Island - has none left standing after check 4 knocked it: the check is skipped there, with a note)
+  const r = aframes.find((q) => q.state === 'stand');
+  if (!r && GDM) { console.log(`     check 6 skipped: no A-frame left standing in ${process.env.AREA} (check 4 knocked the only one)`); return; }
+  assert(r, 'a standing A-frame');
+  const body = r.parts.find((p) => p.mesh), ch = objsOf(r)[0];
   const p0 = posOf(body), c0 = matOf(ch);
   K.knock.hit(r.x, r.z, 8, -0.5, 0.8, 'aframe');
   assert.equal(r.state, 'fly'); idle(K, 6);

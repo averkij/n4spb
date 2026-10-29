@@ -395,13 +395,18 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
   const platRings = WATER_TABLE.ownerRings.map((w) => (w.ring || w.o || []).flat()).filter((o) => o.length >= 6);
   const inRing = (o, x, z) => { let c = false; for (let i = 0, j = o.length / 2 - 1; i < o.length / 2; j = i++) { const xi = o[2 * i], zi = o[2 * i + 1], xj = o[2 * j], zj = o[2 * j + 1]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
   const underPlatform = (x, z, w) => platRings.some((o) => inRing(o, x, z)) && ph.groundHeight(x, z, 1e9, false) > w + 0.3;
+  // n4spb (area-gdm, Morskoy): a MOORED SHIP is a hull box (a service's `ships`: { c, ax, L, B }, e.g. the two liners of the Marine Facade, 293 x 32 m): its drawn hull crosses the waterline along its sides only, and the middle of a 32 m beam is 16 m
+  // from them. A solid cell inside such a footprint is the ship, so the "drawn within 6 m" reach is the beam + 6 m there (the corners of the box at the tapered bow and stern are up to a beam from the hull lines; the hull is still tested: no hull drawn near, still a wall of water).
+  const hulls = [];
+  for (const sv of Object.values(ctx.services || {})) for (const sh of (sv && Array.isArray(sv.ships) ? sv.ships : [])) if (sh && sh.c && sh.ax && sh.L && sh.B) hulls.push(sh);
+  const hullReach = (x, z) => { for (const h of hulls) { const dx = x - h.c[0], dz = z - h.c[1], al = dx * h.ax[0] + dz * h.ax[1], pe = -dx * h.ax[1] + dz * h.ax[0]; if (Math.abs(al) <= h.L / 2 + 3 && Math.abs(pe) <= h.B / 2 + 3) return Math.ceil(h.B) + 6; } return 6; };
   const bad = new Map();
   for (let k = 0; k < solid.length; k++) {
     if (!solid[k] || !isWet(k) || Dwet[k] < 2.5) continue;
     if (underPlatform(cx(k), cz(k), wl[k])) continue;
     const x = cx(k), z = cz(k); if (!L.waterwayAt(x, z)) continue;      // (a waterway: the ponds of the gardens have islands, rocks and trees of their own)
-    let near = false;
-    for (let dz = -6; dz <= 6 && !near; dz++) for (let dx = -6; dx <= 6; dx++) if (drawn.has(key(x + dx, z + dz))) { near = true; break; }
+    let near = false; const R = hulls.length ? hullReach(x, z) : 6;
+    for (let dz = -R; dz <= R && !near; dz++) for (let dx = -R; dx <= R; dx++) if (drawn.has(key(x + dx, z + dz))) { near = true; break; }
     if (!near) { const c = Math.floor(x / 20) + ',' + Math.floor(z / 20), e = bad.get(c) || { n: 0, x, z, ids: new Set() }; e.n++; bad.set(c, e); }
   }
   const total = [...bad.values()].reduce((a, e) => a + e.n, 0);
@@ -507,6 +512,10 @@ const ROUTES = {
     { name: 'the Mining University reach of the Neva -> the Sea Terminal basin (east pocket)', from: [-4560, 440], to: [-6505, 769] },
     { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (north)', from: [-4560, 440], to: [-6535, 520] },
     { name: 'the Mining University reach of the Neva -> the Gulf berth slip of the Sea Terminal (south, round the west tip)', from: [-4560, 440], to: [-6620, 660] },
+  ],
+  gavan: [
+    // the Kronshpits mouth (between the two moles, c -6957 402), the Shkipersky canal and the Shkipersky Bridge (-7010 -31: the walk box ends at the soffit, the bents stand 22 m apart) into Galerny Harbour
+    { name: 'the Gulf off the Kronshpits mouth -> the Shkipersky canal -> Galerny Harbour (under the Shkipersky Bridge)', from: [-6955, 480], to: [-7120, -150] },
   ],
 }[AREA] || [];
 {

@@ -11,9 +11,9 @@
 // kit.js inst.js util.js (copies of landmarksOktyabrsky).  Tools: tools/landmarksSeaTerminal-walk.mjs (walk probe).
 // A part is built only when its claim key is in groups.js.  Publishes ctx.services.landmarksSeaTerminal = { terminal, monuments, photoSpots, entrances, crowd, fences, benches, lamps, parts }
 // and merges monuments / photo spots into ctx.services.landmarks.
-// Provenance: copied from 102_3d_piter commit 0568f7af (src/world/landmarksSeaTerminal.js and landmarksSeaTerminal/*); changes for n4spb: (1) a part is built when THE AREA claims its sub-group (layout.GROUPS.landmarksSeaTerminal; this
-// area claims only 'sea-terminal': groups.js ON), not when the module's own groups.js lists it; (2) world rules (docs/AREAS.md 13, 15.v): the port mesh fence and the quay closure (fence.js), the torpedo-boat chain (boat.js) are
-// breakable bays, the Jersey barriers and the boat's plaque stand are knock records, the thin box of the closed ramp gate (inside the ramp embankment box) is gone; solid on purpose: the terminal walls, the deck piers, the stair block,
+// Provenance: copied from 102_3d_piter commit 0568f7af (src/world/landmarksSeaTerminal.js and landmarksSeaTerminal/*); changes for n4spb: (1) a part is built when THE AREA claims its sub-group (layout.GROUPS.landmarksSeaTerminal; Vasilyevsky
+// claims only 'sea-terminal' (groups.js ON), Gavan all four (groups.js GROUPS_ALL)), not when the module's own groups.js lists it; (2) world rules (docs/AREAS.md 13, 15.v): the port mesh fence and the quay closure (fence.js), the torpedo-boat chain (boat.js),
+// the 100 m hedge of the D-2 plot (sub.js) are breakable bays, the Jersey barriers, the D-2 path lamps and the boat's plaque stand are knock records, the thin box of the closed ramp gate (inside the ramp embankment box) is gone; solid on purpose: the terminal walls, the deck piers, the stair block,
 // the ramp embankment and its walls, the shed, the plinth and the boat.
 export const OWNS_GROUPS = true;
 

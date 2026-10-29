@@ -1,6 +1,6 @@
 // tools/area-smoke.mjs - ONE real-browser smoke of the live areas on their BAKES (GPU job: take /d/git2/gpulock first): the page loads from assets/baked/<id>/, the scene builds, the player starts, a handful of
 // poses are photographed, console / page errors are listed. A look, not a test: the owner wants to see the areas with his eyes first (docs/AREAS.md 13).
-//   node tools/area-smoke.mjs [--area palace|smolny|admiralty|vladimirsky|vasilyevsky|all] [--out shots/smoke] [--only name,name]
+//   node tools/area-smoke.mjs [--area palace|smolny|admiralty|vladimirsky|vasilyevsky|gavan|morskoy|dekabristov|all] [--out shots/smoke] [--only name,name]
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -60,10 +60,20 @@ const SHOTS = [
   ['vasilyevsky', 'vasilyevsky-spit', [-2508.4, -1293.1, 120.8, 8], '', 2.0],
   ['vasilyevsky', 'vasilyevsky-palace-bridge', [-2337, -848, 34.8, 4], '', 2.0],
   ['vasilyevsky', 'vasilyevsky-academy', [-3407.5, -497.9, 13.3, 10], '', 2.0],
+  // Gavan / Morskoy / Dekabristov Island (docs/AREAS.md 15.g): the first VIEWS poses of src/areas/<id>/area.js (the Places-list poses and the sights of the unported modules look at open ground until the port clusters land)
+  ['gavan', 'gavan-kronshpits', [-6946, 345.4, -166, 4], '', 2.0],
+  ['gavan', 'gavan-shkipersky-bridge', [-6987.8, -27.2, 80.1, 2], '', 2.0],
+  ['gavan', 'gavan-pribaltiyskaya', [-7516.6, -772.5, 114.4, 6], '', 2.0],
+  ['morskoy', 'morskoy-pribaltiyskaya', [-7516.6, -772.5, 114.4, 6], '', 2.0],
+  ['morskoy', 'morskoy-golden-city', [-8689.2, -805.9, 5.5, 18], '', 2.0],
+  ['morskoy', 'morskoy-shipbuilders-bridge', [-7497, -1906, 39.8, 6], '', 2.0],
+  ['dekabristov', 'dekabristov-primorskaya', [-6416, -1806, -75.8, 8], '', 2.0],
+  ['dekabristov', 'dekabristov-armenian-church', [-5444, -1702, 0, 8], '', 2.0],
+  ['dekabristov', 'dekabristov-nalichny', [-6704, -1682, -4.4, 6], '', 2.0],
 ];
 const only = args.only ? String(args.only).split(',') : null, areaArg = args.area || 'all';
 const jobs = SHOTS.filter(([a, n]) => (areaArg === 'all' || a === areaArg) && (!only || only.includes(n)));
-const PAGE = { palace: 'index.html', smolny: 'smolny.html', admiralty: 'admiralty.html', vladimirsky: 'vladimirsky.html', vasilyevsky: 'vasilyevsky.html' };
+const PAGE = { palace: 'index.html', smolny: 'smolny.html', admiralty: 'admiralty.html', vladimirsky: 'vladimirsky.html', vasilyevsky: 'vasilyevsky.html', gavan: 'gavan.html', morskoy: 'morskoy.html', dekabristov: 'dekabristov.html' };
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-sandbox', '--no-first-run', '--disable-extensions', '--window-size=1280,720'] });
 const report = [];
 try {

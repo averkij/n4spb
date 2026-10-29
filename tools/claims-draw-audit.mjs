@@ -159,6 +159,30 @@ KNOWN_UNCLAIMED.vasilyevsky = { ...(KNOWN_UNCLAIMED.vasilyevsky || {}),
   w133084710: { module: 'landmarksSevkabel', why: 'the portal crane T1a of the Baltic Shipyard (cranes.js, 60 m, instanced silhouette on its runway) reaches into the OSM outline of the yard hall Kosaya liniya 16 k43 (the source leaves the hall to city: "the yard hall w133084710 stays generic"): the crane gantry passes over the hall roof, verbatim source behaviour' },
 };
 
+// Dekabristov Island, cluster D2 (docs/gdm-D2.md): the Primorskaya vestibule hall (w149345779, 3.3 m) stands UNDER the raised parts of the office complex w85426975 (skip parent, parts from 5 m: w533259377 5 .. 11 m, w533259379 45 .. 49 m,
+// w533259380 11 .. 45 m): the audit tests the footprints without their height band. A separate statement (the blocks of the parallel clusters merge by keeping all of them).
+KNOWN_UNCLAIMED.dekabristov = { ...(KNOWN_UNCLAIMED.dekabristov || {}),
+  w85426975: { module: 'landmarksPrimorskaya', why: 'the office complex of the Metro Museum is a skip parent whose raised parts start 5 m above the ground (minH 5 / 11 / 45): the glazed hall of the Primorskaya vestibule (w149345779, walls 1.5 .. 3.3 m) stands under the arcade, inside the outline and below the parts; the city draws the parts' },
+  w533259377: { module: 'landmarksPrimorskaya', why: 'the part of w85426975 that spans 5 .. 11 m over the vestibule hall (the hall roof is at 3.3 m, 1.7 m below it): the hall walls lie inside its outline, under its soffit; the city draws the part' },
+};
+
+// Gavan (docs/AREAS.md 15.g): the territory lists the same Kirov Palace of Culture / Erarta / garden and Sevkabel modules as vasilyevsky, on the same data, so the audit finds the same three conditions (68 street-lamp triangles inside the Kirov DK outline,
+// the ruin decal, 1,078 spool-tower / festoon triangles on the Electra kiosk): the waivers of vasilyevsky above, repeated for this area. Separate statements (the blocks of the parallel port branches merge by keeping all of them).
+OWNER_SKIPS.gavan = { ...(OWNER_SKIPS.gavan || {}),
+  w1423396925: 'landmarksKirova / kirova-garden draws the ruin (building=ruins) as a flat crushed-stone decal with rubble stumps below 1.5 m (garden.js ruin(): a patch, not a mass); the same module and data as vasilyevsky',
+};
+GENERIC_WAIVERS.gavan = { ...(GENERIC_WAIVERS.gavan || {}),
+  'w45966107|streets': 'street lamps of the Bolshoy pr. V.O. kerb (lamps-D, 2.2 .. 4 m) stand inside the outline of the Kirov Palace of Culture at its west corner (-5332, -196): hidden in the wall mass of the front that landmarksKirova draws (the same finding as in vasilyevsky: 68 triangles)',
+};
+KNOWN_UNCLAIMED.gavan = { ...(KNOWN_UNCLAIMED.gavan || {}),
+  w820265264: { module: 'landmarksSevkabel', why: 'one of the eight timber cable-spool towers (SPOOL_TOWERS of public-life-plan.js, yard.js props: 4.9 m, larch drums + a lamp) and the festoons of culture.js stand on the OSM outline of the bicycle shop Electra (92 m2, 2 levels), which city draws: verbatim source behaviour, a tower beside a kiosk, not a second building (the same finding as in vasilyevsky)' },
+};
+
+// Morskoy, cluster M (docs/gdm-M.md; landmarksMarineFacade). A separate statement (the blocks of the parallel port branches merge by keeping all of them).
+KNOWN_UNCLAIMED.morskoy = { ...(KNOWN_UNCLAIMED.morskoy || {}),
+  r7378336: { module: 'landmarksMarineFacade', why: 'the gold lattice crowns of Golden City (goldencity.js crown(): the overlays on the parts r12001859 / r12001860 of Chelyuskina 4 s1, 17 and 12 storeys, 788 triangles of thin rods and a silhouette proxy on the roofs) stand on the OSM outline of a building that city draws: a roof ornament on a generic block, the verbatim source behaviour (groups.js: "the crowns of r12001859 / r12001860 are overlays, not claimed")' },
+};
+
 // ---------------------------------------------------------------- engine
 const THREE = await import('three');
 const { createContext } = await import(pathToFileURL(path.join(root, 'src/core/ctx.js')).href);

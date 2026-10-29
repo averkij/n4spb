@@ -350,7 +350,21 @@ export function clipPolyline(pts, bb) {
   return out.filter((c) => c.length >= 2);
 }
 
-export const sizeKB = (o) => Buffer.byteLength(JSON.stringify(o)) / 1024;
+// ---------- polygon helper in Python + shapely (carve.py): JSON in, JSON out, full double precision. It fails LOUDLY (throws) when python or shapely is missing: a silent skip would build a wrong map.
+import { spawnSync } from 'node:child_process';
+export function pyCarve(req) {
+  const cands = process.env.N4_PYTHON ? [[process.env.N4_PYTHON, []]] : [['python', []], ['python3', []], ['py', ['-3']]];
+  let last = null;
+  for (const [exe, pre] of cands) {
+    const r = spawnSync(exe, [...pre, path.join(here, 'carve.py')], { input: JSON.stringify(req), encoding: 'utf8', maxBuffer: 1 << 29 });
+    if (r.error) { last = exe + ': ' + r.error.message; continue; }
+    if (r.status !== 0) throw new Error('carve.py failed (' + exe + ', exit ' + r.status + '): ' + (r.stderr || '').trim() + ' (needs Python 3 with shapely: pip install shapely)');
+    return JSON.parse(r.stdout);
+  }
+  throw new Error('no python found to run carve.py (' + last + '); install Python 3 + shapely (pip install shapely) or set N4_PYTHON');
+}
+
+export const sizeKB =(o) => Buffer.byteLength(JSON.stringify(o)) / 1024;
 
 // Sutherland-Hodgman clip of a closed ring to a bbox [minLon,minLat,maxLon,maxLat]. Returns closed ring or null.
 export function clipRing(ring, bb) {
