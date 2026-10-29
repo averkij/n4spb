@@ -162,9 +162,9 @@ const BUDGET_AREA = {
     //
     landmarksDekabristov: 100e3,      // measured 86,676 in `check --area-modules` (the cemeteries, the siege memorial, the garden, the Volodin fountain: docs/gdm-D1.md) + 15 %
     //
-    // PORT-BUDGET: landmarksPrimorskaya
+    landmarksPrimorskaya: 3.4e3,      // measured 2,898 (the glazed vestibule hall + block, the square furniture, the two Smolenka bank flights) + 15 %
     //
-    // PORT-BUDGET: landmarksFill
+    landmarksFill: 47.1e3,      // measured 40,932 (planned roadbeds, 21 sites: frames / foundation fields / cranes / yards / the batching plant, 473 hoarding bays, 489 knock records) + 15 %
     //
     bridges: 102e3,      // measured 88,356 (gdm cluster B: Uralsky, Smolensky, Nalichny, Novo-Andreevsky, Korablestroiteley, 1st - 4th Smolensky, the WHSD portals, Betancourt 18,306, Serny, the WHSD fairway bridge 5,066; the Palace Bridge that every area builds 14,540) + 15 %
   },

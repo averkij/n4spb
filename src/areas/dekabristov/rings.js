@@ -14,7 +14,7 @@
 // ============================================================================
 import * as DEKABRISTOV from '../../world/landmarksDekabristov/groups.js';      // PAVED_RINGS only: the plaza of the Light-and-Music fountain, the apron of the siege obelisk, the paving of the Decembrists' obelisk
 // ---
-// PORT-IMPORT: landmarksPrimorskaya
+import * as PRIMORSKAYA from '../../world/landmarksPrimorskaya/groups.js';      // the Smolenka bank stairs (water rings, keep-outs, paved ground)
 // ---
 // PORT-IMPORT: landmarksFill
 // ---
@@ -27,7 +27,7 @@ const BRIDGES_MO = MO_RINGS(['korablestroiteley-', 'smol3-', 'smol4-'], { cuttin
 const SOURCES = [
   { module: 'landmarksDekabristov', ns: DEKABRISTOV },
   // ---
-  // PORT-SOURCE: landmarksPrimorskaya
+  { module: 'landmarksPrimorskaya', ns: PRIMORSKAYA },
   // ---
   // PORT-SOURCE: landmarksFill
   // ---

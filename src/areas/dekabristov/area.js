@@ -31,9 +31,9 @@ import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as 
 import { GROUPS_LIST as G_DEKABRISTOV } from '../../world/landmarksDekabristov/groups.js';
 import { LUTHERAN_RING, ARMENIAN_RING, SIEGE_RING, GARDEN_RING, VOLODIN_RING } from './cemetery.js';      // the HUD rows of the cemeteries, the garden and the square (the rings are copies of the GREEN records, cemetery.js)
 // ---
-// PORT-IMPORT: landmarksPrimorskaya
+import { GROUPS_LIST as G_PRIM, STAIR_PITS as PRIM_PITS } from '../../world/landmarksPrimorskaya/groups.js';
 // ---
-// PORT-IMPORT: landmarksFill
+import { GROUPS_LIST as G_FILL, ZONE_RING as FILL_RING } from '../../world/landmarksFill/groups.js';
 // ---
 import { mo as MO_ROWS } from '../../world/bridges/groups-mo.js';      // bridgesMo: the bridges of the Smolenka mouth, the Shipbuilders' Bridge, the WHSD portals (bridges/groups-mo.js: imported only by the new areas)
 
@@ -56,9 +56,9 @@ export const MODULES = [
   //
   'landmarksDekabristov', // the Lutheran and Armenian cemeteries, the siege memorial cemetery, the Decembrists' garden, the Volodin square with the Light-and-Music fountain (docs/gdm-D1.md)
   //
-  // PORT-MODULE: landmarksPrimorskaya
+  'landmarksPrimorskaya', // the Primorskaya metro vestibule (hall + block, three entrances as door points, no metro network), the square, the Metro Museum signboard, the Smolenka bank stairs
   //
-  // PORT-MODULE: landmarksFill
+  'landmarksFill', // the land fill dressed as a young district under construction: planned roadbeds, site plots with frames and cranes, container yards, a batching plant, hoardings, floodlight masts
   //
   'bridges',      // the bridges of the area: the Uralsky, Smolensky, Nalichny and Novo-Andreevsky bridges (the same four as in Vasilyevsky)
   'props',        // benches, bins, kiosks, bus shelters, tourist stalls, billboards, flower baskets
@@ -73,9 +73,9 @@ export const LABELS = {
   landmarksVOStatues: 'Армянская церковь, памятник Комитасу, памятник полярникам',
   landmarksDekabristov: 'Лютеранское и Армянское кладбища, мемориал блокады, Сад Декабристов, светомузыкальный фонтан',
   // ---
-  // PORT-LABEL: landmarksPrimorskaya
+  landmarksPrimorskaya: 'станция «Приморская», площадь, спуски к Смоленке',
   // ---
-  // PORT-LABEL: landmarksFill
+  landmarksFill: 'Новый намыв: стройплощадки, краны, контейнеры',
   // ---
   drive: 'машина на старте',
 };
@@ -118,9 +118,9 @@ const VO_KEYS = new Set(['vo-polar', 'vo-komitas', 'vo-church-armenian']);
 GROUPS.landmarksVOStatues = G_VOSTATUES.filter((g) => VO_KEYS.has(g.key));
 GROUPS.landmarksDekabristov = G_DEKABRISTOV;
 // ---
-// PORT-GROUPS: landmarksPrimorskaya
+GROUPS.landmarksPrimorskaya = G_PRIM;
 // ---
-// PORT-GROUPS: landmarksFill
+GROUPS.landmarksFill = G_FILL;
 // ---
 // the bridges: the four Smolenka bridges that stand in the territory and in Vasilyevsky's (bridges/groups-vo.js: Uralsky, Smolensky and Nalichny drawn by the generic arch machinery, the Novo-Andreevsky footbridge). Not claimed
 // yet (the bridge engine round of the area-gdm effort): the Korablestroiteley bridge, the four Smolensky bridges of the Smolenka mouth, the ZSD viaduct, the Betancourt and Serny bridges
@@ -173,9 +173,11 @@ export function makeAreas(h) {
   { name: 'Сквер Александра Володина · Volodin Square', poly: VOLODIN_RING, margin: 4 },
   { name: 'Сад Декабристов · Decembrists\' Garden', poly: GARDEN_RING, margin: 4 },
   // ---
-  // PORT-AREAS: landmarksPrimorskaya
+  { name: 'Вестибюль станции «Приморская» · Primorskaya metro vestibule', c: [-6522, -1802], r: 30 },
+  { name: 'Музей Петербургского метрополитена · Museum of the Petersburg Metro', c: [-6496, -1754], r: 24 },
+  ...PRIM_PITS.map((p) => ({ name: 'Спуск к Смоленке · Stairs to the Smolenka', c: p.c, r: 7 })),
   // ---
-  // PORT-AREAS: landmarksFill
+  { name: 'Новый намыв · New land fill', poly: FILL_RING },
   // ---
   { name: 'Станция метро «Приморская» · Primorskaya metro', c: [-6337, -1818], r: 45 },
   // the streets, the embankments before the water rows (a bank point of the Smolenka would otherwise be named after the river)
@@ -211,12 +213,12 @@ export function makeViews({ yawToward }) {
   // Every pose is a free, walkable spot (tools/layout-test.mjs checks insideBuilding / isOnRoad / line of sight; tools/views-check.mjs adds the colliders; water is allowed, `--land` keeps the camera dry). x, z, yaw (deg, 0 = north, 90 = west), pitch (deg).
   // 1..3 the three cemeteries of the island, 4 Primorskaya, 5 the Decembrists' garden, 6..7 the Smolenka mouth bridges, 8 the Nalichny Bridge, 9 the Smolensky Orthodox Cemetery, 0 the Morskoy Kaskad towers; Shift + 1..4 the fill, the Smolensky bridge,
   // the Xenia chapel, the Komitas monument; Places: the polar explorers monument, the Uralsky bridge (poses found with a ring search around each sight, then checked by tools/views-check.mjs --land).
-  const HERO = { x: -6416, z: -1806, yaw: yawToward(-6416, -1806, -6349, -1823), pitch: 8 };      // the Primorskaya square, looking at the metro pavilion
+  const HERO = { x: -6416, z: -1806, yaw: yawToward(-6416, -1806, -6528, -1800), pitch: 6 };      // the Primorskaya square, looking west at the metro vestibule (the mapped hall at (-6520, -1800); the station node (-6337, -1818) is the platform under the apartment blocks)
   const VIEWS = [
     { key: 'Digit1', label: 'Лютеранское кладбище', x: -5440, z: -1950, yaw: yawToward(-5440, -1950, -5420, -1958), pitch: 8 },
     { key: 'Digit2', label: 'Армянская церковь Воскресения', x: -5444, z: -1702, yaw: yawToward(-5444, -1702, -5444, -1731), pitch: 8 },
     { key: 'Digit3', label: 'Мемориальное кладбище «Остров Декабристов»', x: -5789, z: -1680, yaw: yawToward(-5789, -1680, -5789, -1709), pitch: 8 },
-    { key: 'Digit4', label: 'Станция метро «Приморская»', x: -6416, z: -1806, yaw: yawToward(-6416, -1806, -6349, -1823), pitch: 8 },
+    { key: 'Digit4', label: 'Станция метро «Приморская»', x: -6416, z: -1806, yaw: yawToward(-6416, -1806, -6528, -1800), pitch: 6 },
     { key: 'Digit5', label: 'Сад Декабристов', x: -6330, z: -2395, yaw: yawToward(-6330, -2395, -6368, -2410), pitch: 8 },
     { key: 'Digit6', label: 'Мост Кораблестроителей', x: -7529, z: -1898, yaw: yawToward(-7529, -1898, -7532, -1948), pitch: 6 },
     { key: 'Digit7', label: 'Светомузыкальный фонтан · Смоленские мосты', x: -7995, z: -2050, yaw: yawToward(-7995, -2050, -7995, -2079), pitch: 6 },
@@ -247,9 +249,9 @@ export const TEST = {
     { id: 'w111944528', by: 'landmarksVOStatues', group: 'vo-church-armenian' },
     { id: 'w23426250', by: 'landmarksDekabristov', group: 'dek-siege' },
     // ---
-    // PORT-CLAIMED: landmarksPrimorskaya
+    { id: 'w149345779', by: 'landmarksPrimorskaya', group: 'primorskaya-vestibule' },
     // ---
-    // PORT-CLAIMED: landmarksFill
+    { id: 'w1053534560', by: 'landmarksFill', group: 'fill-construction' },
     // ---
     { id: 'r5574920', by: 'bridges', group: 'nalichny' },
     { id: 'r5574927', by: 'bridges', group: 'korablestroiteley' },
@@ -353,6 +355,7 @@ const PEOPLE_HOT = [
   [-6368, -2410, 0.7, 14],        // the obelisk to the executed Decembrists in the Decembrists' garden (landmarksDekabristov)
   [-7995, -2079, 1.2, 16],        // the Light-and-Music fountain of the Volodin square (landmarksDekabristov)
   [-5440, -2038, 0.4, 12],        // the grave of A. G. Faberge, the Lutheran cemetery (landmarksDekabristov; the cemetery crowd is thinned by HOOKS.inGarden)
+  [-6540, -1805, 1.4, 16],        // the square before the Primorskaya vestibule (landmarksPrimorskaya: benches, the totem)
   // PORT-ZONES
 ];
 /** The pigeon / sparrow zones, in priority order. A row is { tag, kind: 'pigeon' | 'sparrow', x, z, ...overrides of { spread, n, r, w, name, min } } (wildlife/zones.js documents the fields) */
@@ -362,6 +365,7 @@ const PIGEON_ZONES = [
   { tag: 'xenia', kind: 'pigeon', x: -5586, z: -1325, spread: 12, n: 1, w: 1.4, r: 3.5, name: 'Голуби у часовни Ксении Блаженной · Pigeons at the chapel of St Xenia' },
   { tag: 'volodin', kind: 'pigeon', x: -7995, z: -2064, spread: 12, n: 2, w: 1.4, r: 4, name: 'Голуби у светомузыкального фонтана · Pigeons at the Light-and-Music fountain' },
   { tag: 'garden', kind: 'sparrow', x: -6368, z: -2398, spread: 10, n: 1, w: 1.2, r: 3, name: 'Воробьи в Саду Декабристов · Sparrows in the Decembrists\' Garden' },
+  { tag: 'primorskaya-sq', kind: 'pigeon', x: -6540, z: -1806, spread: 12, n: 2, w: 1.8, r: 4.5, name: 'Голуби на площади у станции «Приморская» · Pigeons on the Primorskaya square' },
   // PORT-ZONES
 ];
 /** the districts a crow likes: crows start on a tree top there when the player is not about (the cemeteries). At least one row is needed where crows live */
@@ -370,6 +374,7 @@ const CROW_HAUNTS = [{ x: -5850, z: -1400, r: 430 }, { x: -5430, z: -1900, r: 22
 const CROWDS = {
   primorskaya: [30, 40, 0.7], xenia: [14, 25, 0.7],
   volodin: [14, 25, 0.5], garden: [10, 20, 0.35],
+  'primorskaya-sq': [26, 30, 0.7],
   // PORT-ZONES
 };
 
@@ -415,7 +420,7 @@ export const PRUNE_SERVICES = [
   'city',
   // PORT-PRUNE: landmarksDekabristov
   //
-  // PORT-PRUNE: landmarksPrimorskaya
+  'landmarksPrimorskaya',
   //
   // PORT-PRUNE: landmarksFill
 ];
