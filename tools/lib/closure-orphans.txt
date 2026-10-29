@@ -1,6 +1,7 @@
 # Files under src/ that are in NO closure of any area (live or parked): ports that nothing imports. tools/closure-lint.mjs compares this list with the real orphans:
 # a new orphan that is not listed fails the CI (it is the commit that adds the file that must say so; it catches a blind spot of the scanner at once), and a line whose file
 # is imported after all (or gone) fails too. One POSIX path per line; '#' starts a comment.
+src/world/landmarksGavan/util.js
 src/world/landmarksMakarova/inst.js
 src/world/landmarksMining/prims.js
 src/world/landmarksNavalCorps/util.js

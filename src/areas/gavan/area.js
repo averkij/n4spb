@@ -25,14 +25,14 @@
 import { GROUPS_VO } from '../../world/bridges/groups-vo.js';
 import { GROUPS_LIST as G_KIROVA } from '../../world/landmarksKirova/groups.js';
 import { GROUPS_LIST as G_SEVKABEL } from '../../world/landmarksSevkabel/groups.js';
-import { GROUPS_LIST as G_SEATERMINAL } from '../../world/landmarksSeaTerminal/groups.js';
+import { GROUPS_ALL as G_SEATERMINAL } from '../../world/landmarksSeaTerminal/groups.js';
 import { GROUPS_LIST as G_MODERNVO } from '../../world/landmarksModernVO/groups.js';
 import { GROUPS_LIST as G_SREDNY } from '../../world/landmarksSredny/groups.js';
 import { GROUPS_LIST as G_VOSTATUES } from '../../world/landmarksVOStatues/groups.js';
 import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as RINGS_PAVED } from './rings.js';
 import { makeHooks, makeHeightPatches } from '../north/hooks.js';      // shared with the parked North: the hook bodies are gated by the module list
 // ---
-// PORT-IMPORT: landmarksGavan
+import { GROUPS_LIST as G_GAVAN } from '../../world/landmarksGavan/groups.js';
 // ---
 // PORT-IMPORT: landmarksPribaltiyskaya
 // ---
@@ -50,7 +50,7 @@ export const MODULES = [
   'environment',  // ground, embankment granite, Neva Bay / Gulf / Smolenka water, trees, lawns, flowerbeds, far skyline
   'streets',      // roads, markings, kerbs, granite pavements, crossings, road furniture, trolleybus overhead wires
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
-  // PORT-MODULE: landmarksGavan
+  'landmarksGavan', // the Kronshpits and the MChS buildings, the Shkipersky canal promenade and bridge, Galerny Harbour (steam crane, water tower, guardhouse, rotunda, yacht-club pontoons), the Gavan workers' town, the fire reserve, the church "Miluyushchaya" (before `bridges`: the Shkipersky deck service)
   //
   // PORT-MODULE: landmarksPribaltiyskaya
   //
@@ -75,7 +75,7 @@ export const MODULES = [
 ];
 /** Loading-screen words that differ from the strip's (main.js LABELS is the fallback for the rest). */
 export const LABELS = {
-  // PORT-LABEL: landmarksGavan
+  landmarksGavan: 'Гавань: Кроншпицы, Шкиперский проток и мост, Гаванский городок, церковь «Милующая»',
   // ---
   // PORT-LABEL: landmarksPribaltiyskaya
   // ---
@@ -127,7 +127,7 @@ export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, 
 // A module claimed by two areas is fine: each area passes its own GROUPS.<module> and every ported module gates by it. The lists below are the groups of the module that lie in THIS territory and in its data (scout-gavan.md 2).
 const only = (list, keys) => list.filter((g) => keys.includes(g.key));
 export const GROUPS = {};
-// PORT-GROUPS: landmarksGavan
+GROUPS.landmarksGavan = G_GAVAN;      // all seven groups: the Kronshpits, the Shkipersky bridge and canal, Galerny Harbour, the workers' town, the fire reserve, the church (100 % in the territory)
 // ---
 // PORT-GROUPS: landmarksPribaltiyskaya
 // ---
@@ -135,7 +135,7 @@ GROUPS.landmarksKirova = G_KIROVA;      // all four groups: the DK, Erarta, the 
 // ---
 GROUPS.landmarksSevkabel = G_SEVKABEL.filter((g) => g.key !== 'baltic-cranes');      // the cranes (-5100, 1380) stand 3 % inside the territory and their vertices leave the data margin
 // ---
-GROUPS.landmarksSeaTerminal = G_SEATERMINAL;      // only the terminal itself while landmarksSeaTerminal/groups.js lists it in ON; the D-2, the torpedo boat and the Lenexpo fence join with the widening of ON (the G cluster)
+GROUPS.landmarksSeaTerminal = G_SEATERMINAL;      // all four groups (groups.js GROUPS_ALL: Vasilyevsky keeps the terminal alone): the terminal, the D-2 museum, the torpedo boat, the Lenexpo fence (rings.js takes the matching rings)
 // ---
 GROUPS.landmarksModernVO = only(G_MODERNVO, ['modernvo-erem82', 'modernvo-kollan']);      // the other ten houses lie in Vasilyevsky
 // ---
@@ -157,7 +157,14 @@ export function makeAreas(h) {
   { name: 'Наличный мост · Nalichny Bridge', c: [-6702.1, -1707.9], r: 48 },
   { name: 'Ново-Андреевский мост · Novo-Andreevsky Bridge', c: [-6328.8, -1603.0], r: 20 },
   // ---
-  // PORT-AREAS: landmarksGavan
+  { name: 'Шкиперский мост · Shkipersky Bridge', c: [-7010, -31], r: 35 },
+  { name: 'Кроншпицы Галерной гавани · Kronshpitsy', c: [-6958, 402], r: 62 },      // (the source row has r 55; the photo pose of Digit1 stands 58 m from the centre)
+  { name: 'Набережная Шкиперского протока · Shkipersky canal promenade', c: [-6965, 150], r: 40 },
+  { name: 'Гаванская пожарная часть · Gavan fire station', c: [-6155, -600], r: 45 },
+  { name: 'Паровой кран Галерной гавани · Galerny Harbour steam crane', c: [-7060, -101], r: 28 },
+  { name: 'Водонапорная башня Галерной гавани · Galerny Harbour water tower', c: [-7149, -251], r: 30 },
+  { name: 'Церковь «Милующая» · Church of the Merciful Icon', c: [-5937, 540], r: 70 },
+  { name: 'Гаванский городок · Gavan Quarter', c: [-6289, -667], r: 110 },
   // ---
   // PORT-AREAS: landmarksPribaltiyskaya
   // ---
@@ -171,6 +178,8 @@ export function makeAreas(h) {
   // ---
   { name: 'Морской вокзал · Sea Terminal', c: [-6519, 709], r: 150 },
   { name: 'Площадь Морской Славы · Sea Glory Square', c: [-6324, 649], r: 120 },
+  { name: 'Подводная лодка Д-2 · Submarine D-2', c: [-6598, -66], r: 55 },
+  { name: 'Торпедный катер «Комсомолец» · Torpedo boat Komsomolets', c: [-6565, 355], r: 30 },
   // ---
   ..._groupPolys(SUBGROUPS['modernvo-erem82'], 6).map((r) => ({ name: 'Дом со шпилем · House with the spire', ...r })),
   ..._groupPolys(SUBGROUPS['modernvo-kollan'], 8).map((r) => ({ name: 'Дом Коллана · Kollan house', ...r })),
@@ -202,6 +211,7 @@ export function makeAreas(h) {
   { name: 'Косая линия · Kosaya liniya', road: NAMES.streets.kosayaLiniya },
   { name: 'Детская улица · Detskaya ulitsa', road: NAMES.streets.detskaya },
   { name: 'Западный скоростной диаметр · Western High-Speed Diameter', road: NAMES.streets.zsd },
+  { name: 'Галерная гавань · Galerny Harbour', x0: -7300, x1: -6700, z0: -330, z1: 450, test: (x, z) => inRiver(x, z) },      // the harbour basin and the Shkipersky canal (the source row tests the island outline; here the water itself)
   { name: 'Смоленка · Smolenka River', x0: -7120, x1: -5900, z0: -2100, z1: -1500, test: (x, z) => _shoreOf(['smolenka'], x, z) < 14 },
   { name: 'Невская губа · Neva Bay', x0: -7900, x1: -4800, z0: 1000, z1: 2000, test: (x, z) => inRiver(x, z) },
   { name: 'Финский залив · Gulf of Finland', x0: -10000, x1: -6000, z0: -2300, z1: 2000, test: (x, z) => inRiver(x, z) },
@@ -245,7 +255,7 @@ export function makeViews({ yawToward }) {
 /** The expectations of the CPU tests (tools/layout-test.mjs, tools/landmarks-groups-check.mjs, tools/areas-test.mjs; shape: tools/lib/area-test-data.mjs). */
 export const TEST = {
   claimed: [
-    // PORT-CLAIMED: landmarksGavan
+    { id: 'w17564513', by: 'landmarksGavan', group: 'gavan-workers-town' },
     // ---
     // PORT-CLAIMED: landmarksPribaltiyskaya
     // ---
@@ -268,6 +278,7 @@ export const TEST = {
   mustHaveAreas: [
     { x: -5420.3, z: -194.1, has: 'кирова' }, { x: -5556.7, z: 8.8, has: 'эрарта' }, { x: -6140.8, z: 866.9, has: 'севкабель' }, { x: -5623, z: 1106, has: 'брусницын' },
     { x: -6371.5, z: 685.3, has: 'морской вокзал' }, { x: -6300, z: 640, has: 'морской славы' },
+    { x: -7010, z: -31, has: 'шкиперский мост' }, { x: -6958, z: 402, has: 'кроншпиц' }, { x: -6289, z: -667, has: 'гаванский городок' }, { x: -5937, z: 540, has: 'милующая' }, { x: -6598, z: -66, has: 'д-2' },
     // PORT-AREAS rows of the port clusters add their own sights here
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
@@ -287,13 +298,14 @@ export const TEST = {
 const BRIDGE_ZONES = [
   { id: 'nalichny', name: 'Наличный мост', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7, own: true },
   { id: 'novo-andreevsky', name: 'Ново-Андреевский мост', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3, own: true, foot: true },
-  // PORT-WATER: the Shkipersky Bridge row { id: 'shkipersky-deck', name: 'Шкиперский мост', key: 'gavan', c: [-7009.5, -31.0], axis: 79.4, w: 9.0, len: 35.7, own: true } (waits for the waterway key 'gavan')
+  { id: 'shkipersky-deck', name: 'Шкиперский мост', key: 'gavan', c: [-7009.5, -31.0], axis: 79.4, w: 9.0, len: 35.7, own: true },      // the Shkipersky Bridge (landmarksGavan/bridge.js draws it; row of the source project waterways.js 267)
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
 const BRIDGE_SHADES = [
   { id: 'nalichny-deck', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7 },
   { id: 'novo-andreevsky-deck', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3 },
+  { id: 'shkipersky-deck', key: 'gavan', c: [-7009.5, -31.0], axis: 79.4, w: 9.0, len: 35.7 },
 ];
 
 /** reaches: key of the waterway, test(x, z, nx, nz) on a bank point (landward normal n), run = horizontal length of the slope, kerb = banquette top above the water, lip = step from the banquette to the slope */
@@ -320,7 +332,7 @@ export const WATER = {
   forcedBanks: [],
   openMouths: [],
   dataWater: [{ id: 'r1576084', key: 'smolenka' }, { id: 'r1576086', key: 'smolenka' },
-    // PORT-WATER: { id: 'w10890576', key: 'gavan' } (Galerny Harbour), { id: 'r1648985', key: 'gavan' } (the Shkipersky canal): the waterway key 'gavan' is a shared-engine row (waterways.js, quay.js, water.js, bridges/sites.js, wildlife/world.js)
+    { id: 'w10890576', key: 'gavan' }, { id: 'r1648985', key: 'gavan' },      // Galerny Harbour and the Shkipersky canal: the waterway key 'gavan' (waterways.js, quay.js, water.js, bridges/sites.js, wildlife/world.js)
   ],
   dataRings: [{ id: 'malaya-neva', key: 'neva', source: 'neva-malaya' },
     { id: 'gulf', key: 'neva', source: 'vo-sea' },
@@ -412,7 +424,7 @@ export const GARAGE = {
 /** environment.js: the services whose `entrances` ([{ x, z, clearance? }]) clear the trees from the doors of the buildings they list */
 export const PRUNE_SERVICES = [
   'city',
-  // PORT-PRUNE: landmarksGavan
+  'landmarksGavan',
   //
   'landmarksKirova',
   //
