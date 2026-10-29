@@ -134,6 +134,7 @@ function pruneStubs(net, lines, bars, recs, stats, dropped) {
   const drop = new Set(), st = { solid: 0, solidLen: 0, dashes: 0, dashAsks: 0 };
   const byRid = new Map();
   for (const l of lines) if (l.rid !== undefined && !l.dash) { let a = byRid.get(l.rid); if (!a) byRid.set(l.rid, (a = [])); a.push(l); }
+  const cand = [];
   for (const l of lines) {
     if (l.dash || l.rid === undefined || !/^(centre|median|lane-solid)/.test(l.kind)) continue;
     let len = l.len;
@@ -141,6 +142,16 @@ function pruneStubs(net, lines, bars, recs, stats, dropped) {
     if (len >= RULES.stubMin) continue;
     const a = l.pts[0], b = l.pts[l.pts.length - 1];
     if (len >= RULES.sliver && anchorDist(net, bars, a.x, a.z) < RULES.stubAnchor && anchorDist(net, bars, b.x, b.z) < RULES.stubAnchor) continue;
+    cand.push(l);
+  }
+  // a short piece that sits BETWEEN two kept lines of its kind (both ends meet one) is the link of a continuous line (Nevsky's median where a zebra or a patch of other asphalt cut it into 4-6 m
+  // links): it stays, or the line gets a hole in the middle of the street. Only an orphan (at least one free end) is a stub.
+  const candSet = new Set(cand), cell = (v) => Math.floor(v / 2), ends = new Map();
+  const add = (x, z, l) => { const k = cell(x) * 100003 + cell(z); (ends.get(k) || ends.set(k, []).get(k)).push(l); };
+  for (const l of lines) { if (l.dash || l.rid === undefined || candSet.has(l) || !/^(centre|median|lane-solid)/.test(l.kind)) continue; const a = l.pts[0], b = l.pts[l.pts.length - 1]; add(a.x, a.z, l); add(b.x, b.z, l); }
+  const meets = (p, l) => { for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const o of ends.get((cell(p.x) + i) * 100003 + cell(p.z) + j) || []) { if (o.kind !== l.kind) continue; for (const q of [o.pts[0], o.pts[o.pts.length - 1]]) if (Math.hypot(q.x - p.x, q.z - p.z) < 1.2) return true; } return false; };
+  for (const l of cand) {
+    if (meets(l.pts[0], l) && meets(l.pts[l.pts.length - 1], l)) continue;
     drop.add(l); st.solid++; st.solidLen += l.len;
     if (!l.oi) { const r = recs[l.rid]; r.drawn -= l.len; r.pruned += l.len; }
   }
