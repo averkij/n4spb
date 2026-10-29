@@ -16,6 +16,7 @@ import { tbox } from './geo.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { coverFn } from './surfaces.js';
 import { knockBays, splitBays, unitPanel, unitBox } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the railing, the river curb and the pontoon rails are rows of BREAKABLE bays
+import { knockFurniture } from '../lib/knock-furniture.js';
 import { addFloatBlock } from '../lib/craft-solids.js';      // n4spb: the two pontoons are solid for the motor boat (docs/water-transport-boat-collisions.md)
 // n4spb: the retaining wall body (masonry, y -3.6 .. the coping) and the granite pylons stay solid structures; the railing on the coping, the curb along the river edge (it kept walkers off the water), and the rails of the two
 // pontoons and their gangways are knock bays (the water is reachable: a car breaks a bay off at the foot, the gap is passable). The cafe on the east pontoon is a closed superstructure (a structure).
@@ -110,7 +111,6 @@ function wall(K, S, cover) {
   const bad = (a) => { const w = DF.W(a, -0.3); return cover(w.x, w.z) > -0.5; };
   for (let k = 0; k <= n; k++) pylons.push({ a: aA + k * pitch, ok: !bad(aA + k * pitch) });
   for (let k = 0; k < n; k++) { const a0 = pylons[k].a, a1 = pylons[k + 1].a; bays.push({ a0, a1, ok: pylons[k].ok && pylons[k + 1].ok && !bad((a0 + a1) / 2) && !bad(a0 + (a1 - a0) * 0.25) && !bad(a0 + (a1 - a0) * 0.75) }); }
-  const ms = [];
   const geo = partsGeos((Q) => {
     Q.box(M.pylon, -0.36, 0.36, 0, 0.28, -0.36, 0.36, 'b', 1.6);
     Q.box(M.pylon, -0.3, 0.3, 0.28, 0.34, -0.3, 0.3, 'b', 1.6);
@@ -121,8 +121,10 @@ function wall(K, S, cover) {
     Q.box(M.pylon, -0.2, 0.2, 1.27, 1.29, -0.2, 0.2, 'b', 1.6);
   });
   const rotY = DF.rot;
-  for (const p of pylons) if (p.ok) { const w = DF.W(p.a, -0.3); ms.push(mat4(w.x, Y_COPE, w.z, rotY)); }
-  K.extraTris += addInstanced(ctx, K.root, 'lmmensh-pylons', geo, ms).tris;
+  // n4spb (the owner's rule: every post at the water breaks): the granite pylons are knock records (bollard-like: the same geometry, one thin box each, removed at the knock); the colliders are made here
+  const pySpots = [], pyItems = [];
+  for (const p of pylons) if (p.ok) { const w = DF.W(p.a, -0.3); pySpots.push({ x: w.x, y: Y_COPE, z: w.z, rotY }); pyItems.push(ph.addBox(w.x, w.z, 0.6, 0.6, DF.rot, Y_COPE, 1.3)); }
+  K.extraTris += knockFurniture(ctx, 'lmmensh-pylons', geo, pySpots, pyItems, { kind: 'bollard', mass: 900, h: 1.27, r: 0.34, anchored: 30, hitK: 0.5 }, 320);
   // railing panels: u over 5.5 m, v over 0.9 m (A.rings), alpha cut-out, double sided; the rail stands 0.12 above the coping
   let kept = 0;
   const rb = [];
@@ -139,8 +141,6 @@ function wall(K, S, cover) {
     collider: { y0: Y_COPE, y1: 1.4, thick: 0.5, e0: 0, e1: 0 },
     rec: () => ({ kind: 'fence', mass: 900, h: 1.1, anchored: 26, hitK: 0.6, metal: true, minDv: 0 }) });
   K.extraTris += kept * 14;
-  // the pylons: 0.6 m granite stumps on the coping (structures: a drawn post stays after its panel breaks)
-  for (const p of pylons) if (p.ok) { const w = DF.W(p.a, -0.3); ph.addBox(w.x, w.z, 0.6, 0.6, DF.rot, Y_COPE, 1.3); }
   // collider: the wall body (masonry, from the bed to the coping; the railing above it is the bays)
   const c = DF.W(aA + len / 2, -0.25); ph.addBox(c.x, c.z, len + 0.2, 0.9, DF.rot, -3.6, Y_COPE);
 }

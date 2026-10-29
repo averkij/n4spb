@@ -5,6 +5,7 @@
 import * as L from '../layout.js';
 import { FC } from './frame.js';
 import { fenceRuns } from './fence.js';
+import { knockBays, unitBox, splitBays } from '../lib/fence-bays.js';
 import { fillPolyClipped, coverFn } from './surfaces.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
@@ -36,9 +37,14 @@ export function build(K) {
   const runs = RUNS_C.map((r) => ({ pts: r.pts.map(([a, b]) => w(a, b)), gates: (r.gates || []).map(([a, b]) => { const p = w(a, b); return { x: p[0], z: p[1], half: 2.1 }; }) }));
   fenceRuns(K, runs, { name: 'cathedral', pitch: 3.4, gateHalf: 2.1, pier: pierCath, gatePier: pierCath, panelMat: M.fenceCath, plinthMat: M.graniteGrey, plinthH: 0.9, plinthT: 0.45, panelY0: 0.9, panelY1: 2.3, panelTile: 3.0, pierW: 0.8, colH: 2.3 });
   // ---- brown stucco wall at the north end (Three Hierarchs yard) between the two fences
-  { const a = FC.W(-23.4, -66.0), b = FC.W(20.1, -66.0), len = Math.hypot(b.x - a.x, b.z - a.z), rot = Math.atan2(-(b.z - a.z), b.x - a.x);
-    P.push((a.x + b.x) / 2, 0, (a.z + b.z) / 2, rot); P.box(M.stuccoBrown, -len / 2, len / 2, 0, 2.5, -0.2, 0.2, '', 3); P.box(M.white, -len / 2, len / 2, 2.5, 2.62, -0.28, 0.28, 'b', 3); P.pop();
-    ph.addBox((a.x + b.x) / 2, (a.z + b.z) / 2, len, 0.4, rot, 0, 2.6); }
+  // n4spb (the owner's rule: every wall breaks, docs/AREAS.md 13.7; the pattern of landmarksKirova/eryard.js): the free-standing wall is a row of 4.4 m breakable bays (body + white cap as stretched parts, a thin collider,
+  // one anchored knock record per bay: a car breaks a bay off at the foot, the gap is passable)
+  { const a = FC.W(-23.4, -66.0), b = FC.W(20.1, -66.0);
+    knockBays(ctx, { name: 'lmAnd-north-wall', bays: splitBays(a.x, a.z, b.x, b.z, 4.4, { y: 0 }), far: 300,
+      parts: [{ geo: unitBox(0, 2.5, -0.2, 0.2, { uLen: 4.4, uvs: 3 }), mat: M.stuccoBrown, name: 'wall', stretch: true },
+        { geo: unitBox(2.5, 2.62, -0.28, 0.28, { uLen: 4.4, uvs: 3 }), mat: M.white, name: 'cap', stretch: true, inset: -0.03 }],
+      collider: { y0: 0, y1: 2.6, thick: 0.4, e0: 0, e1: 0 },
+      rec: () => ({ kind: 'fence', mass: 1400, h: 2.6, anchored: 28, hitK: 0.5, metal: false, minDv: 0 }) }); }
   // ---- herringbone clinker paving of the court
   const ring = courtWorld();
   K.svc.pavingTris = fillPolyClipped(P, M.herring, ring, 0.05, (x, z) => (L.insideBuilding(x, z, 0.0) && !inCourtOpen(x, z) ? 1 : cover(x, z)), { margin: 0.25, maxEdge: 4, tile: 2 });

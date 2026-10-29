@@ -31,7 +31,7 @@ Knock records (`lib/knock-furniture.js` / `lib/fence-bays.js`):
 
 Solid on purpose (STRUCTURES, none near water except where noted; no `ALLOW` row was needed):
 * walls of buildings (every `addPolyColliders`, `D.wall`, `F.wall`, `h.colliders` shell: cathedral, Three Hierarchs, market ring and its three passage walls, metro pavilion, Pel house, Annunciation church, chapel, the three depot sheds and admin blocks, Geological Committee, Dom Evangelia, Frank mansion, Chernikhov tower, the Gorny Institut pavilions, all twelve ModernVO houses with their tower piers, the four churches of VOStatues), the 8 gate pavilions of the Annunciation fence;
-* masonry walls away from water: the brown stucco wall of the Three Hierarchs yard (2.5 m, 43 m), the plaster plot / yard walls of the tram depot (`wallRun`, 6 runs), the walled gap with the iron gate between 79A and 79B;
+* (since the fix A of AREAS.md 15.v the brown stucco wall of the Three Hierarchs yard and the plaster walls of the tram depot are breakable bays, not structures) masonry walls away from water: the walled gap with the iron gate between 79A and 79B;
 * columns of the Geological Committee portico, the metro pavilion stair slabs (walk boxes);
 * monuments, busts, pedestals, sculptures and their plinths: the chapel of St Vladimir, the order obelisk, the Golovin bust, the Korchmin monument (and the horse-tram car, horses, coachman), the Brush monument car and the five museum cars on the apron, the Leonov bust, the memorial boulder, all 63 solids (48 boxes, 15 cylinders) of the VOStatues pieces except the removed basin blocks;
 * the 5 playground towers of the Blagoveshchensky garden (play equipment 1.4 x 1.4, 2.8 m: not converted, drawn in the static mesh);

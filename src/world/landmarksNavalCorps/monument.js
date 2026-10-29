@@ -9,6 +9,8 @@ import { K, MON, STAIR } from './frame.js';
 import { krusensternFig } from './figure.js';
 import { figureMats } from '../lib/figures.js';
 import * as L from '../layout.js';
+import { partsGeos } from './inst.js';
+import { knockFurniture } from '../lib/knock-furniture.js';
 import { knockBays, unitPanel, unitBox } from '../lib/fence-bays.js';      // n4spb (docs/AREAS.md 13.7, docs/vo-m2.md): the eight railing panels are breakable bays; the eight cast-iron posts stay solid
 
 const Y_TOP = 0.15;
@@ -73,17 +75,17 @@ export function build(Q) {
 
 /** the cast-iron railing on the tumba top (frame K): square tu0..tu1 x tv0..tv1, 1.05 m high, posts 0.2 m square 1.15 m tall with a pyramid cap and a ball, two panels per side */
 function railing(Q, tu0, tu1, tv0, tv1) {
-  const P = Q.P, M = Q.M, ph = Q.ctx.physics, y0 = Y_TOP, hh = 1.05, eps = 0.1;
+  const M = Q.M, ph = Q.ctx.physics, y0 = Y_TOP, hh = 1.05, eps = 0.1;
   const xs = [tu0 + eps, (tu0 + tu1) / 2, tu1 - eps], zs = [tv0 + eps, (tv0 + tv1) / 2, tv1 - eps];
-  const post = (x, z) => {
-    P.box(M.ironRail, x - 0.1, x + 0.1, y0, y0 + 1.1, z - 0.1, z + 0.1, 'b', 1);
-    P.fan(M.ironRail, [[x - 0.12, y0 + 1.1, z - 0.12], [x + 0.12, y0 + 1.1, z - 0.12], [x, y0 + 1.22, z]], [0, 0.5, -1]);
-    P.fan(M.ironRail, [[x + 0.12, y0 + 1.1, z - 0.12], [x + 0.12, y0 + 1.1, z + 0.12], [x, y0 + 1.22, z]], [1, 0.5, 0]);
-    P.fan(M.ironRail, [[x + 0.12, y0 + 1.1, z + 0.12], [x - 0.12, y0 + 1.1, z + 0.12], [x, y0 + 1.22, z]], [0, 0.5, 1]);
-    P.fan(M.ironRail, [[x - 0.12, y0 + 1.1, z + 0.12], [x - 0.12, y0 + 1.1, z - 0.12], [x, y0 + 1.22, z]], [-1, 0.5, 0]);
-    P.box(M.ironRail, x - 0.12, x + 0.12, y0 + 1.1, y0 + 1.14, z - 0.12, z + 0.12, 'b', 1);
-  };
-  for (const x of xs) for (const z of zs) { if (x === xs[1] && z === zs[1]) continue; post(x, z); }
+  // n4spb (the owner's rule: every post at the water breaks): the eight cast-iron posts are knock records (bollard-like), the same geometry built once at the origin (foot at y 0), a thin box each
+  const postGeo = partsGeos((R) => {
+    R.box(M.ironRail, -0.1, 0.1, 0, 1.1, -0.1, 0.1, 'b', 1);
+    R.fan(M.ironRail, [[-0.12, 1.1, -0.12], [0.12, 1.1, -0.12], [0, 1.22, 0]], [0, 0.5, -1]);
+    R.fan(M.ironRail, [[0.12, 1.1, -0.12], [0.12, 1.1, 0.12], [0, 1.22, 0]], [1, 0.5, 0]);
+    R.fan(M.ironRail, [[0.12, 1.1, 0.12], [-0.12, 1.1, 0.12], [0, 1.22, 0]], [0, 0.5, 1]);
+    R.fan(M.ironRail, [[-0.12, 1.1, 0.12], [-0.12, 1.1, -0.12], [0, 1.22, 0]], [-1, 0.5, 0]);
+    R.box(M.ironRail, -0.12, 0.12, 1.1, 1.14, -0.12, 0.12, 'b', 1);
+  });
   // panels: between consecutive posts of each side
   const bays = [];
   const panel = (xa, za, xb, zb) => { const A = K.W(xa, za), B = K.W(xb, zb); bays.push({ x0: A.x, z0: A.z, x1: B.x, z1: B.z, y: y0 }); };      // (the wheel panel + its top bar: the parts of the knock bays below)
@@ -99,5 +101,7 @@ function railing(Q, tu0, tu1, tv0, tv1) {
     collider: { y0: Y_TOP - 0.1, y1: Y_TOP + 1.3, thick: 0.3, e0: 0, e1: 0 },
     rec: () => ({ kind: 'fence', mass: 160, h: 1.1, anchored: 14, hitK: 0.35, metal: true, minDv: 0 }) });
   Q.extraTris = (Q.extraTris || 0) + bays.length * 6;
-  for (const x of xs) for (const z of zs) { if (x === xs[1] && z === zs[1]) continue; const w = K.W(x, z); ph.addBox(w.x, w.z, 0.24, 0.24, K.rot, Y_TOP - 0.1, Y_TOP + 1.3); }
+  const spots = [], items = [];
+  for (const x of xs) for (const z of zs) { if (x === xs[1] && z === zs[1]) continue; const w = K.W(x, z); spots.push({ x: w.x, y: y0, z: w.z, rotY: K.rot }); items.push(ph.addBox(w.x, w.z, 0.24, 0.24, K.rot, Y_TOP - 0.1, Y_TOP + 1.3)); }
+  Q.extraTris = (Q.extraTris || 0) + knockFurniture(Q.ctx, 'lmnaval-krusenstern-posts', postGeo, spots, items, { kind: 'bollard', mass: 120, h: 1.22, r: 0.15, anchored: 22, hitK: 0.4, metal: true }, 260);
 }
