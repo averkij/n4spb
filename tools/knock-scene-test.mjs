@@ -5,14 +5,14 @@
 //   3. car-driven: each of the four garage cars (coupe, taxi pickup 'truck', Zhiguli 'lada', 'roadster') drives at 15, 30 and 50 km/h into a bin, a bench, a lamp, a signal pole, a sign post, a mast arm
 //      (a fresh record with a clear run-up every time); the table says what held / what broke and the speed the car lost; the tuning expectations are checked
 //   node tools/knock-scene-test.mjs [--q medium] [--only census,kinds,cars] [--cars coupe,truck] [--kinds bin,lamp] [--speeds 15,30,50] [--params "a=b"] [--json out.json]
-//   While the bake is stale (any src edit) the page needs ?baked=force: the tool adds it by itself when the manifest revision differs from the source revision.
+//   While the bake is stale (any src edit) the page needs ?baked=force: the tool adds it by itself when the manifest revision of the area of the page (index.html: palace) differs from the revision of the live tree.
 //   Run through the GPU lock when other agents share the machine. Exit code 1 on a failed check.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
-import { bakedRevision } from './baked-revision.mjs';
+import { handleBakedRevision, areaOfPath, liveRevision } from './lib/dev-revision.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = {};
@@ -33,7 +33,7 @@ const REF = { vosstaniya: [589, 173], admiralty: [-2433, -622] };
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
-  if (req.url === '/__baked_revision') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ revision: bakedRevision(root) })); }
+  if (handleBakedRevision(req, res, root)) return;
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
   const f = path.join(root, p);
   fs.readFile(f, (err, data) => { if (err) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); res.end(data); });
@@ -65,8 +65,9 @@ try {
   const q = new URLSearchParams({ q: args.q || 'medium', t: '30' });
   if (args.params) for (const [k, v] of new URLSearchParams(args.params)) q.set(k, v);
   try {
-    const man = JSON.parse(fs.readFileSync(path.join(root, 'assets/baked/manifest.json'), 'utf8'));
-    if (man.revision !== bakedRevision(root) && !q.has('baked')) { q.set('baked', 'force'); console.log('the bake is stale (' + man.revision + ' vs ' + bakedRevision(root) + '): loading with baked=force'); }
+    const id = areaOfPath(root, '/index.html'), live = liveRevision(root, id);       // the area of THE PAGE it loads (index.html: palace), not a global revision
+    const man = JSON.parse(fs.readFileSync(path.join(root, 'assets/baked', id, 'manifest.json'), 'utf8'));
+    if (man.revision !== live && !q.has('baked')) { q.set('baked', 'force'); console.log(`the bake of ${id} is stale (${man.revision} vs ${live}): loading with baked=force`); }
   } catch (e) { /* no bake: the page builds procedurally */ }
   await page.goto(`http://127.0.0.1:${port}/index.html?${q}`, { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction("document.body.classList.contains('loaded')", { timeout: Number(args['load-timeout'] || 600000), polling: 250 });

@@ -1,4 +1,4 @@
-import { bakedRevision } from './baked-revision.mjs';
+import { handleBakedRevision } from './lib/dev-revision.mjs';
 // Minimal static file server for local development (no dependencies).
 // usage: node tools/serve.mjs [port] [--area <id> | --page <file>]   (default port 5176)  ->  http://localhost:5176
 // Every file of the site root is served, so every area page is reachable by its name (/index.html, /north.html ...); --area / --page only choose the page that "/" opens (default: the strip).
@@ -29,7 +29,7 @@ const TYPES = {
 };
 
 http.createServer((req, res) => {
-  if (req.url === '/__baked_revision') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ revision: bakedRevision(root) })); }
+  if (handleBakedRevision(req, res, root)) return;
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p.endsWith('/')) p += p === '/' ? DEFAULT_PAGE : 'index.html';
   const file = path.join(root, p);
