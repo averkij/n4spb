@@ -6,6 +6,7 @@
 //   revisionsOf(root, opts?)          { id: { revision, files, bytes, hashed[] } } for every area of the registry (one directory walk, one read cache)
 //   liveAreas(root, ctx?)             the registry rows that are baked (not parked, not planned)
 //   createRevisionContext(root, opts) a tree snapshot: { overlay, virtual, read, areas, rules, scanner } (tests overlay in-memory files; see tools/lib/closure.mjs createContext)
+//   digestsOf(ctx, hashed)            { rel: sha256[0:12] } of the hashed bytes (inputs.json)
 //
 // Not hashed on purpose: the bake tooling itself (tools/bake-scene.mjs, bake-osm, the codec on the tools side), Google Fonts bytes and the Edge / GPU versions: change those -> bump BAKE_SCHEME
 // and re-bake everything (node tools/bake-scene.mjs --area all --force).
@@ -57,6 +58,12 @@ export function areaRevision(root, areaId, ctx) {
   return { revision: h.digest('hex').slice(0, 20), files: hashed.length, bytes, hashed };
 }
 export function revisionOf(root, areaId, ctx) { return areaRevision(root, areaId, ctx).revision; }
+/** { rel: sha256[0:12] } of the bytes that enter the hash, for the files of a closure (inputs.json of a bake: the informational diff of bake-manifest-check) */
+export function digestsOf(ctx, hashed) {
+  const out = {};
+  for (const rel of hashed) out[rel] = createHash('sha256').update(hashBytes(ctx, rel)).digest('hex').slice(0, 12);
+  return out;
+}
 /** the registry rows that are baked: not parked, not planned */
 export function liveAreas(root, ctx) {
   ctx = ctx || createRevisionContext(root);

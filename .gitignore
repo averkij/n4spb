@@ -22,3 +22,6 @@ assets/baked/**/*.part
 docs/reference/yandex-center.png
 docs/reference/plan-overlay.png
 tools/tauride/raw/
+
+# the lock of a running bake (tools/lib/bake-guard.mjs)
+assets/baked/.bake.lock
