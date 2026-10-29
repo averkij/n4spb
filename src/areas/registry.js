@@ -291,7 +291,7 @@ REGISTRY.admiralty = {
 
 // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v): map area 48, the Vasilyevsky island with the okrug 7 / Gavan side - the Strelka with the Exchange and the Rostral columns, the Kunstkamera, the Twelve Collegia, the Menshikov
 // Palace, the Academy of Arts, the Andrew Cathedral, the Smolensky cemetery, the Smolenka and the Sea Terminal - plus the Petrograd-side bank of the Neva and the Neva Bay south of the island. The cut of tools/area-shape.mjs
-// --k 48 --js vasilyevsky (land outline plus water zones, 63 rectangles, 11.23 km2; the names carry the prefix VO because V.. belongs to Vladimirsky). No ST rectangle: no railway station (one purple Zhiguli at the spawn, 13.4).
+// --k 48 --js vasilyevsky (land outline plus water zones, 63 rectangles, 11.23 km2, plus 8 hand-added water rectangles VO64 .. VO71, 0.33 km2, and 4 of shore land VO72 .. VO75, 0.064 km2; the names carry the prefix VO because V.. belongs to Vladimirsky). No ST rectangle: no railway station (one purple Zhiguli at the spawn, 13.4).
 REGISTRY.vasilyevsky = {
   id: 'vasilyevsky', page: 'vasilyevsky.html', bake: 'baked/vasilyevsky/', requireBake: true,
   title: 'Васильевский–Округ № 7', titleEn: 'Vasilyevsky–Okrug № 7',
@@ -365,6 +365,21 @@ REGISTRY.vasilyevsky = {
       { name: 'VO61', x0: -6240, x1: -5040, z0: 1680, z1: 1760 },
       { name: 'VO62', x0: -6160, x1: -5040, z0: 1760, z1: 1840 },
       { name: 'VO63', x0: -5920, x1: -5120, z0: 1840, z1: 1920 },
+      // VO64 .. VO71: the OPEN WATER of the Neva Bay between the Sea Terminal pockets (VO48 / VO49) and the bay water of VO54 .. VO57, added by hand after the area-shape cut (0.33 km2; every cell is water on 8 of 9 samples, fix C of the Vasilyevsky review).
+      // The map's water zone (wz) stops at the shore, so the territory edge ran across the open water: the two pockets of the Sea Terminal (4,711 and 3,463 m2) were separate bodies of water for a boat. Not part of the area-shape output: re-add after re-cutting the rows above.
+      { name: 'VO64', x0: -6720, x1: -6560, z0: 720, z1: 800 },
+      { name: 'VO65', x0: -6720, x1: -6400, z0: 800, z1: 880 },
+      { name: 'VO66', x0: -6720, x1: -6240, z0: 880, z1: 960 },
+      { name: 'VO67', x0: -6720, x1: -6160, z0: 960, z1: 1040 },
+      { name: 'VO68', x0: -6720, x1: -6080, z0: 1040, z1: 1120 },
+      { name: 'VO69', x0: -6720, x1: -6000, z0: 1120, z1: 1200 },
+      { name: 'VO70', x0: -6720, x1: -6080, z0: 1200, z1: 1280 },
+      { name: 'VO71', x0: -6720, x1: -6160, z0: 1280, z1: 1360 },
+      // VO72 .. VO75: the 10 cells of shore land (0.064 km2) that the water band VO64 .. VO71 would otherwise enclose between itself and VO50 .. VO53 (areas-test: no enclosed hole in the territory = no invisible wall).
+      { name: 'VO72', x0: -6400, x1: -6160, z0: 800, z1: 880 },
+      { name: 'VO73', x0: -6240, x1: -6080, z0: 880, z1: 960 },
+      { name: 'VO74', x0: -6160, x1: -6000, z0: 960, z1: 1040 },
+      { name: 'VO75', x0: -6080, x1: -5840, z0: 1040, z1: 1120 },
   ],
 };
 
