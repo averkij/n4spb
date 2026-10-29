@@ -1,5 +1,5 @@
 // Z-fighting probe in the real renderer (headless Edge/Chrome + puppeteer-core, like tools/shot.mjs).
-//   node tools/zfight.mjs [--only mod,mod] [--cams "hero;v2;x,z,yaw,pitch;x,y,z,yaw,pitch"] [--t 20] [--thr 40] [--out shots/zfight/run]
+//   node tools/zfight.mjs [--area vasilyevsky] [--only mod,mod] [--cams "hero;v2;x,z,yaw,pitch;x,y,z,yaw,pitch"] [--t 20] [--thr 40] [--out shots/zfight/run]
 // The same frame is rendered three times with the screen-space outline switched off: A, A again, and B with near / far changed by 7 %
 // (an identical picture whose depth buffer is quantised differently). Surfaces that are really separated cannot change; two surfaces that
 // z-fight flip between B and A. Pixels with |A - B| > thr are "noisy". For every noisy 24 px cell the probe casts a ray through the pixel
@@ -11,11 +11,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import puppeteer from 'puppeteer-core';
+import { resolveArea, activateArea } from './lib/area-page.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = {};
 for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i]; if (a.startsWith('--')) { const k = a.slice(2); const v = process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[++i] : '1'; args[k] = v; } }
 const W = Number(args.w || 1280), H = Number(args.h || 720), THR = Number(args.thr || 40);
+const AREA = resolveArea(args, root);          // --area <id> | --page <file>: another area's page (default: the strip, index.html); its layout gives hero / v1..
+await activateArea(AREA.row, root);
 const L = await import(pathToFileURL(path.join(root, 'src/world/layout.js')).href);
 const pose = (p) => `${p.x},${p.z},${p.yaw},${p.pitch}`;
 const PRESETS = { hero: [pose(L.HERO)], views: L.VIEWS.map(pose), overview: ['-102,430,430,0,-42'], aerial: ['330,300,380,55,-38'], top: ['-102.9,452,83.7,0,-90'] };
@@ -67,7 +70,7 @@ try {
   if (args.only) q.set('only', args.only);
   if (args.params) for (const [k, v] of new URLSearchParams(args.params)) q.set(k, v);
   q.set('cam', cams[0]);
-  await page.goto(`http://127.0.0.1:${port}/index.html?${q}`, { waitUntil: 'load', timeout: 180000 });
+  await page.goto(`http://127.0.0.1:${port}/${AREA.page}?${q}`, { waitUntil: 'load', timeout: 180000 });
   await page.waitForFunction('window.__ready === true', { timeout: 600000, polling: 250 });
   await page.evaluate(() => {
     window.__grab = () => { const gl = document.getElementById('scene').getContext('webgl2'); const px = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4); gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, px); return px; };

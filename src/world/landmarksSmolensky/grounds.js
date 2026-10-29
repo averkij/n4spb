@@ -29,7 +29,7 @@ export async function build(K) {
   P.push(0, 0, 0, 0);
   fillPolyFine(P, M.floorSplat, insetRiver(pl.ring, 7), 0.014, { maxEdge: 22, tile: 6 });
   P.pop();
-  // ---- the ALLEYS: streets does not draw a footway inside a claimed GREEN polygon (streets/paths.js ownedPolys), the module lays its own ribbons: asphalt 3.2 m (tagged asphalt), brick pavers 2.4 m, untagged footways
+  // ---- the ALLEYS: streets draws no way that groups.js claims (smolensky-grounds osm: the 66 alley ids of place.js; 2026-10-29: before the claim streets laid a second ribbon of its own at y 0.042 over these at 0.025 .. 0.033, two systems on one alley = z-fighting and a ground that changed with the distance), the module lays its own ribbons: asphalt 3.2 m (tagged asphalt), brick pavers 2.4 m, untagged footways
   // asphalt 2.4 m (photos 72 / 139: the alleys of the cemetery are asphalt, the older ones herringbone pavers), gravel paths 1.6 m, unpaved paths 1.0 m; one height per class (no coplanar overlap between classes)
   const CLS = { asphalt: [M.asphalt, 3.2, 0.033, 3], narrow: [M.asphalt, 2.4, 0.031, 3], paving: [M.pavers, 2.4, 0.029, 2], gravel: [M.gravel, 1.6, 0.027, 3], earth: [M.gravel, 1.0, 0.025, 3] };
   const classOf = (p) => (p.surface === 'asphalt' ? 'asphalt' : /paving|sett|plates|concrete/.test(p.surface) ? 'paving' : /gravel|compacted|ground/.test(p.surface) ? 'gravel' : p.surface === 'unpaved' ? 'earth' : p.hwClass === 'path' ? 'gravel' : 'narrow');
