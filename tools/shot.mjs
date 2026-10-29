@@ -1,4 +1,4 @@
-import { bakedRevision } from './baked-revision.mjs';
+import { handleBakedRevision } from './lib/dev-revision.mjs';
 // Headless GPU screenshots of the real renderer (Edge + puppeteer-core). Starts its own server.
 // usage:
 //   node tools/shot.mjs --only environment,city --cams "x,z,yaw,pitch;x,y,z,yaw,pitch" --out shots/city/a [--t 20] [--w 1280 --h 720] [--q high] [--fov 62]
@@ -49,7 +49,7 @@ fs.mkdirSync(path.dirname(path.resolve(root, out)), { recursive: true });
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
 const server = http.createServer((req, res) => {
-  if (req.url === BASE + '/__baked_revision') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ revision: bakedRevision(root) })); }
+  if (handleBakedRevision(req, res, root, { base: BASE })) return;
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
   if (BASE && p.startsWith(BASE + '/')) p = p.slice(BASE.length);
   const f = path.join(root, p);

@@ -4,7 +4,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bakedRevision } from './baked-revision.mjs';
+import { handleBakedRevision } from './lib/dev-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2), modules = [], options = {};
@@ -27,7 +27,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
     res.write(': connected\n\n'); clients.add(res); req.on('close', () => clients.delete(res)); return;
   }
-  if (url.pathname === '/__baked_revision') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ revision: bakedRevision(root) })); }
+  if (handleBakedRevision(req, res, root)) return;
   let filename;
   try { filename = path.resolve(root, '.' + decodeURIComponent(url.pathname.endsWith('/') ? url.pathname + 'index.html' : url.pathname)); }
   catch { res.writeHead(400); return res.end(); }

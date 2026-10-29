@@ -19,11 +19,11 @@ const args = {}; for (let i = 2; i < process.argv.length; i++) { const a = proce
 const HOPS = Number(args.hops || 4), MODE = args.mode || 'replace', TIER = args.q || 'medium', PAGE = args.page || 'index.html', PAGES = args.pages ? String(args.pages).split(',') : [PAGE];      // --pages index.html,north.html: hop between the pages in turn (every arrival is compared with the first one of ITS page)
 const out = path.resolve(root, args.out || 'shots/areas/nav-memory.json');
 fs.mkdirSync(path.dirname(out), { recursive: true });
-const { bakedRevision } = await import('./baked-revision.mjs');
+const { handleBakedRevision } = await import('./lib/dev-revision.mjs');
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
 const server = http.createServer((req, res) => {
-  if (req.url === '/__baked_revision') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ revision: bakedRevision(root) })); }
+  if (handleBakedRevision(req, res, root)) return;
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
   const f = path.join(root, p); if (!f.startsWith(root)) { res.writeHead(403); return res.end(); }
   fs.readFile(f, (err, data) => { if (err) { res.writeHead(404); return res.end(); }

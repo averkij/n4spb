@@ -400,11 +400,12 @@ export function createGates(deps) {
     try {
       const head = await Promise.race([fetchImpl(new URL(row.page, win.location.href), { method: 'HEAD', cache: 'no-cache' }), timeout(4000)]);
       if (!head.ok) return { ok: false, why: 'page', status: head.status };
-      const peekManifest = deps.peekManifest || (await import('./baked-world.js')).peekManifest, BAKED_REVISION = deps.bakedRevision ?? (await import('./baked-revision.js')).BAKED_REVISION;      // (injectable for tests)
+      const peekManifest = deps.peekManifest || (await import('./baked-world.js')).peekManifest, REVS = deps.bakedRevisions ?? (await import('./baked-revision.js')).BAKED_REVISIONS;      // (injectable for tests) REVS: the bake revision of EVERY live area (generated map): the target's manifest is compared with the TARGET's own entry, not with the revision of this page's area
       const m = await Promise.race([peekManifest(row.bake), timeout(4000)]);
       if (!m) return { ok: false, why: 'manifest' };
       if (m.area && m.area !== to) return { ok: false, why: 'area' };
-      if (m.revision !== BAKED_REVISION) return { ok: false, why: 'stale' };
+      const want = REVS?.[row.id];      // a target that has no entry (a parked or unknown area), or a page whose cached map is older than the bake: stale, the safe side
+      if (!want || m.revision !== want) return { ok: false, why: 'stale' };
       return { ok: true };
     } catch (e) { return { ok: false, why: 'offline' }; }
   }
