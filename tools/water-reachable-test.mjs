@@ -449,7 +449,7 @@ if (AREA === 'palace') {
       car.reset(f.cx, f.cz, 0); if (Math.abs(car.y - (f.top + 0.03)) > 1e-6) { bad.push(['place', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2)]); continue; }
       if (big) for (let t = 0; t < 1; t += 1 / 60) car.step(1 / 60, idle);
       if (big && car.y < f.top - 0.3) bad.push(['stay', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2)]);
-      if (big) {
+      if (big && !floorItems.includes(f)) {      // (the floor of an undrawn OSM bridge lies AT the road level: nothing to drop from, so no 'land' event)
         car.reset(f.cx, f.cz, 0); car.y = 0.03; let ev = false;      // dropped from the road level
         for (let t = 0; t < 3; t += 1 / 60) { car.step(1 / 60, idle); if (car.events.some((e) => e.type === 'land')) ev = true; }
         if (car.y < f.top - 0.3 || car.fall) bad.push(['drop', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2), th]); else if (ev) landed++;
@@ -457,7 +457,7 @@ if (AREA === 'palace') {
       const p = walker(f.cx, f.cz); p.pos.y = f.top + 0.3; for (let t = 0; t < 1; t += 1 / 60) { p.time += 1 / 60; p.update(1 / 60); }
       if (Math.abs(p.pos.y - f.top) > 0.1) bad.push(['walker', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +p.pos.y.toFixed(2)]);
     }
-    assert(n >= 3 && bad.length === 0 && (landed >= 1 || !floors.some((q) => Math.min(q.hw, q.hd) >= 3.5)), `${bad.length} of ${n} floors failed (${landed} landings with the event): ${JSON.stringify(bad.slice(0, 5))}`);
+    assert(n >= 3 && bad.length === 0 && (landed >= 1 || !floors.some((q) => Math.min(q.hw, q.hd) >= 3.5 && !floorItems.includes(q))), `${bad.length} of ${n} floors failed (${landed} landings with the event): ${JSON.stringify(bad.slice(0, 5))}`);
   });
 }
 
@@ -553,9 +553,13 @@ if (built.includes('landmarksTauride')) {
     if (S.kind === 'walk' && S.item && !S.item.sticky && S.y <= 0.3) { if (S.y > 0.03) return S.y; if (th < -0.2 && S.y > th + 0.05) return S.y + 0.03; }
     return th < -0.2 ? th + 0.03 : 0.03;
   };
-  const DRIVABLE = new Set(['primary', 'secondary', 'tertiary', 'unclassified', 'residential']);
-  const bridges = ROADS.filter((r) => r.bridge && !r.tunnel && DRIVABLE.has(r.hw) && /мост/i.test(r.name || ''));
-  check(`9 every named drivable OSM bridge of the area (${bridges.length} ways) has a surface at the level of the road over every water cell of its way: the car never drops to the bed`, () => {
+  const DRIVABLE = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'motorway_link', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link']);
+  // every drivable bridge=yes way, named or not (the Makarova embankment overpasses of k51 are called "набережная Макарова" or carry no name: the old /мост/i filter did not see them)
+  // Two embankment ways of the Griboedov canal (palace + admiralty, the Kazan bridge region) are drivable bridge=yes ways over water that no module draws: found by the widened filter, they predate the three new areas and
+  // changing them would change two old areas (the owner decides): listed here so that the widened check stays green for them and fails for every NEW case. See docs/AREAS.md 15.g (fix round).
+  const KNOWN_OLD = new Set(['w243947052', 'w307823510']);
+  const bridges = ROADS.filter((r) => r.bridge && !r.tunnel && DRIVABLE.has(r.hw) && !KNOWN_OLD.has(r.id));
+  check(`9 every drivable OSM bridge of the area (${bridges.length} ways) has a surface at the level of the road over every water cell of its way: the car never drops to the bed`, () => {
     const bad = []; let wet = 0;
     for (const r of bridges) {
       let fall = 0, first = null;

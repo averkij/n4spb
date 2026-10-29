@@ -290,6 +290,27 @@ const BRIDGE_ZONES = [
   { id: 'smol4', name: '4-й Смоленский мост', key: 'smolenka', c: [-7903.2, -2151.0], axis: 16.3, w: 51.0, len: 31.3, own: true },
   // the Serny Bridge (bridges/petrovsky/serny.js: frame origin (-4930.11, -2552.04), bearing 30.31, 13 m wide, 18.7 m long): the quay leaves its opening to the bridge's own abutments and wings. The Betancourt Bridge needs no row: a viaduct 10 - 18 m high over the shore, the generic quay stands under it
   { id: 'serny-bridge', name: 'Серный мост', key: 'neva', c: [-4930.1, -2552.0], axis: 30.3, w: 13.0, len: 18.7, own: true },
+  // FLOOR-ONLY rows (floor: true; docs/AREAS.md 15.x "Bridge fixes", the Admiralty row 'smezhny'): the Makarova embankment overpass complex crosses the corner of the Neva at (-6400 .. -6290, -2920 .. -2850) on five drivable OSM bridge
+  // ways (w723954964, w302687690, w605933147, w588966048, w302687689; layer 1) and one footway (w588712889) that no module draws. Streets draws their asphalt at the road level over the water, the quay opens nothing there: an invisible
+  // walk floor (y 0, bottom -1.2) under each water stretch (+ 7 m of bank on both sides, box width = lanes * 3.5 + 5 m, 5 m for the footway) lets a car or a walker cross instead of falling to the bed (check 9 of water-reachable-test).
+  // The rows were cut from the polylines of the ways (one box per polyline segment that touches water); the edges are open, there is no parapet (water is reachable). Owner check: the roads hang flat over the water, no soffit is drawn.
+  { id: 'mk-723954964-1', floor: true, c: [-6403.7, -2907.2], axis: 128.3, w: 16, len: 14.4 },
+  { id: 'mk-302687690-1', floor: true, c: [-6381.6, -2891.8], axis: 124.1, w: 19, len: 45.4 },
+  { id: 'mk-302687690-2', floor: true, c: [-6345.6, -2870], axis: 118.1, w: 19, len: 45.1 },
+  { id: 'mk-605933147-1', floor: true, c: [-6307.3, -2853.6], axis: 108.2, w: 16, len: 44.5 },
+  { id: 'mk-588966048-1', floor: true, c: [-6312.6, -2852.6], axis: 117.4, w: 9, len: 35.6 },
+  { id: 'mk-588966048-2', floor: true, c: [-6294, -2843.4], axis: 112.8, w: 9, len: 12 },
+  { id: 'mk-302687689-1', floor: true, c: [-6302.8, -2867.9], axis: 290.7, w: 16, len: 45.7 },
+  { id: 'mk-302687689-2', floor: true, c: [-6339.6, -2883.7], axis: 295.9, w: 16, len: 40.6 },
+  { id: 'mk-302687689-3', floor: true, c: [-6373.7, -2903], axis: 302.8, w: 16, len: 43.9 },
+  { id: 'mk-302687689-4', floor: true, c: [-6395.2, -2917.5], axis: 308.2, w: 16, len: 14 },
+  { id: 'mk-588712889-1', floor: true, c: [-6282.6, -2870.2], axis: 286.7, w: 5, len: 10.1 },
+  { id: 'mk-588712889-2', floor: true, c: [-6294.9, -2874.5], axis: 290.2, w: 5, len: 22.1 },
+  { id: 'mk-588712889-3', floor: true, c: [-6315.9, -2882.9], axis: 292.9, w: 5, len: 29.2 },
+  { id: 'mk-588712889-4', floor: true, c: [-6337.9, -2893.1], axis: 297, w: 5, len: 25.2 },
+  { id: 'mk-588712889-5', floor: true, c: [-6356.6, -2903.1], axis: 299.4, w: 5, len: 23.2 },
+  { id: 'mk-588712889-6', floor: true, c: [-6373.9, -2913.5], axis: 303.1, w: 5, len: 23.2 },
+  { id: 'mk-588712889-7', floor: true, c: [-6388.4, -2923.4], axis: 305.9, w: 5, len: 18 },
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
