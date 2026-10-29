@@ -20,6 +20,9 @@
 // ---
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js)
 // ---
+import { ringsOf as MO_RINGS } from '../../world/bridges/groups-mo.js';      // bridgesMo
+const BRIDGES_MO = MO_RINGS(['korablestroiteley-', 'smol3-', 'smol4-'], { cutting: true });      // the stair pits of the Shipbuilders' and the 3rd / 4th Smolensky bridges + the cutting banks of the WHSD (its first stretch)
+// ---
 
 const SOURCES = [
   // PORT-SOURCE: landmarksDekabristov
@@ -29,6 +32,8 @@ const SOURCES = [
   // PORT-SOURCE: landmarksFill
   // ---
   { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
+  // ---
+  { module: 'bridges', ns: BRIDGES_MO },      // bridgesMo: the pits of the three bridges with corner / abutment stairs, the cutting banks of the WHSD
   // ---
 ];
 

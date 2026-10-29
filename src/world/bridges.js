@@ -23,6 +23,8 @@ import { STYLES5 } from './bridges/styles5.js';      // Nalichny (+ Korablestroi
 import { buildFoot3 } from './bridges/foot3.js';      // the Novo-Andreevsky footbridge
 import { FOOT, VO2_SITES } from './bridges/sites-vo2.js';
 import { openHedgeGaps } from './bridges/gaps.js';
+import { LIST as PETROVSKY } from './bridges/petrovsky.js';      // the Betancourt and Serny bridges and the WHSD fairway bridge (Dekabristov Island)
+import { buildWhsd } from './bridges/whsd.js';      // the Western High-Speed Diameter (at-grade stretch + viaduct + portals + pylons), built by the areas that claim the `whsd` group (Morskoy, Gavan, Dekabristov), each its own part of the line (docs/gdm-B.md)
 import { BRIDGE_GROUP_KEYS } from './lib/area-tables.js';
 import { makeRailBatch } from './bridges/rails.js';
 import { SITES, WATER_Y } from './bridges/sites.js';
@@ -94,6 +96,17 @@ export async function build(ctx) {
   try {
     if (BRIDGE_GROUP_KEYS.has(FOOT.id)) { const P = new Parts(), info = buildFoot3({ ctx, P, M, rails, waterY: waterY('smolenka'), zones: QZONES }); info.colliders(); flush(P, FOOT.id, null, info.extraTris); stats.colliders += info.info.colliders; list.push({ id: FOOT.id, name: FOOT.name, nameEn: FOOT.nameEn, x: info.x, z: info.z, at: info.at, B: info }); }
   } catch (err) { console.error('[bridges] novo-andreevsky failed:', err); failed.push('novo-andreevsky: ' + (err && err.stack || err)); }
+  // the Western High-Speed Diameter (bridges/whsd.js, data sites-vo2.js WHSD): the twin viaduct decks (drivable, not walkable), the at-grade stretch with its open cutting, the Korabelny cable-stayed bridge pylons, the tunnel portals;
+  // only where the area claims the `whsd` group, and only the stations inside the data extent of the area (whsd.js); the deck barriers and the median barrier are knock bays (rails.parapet), the lamps knock posts
+  try {
+    if (BRIDGE_GROUP_KEYS.has('whsd')) { const P = new Parts(), info = buildWhsd({ ctx, P, M, rails }); info.colliders(); flush(P, 'whsd', null, info.extraTris); stats.colliders += info.info.colliders; list.push({ id: 'whsd', name: 'Западный скоростной диаметр', nameEn: 'Western High-Speed Diameter (viaduct, cable-stayed bridge, portals)', x: info.x, z: info.z, at: info.at, B: info }); }
+  } catch (err) { console.error('[bridges] whsd failed:', err); failed.push('whsd: ' + (err && err.stack || err)); }
+  // the bridges of the Petrovsky side that Dekabristov Island holds (bridges/petrovsky.js: the Betancourt Bridge, the Serny Bridge, the WHSD fairway bridge pylons), where the area claims the id
+  for (const it of PETROVSKY) {
+    if (!BRIDGE_GROUP_KEYS.has(it.id)) continue;
+    try { const P = new Parts(), info = it.build({ ctx, P, M, rails, waterY: waterY('neva'), zones: QZONES }); info.colliders(); flush(P, it.id, null, info.extraTris); stats.colliders += info.info.colliders; list.push({ id: it.id, name: it.name, nameEn: it.nameEn, x: info.x, z: info.z, at: info.at, B: info }); }
+    catch (err) { console.error(`[bridges] ${it.id} failed:`, err); failed.push(`${it.id}: ${err && err.stack || err}`); }
+  }
   // the lawn hedges of the environment (thin 1.1 m boxes, up to 180 m long) may cross a foot path that leads onto the Nalichny / Novo-Andreevsky approaches: cut a gap into every hedge box that crosses an approach corridor (colliders only, bridges/gaps.js)
   try {
     const cor = VO2_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)).map((s) => ({ cx: s.cx, cz: s.cz, b: s.b, u0: s.bank[0] - 2 - 28, u1: s.bank[1] + 2 + 28, v0: s.v0 - 0.4, v1: s.v1 + 0.4 }));

@@ -33,6 +33,8 @@ import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as 
 // PORT-IMPORT: landmarksPrimorskaya
 // ---
 // PORT-IMPORT: landmarksFill
+// ---
+import { mo as MO_ROWS } from '../../world/bridges/groups-mo.js';      // bridgesMo: the bridges of the Smolenka mouth, the Shipbuilders' Bridge, the WHSD portals (bridges/groups-mo.js: imported only by the new areas)
 
 /** Area id: <html data-area> must equal it (main.js refuses to run a page whose area module is another one) and the registry (src/areas/registry.js) lists it. */
 export const ID = 'dekabristov';
@@ -123,6 +125,13 @@ GROUPS.landmarksVOStatues = G_VOSTATUES.filter((g) => VO_KEYS.has(g.key));
 // yet (the bridge engine round of the area-gdm effort): the Korablestroiteley bridge, the four Smolensky bridges of the Smolenka mouth, the ZSD viaduct, the Betancourt and Serny bridges
 const BRIDGE_KEYS = new Set(['uralsky', 'smolensky', 'nalichny', 'novo-andreevsky']);
 GROUPS.bridges = GROUPS_VO.filter((b) => BRIDGE_KEYS.has(b.key));
+// ---
+// bridgesMo (docs/gdm-B.md): the Shipbuilders' Bridge, the 1st .. 4th Smolensky bridges of the Smolenka mouth and the WHSD (here only its tunnel portals and the first 100 m of the at-grade stretch: the rest of the corridor lies in Morskoy)
+GROUPS.bridges = GROUPS.bridges.concat(MO_ROWS(['korablestroiteley', 'smol1', 'smol2', 'smol3', 'smol4', 'whsd', 'betancourt', 'serny-bridge', 'whsd-petrovsky'], {
+  // the WHSD here: the two tunnel ways of the Smolenka mouth and the first at-grade ways beyond the portals (the viaduct ways lie in Morskoy and Gavan); the fairway bridge of the Petrovsky side claims its own ways (r8840605, w589047643 / w589047646)
+  whsd: { osm: ['w130068396', 'w350477987', 'w1257246774', 'w1257246771'], at: [-8147, -1977] },
+  'whsd-petrovsky': { osm: ['r8840605', 'w589047643', 'w589047646'], at: [-7540, -3800] } }));
+// ---
 
 /**
  * The HUD location table (first match wins), built with the layout helpers `h` ({ NAMES, SUBGROUPS, _sqPolys, _groupPolys, _named, _areaPolys, _shoreOf, _deck, inRiver, shoreDist }).
@@ -198,7 +207,7 @@ export function makeViews({ yawToward }) {
     { key: 'Digit0', label: 'ЖК «Морской Каскад»', x: -7740, z: -2200, yaw: yawToward(-7740, -2200, -7740, -2233), pitch: 10 },
     { key: 'ShiftDigit1', label: 'Намывная территория', x: -7995, z: -2930, yaw: yawToward(-7995, -2930, -7995, -2960), pitch: 6 },
     { key: 'ShiftDigit2', label: 'Смоленский мост', x: -5287, z: -1620, yaw: yawToward(-5287, -1620, -5287, -1646), pitch: 6 },
-    { key: 'ShiftDigit3', label: 'Часовня блаженной Ксении', x: -5586, z: -1360, yaw: yawToward(-5586, -1360, -5586, -1325), pitch: 8 },
+    { key: 'ShiftDigit3', label: 'Часовня блаженной Ксении', x: -5587, z: -1359.7, yaw: yawToward(-5587, -1359.7, -5586, -1325), pitch: 8 },      // (moved 0.3 m: with the whole cemetery ring built, gdm cluster B, a grave stood on the old pose (-5586, -1360))
     { key: 'ShiftDigit4', label: 'Памятник Комитасу', x: -5040, z: -1720, yaw: yawToward(-5040, -1720, -5017, -1745), pitch: 8 },
     // the Places list only
     { key: 'Place.polar', label: 'Памятник всем полярникам', x: -6688, z: -1585, yaw: yawToward(-6688, -1585, -6686, -1607), pitch: 6 },
@@ -245,6 +254,14 @@ const BRIDGE_ZONES = [
   { id: 'smolensky', name: 'Смоленский мост', key: 'smolenka', c: [-5286.9, -1645.8], axis: 149.5, w: 28.2, len: 21.3, own: true },
   { id: 'nalichny', name: 'Наличный мост', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7, own: true },
   { id: 'novo-andreevsky', name: 'Ново-Андреевский мост', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3, own: true, foot: true },
+  // bridgesMo: the Shipbuilders' Bridge and the four bridges of the Smolenka mouth (the numbers of the source's BRIDGE_SHADES rows, environment/waterways.js 259 .. 263; river.js SITE_OF maps the ids to the sites of bridges/sites-vo2.js)
+  { id: 'korablestroiteley', name: 'Мост Кораблестроителей', key: 'smolenka', c: [-7532.2, -1948.0], axis: 16.5, w: 70.8, len: 40.7, own: true },
+  { id: 'smol1', name: '1-й Смоленский мост', key: 'smolenka', c: [-8059.5, -2005.4], axis: 15.7, w: 16.4, len: 30.8, own: true },
+  { id: 'smol2', name: '2-й Смоленский мост', key: 'smolenka', c: [-8008.7, -2182.8], axis: 17.4, w: 15.8, len: 31.5, own: true },
+  { id: 'smol3', name: '3-й Смоленский мост', key: 'smolenka', c: [-7955.6, -1975.4], axis: 16.3, w: 51.4, len: 32.2, own: true },
+  { id: 'smol4', name: '4-й Смоленский мост', key: 'smolenka', c: [-7903.2, -2151.0], axis: 16.3, w: 51.0, len: 31.3, own: true },
+  // the Serny Bridge (bridges/petrovsky/serny.js: frame origin (-4930.11, -2552.04), bearing 30.31, 13 m wide, 18.7 m long): the quay leaves its opening to the bridge's own abutments and wings. The Betancourt Bridge needs no row: a viaduct 10 - 18 m high over the shore, the generic quay stands under it
+  { id: 'serny-bridge', name: 'Серный мост', key: 'neva', c: [-4930.1, -2552.0], axis: 30.3, w: 13.0, len: 18.7, own: true },
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
@@ -253,6 +270,11 @@ const BRIDGE_SHADES = [
   { id: 'smolensky-deck', key: 'smolenka', c: [-5286.9, -1645.8], axis: 149.5, w: 28.2, len: 21.3 },
   { id: 'nalichny-deck', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7 },
   { id: 'novo-andreevsky-deck', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3 },
+  { id: 'korablestroiteley-deck', key: 'smolenka', c: [-7532.2, -1948.0], axis: 16.5, w: 70.8, len: 40.7 },
+  { id: 'smol1-deck', key: 'smolenka', c: [-8059.5, -2005.4], axis: 15.7, w: 16.4, len: 30.8 },
+  { id: 'smol2-deck', key: 'smolenka', c: [-8008.7, -2182.8], axis: 17.4, w: 15.8, len: 31.5 },
+  { id: 'smol3-deck', key: 'smolenka', c: [-7955.6, -1975.4], axis: 16.3, w: 51.4, len: 32.2 },
+  { id: 'smol4-deck', key: 'smolenka', c: [-7903.2, -2151.0], axis: 16.3, w: 51.0, len: 31.3 },
 ];
 
 /** reaches: key of the waterway, test(x, z, nx, nz) on a bank point (landward normal n), run = horizontal length of the slope, kerb = banquette top above the water, lip = step from the banquette to the slope */

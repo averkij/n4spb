@@ -78,6 +78,19 @@ const WALLS = {
   smolenka: { tones: ['#a29a92', '#98908a', '#aaa198', '#908880', '#a49a90', '#9a928a'], rows: 6, vein: 0.4 },      // Vasilyevsky-Okrug 7: the Smolenka (source project's tones)
   neva: { tones: ['#ab9487', '#b49d90', '#9d8a7e', '#a68f84', '#b8a094', '#a08c80', '#b09584'], rows: 7, vein: 0.8, big: 1 },
 };
+// n4spb (gdm cluster B, docs/gdm-B.md; source project quay.js 94, 300 .. 308): the mouth arms of the Smolenka (x < -7490, Morskoy / Dekabristov only: no other area has a Smolenka bank there) have a PALE GREY granite wall (photo V17 / w08 of the source's
+// review-water refs), not the warm grey-pink of the river above, and a paved lower berm 0.6 m over the water at its foot. The table row and the berm texture are painted only where the arms exist (see the mk() calls at the end).
+WALLS.mouth = { tones: ['#bdbab4', '#b3b0aa', '#c4c0b8', '#aaa7a1', '#b8b4ac', '#c0bdb6'], rows: 5, vein: 0.1, big: 1 };
+/** the paved lower berm at the foot of the wall of the Smolenka mouth arms (photo w08 = V17: pale grey granite slabs ~0.9 x 0.6 m, tight joints, grass in some of them) */
+function bermTexture(ctx) {
+  return ctx.tex.draw(256, 256, (g, w, h) => {
+    const r = ctx.rng('quay-berm-tex');
+    g.fillStyle = '#8c8a85'; g.fillRect(0, 0, w, h);
+    const tones = ['#b9b6ae', '#c1beb6', '#b0ada6', '#bcb8ae', '#c5c2ba'];
+    for (let j = 0; j < 4; j++) { let x = -r() * 40; while (x < w) { const bw = 54 + r() * 26; g.fillStyle = tones[Math.floor(r() * tones.length)]; g.fillRect(x + 1.5, j * 64 + 1.5, bw - 3, 61); x += bw; } }
+    for (let i = 0; i < 60; i++) { g.fillStyle = r() < 0.5 ? 'rgba(86,112,60,0.55)' : 'rgba(236,232,220,0.25)'; g.fillRect(r() * w, r() * h, 2 + r() * 4, 1.5 + r() * 3); }
+  }, { key: 'env-quay-berm-1', repeat: [1, 1], anisotropy: 4 });
+}
 function wallTexture(ctx, key, base = key) {
   const W = WALLS[key], H = tileH(base), wlFrac = 1 - FOOT / H;
   return ctx.tex.draw(1024, 512, (g, w, h) => {
@@ -450,7 +463,7 @@ function railStyle(key, bank, x, z, nx, s, nz = 0) {
   }
   if (key === 'moika') return x > -1000 ? 'vase' : 'moika';
   if (key === 'winter-canal') return 'lancet';
-  if (key === 'smolenka') return 'bars';                                      // the Smolenka (source project quay.js): plain bars
+  if (key === 'smolenka') return x < -7490 && L.inExtent(x, z) ? null : 'bars';                  // the Smolenka (source project quay.js): plain bars; n4spb (cluster B): the mouth arms (x < -7490: Morskoy / Dekabristov) have the bare torus cornice and no railing (photo V17)
   if (key === 'admiralty') return 'moika';                                    // the house bank of the Admiralty / Novo-Admiralty canals: the Moika pattern
   if (key === 'kryukov') return z < 500 ? 'moika' : 'vase';                    // the north reach (Moika -> Truda Sq, 12-13 m) the Moika pattern, the middle / south reach the Griboedov-type vase balusters
   return 'vase';
@@ -502,6 +515,7 @@ export function buildQuay(ctx, root) {
   const keys = Object.keys(WATERWAYS);
   const grass = new MeshBuilder(), capB = new MeshBuilder(), slopeInfo = [];
   for (const k of keys) { face[k] = new MeshBuilder(); faceDeck[k] = new MeshBuilder(); coping[k] = new MeshBuilder(); }
+  face.mouth = new MeshBuilder(); const bermB = new MeshBuilder();      // n4spb (cluster B): the pale grey wall and the paved lower berm of the Smolenka mouth arms (x < -7490); empty (and drawn nowhere) in every other area
   const rings = [], signs = [], culverts = [], corbels = [];
   // THE BREAKABLE FENCE (docs/AREAS.md 13.7, the world rule "water is reachable"): every post, panel and tube of a railing, every section of the Neva parapet and every cheek wall of a descent is a BAY of lib/fence-bays.js: its own
   // thin collider + its instances + one knock record (a car above the break speed breaks the bay off, the gap is passable). A railing bay is the span between two posts and the post at its end (a post that no span ends at stands alone
@@ -805,7 +819,23 @@ export function buildQuay(ctx, root) {
     const u0 = bank.idx * 0.37;
     const batter = key === 'neva' ? 0.3 : key === 'fontanka' ? 0 : 0.08;                 // the foot of the wall leans toward the water
     const wallProf = [[-batter, YB], [0, COP_BOT]];
-    sweep(face[key], wallProf, (i) => segDeck[i] || segIn[i] || segSlope[i], u0, vWall);
+    // n4spb (cluster B, source quay.js 904 .. 921): the mouth arms of the Smolenka (x < -7490): a pale grey wall (own texture) and a paved lower berm 0.6 m over the water (photo w08 / V17); no berm at a descent, a bridge gap, a gate
+    const segMouth = seg.map((sg, i) => key === 'smolenka' && !bank.far && fr[i].x < -7490 && fr[i + 1].x < -7490 && L.inExtent(fr[i].x, fr[i].z) && L.inExtent(fr[i + 1].x, fr[i + 1].z));      // (inside the data extent only: the Vasilyevsky data holds Smolenka banks up to x -7840 as scenery, 600 m beyond its extent: they stay as they were)
+    sweep(face[key], wallProf, (i) => segDeck[i] || segIn[i] || segSlope[i] || segMouth[i], u0, vWall);
+    sweep(face.mouth, wallProf, (i) => segDeck[i] || segIn[i] || segSlope[i] || !segMouth[i], u0, vWall);
+    if (segMouth.some(Boolean)) {
+      const wlM = lvl(key), yT = wlM + 0.6, BW = 2.2, nearDesc = (i) => { const mx = (fr[i].x + fr[i + 1].x) / 2, mz = (fr[i].z + fr[i + 1].z) / 2; for (const d of mine) { const q = dUV(d, mx, mz); if (q.u > -DS.gateA - 4 && q.u < d.end + 4 && Math.abs(q.v) < 5) return true; } return false; };
+      const bermSkip = seg.map((sg, i) => !segMouth[i] || segDeck[i] || segIn[i] || segSlope[i] || segKind[i] !== 0 || segOpen[i] || nearDesc(i));
+      for (let i = 0; i + 1 < fr.length; i++) {
+        if (bermSkip[i]) continue;
+        const a = fr[i], b = fr[i + 1], sg = seg[i], P = (q, o) => [q.x - q.mx * o * q.k, q.z - q.mz * o * q.k];      // offset o toward the water (landward mitre normal reversed)
+        const [ax0, az0] = P(a, 0), [bx0, bz0] = P(b, 0), [ax1, az1] = P(a, BW), [bx1, bz1] = P(b, BW);
+        const v0 = bermB.vert(ax0, yT, az0, 0, 1, 0, a.s / 2.4, 0), v1 = bermB.vert(bx0, yT, bz0, 0, 1, 0, b.s / 2.4, 0), v2 = bermB.vert(bx1, yT, bz1, 0, 1, 0, b.s / 2.4, BW / 2.4), v3 = bermB.vert(ax1, yT, az1, 0, 1, 0, a.s / 2.4, BW / 2.4);
+        quadN(bermB, v0, v1, v2, v3, 0, 1, 0);
+        const f0 = bermB.vert(ax1, wlM - 0.12, az1, -sg.nx, 0, -sg.nz, a.s / 2.4, 0), f1 = bermB.vert(bx1, wlM - 0.12, bz1, -sg.nx, 0, -sg.nz, b.s / 2.4, 0), f2 = bermB.vert(bx1, yT, bz1, -sg.nx, 0, -sg.nz, b.s / 2.4, 0.3), f3 = bermB.vert(ax1, yT, az1, -sg.nx, 0, -sg.nz, a.s / 2.4, 0.3);
+        quadN(bermB, f0, f1, f2, f3, -sg.nx, 0, -sg.nz);
+      }
+    }
     sweep(faceDeck[key], wallProf, (i) => !segDeck[i] || segIn[i] || segOpen[i], u0, vWall);
     // ---- grass-slope banks: low granite banquette (kerb) at the water, a short lip, the grass slope up to street level, granite end caps where the slope meets a bridge / the wall
     for (const reach of new Set(sRuns.map((r) => r.reach))) {
@@ -1013,6 +1043,9 @@ export function buildQuay(ctx, root) {
   // (n4spb: WATERWAYS lists the Smolenka in every area; where it has no wall at all it costs no 1024 x 512 canvas, so the other areas build as before)
   for (const k of keys) { const skip = k === 'smolenka' && face[k].empty && faceDeck[k].empty; if (!skip) { mk(face[k], matFor(k, false), 'env-quay-wall-' + k); mk(faceDeck[k], matFor(k, true), 'env-quay-wall-deck-' + k, false); } mk(coping[k], copingMat(k), 'env-quay-coping-' + k); }
   mk(parapet, ctx.mat.toon('#ffffff', { map: parapetTexture(ctx), paint: 0.04, name: 'env-quay-parapet' }), 'env-quay-parapet');
+  // n4spb (cluster B): the mouth arms of the Smolenka (texture and material only where there is a piece: no canvas, no mesh in the other areas)
+  if (!face.mouth.empty) mk(face.mouth, ctx.mat.toon('#ffffff', { map: wallTexture(ctx, 'mouth', 'smolenka'), paint: 0.05, name: 'env-quay-wall-mouth' }), 'env-quay-wall-mouth');
+  if (!bermB.empty) mk(bermB, ctx.mat.toon('#ffffff', { map: bermTexture(ctx), paint: 0.05, name: 'env-quay-berm' }), 'env-quay-berm', false);
   mk(grass, ctx.mat.toon('#ffffff', { map: grassTexture(ctx), paint: 0.06, name: 'env-quay-grass' }), 'env-quay-grass');
   mk(capB, ctx.mat.toon('#a69489', { paint: 0.05, side: 'double', name: 'env-quay-slope-caps' }), 'env-quay-slope-caps');
   mk(granite, ctx.mat.toon('#9a948f', { paint: 0.05, name: 'env-quay-stairs' }), 'env-quay-stairs');

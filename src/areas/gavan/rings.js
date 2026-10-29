@@ -30,6 +30,9 @@ import * as SREDNY from '../../world/landmarksSredny/groups.js';
 // ---
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js)
 // ---
+import { ringsOf as MO_RINGS } from '../../world/bridges/groups-mo.js';      // bridgesMo
+const BRIDGES_MO = MO_RINGS([], { cutting: true });      // no stair pits in this territory, only the cutting banks of the WHSD
+// ---
 
 const SOURCES = [
   { module: 'landmarksKirova', ns: KIROVA },
@@ -43,6 +46,8 @@ const SOURCES = [
   // PORT-SOURCE: landmarksGavan
   // ---
   // PORT-SOURCE: landmarksPribaltiyskaya
+  // ---
+  { module: 'bridges', ns: BRIDGES_MO },      // bridgesMo: the grass embankments of the WHSD cutting (paved ground: no trunks, hedges, beds or tufts)
   // ---
   { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
   // ---
