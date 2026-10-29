@@ -12,7 +12,7 @@
 //  `paved: false` on a source = the module's PAVED_RINGS are already wired elsewhere; the water rings and the keep-outs are always taken.
 //  The bridges source is bridges/groups-vo.js: of its pits only the Nalichny corner stairs are handed over (the other pits of the Smolenka mouth bridges follow with the bridge engine round).
 // ============================================================================
-// PORT-IMPORT: landmarksDekabristov
+import * as DEKABRISTOV from '../../world/landmarksDekabristov/groups.js';      // PAVED_RINGS only: the plaza of the Light-and-Music fountain, the apron of the siege obelisk, the paving of the Decembrists' obelisk
 // ---
 // PORT-IMPORT: landmarksPrimorskaya
 // ---
@@ -25,7 +25,7 @@ const BRIDGES_MO = MO_RINGS(['korablestroiteley-', 'smol3-', 'smol4-'], { cuttin
 // ---
 
 const SOURCES = [
-  // PORT-SOURCE: landmarksDekabristov
+  { module: 'landmarksDekabristov', ns: DEKABRISTOV },
   // ---
   // PORT-SOURCE: landmarksPrimorskaya
   // ---

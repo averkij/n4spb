@@ -160,7 +160,7 @@ const BUDGET_AREA = {
     //
     landmarksVOStatues: 26e3,      // estimate ~20 k (the Armenian church, the Komitas monument, the polar explorers) + 30 %
     //
-    // PORT-BUDGET: landmarksDekabristov
+    landmarksDekabristov: 100e3,      // measured 86,676 in `check --area-modules` (the cemeteries, the siege memorial, the garden, the Volodin fountain: docs/gdm-D1.md) + 15 %
     //
     // PORT-BUDGET: landmarksPrimorskaya
     //
