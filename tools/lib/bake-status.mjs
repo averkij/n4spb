@@ -194,11 +194,11 @@ export function planBake(statuses, args) {
   const byId = new Map(statuses.map((s) => [s.id, s]));
   const live = statuses.filter((s) => !s.row.parked && s.status !== 'PLANNED');
   out.repair = live.filter((s) => s.status === 'UNSYNCED').map((s) => s.id);
-  const pick = (s, forced) => {
+  const pick = (s, forced, byName = false) => {
     if (s.status === 'ERROR') { out.errors.push(`area ${s.id}: the closure cannot be computed: ${s.error}`); return; }
     if (needsBake(s)) out.selected.push({ id: s.id, reason: s.status });
     else if (forced) out.selected.push({ id: s.id, reason: 'forced' });
-    else out.skipped.push({ id: s.id, why: `${s.status === 'UNSYNCED' ? 'fresh (to be synced)' : 'fresh'}, use --force to bake it again` });
+    else if (byName) out.skipped.push({ id: s.id, why: `${s.status === 'UNSYNCED' ? 'fresh (to be synced)' : 'fresh'}, use --force to bake it again` });
   };
   const area = args.area;
   if (area === null || area === undefined) {
@@ -211,7 +211,7 @@ export function planBake(statuses, args) {
       const s = byId.get(id);
       if (!s) { out.errors.push(`unknown area "${id}" (known: ${statuses.map((x) => x.id).join(', ')})`); out.usage = true; continue; }
       if (s.status === 'PLANNED') { out.errors.push(`area "${id}" is planned (its files do not exist yet): nothing to bake`); out.usage = true; continue; }
-      pick(s, !!args.force);
+      pick(s, !!args.force, true);
     }
   }
   const order = new Map(statuses.map((s, i) => [s.id, i]));

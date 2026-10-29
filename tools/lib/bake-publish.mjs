@@ -32,6 +32,16 @@ export function removeUnfinished(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) if (e.isFile() && /.(part|tmp)$/.test(e.name)) fs.unlinkSync(path.join(dir, e.name));
 }
 
+/**
+ * The state of the bake of one area (what the bake server writes into and finishArea publishes): a FRESH read of the tree at the start of this area, its revision and closure, the digests of the closure
+ * and an empty set of served files. The directory is cleaned of the unfinished chunks of a crashed bake (the caller holds the bake lock); the products of earlier revisions stay until the publish.
+ */
+export function beginArea({ root, row }) {
+  const actx = createRevisionContext(root), info = areaRevision(root, row.id, actx), closure = actx.scanner.closureOf(root, row.id, actx), lock = threeLockOf(actx), output = areaDir(root, row);
+  fs.mkdirSync(output, { recursive: true }); removeUnfinished(output);
+  return { row, output, revision: info.revision, info, closure, digests: digestsOf(actx, info.hashed), three: `${lock.version} ${lock.integrity}`, files: {}, sizes: {}, served: new Set() };
+}
+
 export function publishArea({ root, row, revision, files, sizes, sha256, inputs, closure, bakeSeconds, rows, fault }) {
   if (!/^[0-9a-f]{20}$/.test(revision)) throw new Error(`publishArea: bad revision ${revision}`);
   const dir = areaDir(root, row);
