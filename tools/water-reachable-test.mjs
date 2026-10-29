@@ -1,5 +1,5 @@
 // tools/water-reachable-test.mjs - THE RULE FOR CHECKING "water is reachable" (CLAUDE.md "World rules", docs/AREAS.md 13.7), CPU only, no GPU, no bake:
-//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky|vasilyevsky> tools/water-reachable-test.mjs [--quick]            npm run water   (the five live areas)
+//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky|vasilyevsky|gavan|morskoy|dekabristov> tools/water-reachable-test.mjs [--quick]            npm run water   (the eight live areas)
 // It builds the REAL modules of the area headlessly (tools/lib/headless-world.mjs: environment, bridges, streets, the landmark modules ... everything that owns colliders; no city / people / traffic) and proves
 // with the area's real colliders, the real Physics + Player and the real car handling (drive/handling.js):
 //   1  no collider and no territory predicate classifies a water cell as blocked: every sampled water cell in the play area is inside the territory, reachable for the car (handling.blocked), has a finite ground
