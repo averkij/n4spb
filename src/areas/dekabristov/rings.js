@@ -16,7 +16,7 @@ import * as DEKABRISTOV from '../../world/landmarksDekabristov/groups.js';      
 // ---
 import * as PRIMORSKAYA from '../../world/landmarksPrimorskaya/groups.js';      // the Smolenka bank stairs (water rings, keep-outs, paved ground)
 // ---
-// PORT-IMPORT: landmarksFill
+// (landmarksFill gives no rings: it touches no water and keeps no ground clear; groups.js has no PAVED_RINGS / WATER_RINGS / KEEP_OUT)
 // ---
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js)
 // ---
@@ -29,7 +29,7 @@ const SOURCES = [
   // ---
   { module: 'landmarksPrimorskaya', ns: PRIMORSKAYA },
   // ---
-  // PORT-SOURCE: landmarksFill
+  // (no source for landmarksFill, see the import section)
   // ---
   { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
   // ---

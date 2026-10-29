@@ -362,7 +362,7 @@ export const GARAGE = {
 /** environment.js: the services whose `entrances` ([{ x, z, clearance? }]) clear the trees from the doors of the buildings they list */
 export const PRUNE_SERVICES = [
   'city',
-  // PORT-PRUNE: landmarksMarineFacade
+  // (landmarksMarineFacade publishes an empty `entrances` list: the terminals are not enterable, so it needs no row here)
   //
   // (landmarksPribaltiyskaya publishes no `entrances`: the hotel is closed, so it needs no row here)
 ];

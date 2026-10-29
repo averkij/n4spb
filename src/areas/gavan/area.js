@@ -146,7 +146,6 @@ GROUPS.landmarksSredny = only(G_SREDNY, ['tram-depot', 'dom-evangelia', 'gorny-p
 GROUPS.landmarksVOStatues = only(G_VOSTATUES, ['vo-musa-jalil', 'vo-lenin-pokrovskaya', 'vo-polar']);
 // ---
 // the bridges: the Novo-Andreevsky footbridge and the Nalichny Bridge (bridges/groups-vo.js; the stair pits of Nalichny hand their rings over through ./rings.js). The Shkipersky Bridge (landmarksGavan) and the WHSD decks are the bridge cluster's.
-// PORT-GROUPS: bridges
 GROUPS.bridges = only(GROUPS_VO, ['novo-andreevsky', 'nalichny']);
 
 // bridgesMo (docs/gdm-B.md): the Western High-Speed Diameter, the part of it that lies in this data extent (the at-grade stretch with its open cutting from z about -520, the viaduct up to the Korabelny pylon at z 1275) and the two park footbridges over the cutting
@@ -292,7 +291,6 @@ export const TEST = {
     // ---
     { x: -7516.6, z: -772.5, has: 'прибалтийская' }, { x: -7464.1, z: -796.1, has: 'петру' }, { x: -7309, z: -804, has: 'малые гаванцы' },
     // ---
-    // PORT-AREAS rows of the port clusters add their own sights here
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
   roadsNear: { at: [-6000, 520], r: 90, min: 3 },

@@ -418,11 +418,11 @@ export const GARAGE = {
 /** environment.js: the services whose `entrances` ([{ x, z, clearance? }]) clear the trees from the doors of the buildings they list */
 export const PRUNE_SERVICES = [
   'city',
-  // PORT-PRUNE: landmarksDekabristov
+  // (landmarksDekabristov publishes no `entrances`: the cemeteries and the garden have no doors)
   //
   'landmarksPrimorskaya',
   //
-  // PORT-PRUNE: landmarksFill
+  // (landmarksFill publishes no `entrances`: a building site has no doors)
 ];
 /** the area-specific hooks of the engine modules (milestone M6, docs/AREAS.md section 9: keep-outs of trees / tufts / props / ways / parking, the crowd garden, the deck services; the call sites read
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */
