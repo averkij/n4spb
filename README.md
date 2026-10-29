@@ -15,7 +15,7 @@ What the strip is, what was dropped and why, how to rebuild and deploy it: [`doc
 
 ## Gallery
 
-Screenshots of the shipping scene (Medium, a July afternoon unless the caption says otherwise), made with `tools/shot.mjs` from the real baked page; the cameras are the numbered places of the controls table and a few free cameras.
+Screenshots of the shipping scene (Medium, a July afternoon unless the caption says otherwise), made with `tools/shot.mjs` from the real baked page; the cameras are authored view poses and a few free cameras (the place teleport keys are off in the scene).
 
 ### Sights
 
@@ -73,15 +73,8 @@ Note that the page loads fast only while the shipping bake in `assets/baked/` ma
 | Space | Jump |
 | F | Take off / land. While flying **W / S fly along the view**, A / D strafe, Space or E up, Q or C down, Shift boost. Roofs are walkable: fly over a building, press F and you land on its roof |
 | E | Use: enter the metro, board / leave a train, switch an escalator, get into the car ("[E] ..." prompts) |
-| E at a parked car | **Drive**: four cars wait on the station forecourt, each with its own handling, engine voice and cockpit: the red sports car (beside the Moscow station's taxi rank), the taxi pickup, the eggplant Zhiguli and the white **Tesla Roadster** (2026; its **Shift** is a THRUST from four cold-gas nozzles, **X** is a gas hop over kerbs, benches and bins (1.9 m high), **C** is the barrel hop, twice as high (3.7 m) with a 360 degree roll and side jets; both start the instant the key goes down); E at the nearest one gets in, every car carries the Bibliotechka roof logo. In the car: **W / S** gas / brake + reverse, **A / D** steer, **Shift** nitro, **Space** handbrake (drift), **G** horn, **V** camera (chase / high / cockpit), mouse looks around, **E** gets out (below 25 km/h); the place keys and R teleport the car |
+| E at a parked car | **Drive**: four cars wait on the station forecourt, each with its own handling, engine voice and cockpit: the red sports car (beside the Moscow station's taxi rank), the taxi pickup, the eggplant Zhiguli and the white **Tesla Roadster** (2026; its **Shift** is a THRUST from four cold-gas nozzles, **X** is a gas hop over kerbs, benches and bins (1.9 m high), **C** is the barrel hop, twice as high (3.7 m) with a 360 degree roll and side jets; both start the instant the key goes down); E at the nearest one gets in, every car carries the Bibliotechka roof logo. In the car: **W / S** gas / brake + reverse, **A / D** steer, **Shift** nitro, **Space** handbrake (drift), **G** horn, **V** camera (chase / high / cockpit), mouse looks around, **E** gets out (below 25 km/h); R teleports the car to the start |
 | Street map (bottom left) | A round heading-up map that labels the named streets and a pill above it that names the street you are on (hidden underground and in the metro, **H** hides it with the rest of the UI) |
-| 1 – 5 | Jump to: Площадь Восстания · Московский вокзал / Обелиск / Невский проспект / платформы вокзала / Аничков мост |
-| 6 – 8 | Спас на Крови (Griboedov Canal) / Гостиный Двор / Зимний дворец |
-| 9, 0 | Казанский собор / Дворцовая площадь · Александровская колонна |
-| Shift + 1 – 9 | Подписные Издания / Русский музей / Дворцовый мост / Дом Зингера / Аничков дворец / Михайловский сад · павильон Росси / Адмиралтейство · Александровский сад / Исаакиевский собор / Медный всадник |
-| Alt + 1 – 4 | Metro entrances: Площадь Восстания (rotunda) / Маяковская (Nevsky Atrium) / Гостиный двор / Невский проспект (Griboedov Canal) |
-| Alt + 5 | Михайловский замок · памятник Петру I |
-| Places (top right list) | The same views plus: the Oktyabrsky hall, Vladimirskaya metro, the Circus, the National Library, the Alexandrinsky Theatre, the Hermitage, Admiralteyskaya metro |
 | T | Time of day: 15:20 **day** → 19:10 **golden evening** → 00:20 **white night** (never black, lit windows and lamps) → 11:20 **overcast** ("Petersburg milk") |
 | L | Copy the current pose `x,y,z,yaw,pitch` to the clipboard (paste it into `?cam=` or `tools/shot.mjs --cams`) |
 | H | Hide the UI |
@@ -104,7 +97,7 @@ The page runs on phones and tablets with an on-screen control layer (`src/core/t
 | Walking: left thumb | floating stick (push all the way to run) |
 | Walking: right thumb | drag to look |
 | Walking: bottom right | **JUMP**, **RUN** (latch), **FLY** (take off / land; while flying: **UP**, **DOWN**, **BOOST**), and a **USE** button that appears when something is in reach (a car, a metro door, a train) with its label |
-| Top right | **MENU** (places, time of day, sound, hide UI, respawn, FPS, fullscreen, quality, settings) and **SOUND** |
+| Top right | **MENU** (time of day, sound, hide UI, respawn, FPS, fullscreen, quality, settings) and **SOUND** |
 | Driving: left thumb | steering: a floating wheel (swipe left / right, proportional), or arrows, or tilt the phone |
 | Driving: right thumb | **GAS**, **BRAKE** (reverse at a standstill), **NITRO**, **DRIFT** (handbrake), **HOP** and **FLIP** (cars that can hop: HOP is the simple hop, FLIP the high barrel hop; each fires on the press) |
 | Driving: top | **CAM** (camera), **HORN**, **AUTO** (auto-gas), **FIX** (repair), **EXIT** (below 25 km/h); a drag on the free screen orbits the camera |
