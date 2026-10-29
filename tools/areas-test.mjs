@@ -143,9 +143,13 @@ for (const g of GATES.filter(isDoor)) {
 // an EDGE gate (docs/AREAS.md 14, tools/lib/edge-geometry.mjs): no segment, no arrival rectangle. The shape of the row, the reverse pair, the territories overlap, enough of the boundary of FROM hops to TO (the lens)
 // THE LENS THRESHOLDS PER GATE (docs/AREAS.md 15.y): the global rule is worksMin 1000 m of hopping boundary, deadMax 300 m for the worst dead strip, nearMaxPct 10 percent of the hopping boundary within 100 m
 // of the reverse trigger. A pair whose overlap is legitimately thin may be relaxed HERE, by gate id, with the measured numbers in the comment (and in docs/AREAS.md 15.y) - never by loosening the global rule.
-// The measured numbers of the ten gates of the four-area graph all pass the global rule (tightest: e9 hops 2400 m of its boundary, e2 / e9 have the longest dead strip 260 m, e1 / e2 the largest bounce-back share 5.9 / 6.0 percent), so the table is empty.
+// The measured numbers of the ten gates of the four-area graph all pass the global rule (tightest: e9 hops 2400 m of its boundary, e2 / e9 have the longest dead strip 260 m, e1 / e2 the largest bounce-back share 5.9 / 6.0 percent), so the table held no row until the sixth to eighth areas (e16 below).
 const LENS_GLOBAL = { worksMin: 1000, deadMax: 300, nearMaxPct: 10 };
-const LENS_RELAX = {};      // gate id -> a partial { worksMin, deadMax, nearMaxPct }, e.g. e9: { deadMax: 320 }   // measured: ...
+// e15 .. e26 (docs/AREAS.md 15.g, B600 territories of gavan / morskoy / dekabristov): eleven of the twelve gates pass the global rule (tightest: e16 hops only 2520 m, the worst dead strip 300 m at M31.z1 (morskoy -> vasilyevsky, e18), bounce share
+// 8.8 percent for e26). The exception is e16 (dekabristov -> gavan): of the 2520 m of its hopping boundary 380 m (15.1 percent) land within 100 m of the place where e15 (gavan -> dekabristov) would fire again. The cause is the thin overlap of the two
+// territories (1.09 km2: the Gulf water between the Smolenka mouth and the Gavan coast, 40 m gate zone over a 2.5 km boundary), not a shape defect that a rectangle could repair; the arrival grace of core/gates.js (graceS, 6 s) only delays a hop back, it does not prevent one: a known limit, listed in docs/AREAS.md 15.g.
+// Measured with tools/edge-geometry (step 20 m): e16 bounce 380 of 2520 m = 15.1 percent; the limit is set to 16.
+const LENS_RELAX = { e16: { nearMaxPct: 16 } };      // gate id -> a partial { worksMin, deadMax, nearMaxPct }, e.g. e9: { deadMax: 320 }   // measured: ...
 const lensRule = (g) => ({ ...LENS_GLOBAL, ...(LENS_RELAX[g.id] || {}) });
 for (const g of GATES.filter(isEdge)) {
   const lens = EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 300 }), rule = lensRule(g);

@@ -637,6 +637,27 @@ export const GATES = [
   { id: 'e12', kind: 'edge', from: 'vasilyevsky', to: 'palace', zone: 40, reverse: 'e11' },
   { id: 'e13', kind: 'edge', from: 'admiralty', to: 'vasilyevsky', zone: 40, reverse: 'e14' },
   { id: 'e14', kind: 'edge', from: 'vasilyevsky', to: 'admiralty', zone: 40, reverse: 'e13' },
+  // e15 .. e26 - the sixth to eighth areas, Gavan, Morskoy and Dekabristov Island (docs/AREAS.md 15.g): with vasilyevsky they form four territories that overlap EACH OTHER (the B600 territories include the Gulf water within 600 m of the land, shared between neighbours),
+  // none of them touches palace, smolny, vladimirsky or admiralty (nearest rectangles: gavan-admiralty 560 m), so the new demand is exactly the six pairs among {vasilyevsky, gavan, morskoy, dekabristov} = twelve gates, one each way, reverse pairs adjacent.
+  // Overlap (km2 of rectangle intersections): vasilyevsky-gavan 4.19, vasilyevsky-morskoy 1.02, vasilyevsky-dekabristov 2.45, gavan-morskoy 3.63, gavan-dekabristov 1.09, morskoy-dekabristov 2.60.
+  // ORDER CONSTRAINT (the gate machine takes the FIRST row of the FROM area that triggers, so in a corner where three territories overlap the first row wins and the others starve; tools/gates-test.mjs asserts that a walker at ~40 working points of every edge row is offered
+  // a gate of his own area and that the row itself fires at 50 percent of them or more; found by trying every permutation of each FROM area's rows against these territories, tools/gates-test.mjs + the real createGateMachine):
+  //   from gavan: dekabristov FIRST (then morskoy / vasilyevsky in either order);  from dekabristov: gavan FIRST;  from morskoy: dekabristov LAST (vasilyevsky and gavan in either order);
+  //   from vasilyevsky: palace before admiralty (as for e12 / e14) AND morskoy before gavan and before dekabristov (the naive append gavan, morskoy, dekabristov starves morskoy: it fires at 21 of 47 points).
+  // The array order below gives gavan [dekabristov, morskoy, vasilyevsky], dekabristov [gavan, vasilyevsky, morskoy], morskoy [vasilyevsky, gavan, dekabristov], vasilyevsky [palace, admiralty, morskoy, gavan, dekabristov] - all in the pass lists.
+  // After ANY change of a territory of these four areas rerun the order search (tools/gates-test.mjs fails when a row starves). The lens of the twelve gates passes the global rule except e16 (dekabristov -> gavan: bounce share 15.1 percent): LENS_RELAX in tools/areas-test.mjs.
+  { id: 'e15', kind: 'edge', from: 'gavan', to: 'dekabristov', zone: 40, reverse: 'e16' },
+  { id: 'e16', kind: 'edge', from: 'dekabristov', to: 'gavan', zone: 40, reverse: 'e15' },
+  { id: 'e17', kind: 'edge', from: 'vasilyevsky', to: 'morskoy', zone: 40, reverse: 'e18' },
+  { id: 'e18', kind: 'edge', from: 'morskoy', to: 'vasilyevsky', zone: 40, reverse: 'e17' },
+  { id: 'e19', kind: 'edge', from: 'gavan', to: 'morskoy', zone: 40, reverse: 'e20' },
+  { id: 'e20', kind: 'edge', from: 'morskoy', to: 'gavan', zone: 40, reverse: 'e19' },
+  { id: 'e21', kind: 'edge', from: 'vasilyevsky', to: 'gavan', zone: 40, reverse: 'e22' },
+  { id: 'e22', kind: 'edge', from: 'gavan', to: 'vasilyevsky', zone: 40, reverse: 'e21' },
+  { id: 'e23', kind: 'edge', from: 'vasilyevsky', to: 'dekabristov', zone: 40, reverse: 'e24' },
+  { id: 'e24', kind: 'edge', from: 'dekabristov', to: 'vasilyevsky', zone: 40, reverse: 'e23' },
+  { id: 'e25', kind: 'edge', from: 'morskoy', to: 'dekabristov', zone: 40, reverse: 'e26' },
+  { id: 'e26', kind: 'edge', from: 'dekabristov', to: 'morskoy', zone: 40, reverse: 'e25' },
   // g0 - the dev loop (?devgates=1): a gate across the Nevsky approach to Vosstaniya Square (a vertical segment at x = 470, the strip east of it is the "own area") that leads back to the SAME page at
   // the same pose. It exercises the whole hand-off (prompt, preflight, veil, navigation, arrival, memory) before a second area exists, and stays as a test fixture afterwards.
   { id: 'g0', dev: true, from: 'strip', to: 'strip', seg: [[470, 100], [470, 240]], inward: [1, 0], zone: 30, arrive: { x0: 440, x1: 700, z0: 80, z1: 260 }, reverse: 'g0' },

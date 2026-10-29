@@ -127,6 +127,47 @@ const BUDGET_AREA = {
     //
     landmarksVOStatues: 176e3,      // measured 153,116 (vo-m3: + 15 %)
   },
+  // Gavan / Morskoy / Dekabristov Island (docs/AREAS.md 15.g; foundation, NOT measured yet): every row is the scouts' estimate (D:/git2/n4spb-work/gdm/scout-*.md section 'Triangles') + about 30 %, the base modules from the prototype builds of
+  // scout-sea.md (environment 0.81 M / 0.93 M / 1.08 M for k=49 / 47 / 51, B600 territories). The port rounds replace each row by its measured value + 15 % (the PORT-BUDGET marker lines: one per module, replaced by the real row; the separating `//` line stays).
+  gavan: { environment: 1.7e6, streets: 1.0e6, city: 650e3, props: 260e3,      // estimates: environment 1.0 - 1.3 M, streets ~0.75 M, city 0.42 - 0.50 M (2,009 buildings), props ~0.2 M
+    // PORT-BUDGET: landmarksGavan
+    //
+    // PORT-BUDGET: landmarksPribaltiyskaya
+    //
+    landmarksKirova: 218e3,      // measured in vasilyevsky 189,336 (the same module and groups) + 15 %
+    //
+    landmarksSevkabel: 250e3,      // estimate ~190 k (192,892 in vasilyevsky minus the Baltic Shipyard cranes) + 30 %
+    //
+    landmarksSeaTerminal: 65e3,      // estimate ~50 k (29,383 in vasilyevsky + D-2 + boat + hoarding) + 30 %
+    //
+    landmarksModernVO: 34e3, landmarksSredny: 72e3, landmarksVOStatues: 33e3,      // estimates ~26 k / ~55 k / ~25 k (the groups that lie in this territory) + 30 %
+    //
+    bridges: 130e3,      // estimate 0.07 - 0.10 M (WHSD 63.5 k + Shkipersky 3.2 k + Novo-Andreevsky 3.6 k) + 30 %
+  },
+  morskoy: { environment: 1.3e6, streets: 720e3, city: 350e3, props: 130e3,      // estimates: environment 0.6 - 1.5 M (prototype 0.93 M), streets 0.45 - 0.55 M, city ~0.27 M (1,175 buildings), props ~0.1 M
+    // PORT-BUDGET: landmarksMarineFacade
+    //
+    // PORT-BUDGET: landmarksPribaltiyskaya
+    //
+    landmarksVOStatues: 13e3,      // estimate < 10 k (the polar explorers' monument only) + 30 %
+    //
+    bridges: 260e3,      // estimate 130 - 200 k (arch bridges + Nalichny + Novo-Andreevsky + WHSD at grade) + 30 %
+    //
+    // PORT-BUDGET: bridgesMo
+  },
+  dekabristov: { environment: 1.5e6, streets: 1.04e6, city: 650e3, props: 200e3,      // estimates: environment 1.0 - 1.2 M (prototype 1.08 M), streets 0.6 - 0.8 M, city 0.5 - 0.7 M (589 buildings after the DK1..DK5 fetch: likely far less), props ~0.15 M
+    landmarksSmolensky: 320e3,      // measured in vasilyevsky 277,547 (the same six groups: overlap parity, docs/AREAS.md 15.g) + 15 %
+    //
+    landmarksVOStatues: 26e3,      // estimate ~20 k (the Armenian church, the Komitas monument, the polar explorers) + 30 %
+    //
+    // PORT-BUDGET: landmarksDekabristov
+    //
+    // PORT-BUDGET: landmarksPrimorskaya
+    //
+    // PORT-BUDGET: landmarksFill
+    //
+    bridges: 325e3,      // estimate 0.15 - 0.25 M (Uralsky, Smolensky, Nalichny, Novo-Andreevsky + the Smolenka mouth bridges) + 30 %
+  },
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;
 const BUDGET = { environment: 500e3, streets: 500e3, city: 600e3, landmarksA: 400e3, landmarksB: 500e3, landmarksC: 500e3, landmarksD: 300e3, traffic: 400e3, props: 300e3, people: 200e3, wildlife: 100e3,
