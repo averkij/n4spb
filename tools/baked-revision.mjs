@@ -26,29 +26,21 @@ export function createRevisionContext(root, opts = {}) {
   ctx.scanner = opts.scanner || defaultScanner;
   return ctx;
 }
-const fileCaches = new WeakMap();
-/** the bytes that enter the hash: text files with CRLF read as LF, everything else raw */
+/** the bytes that enter the hash: text files with CRLF read as LF, everything else raw (cached per file in the context) */
 function hashBytes(ctx, rel) {
-  let m = fileCaches.get(ctx); if (!m) fileCaches.set(ctx, m = new Map());
-  let b = m.get(rel);
-  if (!b) {
-    b = ctx.bytes(rel);
-    if (TEXT_EXT.includes(path.posix.extname(rel).toLowerCase())) b = Buffer.from(b.toString('utf8').replaceAll('\r\n', '\n'), 'utf8');
-    m.set(rel, b);
-  }
-  return b;
+  return ctx.memo(rel, 'hash', () => {
+    const b = ctx.bytes(rel);
+    return TEXT_EXT.includes(path.posix.extname(rel).toLowerCase()) ? Buffer.from(b.toString('utf8').replaceAll('\r\n', '\n'), 'utf8') : b;
+  });
 }
-const lockCaches = new WeakMap();
 /** the lock entry of three.js (package-lock.json: version + integrity); no npm ci needed. Throws when it is missing: the revision would silently ignore a three.js upgrade. */
 export function threeLockOf(ctx) {
-  let v = lockCaches.get(ctx);
-  if (!v) {
+  return ctx.memo('package-lock.json', 'three', () => {
     let lock; try { lock = JSON.parse(ctx.text('package-lock.json')); } catch (e) { throw new ClosureError('Lock', `package-lock.json cannot be read (${e.message})`); }
     const e = lock && lock.packages && lock.packages['node_modules/three'];
     if (!e || !e.version || !e.integrity) throw new ClosureError('Lock', 'package-lock.json has no node_modules/three entry with a version and an integrity');
-    lockCaches.set(ctx, v = { version: e.version, integrity: e.integrity });
-  }
-  return v;
+    return { version: e.version, integrity: e.integrity };
+  });
 }
 /** { revision, files, bytes, hashed } of one area on the tree of `ctx` */
 export function areaRevision(root, areaId, ctx) {

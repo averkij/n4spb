@@ -71,6 +71,7 @@ export const looksLikeAsset = (v) => v.length > 0 && (v.includes('assets/') || (
 const isJsPath = (p) => /\.(m?js)$/.test(p);
 
 // ------------------------------------------------------------------------------------------------ the scanner (mutant flags: all off by default, tools/closure-mutation-test.mjs)
+let scannerCount = 0;
 const MUTANTS = ['ignoreTemplates', 'ignoreExportFrom', 'ignorePageRemap', 'skipLargeFiles', 'narrowGlobs', 'dropDynamicTable', 'forgetPage', 'hashRuntimeOnly', 'keepQuery'];
 export function makeScanner(opts = {}) {
   for (const k of Object.keys(opts)) if (!MUTANTS.includes(k)) throw new Error(`makeScanner: unknown option ${k}`);
@@ -149,8 +150,8 @@ export function makeScanner(opts = {}) {
     return { rel, bare };
   }
 
-  const edgeCaches = new WeakMap();
-  const edgesFor = (ctx, f) => { let m = edgeCaches.get(ctx); if (!m) edgeCaches.set(ctx, m = new Map()); let e = m.get(f); if (!e) m.set(f, e = edgesOf(ctx.text(f))); return e; };
+  const myId = ++scannerCount;
+  const edgesFor = (ctx, f) => ctx.memo(f, `edges${myId}`, () => edgesOf(ctx.text(f)));
 
   /** closure of one area: { area, page, seen:Set, hashed:[sorted], edges:Map(file -> [{kind,spec,target}]), assets:[{from,literal,path,hash}], external:Set, entries:[], modules:[] } */
   function closureOf(root, areaId, ctx) {
@@ -227,7 +228,7 @@ export function makeScanner(opts = {}) {
       }
       throw new ClosureError('Rule', `unknown rule ${rule.rule} (${file})`);
     };
-    const mutated = o.dropDynamicTable || o.ignoreTemplates;       // a mutant skips the consistency checks of the tables: it must be caught by what it changes, not by them
+    const mutated = o.ignoreTemplates || o.dropDynamicTable || !!o.skipLargeFiles;       // these mutants hide the sites the rows match: they skip the stale-row check, so that they are caught by what they change, not by it
     while (stack.length) {
       const f = stack.pop(), src = ctx.text(f), list = edgeList(f);
       const rulesOfFile = dyn[f] || {}, hit = new Set(), assetRows = assetTable[f] || {}, assetHit = new Set();
@@ -239,8 +240,8 @@ export function makeScanner(opts = {}) {
           if (r) hit.add(e.expr);
           if (!r) { if (o.dropDynamicTable) continue; throw new ClosureError('Unclassified', `computed import(${e.expr}) at ${f}:${lineAt(src, e.pos)} has no row in DYNAMIC_IMPORTS (tools/lib/closure-rules.mjs; area ${areaId}): list the directory it can load from`); }
           let files = ruleFiles(r, f);
-          if (o.narrowGlobs && r.rule !== 'area-modules') { strings = strings || new Set(tokenize(src).filter((t) => t.t === 'str').map((t) => t.v)); files = files.filter((x) => strings.has(P.basename(x).replace(/\.m?js$/, ''))); }
           if (!files.length && r.rule !== 'area-modules') throw new ClosureError('Rule', `the DYNAMIC_IMPORTS row ${f} ${e.expr} matches no file`);
+          if (o.narrowGlobs && r.rule !== 'area-modules') { strings = strings || new Set(tokenize(src).filter((t) => t.t === 'str').map((t) => t.v)); files = files.filter((x) => strings.has(P.basename(x).replace(/\.m?js$/, ''))); }
           for (const x of files) { if (x === f) continue; list.push({ kind: 'rule', spec: e.expr, target: x }); add(x, f, `rule ${r.rule} for import(${e.expr})`); }
           continue;
         }
@@ -279,6 +280,7 @@ export function makeScanner(opts = {}) {
   return { options: o, tokenize, edgesOf, edgesFor, pageOf, importMapOf, closureOf };
 }
 
+
 // ------------------------------------------------------------------------------------------------ the tree the scan reads
 /**
  * A snapshot context of one tree: the file list (exact spelling), cached reads, the registry rows. `root` is the repository root.
@@ -287,11 +289,22 @@ export function makeScanner(opts = {}) {
  *   read     (rel) => string | Buffer | null | undefined   called first for every read; undefined falls through to the overlay and the disk
  *   areas    registry rows { id: { id, page, parked } } or an array of rows (default: src/areas/registry.js of the tree)
  *   rules    { DYNAMIC_IMPORTS, RUNTIME_ASSETS } (default: tools/lib/closure-rules.mjs)
+ *   parent   (internal, see ctx.derive) a context whose caches are inherited
+ * ctx.derive(patch) is a copy of the tree with some files replaced (patch = an overlay): the reads and scans of the files that did not change are shared, so a test that edits one file and
+ * recomputes the five revisions costs milliseconds, not seconds.
  */
 export function createContext(root, opts = {}) {
-  const { overlay = {}, virtual = false, read: hook = null } = opts;
+  const { virtual = false, read: hook = null, parent = null } = opts;
+  const overlay = { ...(parent ? parent.opts.overlay : {}), ...(opts.overlay || {}) };
+  const patch = opts.overlay || {};
   const rules = opts.rules || { DYNAMIC_IMPORTS, RUNTIME_ASSETS };
-  let listing = null, lower = null; const bytesCache = new Map(), textCache = new Map(); let rowsCache = null;
+  let listing = null, lower = null, fileSet = null;
+  const bytesCache = new Map(), textCache = new Map(), memos = new Map();
+  if (parent) {                                     // inherit what the patch does not touch
+    for (const [k, v] of parent.bytesCache) if (!(k in patch)) bytesCache.set(k, v);
+    for (const [k, v] of parent.textCache) if (!(k in patch)) textCache.set(k, v);
+    for (const [k, v] of parent.memos) if (!(k in patch)) memos.set(k, new Map(v));
+  }
   const walk = (abs, rel, out) => {
     for (const e of fs.readdirSync(abs, { withFileTypes: true })) {
       const r = rel ? `${rel}/${e.name}` : e.name;
@@ -300,20 +313,22 @@ export function createContext(root, opts = {}) {
   };
   const build = () => {
     const set = new Set();
-    if (!virtual) {
-      const out = [];
-      for (const e of fs.readdirSync(root, { withFileTypes: true })) if (e.isFile()) out.push(e.name);
-      for (const d of ['src', 'vendor', 'assets']) if (fs.existsSync(path.join(root, d))) walk(path.join(root, d), d, out);
-      for (const r of out) set.add(r);
+    if (parent) { for (const r of parent.list()) set.add(r); for (const [r, v] of Object.entries(patch)) { if (v === null) set.delete(r); else set.add(r); } }
+    else {
+      if (!virtual) {
+        const out = [];
+        for (const e of fs.readdirSync(root, { withFileTypes: true })) if (e.isFile()) out.push(e.name);
+        for (const d of ['src', 'vendor', 'assets']) if (fs.existsSync(path.join(root, d))) walk(path.join(root, d), d, out);
+        for (const r of out) set.add(r);
+      }
+      for (const [r, v] of Object.entries(overlay)) { if (v === null) set.delete(r); else set.add(r); }
     }
-    for (const [r, v] of Object.entries(overlay)) { if (v === null) set.delete(r); else set.add(r); }
     listing = [...set].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)); lower = new Map(listing.map((r) => [r.toLowerCase(), r]));
     return set;
   };
-  let fileSet = null;
   const files = () => fileSet || (fileSet = build());
   const ctx = {
-    root, rules, opts,
+    root, rules, opts: { ...opts, overlay, rules }, bytesCache, textCache, memos,
     /** every file of the tree (src, vendor, assets without assets/baked, the root files), sorted by plain string order */
     list() { files(); return listing; },
     has(rel) { return files().has(rel); },
@@ -328,15 +343,23 @@ export function createContext(root, opts = {}) {
       b = Buffer.isBuffer(v) ? v : Buffer.from(String(v), 'utf8'); bytesCache.set(rel, b); return b;
     },
     text(rel) { let t = textCache.get(rel); if (t === undefined) textCache.set(rel, t = ctx.bytes(rel).toString('utf8')); return t; },
+    /** a value computed from the content of ONE file (cached; dropped for a file that a derived context replaces) */
+    memo(rel, tag, compute) {
+      let m = memos.get(rel); if (!m) memos.set(rel, m = new Map());
+      if (!m.has(tag)) m.set(tag, compute());
+      return m.get(tag);
+    },
     /** registry rows in registry order */
     rows() {
-      if (rowsCache) return rowsCache;
       let reg;
-      if (opts.areas) reg = Array.isArray(opts.areas) ? Object.fromEntries(opts.areas.map((r) => [r.id, r])) : opts.areas;
-      else { const text = ctx.text('src/areas/registry.js'); reg = new Function(text.replace(/^export\s+/gm, '') + '\nreturn REGISTRY;')(); }
-      return (rowsCache = Object.values(reg));
+      if (opts.areas) reg = opts.areas;
+      else reg = ctx.memo('src/areas/registry.js', 'registry', () => new Function(ctx.text('src/areas/registry.js').replace(/^export\s+/gm, '') + '\nreturn REGISTRY;')());
+      if (reg && !Array.isArray(reg)) reg = Object.values(reg);
+      return reg;
     },
     row(id) { const r = ctx.rows().find((x) => x.id === id); if (!r) throw new ClosureError('UnknownArea', `area ${id} is not in the registry`); if (!r.page) throw new ClosureError('UnknownArea', `registry row ${id} has no page`); return r; },
+    /** a copy of this tree with the files of `patch` replaced ({ rel: string | Buffer | null }); `read` hooks are not inherited */
+    derive(patchFiles, extra = {}) { const d = createContext(root, { ...opts, read: null, overlay: patchFiles, parent: ctx, ...extra }); d.scanner = ctx.scanner; return d; },
   };
   return ctx;
 }
