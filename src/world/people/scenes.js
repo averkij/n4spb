@@ -30,9 +30,11 @@ export function populate(ctx, nav, sim, opts = {}) {
     return comps[0].ids[0];
   };
   const streetNode = (id) => { const k = N.k[id]; return k === 's' || k === 'a' || k === 'p' || k === 'k'; };
-  const walker = (specOpts, prefs, scene = 'walk', tweak = null) => {
+  // no riders in the garden (people.js DENSITY.garden.noRiders: the Smolensky cemetery): a walker with a vehicle, and the parent a kid on a scooter follows (ride = true), starts on a street node outside it
+  const noRide = nav.gardenActive === true && nav.gardenCfg.noRiders === true, outsideNode = (id) => streetNode(id) && !nav.inGarden(N.x[id], N.z[id]);
+  const walker = (specOpts, prefs, scene = 'walk', tweak = null, ride = false) => {
     const spec = makeSpec(R, specOpts); if (tweak) tweak(spec);
-    const a = sim.spawn(spec, { prefs, scene }); sim.placeAtNode(a, startNode(streetNode)); count(scene); return a;
+    const a = sim.spawn(spec, { prefs, scene }); sim.placeAtNode(a, startNode(noRide && (ride || spec.vehicle) ? outsideNode : streetNode)); count(scene); return a;
   };
   /** put follower b beside its leader a (a walkable spot within d metres, else on the leader) */
   const nextTo = (b, a, d) => { let x = a.x, z = a.z; for (const k of [d, -d, d * 0.5, -d * 0.5, 0.2]) { const px = a.x + Math.cos(a.yaw) * k, pz = a.z - Math.sin(a.yaw) * k; if (nav.walkable(px, pz) && nav.obstDist(px, pz, 0.6) > 0.3 && nav.cover(px, pz) < -0.4) { x = px; z = pz; break; } } sim.place(b, x, z, a.yaw, a.y); b.comp = a.comp; };
@@ -86,7 +88,7 @@ export function populate(ctx, nav, sim, opts = {}) {
   for (let i = 0; i < n(8); i++) walker({ role: 'rider', vehicle: 'bike' }, P_RIDER, 'bike');
   for (let i = 0; i < n(14); i++) walker({ role: 'rider', vehicle: 'escooter' }, P_RIDER, 'escooter');
   for (let i = 0; i < n(7); i++) {
-    const a = walker({ role: 'walk' }, P_STROLL, 'family'), b = sim.spawn(makeSpec(R, { role: 'kid', vehicle: R() < 0.7 ? 'kick' : 'balance' }), { prefs: a.prefs, scene: 'family' });
+    const a = walker({ role: 'walk' }, P_STROLL, 'family', null, true), b = sim.spawn(makeSpec(R, { role: 'kid', vehicle: R() < 0.7 ? 'kick' : 'balance' }), { prefs: a.prefs, scene: 'family' });
     b.vpref = Math.min(b.vpref, a.vpref * 1.3); sim.follow(b, a, (R() < 0.5 ? 1 : -1) * 0.9, 0.3); nextTo(b, a, 0.9); count('kidrider');
   }
   for (let i = 0; i < n(10); i++) walker({ role: 'courier', vehicle: R() < 0.4 ? 'escooter' : null }, P_COURIER, 'courier');

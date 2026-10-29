@@ -565,6 +565,9 @@ export const ZONES = {
   fountains: [],
   peopleDensity: {
     west: { scale: 1, platforms: 1, off: true }, mars: { scale: 1, zones: [], off: true },
+    // the Smolensky cemetery (HOOKS.inGarden = cemetery.js): a quarter of the density the island had (the zone weight there, hot spots and base alike, is multiplied by 0.22: spawn, goals and re-placements; measured 0.27 x the old density), at most 130 heads
+    // inside it, and nobody on a bike / scooter / kick scooter / balance bike (noRiders: people/sim.js, scenes.js)
+    garden: { factor: 0.22, maxPeople: 130, noRiders: true },
   },
   peopleCorridor: [],
   peopleHot: PEOPLE_HOT,
@@ -607,10 +610,13 @@ export const PRUNE_SERVICES = [
 ];
 /** the area-specific hooks of the engine modules (milestone M6, docs/AREAS.md section 9: keep-outs of trees / tufts / props / ways / parking, the crowd garden, the deck services; the call sites read
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */
-export const HOOKS = makeHooks(MODULES);      // the hook set of src/areas/north/hooks.js gated by the module list: none of its modules is in this list, so it is inert here
+// the hook set of src/areas/north/hooks.js gated by the module list: none of its modules is in this list, so it is inert here, EXCEPT inGarden: the "garden" of the crowd is the Smolensky cemetery here (cemetery.js: the
+// polygon of GREEN r2736670), whose people density is a quarter of the island's and without riders (ZONES.peopleDensity.garden below); the North's own inGarden (the Tauride Garden, x > 915) is never true on the island
+export const HOOKS = { ...makeHooks(MODULES), inGarden: inCemetery };
 /** the height patches of layout.heightAt (milestone M6, docs/AREAS.md section 9): the hook set gated by MODULES, see src/areas/north/hooks.js */
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 
+import { inCemetery } from './cemetery.js';
 import { makeHooks, makeHeightPatches } from '../north/hooks.js';      // shared with the parked North: the hook bodies are gated by the module list
 
 // ---------------------------------------------------------------- the places of the OTHER areas (docs/AREAS.md: core/gates.js, the HUD list "Места · Places")

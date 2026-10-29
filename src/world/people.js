@@ -31,7 +31,7 @@ import { ZONES } from './lib/area-tables.js';
 //            maxPeople: a hard head count for the zone (nobody picks a target / is re-placed there while it is full).
 //            The Nevsky pavement crowd between Mayakovskaya and the Fontanka is not touched.
 // garden     the garden of the area (HOOKS.inGarden: the Tauride Garden of the North): inside it the people density is `factor` x the plan (nav.densityFactor) and at most `maxPeople` people are in it
-//            (people/sim.js crowdedAt / recycle: nobody picks a target / is re-placed there while it is full). The neutral row (factor 1, no cap) is the strip's (it has no garden); the North's row is in its area module (ZONES.peopleDensity.garden).
+//            (people/sim.js crowdedAt / recycle: nobody picks a target / is re-placed there while it is full). `noRiders: true` (vasilyevsky's cemetery): nobody on a bike / scooter / kick scooter / balance bike (nor the parent of such a kid) starts in it, picks a target in it or gets a route through it (sim.js banRide). The neutral row (factor 1, no cap) is the strip's (it has no garden); the North's row is in its area module (ZONES.peopleDensity.garden).
 // The area-bound sub-tables (station, west, mars, garden: the numbers and their meaning are in src/world/area.js ZONES.peopleDensity, where the strip's values are) come from the area module; an area that leaves
 // one out gets the neutral one (no station zone, scale 1, no quiet zone of the castle, no garden cap). global is the engine's.
 const PD = ZONES.peopleDensity;
