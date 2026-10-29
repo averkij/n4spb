@@ -71,18 +71,19 @@ log('centre-line type by (lanes, rank): ' + [...cons.entries()].map(([k, m]) => 
 for (const [k, m] of cons) if (Object.keys(m).length > 1) fail(`two-way carriageways of one class (${k}) get different centre lines: ${Object.keys(m).join(', ')}`);
 
 // ---------------------------------------------------------------- 2. coverage of the rules
-log('\n== 2. COVERAGE of the rules (drawn / (asked - under bridge decks - zebra zones); the rest is hidden under other carriageways\' asphalt)');
+log('\n== 2. COVERAGE of the rules (drawn / (asked - under bridge decks - zebra zones - stubs dropped by pruneStubs); the rest is hidden under other carriageways\' asphalt)');
 const cov = {}, worst = [];
 for (const rl of plan.rules) {
   const w = net.ways[rl.way]; if (!wayNear(w)) continue;
-  const e = (cov[rl.kind] ||= { want: 0, drawn: 0, deck: 0, cross: 0, cover: 0 });
-  for (const k of ['want', 'drawn', 'deck', 'cross', 'cover']) e[k] += rl[k];
+  const e = (cov[rl.kind] ||= { want: 0, drawn: 0, deck: 0, cross: 0, cover: 0, pruned: 0 });
+  for (const k of ['want', 'drawn', 'deck', 'cross', 'cover', 'pruned']) e[k] += rl[k] || 0;
   if (rl.cover > 8) worst.push({ way: w.i, id: w.id, name: w.name, cls: classOf(w), kind: rl.kind, want: rl.want, cover: rl.cover, x: w.x[w.n >> 1], z: w.z[w.n >> 1] });
 }
+const pr = plan.stats.pruned; if (pr) log(`STUBS dropped (markings.js pruneStubs): ${pr.solid} solid pieces (${pr.solidLen.toFixed(0)} m; shorter than ${RULES.stubMin} m and not between two stop bars / zebras / decks), ${pr.dashAsks} dashed stretches (${pr.dashes} dashes: one dash visible, or 2 mostly hidden)`);
 let allWant = 0, allDrawn = 0;
 for (const [kind, e] of Object.entries(cov)) {
-  const den = Math.max(1, e.want - e.deck - e.cross);
-  log(`${pad(kind, 16)} asked ${pad(km(e.want), 6)} km  drawn ${pad(km(e.drawn), 6)}  deck ${pad(km(e.deck), 5)} zebra ${pad(km(e.cross), 5)} under other asphalt ${pad(km(e.cover), 5)}  = ${(100 * e.drawn / den).toFixed(1)} %`);
+  const den = Math.max(1, e.want - e.deck - e.cross - e.pruned);
+  log(`${pad(kind, 16)} asked ${pad(km(e.want), 6)} km  drawn ${pad(km(e.drawn), 6)}  deck ${pad(km(e.deck), 5)} zebra ${pad(km(e.cross), 5)} under other asphalt ${pad(km(e.cover), 5)} stubs dropped ${pad(km(e.pruned), 5)}  = ${(100 * e.drawn / den).toFixed(1)} %`);
   if (/^(centre|median|lane-solid|pocket)/.test(kind)) { allWant += den; allDrawn += e.drawn; }
 }
 if (allWant) { const p = 100 * allDrawn / allWant; log(`TOTAL solid / centre coverage ${p.toFixed(1)} %`); if (p < 92) fail(`coverage ${p.toFixed(1)} % < 92 %`); }
@@ -152,6 +153,15 @@ for (const l of plan.lines) {
     for (let cx = Math.floor((Math.min(a.x, b.x) - 1.1) / SEGC); cx <= Math.floor((Math.max(a.x, b.x) + 1.1) / SEGC); cx++) for (let cz = Math.floor((Math.min(a.z, b.z) - 1.1) / SEGC); cz <= Math.floor((Math.max(a.z, b.z) + 1.1) / SEGC); cz++) { const k = cx * 8192 + cz; let m = MG.get(k); if (!m) MG.set(k, (m = [])); m.push(sg); }
   }
 }
+const DG = new Map();
+for (const l of plan.dropped || []) {
+  if (!/^median-/.test(l.kind)) continue;
+  for (let i = 1; i < l.pts.length; i++) {
+    const a = l.pts[i - 1], b = l.pts[i], sg = [a.x, a.z, b.x, b.z, l.way];
+    for (let cx = Math.floor((Math.min(a.x, b.x) - 1.1) / SEGC); cx <= Math.floor((Math.max(a.x, b.x) + 1.1) / SEGC); cx++) for (let cz = Math.floor((Math.min(a.z, b.z) - 1.1) / SEGC); cz <= Math.floor((Math.max(a.z, b.z) + 1.1) / SEGC); cz++) { const k = cx * 8192 + cz; let m = DG.get(k); if (!m) DG.set(k, (m = [])); m.push(sg); }
+  }
+}
+const droppedAt = (x, z) => { for (const [ax, az, bx, bz] of DG.get(Math.floor(x / SEGC) * 8192 + Math.floor(z / SEGC)) || []) { const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-12, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)); if (Math.hypot(x - ax - dx * t, z - az - dz * t) < 1.0) return true; } return false; };
 const drawersAt = (x, z) => {
   const out = new Set();
   for (const [ax, az, bx, bz, wi] of MG.get(Math.floor(x / SEGC) * 8192 + Math.floor(z / SEGC)) || []) {
@@ -172,8 +182,9 @@ const pairStat = (ways) => {
         if (!w.med[q.k] || !w.med[Math.min(w.n - 1, q.k + 1)]) continue;
         const v = w.medPartner && w.medPartner[q.k], x = q.x + q.tz * q.hL, z = q.z - q.tx * q.hL;
         if (deckAt(x, z, 0.3) || nearCrossing(net, x, z, RULES.zebraClear) || net.cover(x, z, { skip: w, skip2: v }) > 0.2) continue;
-        st.pts++;
         const d = drawersAt(x, z);
+        if (d.size === 0 && droppedAt(x, z)) { st.stub = (st.stub || 0) + 1; continue; }       // (a stub the rule dropped on purpose)
+        st.pts++;
         if (d.size === 1) st.one++; else if (d.size === 0) { st.gap++; if (st.gaps.length < 40) st.gaps.push({ way: w.i, id: w.id, x, z }); } else st.dup++;
       }
     }
@@ -182,7 +193,7 @@ const pairStat = (ways) => {
 };
 const allMed = net.ways.filter((w) => eligible(w) && w.med && wayNear(w));
 const PS = pairStat(allMed);
-log(`all paired carriageways: ${PS.pts} points on the shared edges; one line ${PS.one} (${(100 * PS.one / Math.max(1, PS.pts)).toFixed(1)} %), NO line ${PS.gap}, drawn twice ${PS.dup}`);
+log(`all paired carriageways: ${PS.pts} points on the shared edges; one line ${PS.one} (${(100 * PS.one / Math.max(1, PS.pts)).toFixed(1)} %), NO line ${PS.gap}, drawn twice ${PS.dup}; points of dropped stubs, not counted ${PS.stub || 0}`);
 for (const g of PS.gaps.slice(0, 6)) log(`  gap: way ${g.way} ${g.id} at ${g.x.toFixed(0)},${g.z.toFixed(0)}`);
 // (the limit was 6 % for the whole city; the strip has far fewer points and the same gaps on the Admiralteyskaya embankment, 2-ya Sovetskaya and Gorokhovaya: 7.1 % on 2026-10-16, 6.5 % before the run-on past the clip line)
 if (PS.gap > PS.pts * 0.08) fail(`${PS.gap} shared-edge points without a median line`);

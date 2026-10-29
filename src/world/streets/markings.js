@@ -14,6 +14,9 @@
 //   stop line       1.12: one continuous bar across all lanes of an approach, 0.4 m (0.6 m on the primary streets), at the end of the lane range (1.5 m before the zebra when there is one), at every
 //                   signalised approach and every give-way approach of a public street (the lane graph's `give`: the minor street meeting a higher-ranked one).
 //   arrows          straight-ahead arrows 30 m before the stop line, one per lane, on the approaches of the wide streets (rank >= 3, carriageway >= 10 m) to a junction.
+//   no stubs        a solid centre / median / bus-lane piece shorter than RULES.stubMin (6 m) is dropped unless both its ends meet a stop bar, a zebra or a bridge deck (and then it is at least 1.5 m long); a dashed lane / centre stretch of which
+//                   at most ONE dash is visible (or 2 dashes with at least twice as many hidden under other carriageways' asphalt) is dropped: the interior of a wide junction (several overlapping carriageways,
+//                   6-30 m links between two junctions) otherwise shows orphan double-line stubs and lone dashes (pruneStubs, docs/rules/ROAD-MARKINGS.md).
 //   nothing on      rank-0 ways (courtyards, service), living streets, pedestrian ways, bridge decks drawn by the bridges module (decks.js).
 import { wayAt, nearCrossing } from './net.js';
 import { prepLanes, latAt } from './lanes.js';
@@ -21,7 +24,7 @@ import { deckAt } from './decks.js';
 import { UP, rgb, dpKeep, clamp } from './util.js';
 import { ROAD_Y, LIFT, WEST_X } from './surface.js';
 
-export const RULES = { dash: 1.0, period: 4.0, lane: 0.14, thin: 0.1, gap: 0.1, laneMin: 2.6, narrow: 5.5, sideDash: 6.5, stopMinApproach: 12, stopW: 0.4, stopWPrimary: 0.6, arrowBefore: 30, zebraClear: 1.0 };
+export const RULES = { dash: 1.0, period: 4.0, lane: 0.14, thin: 0.1, gap: 0.1, laneMin: 2.6, narrow: 5.5, sideDash: 6.5, stopMinApproach: 12, stopW: 0.4, stopWPrimary: 0.6, arrowBefore: 30, zebraClear: 1.0, stubMin: 6, stubAnchor: 3, sliver: 1.5 };
 const WHITE = rgb('#e9e6dc');
 
 /** centre-line type of a roadway by its lane count, rank and width (null = none): 'double' | 'solid' | 'dash' */
@@ -110,8 +113,51 @@ function medOffsets(w) {
   return w._medOff;
 }
 
+/** distance from (x, z) to the nearest stop bar / zebra / bridge deck: the things a line legitimately ENDS at (the range end of a line is a junction mouth, which is no anchor: a link between two junctions is all mouths) */
+function anchorDist(net, bars, x, z) {
+  if (deckAt(x, z, 1)) return 0;
+  if (nearCrossing(net, x, z, RULES.stubAnchor)) return 0;
+  let m = 1e9;
+  for (const b of bars) {
+    if (Math.abs(x - b.x) > 40 || Math.abs(z - b.z) > 40) continue;
+    const u = (x - b.x) * b.tx + (z - b.z) * b.tz, c = (x - b.x) * -b.tz + (z - b.z) * b.tx;
+    m = Math.min(m, Math.hypot(u > 0 ? u : u < -b.depth ? -b.depth - u : 0, c < b.a ? b.a - c : c > b.b ? c - b.b : 0));
+  }
+  return m;
+}
+/** STUBS: what is left of a rule after the other carriageways' asphalt, the zebras and the partner's share took their parts. In the interior of a wide junction (the 6-way node of Birzhevaya ploshchad: seven
+ *  overlapping carriageways, links of 5-30 m between its nodes) that leaves orphans: a 2-5 m piece of a double line hanging on the asphalt, a lone dash. Drop
+ *   - a solid centre / median / bus-lane piece shorter than RULES.stubMin unless BOTH its ends meet a stop bar / zebra / deck and it is at least RULES.sliver (1.5 m) long (a short piece between two of those is a real line); the two lines of a double go together;
+ *   - the dashes of a dashed stretch of which at most ONE dash shows, or 2 dashes show with at least twice as many hidden under other asphalt.
+ *  Pocket lines (bay edges) stay. rec.pruned / rec.drawn keep the books of the audit (coverage = drawn / (asked - deck - zebra - pruned)). */
+function pruneStubs(net, lines, bars, recs, stats, dropped) {
+  const drop = new Set(), st = { solid: 0, solidLen: 0, dashes: 0, dashAsks: 0 };
+  const byRid = new Map();
+  for (const l of lines) if (l.rid !== undefined && !l.dash) { let a = byRid.get(l.rid); if (!a) byRid.set(l.rid, (a = [])); a.push(l); }
+  for (const l of lines) {
+    if (l.dash || l.rid === undefined || !/^(centre|median|lane-solid)/.test(l.kind)) continue;
+    let len = l.len;
+    if (/double$/.test(l.kind)) for (const m of byRid.get(l.rid)) if (m !== l && Math.hypot(m.pts[0].x - l.pts[0].x, m.pts[0].z - l.pts[0].z) < 0.5) len = Math.max(len, m.len);
+    if (len >= RULES.stubMin) continue;
+    const a = l.pts[0], b = l.pts[l.pts.length - 1];
+    if (len >= RULES.sliver && anchorDist(net, bars, a.x, a.z) < RULES.stubAnchor && anchorDist(net, bars, b.x, b.z) < RULES.stubAnchor) continue;
+    drop.add(l); st.solid++; st.solidLen += l.len;
+    if (!l.oi) { const r = recs[l.rid]; r.drawn -= l.len; r.pruned += l.len; }
+  }
+  for (const r of recs) {
+    if (!/dash$/.test(r.kind)) continue;
+    const d = Math.round(r.drawn / RULES.dash), c = Math.round(r.cover / RULES.dash);
+    if (d < 1 || !(d <= 1 || (d <= 2 && c >= 2 * d))) continue;
+    st.dashAsks++; st.dashes += d; r.pruned += r.drawn; r.drawn = 0; r.dropDash = true;
+  }
+  stats.pruned = st;
+  const keep = [];
+  for (const l of lines) { if (drop.has(l)) dropped.push(l); else if (!(l.dash && recs[l.rid].dropDash)) keep.push(l); }
+  return keep;
+}
+
 export function planMarkings(net, graph, o = {}) {
-  const lines = [], arrows = [], bars = [];
+  const lines = [], arrows = [], bars = [], recs = [];
   const stats = { classes: {}, ways: 0 }, rules = [];                // rules: every stretch a rule asked a line for: { way, kind, want, drawn, deck, cross, cover } in metres (the audit: coverage = drawn / (want - deck - cross))
   const push = (kind, w, pts, width, extra = {}) => {
     if (pts.length < 2) return 0;
@@ -125,7 +171,7 @@ export function planMarkings(net, graph, o = {}) {
   /** ask for a line of `kind` along w between arclengths lo and hi at the lateral position latFn(q): dashed (1 m / 3 m from `anchor`), or solid at the offsets `offs` (a double line = two thin lines);
    *  o.hid tells where there is no paint. Records the rule (what was asked / drawn / hidden by what) and pushes the drawn pieces. */
   const ask = (kind, w, lo, hi, latFn, width, o) => {
-    const rec = { way: w.i, kind, want: 0, drawn: 0, deck: 0, cross: 0, cover: 0 }, hid = o.hid;
+    const rec = { way: w.i, kind, want: 0, drawn: 0, deck: 0, cross: 0, cover: 0, pruned: 0, id: recs.length }, hid = o.hid; recs.push(rec);
     if (o.dash) {
       const P = RULES.period, D = RULES.dash, a = o.anchor;
       for (let s = a + 1.5 + P * Math.ceil((lo - a - 1.5) / P - 1e-9); s + D <= hi + 1e-6; s += P) {
@@ -133,14 +179,14 @@ export function planMarkings(net, graph, o = {}) {
         for (const p of pts) { why = hid(p); if (why) break; }
         if (why === 'gate') continue;
         rec.want += D;
-        if (why) rec[why] += D; else { push(kind, w, pts, width, { dash: true }); rec.drawn += D; }
+        if (why) rec[why] += D; else { push(kind, w, pts, width, { dash: true, rid: rec.id }); rec.drawn += D; }
       }
     } else {
       const n = Math.max(2, Math.ceil((hi - lo) / 3) + 1), wt = (hi - lo) / n;
       rec.want = hi - lo;
       (o.offs || [0]).forEach((off, oi) => {
         const lat = off ? (q) => latFn(q) + off : latFn; let cur = null, prev = null;
-        const flush = () => { if (cur && cur.length >= 2) { const l = push(kind, w, cur, width, off ? { off } : {}); if (!oi) rec.drawn += l; } cur = null; };
+        const flush = () => { if (cur && cur.length >= 2) { const l = push(kind, w, cur, width, off ? { off, rid: rec.id, oi } : { rid: rec.id, oi }); if (!oi) rec.drawn += l; } cur = null; };
         const edge = (sv, sh) => { for (let it = 0; it < 8; it++) { const m = (sv + sh) / 2; if (hid(sample(w, m, lat))) sh = m; else sv = m; } return sample(w, sv, lat); };       // where the paint really starts / ends: the sample grid (3 m) is refined to 2 cm
         for (let k = 0; k < n; k++) {
           const sk = lo + (hi - lo) * k / (n - 1), p = sample(w, sk, lat), why = hid(p);
@@ -247,8 +293,9 @@ export function planMarkings(net, graph, o = {}) {
     const depth = L0.rank >= 4 ? RULES.stopWPrimary : RULES.stopW;
     bars.push({ x: p0[0], z: p0[1], tx, tz, a, b, depth, y: deck ? 0.05 + LIFT : ROAD_Y + LIFT, signal: !!g.sl.signal, give: !!g.sl.give, rank: L0.rank, junction: g.sl.junction, approach: g.sl.approach, name: L0.name || null });
   }
-  stats.counts = { lines: lines.length, bars: bars.length, arrows: arrows.length };
-  return { lines, bars, arrows, rules, stats };
+  const dropped = [], kept = pruneStubs(net, lines, bars, recs, stats, dropped);
+  stats.counts = { lines: kept.length, bars: bars.length, arrows: arrows.length };
+  return { lines: kept, bars, arrows, rules, stats, dropped };
 }
 
 // ------------------------------------------------------------------ painting

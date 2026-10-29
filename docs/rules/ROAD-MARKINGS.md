@@ -17,6 +17,7 @@ tyre wear, the red bus lane of west Nevsky, kerb yellow, bay lines, bus-stop zig
 | zebra 1.14.1 | across every crossing in `net.crossings`; centre / lane lines stop 0.5 m before the bars and resume behind them (`nearCrossing(.., 1.0)`; line ends are refined to 2 cm) |
 | stop line 1.12 | one continuous bar across all lanes of an approach, 0.4 m (0.6 m on primary streets), at the end of the lane range (1.5 m before the zebra when there is one), at every signalised approach and every give-way approach (`stopLines.give`: a minor street meeting a higher-ranked one). Approach lane shorter than 12 m (micro lane inside a junction complex) gets none |
 | arrows | straight arrows 30 m before the stop line, one per lane, on approaches of the wide streets (rank >= 3, carriageway >= 10 m) |
+| no stubs (`pruneStubs`) | after the rules ran, a solid centre / median / bus-lane piece shorter than 6 m (`RULES.stubMin`) is dropped unless BOTH its ends meet a stop bar / zebra / bridge deck within 3 m (`stubAnchor`) and it is >= 1.5 m long (`sliver`); the two lines of a double go together. A dashed stretch of which at most ONE dash shows (or 2 dashes with at least twice as many hidden under other asphalt) is dropped. Pocket (bay) lines stay |
 
 ## Audit (headless, no GPU, ~10 s)
 
@@ -53,3 +54,14 @@ points in its "exactly one median line" check. Lane lines, pocket lines, stop ba
 | paint triangles inside junction boxes | 3672 | 887 (stop bars and zebra margins) |
 | stop bars | 1697 per-lane bars (signalised) | 561 per-approach bars (signalised + give way) |
 | markings triangles | 122 708 | ~106 000 |
+
+## Wide junction interiors (2026-10-29, Birzhevaya ploshchad / Palace bridge)
+
+At a junction complex (the 6-way node of Birzhevaya ploshchad -2507,-1104 with its neighbours: seven overlapping carriageways, links of 5-30 m between the nodes) the rules asked for lines on stretches that the
+other carriageways' asphalt, the zebras and the partner share then cut into orphans: a 5 m piece of a double line, 1-2 m slivers of it, lone dashes (one dash of a lane line of a 6 m link). The rules stay as they are;
+`pruneStubs` (markings.js, called at the end of `planMarkings`) removes the leftovers, see the "no stubs" row. `plan.dropped` keeps the dropped solid pieces, `rec.pruned` the metres, and the audit counts them out of the coverage denominator
+(and out of the "exactly one median line" gaps).
+Audit before -> after (`node tools/area.mjs <area> tools/streets-markings-audit.mjs --strict`): solid pieces dropped / dashed stretches dropped / centre-lane-pocket points inside junction boxes / solid coverage:
+palace 359 / 124 / 21 -> 6 / 95.5 -> 95.4 %; admiralty 397 / 168 / 12 -> 0 / 95.5 -> 95.4 %; vasilyevsky 335 / 112 / 12 -> 0 / 97.0 -> 96.9 %; smolny 473 / 194 / 15 -> 6 / 95.0 -> 94.9 %;
+vladimirsky 382 / 204 / 9 -> 6 / 94.1 -> 94.1 %; stop bars, arrows and zebras unchanged; the shared-edge "drawn twice" count falls (palace 718 -> 522, admiralty 449 -> 227, vladimirsky 1103 -> 865).
+Markings are part of the baked street surfaces: a re-bake is needed to see this in the baked build.
