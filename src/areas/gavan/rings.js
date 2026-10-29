@@ -31,6 +31,9 @@ import * as PRIBALTIYSKAYA from '../../world/landmarksPribaltiyskaya/groups.js';
 // ---
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js)
 // ---
+import { ringsOf as MO_RINGS } from '../../world/bridges/groups-mo.js';      // bridgesMo
+const BRIDGES_MO = MO_RINGS([], { cutting: true });      // no stair pits in this territory, only the cutting banks of the WHSD
+// ---
 
 const SEA_KEYS = SEATERMINAL.GROUPS_ALL.map((g) => g.key);      // the claim of area.js (GROUPS.landmarksSeaTerminal = GROUPS_ALL)
 const SEA_ALL = { KEEP_OUT: SEATERMINAL.keepOutFor(SEA_KEYS), PAVED_RINGS: SEATERMINAL.pavedRingsFor(SEA_KEYS) };
@@ -47,6 +50,8 @@ const SOURCES = [
   { module: 'landmarksGavan', ns: GAVAN },
   // ---
   { module: 'landmarksPribaltiyskaya', ns: PRIBALTIYSKAYA },
+  // ---
+  { module: 'bridges', ns: BRIDGES_MO },      // bridgesMo: the grass embankments of the WHSD cutting (paved ground: no trunks, hedges, beds or tufts)
   // ---
   { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
   // ---

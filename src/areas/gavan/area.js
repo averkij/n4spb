@@ -36,6 +36,8 @@ import { GROUPS_LIST as G_GAVAN } from '../../world/landmarksGavan/groups.js';
 // ---
 import { GROUPS_LIST as G_PRIBALTIYSKAYA } from '../../world/landmarksPribaltiyskaya/groups.js';
 // ---
+import { mo as MO_ROWS } from '../../world/bridges/groups-mo.js';      // bridgesMo: the WHSD (bridges/groups-mo.js: imported only by the new areas)
+// ---
 
 /** Area id: <html data-area> must equal it (main.js refuses to run a page whose area module is another one) and the registry (src/areas/registry.js) lists it. */
 export const ID = 'gavan';
@@ -147,6 +149,9 @@ GROUPS.landmarksVOStatues = only(G_VOSTATUES, ['vo-musa-jalil', 'vo-lenin-pokrov
 // PORT-GROUPS: bridges
 GROUPS.bridges = only(GROUPS_VO, ['novo-andreevsky', 'nalichny']);
 
+// bridgesMo (docs/gdm-B.md): the Western High-Speed Diameter, the part of it that lies in this data extent (the at-grade stretch with its open cutting from z about -520, the viaduct up to the Korabelny pylon at z 1275) and the two park footbridges over the cutting
+GROUPS.bridges = GROUPS.bridges.concat(MO_ROWS(['whsd', 'whsd-crossings'], { 'whsd-crossings': { osm: ['w1428211376', 'w1428213485'], at: [-7937, -583] } }));      // (the Mikhmanskaya overpass, w1257246775 / w1257246770, lies in Morskoy)
+
 /**
  * The HUD location table (first match wins), built with the layout helpers `h` ({ NAMES, SUBGROUPS, _sqPolys, _groupPolys, _named, _areaPolys, _shoreOf, _deck, inRiver, shoreDist }).
  * shapes: { poly: [x,z,...], margin? (m around the polygon) } | { c: [x,z], r } | { x0, x1, z0, z1 } | { road: 'Невский проспект' } (nearest road of that name within 22 m)
@@ -156,6 +161,7 @@ export function makeAreas(h) {
   return [
   { name: 'Наличный мост · Nalichny Bridge', c: [-6702.1, -1707.9], r: 48 },
   { name: 'Ново-Андреевский мост · Novo-Andreevsky Bridge', c: [-6328.8, -1603.0], r: 20 },
+  { name: 'ЗСД · Western High-Speed Diameter', road: NAMES.streets.zsd },      // bridgesMo (docs/gdm-B.md)
   // ---
   { name: 'Шкиперский мост · Shkipersky Bridge', c: [-7010, -31], r: 35 },
   { name: 'Кроншпицы Галерной гавани · Kronshpitsy', c: [-6958, 402], r: 62 },      // (the source row has r 55; the photo pose of Digit1 stands 58 m from the centre)

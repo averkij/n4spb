@@ -5,10 +5,16 @@
 // the pits of the bridges outside the territory (Korablestroiteley, the 3rd / 4th Smolensky bridges) are not handed over.
 import { WATER_RINGS as PIT_WATER, KEEP_OUT as PIT_KEEP, PAVED_RINGS as PIT_PAVED } from './pits.js';
 
-const mine = (p) => p.id.startsWith('nalichny-');
-export const WATER_RINGS = PIT_WATER.filter(mine);
-export const KEEP_OUT = PIT_KEEP.filter(mine);
-export const PAVED_RINGS = PIT_PAVED.filter(mine).map((p) => p.ring);
+/** n4spb: the pit rings of the bridges whose pit ids start with one of `prefixes` ('nalichny-', 'korablestroiteley-', 'smol3-' ...): an area hands over only the pits of the bridges it builds (a ring of a pit whose flight is not drawn would be a hole of water
+ *  in the street). { WATER_RINGS, KEEP_OUT, PAVED_RINGS } in the format of src/areas/<id>/rings.js. Vasilyevsky and the other old areas keep the Nalichny pits only (the constants below); bridges/groups-mo.js uses it for the new areas. */
+export const pitsOf = (prefixes) => {
+  const mine = (p) => prefixes.some((x) => p.id.startsWith(x));
+  return { WATER_RINGS: PIT_WATER.filter(mine), KEEP_OUT: PIT_KEEP.filter(mine), PAVED_RINGS: PIT_PAVED.filter(mine).map((p) => p.ring) };
+};
+const NAL = pitsOf(['nalichny-']);
+export const WATER_RINGS = NAL.WATER_RINGS;
+export const KEEP_OUT = NAL.KEEP_OUT;
+export const PAVED_RINGS = NAL.PAVED_RINGS;
 
 export const GROUPS_VO = [
   { key: 'birzhevoy', name: 'Биржевой мост', nameEn: 'Exchange (Birzhevoy) Bridge', ids: [], osm: ['r4074054', 'w362785969', 'w362785970', 'w102582397', 'w128494897'], at: [-2679, -1545], note: 'five flat green welded arches on pink granite piers, trident railing, bascule shown closed' },

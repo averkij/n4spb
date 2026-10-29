@@ -18,7 +18,8 @@ import * as MARINEFACADE from '../../world/landmarksMarineFacade/groups.js';    
 // ---
 import * as PRIBALTIYSKAYA from '../../world/landmarksPribaltiyskaya/groups.js';      // five paved rings (the hotel platform and plaza, the Kirov platform); no water ring, no keep-out: the module is inland
 // ---
-// PORT-IMPORT: bridgesMo
+import { ringsOf as MO_RINGS } from '../../world/bridges/groups-mo.js';      // bridgesMo: the stair pits of the Shipbuilders' and the 3rd / 4th Smolensky bridges + the grass embankments of the WHSD cutting (paved ground)
+const BRIDGES_MO = MO_RINGS(['korablestroiteley-', 'smol3-', 'smol4-'], { cutting: true });
 // ---
 
 const SOURCES = [
@@ -28,7 +29,7 @@ const SOURCES = [
   // ---
   { module: 'landmarksPribaltiyskaya', ns: PRIBALTIYSKAYA },
   // ---
-  // PORT-SOURCE: bridgesMo
+  { module: 'bridges', ns: BRIDGES_MO },      // bridgesMo: the pits of the three bridges with corner / abutment stairs, the cutting banks of the WHSD
   // ---
 ];
 

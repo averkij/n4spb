@@ -30,7 +30,7 @@ import { GROUPS_LIST as G_MARINEFACADE } from '../../world/landmarksMarineFacade
 // ---
 import { GROUPS_LIST as G_PRIBALTIYSKAYA } from '../../world/landmarksPribaltiyskaya/groups.js';
 // ---
-// PORT-IMPORT: bridgesMo
+import { mo as MO_ROWS } from '../../world/bridges/groups-mo.js';      // bridgesMo: the Shipbuilders' and the four Smolensky mouth bridges, the WHSD (bridges/groups-mo.js: imported only by the new areas)
 
 /** Area id: <html data-area> must equal it (main.js refuses to run a page whose area module is another one) and the registry (src/areas/registry.js) lists it. */
 export const ID = 'morskoy';
@@ -108,7 +108,9 @@ GROUPS.landmarksVOStatues = G_VOSTATUES.filter((g) => g.key === 'vo-polar');
 // ---
 // the bridges that lie in the overlap with Vasilyevsky and are ported there (bridges/groups-vo.js): the Nalichny Bridge (its four corner stairs go through rings.js) and the Novo-Andreevsky footbridge
 GROUPS.bridges = GROUPS_VO.filter((b) => b.key === 'nalichny' || b.key === 'novo-andreevsky');
-// PORT-GROUPS: bridgesMo
+// bridgesMo (docs/gdm-B.md): the Shipbuilders' Bridge, the 1st .. 4th Smolensky bridges of the Smolenka mouth, the WHSD (the part of it that lies in this data extent: the at-grade stretch with its open cutting, the portals, the first 440 m of the viaduct) and the decks
+// that cross the at-grade stretch (the Mikhmanskaya overpass, the park footbridges)
+GROUPS.bridges = GROUPS.bridges.concat(MO_ROWS(['korablestroiteley', 'smol1', 'smol2', 'smol3', 'smol4', 'whsd', 'whsd-crossings']));
 
 /**
  * The HUD location table (first match wins), built with the layout helpers `h` ({ NAMES, SUBGROUPS, _sqPolys, _groupPolys, _named, _areaPolys, _shoreOf, _deck, inRiver, shoreDist }).
@@ -119,7 +121,11 @@ export function makeAreas(h) {
   return [
   { name: 'Наличный мост · Nalichny Bridge', c: [-6702.1, -1707.9], r: 48 },
   { name: 'Ново-Андреевский мост · Novo-Andreevsky Bridge', c: [-6328.8, -1603.0], r: 20 },
-  // PORT-AREAS: bridgesMo
+  { name: 'Мост Кораблестроителей · Korablestroiteley Bridge', c: [-7532.2, -1948], r: 52 },
+  { name: '1-й Смоленский мост · 1st Smolensky Bridge', c: [-8059.5, -2005.4], r: 20 },
+  { name: '2-й Смоленский мост · 2nd Smolensky Bridge', c: [-8008.7, -2182.8], r: 20 },
+  { name: '3-й Смоленский мост · 3rd Smolensky Bridge', c: [-7955.6, -1975.4], r: 34 },
+  { name: '4-й Смоленский мост · 4th Smolensky Bridge', c: [-7903.2, -2151], r: 34 },
   // ---
   { name: 'Памятник всем полярникам · Polar explorers monument', c: [-6686, -1607.2], r: 22 },
   // ---
@@ -201,6 +207,7 @@ export const TEST = {
     { id: 'n5102741821', by: 'landmarksVOStatues', group: 'vo-polar' },
     // ---
     { id: 'r5574920', by: 'bridges', group: 'nalichny' },
+    { id: 'r5574927', by: 'bridges', group: 'korablestroiteley' },
     { id: 'w41575292', by: 'landmarksMarineFacade', group: 'mf-terminals' },
     // ---
     { id: 'w17559880', by: 'landmarksPribaltiyskaya', group: 'pribaltiyskaya-hotel' },
@@ -213,7 +220,7 @@ export const TEST = {
     // ---
     { x: -7516.6, z: -772.5, has: 'прибалтийская' }, { x: -7464.1, z: -796.1, has: 'петру' }, { x: -7992.7, z: -1065.3, has: 'киров' }, { x: -7309, z: -804, has: 'малые гаванцы' },
     // ---
-    // PORT-HAVE: bridgesMo
+    { x: -7532, z: -1948, has: 'кораблестроител' }, { x: -8059.5, z: -2005.4, has: '1-й смоленский' }, { x: -8008.7, z: -2182.8, has: '2-й смоленский' }, { x: -7955.6, z: -1975.4, has: '3-й смоленский' }, { x: -7903.2, z: -2151, has: '4-й смоленский' },
   ],
   // `kept` is left out on purpose: the default is every key of GROUPS, so tools/landmarks-groups-check.mjs verifies every landmark module of this page against its data
   roadsNear: { at: [-7516, -772], r: 90, min: 3 },
@@ -232,14 +239,23 @@ export const TEST = {
 const BRIDGE_ZONES = [
   { id: 'nalichny', name: 'Наличный мост', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7, own: true },
   { id: 'novo-andreevsky', name: 'Ново-Андреевский мост', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3, own: true, foot: true },
-  // PORT-ZONES: bridgesMo
+  // bridgesMo: the Shipbuilders' Bridge and the four bridges of the Smolenka mouth (the numbers of the source's BRIDGE_SHADES rows, environment/waterways.js 259 .. 263; river.js SITE_OF maps the ids to the sites of bridges/sites-vo2.js)
+  { id: 'korablestroiteley', name: 'Мост Кораблестроителей', key: 'smolenka', c: [-7532.2, -1948.0], axis: 16.5, w: 70.8, len: 40.7, own: true },
+  { id: 'smol1', name: '1-й Смоленский мост', key: 'smolenka', c: [-8059.5, -2005.4], axis: 15.7, w: 16.4, len: 30.8, own: true },
+  { id: 'smol2', name: '2-й Смоленский мост', key: 'smolenka', c: [-8008.7, -2182.8], axis: 17.4, w: 15.8, len: 31.5, own: true },
+  { id: 'smol3', name: '3-й Смоленский мост', key: 'smolenka', c: [-7955.6, -1975.4], axis: 16.3, w: 51.4, len: 32.2, own: true },
+  { id: 'smol4', name: '4-й Смоленский мост', key: 'smolenka', c: [-7903.2, -2151.0], axis: 16.3, w: 51.0, len: 31.3, own: true },
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
 const BRIDGE_SHADES = [
   { id: 'nalichny-deck', key: 'smolenka', c: [-6702.1, -1707.9], axis: 16.3, w: 70.9, len: 41.7 },
   { id: 'novo-andreevsky-deck', key: 'smolenka', c: [-6328.8, -1603.0], axis: 201.7, w: 3.3, len: 22.3 },
-  // PORT-ZONES: bridgesMo
+  { id: 'korablestroiteley-deck', key: 'smolenka', c: [-7532.2, -1948.0], axis: 16.5, w: 70.8, len: 40.7 },
+  { id: 'smol1-deck', key: 'smolenka', c: [-8059.5, -2005.4], axis: 15.7, w: 16.4, len: 30.8 },
+  { id: 'smol2-deck', key: 'smolenka', c: [-8008.7, -2182.8], axis: 17.4, w: 15.8, len: 31.5 },
+  { id: 'smol3-deck', key: 'smolenka', c: [-7955.6, -1975.4], axis: 16.3, w: 51.4, len: 32.2 },
+  { id: 'smol4-deck', key: 'smolenka', c: [-7903.2, -2151.0], axis: 16.3, w: 51.0, len: 31.3 },
 ];
 
 /** reaches: key of the waterway, test(x, z, nx, nz) on a bank point (landward normal n), run = horizontal length of the slope, kerb = banquette top above the water, lip = step from the banquette to the slope */

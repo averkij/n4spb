@@ -72,6 +72,7 @@ export function closeBank(o) {
     const ph = o.ph, probe = { x: 0, z: 0 }, ghosts = [];      // WATER IS REACHABLE (docs/AREAS.md 13.7, 15.2): with o.ctx the wing wall's collider is a row of breakable GHOST bays (lib/fence-bays.js): the wall stays drawn, the collider breaks like every fence
     for (let k = 0; k + 1 < pts.length; k++) {
       const a = pts[k], b = pts[k + 1], um = (a[0] + b[0]) / 2 - dir * 0.15, vm = (a[1] + b[1]) / 2, w = world(um, vm);
+      if (k >= nDraw && w.x < -7490) break;      // n4spb (gdm cluster B): the Smolenka mouth arms (x < -7490, the rule of environment/quay.js): the bank beyond the drawn wing has no quay railing and no wall collider (an open edge, water is reachable), so no invisible wall may run on from the wing
       if (k >= nDraw) { probe.x = w.x; probe.z = w.z; ph.resolve(probe, 0.25, 0, 1.7); if (Math.hypot(probe.x - w.x, probe.z - w.z) > 0.04) break; }   // the quay collider of the environment takes over
       const rot = Math.atan2(-(b[0] - a[0]) * f.s - (b[1] - a[1]) * f.c, (b[0] - a[0]) * f.c - (b[1] - a[1]) * f.s);
       if (o.ctx) {

@@ -224,6 +224,7 @@ function pickFence(filter = () => true, tries = 400, loose = false, stable = fal
   for (let i = 0; i < fs.length && tries > 0; i++) {
     const r = stable ? fs[i] : fs[(i * 7919) % fs.length]; if (!filter(r)) continue; tries--;
     const w = towardWater(r); if (!w) continue;
+    if (!loose && (r.w || 2) < 0.5) continue;      // (gdm cluster B) a one-post bay (w ~ 0: the lone post at the gate of a quay descent whose steps run down 8 m and more) is no fence line: the water IS reachable by the steps, but not within the 4.5 m of the walks below
     const len = r.w || 2, ex = new Set(r.items);
     // the neighbours of the same fence line are allowed (the walk is straight at the bay), nothing else may stand in the way, on either side
     const near = ph.querySolids(r.x, r.z, 4); for (const it of near) if (it.fence) ex.add(it);
