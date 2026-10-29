@@ -30,6 +30,7 @@ const PARTS = [
   ['gates', 'smolensky-gates', () => import('./landmarksSmolensky/gates.js')],
   ['resurrection', 'smolensky-resurrection', () => import('./landmarksSmolensky/resurrection.js')],
   ['fence', 'smolensky-grounds', () => import('./landmarksSmolensky/fence.js')],
+  ['famous', 'smolensky-grounds', () => import('./landmarksSmolensky/famous.js')],            // the graves of famous people: BEFORE the grounds (it clears its discs in the shared plan); docs/vo-monuments.md
   ['grounds', 'smolensky-grounds', () => import('./landmarksSmolensky/grounds.js')],
   ['furniture', 'smolensky-grounds', () => import('./landmarksSmolensky/furniture.js')],
 ];
