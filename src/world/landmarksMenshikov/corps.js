@@ -6,7 +6,7 @@
 //   PORTICOES  the 1938 south portico of FOUR PAIRS of Ionic columns on pedestals (a -4.9 / -0.9 / 3.1 / 7.1, three doors between the pairs); the historic four-PAIR portico at a -266.7 (pitch 7 m); the
 //            four-SINGLE-column portico with an iron canopy at a -203.4 (pitch 2.6 m); entablatures break forward over every pair.
 //   GALLERIES  the two 2-storey galleries beside the palace (eave 8.8 m, a row of round oculi); everything else (courtyard sides) plain red-orange walls with simple windows.
-//   ROOFS    low-pitched ranges (R1: rust-brown street slope, zinc rear slope, eave 10.4, ridge 12.4; irregular red-brick chimneys), a deck under everything.  Closed building: thin colliders round the outline.
+//   ROOFS    low-pitched ranges (R1: one rust-brown sheet on both slopes and the hip ends, eave 10.4, ridge 12.4; irregular red-brick chimneys), a deck under everything.  Closed building: thin colliders round the outline.
 // Claim: groups.js key 'first-cadet-corps' (w28691170; the clinic w28691194 and the shed w28691177 stay generic).
 import * as THREE from 'three';
 import * as L from '../layout.js';
@@ -178,7 +178,9 @@ function roofRange(P, M, r) {
   const [h0, h1] = r.hips, hw = (v1 - v0) / 2 + ov, vm = (v0 + v1) / 2;
   const ua = u0 - (h0 ? ov : 0), ub = u1 + (h1 ? ov : 0);
   let ur0 = ua + (h0 ? hw : 0), ur1 = ub - (h1 ? hw : 0); if (ur0 > ur1) { ur0 = ur1 = (ur0 + ur1) / 2; }
-  const front = r.kind === 'r1' ? M.roofRust : r.kind === 'r2' || r.kind === 'port' ? M.roofGreyFlat : M.roofZinc, back = r.kind === 'r1' ? M.roofZinc : front;
+  // ONE sheet per roof (owner, pose -3380,30,-1045: the zinc hip and zinc rear slope against the rust street slope drew the hip as a grey end whose diagonal edge cut a red triangle out of the street slope):
+  // both slopes AND the hip ends of a range share the front sheet
+  const front = r.kind === 'r1' ? M.roofRust : r.kind === 'r2' || r.kind === 'port' ? M.roofGreyFlat : M.roofZinc, back = front;
   // map (u, y, v) -> world-frame (x, y, z) of the KF frame; the longX flag swaps the roles
   const mp = (u, y, v) => (longX ? [u, y, v] : [v, y, u]), nm = (nu, ny, nv) => (longX ? [nu, ny, nv] : [nv, ny, nu]);
   const Q = (mat, pts, n, uv) => P.quad(mat, mp(...pts[0]), mp(...pts[1]), mp(...pts[2]), mp(...pts[3]), nm(...n), uv);
@@ -186,8 +188,8 @@ function roofRange(P, M, r) {
   Q(front, [[ua, E, v1 + ov], [ub, E, v1 + ov], [ur1, R, vm], [ur0, R, vm]], [0, hw, rise], [[0, 0], [lu, 0], [lr, sl], [0, sl]]);
   Q(back, [[ub, E, v0 - ov], [ua, E, v0 - ov], [ur0, R, vm], [ur1, R, vm]], [0, hw, -rise], [[0, 0], [lu, 0], [lr, sl], [0, sl]]);
   const tri = (mat, p0, p1, p2, n) => P.fan(mat, [mp(...p0), mp(...p1), mp(...p2)], nm(...n), (p) => [p[0] / 0.6, p[1] / 0.6]);
-  if (h0) tri(M.roofZinc, [ua, E, v0 - ov], [ua, E, v1 + ov], [ur0, R, vm], [-rise, hw, 0]); else tri(M.roofGreyFlat, [ua, E, v0 - ov], [ua, E, v1 + ov], [ua, R, vm], [-1, 0, 0]);
-  if (h1) tri(M.roofZinc, [ub, E, v1 + ov], [ub, E, v0 - ov], [ur1, R, vm], [rise, hw, 0]); else tri(M.roofGreyFlat, [ub, E, v1 + ov], [ub, E, v0 - ov], [ub, R, vm], [1, 0, 0]);
+  if (h0) tri(front, [ua, E, v0 - ov], [ua, E, v1 + ov], [ur0, R, vm], [-rise, hw, 0]); else tri(M.roofGreyFlat, [ua, E, v0 - ov], [ua, E, v1 + ov], [ua, R, vm], [-1, 0, 0]);
+  if (h1) tri(front, [ub, E, v1 + ov], [ub, E, v0 - ov], [ur1, R, vm], [rise, hw, 0]); else tri(M.roofGreyFlat, [ub, E, v1 + ov], [ub, E, v0 - ov], [ub, R, vm], [1, 0, 0]);
   return { longX, ur0, ur1, vm, E, R, ov };
 }
 /** a red-brick chimney 0.9 x 1.6 m, 2.4 m above the ridge, base band and white cap (frame KF) */
