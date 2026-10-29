@@ -145,7 +145,7 @@ const BUDGET_AREA = {
     bridges: 130e3,      // estimate 0.07 - 0.10 M (WHSD 63.5 k + Shkipersky 3.2 k + Novo-Andreevsky 3.6 k) + 30 %
   },
   morskoy: { environment: 1.3e6, streets: 720e3, city: 350e3, props: 130e3,      // estimates: environment 0.6 - 1.5 M (prototype 0.93 M), streets 0.45 - 0.55 M, city ~0.27 M (1,175 buildings), props ~0.1 M
-    // PORT-BUDGET: landmarksMarineFacade
+    landmarksMarineFacade: 104e3,      // measured 89,587 in the area build (89,945 alone; the source 89,591: the fence pieces, gallery glass, masts, kiosks and booths are knock bays / records, same drawing) + 15 %
     //
     // PORT-BUDGET: landmarksPribaltiyskaya
     //

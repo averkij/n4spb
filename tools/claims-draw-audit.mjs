@@ -171,6 +171,11 @@ KNOWN_UNCLAIMED.gavan = { ...(KNOWN_UNCLAIMED.gavan || {}),
   w820265264: { module: 'landmarksSevkabel', why: 'one of the eight timber cable-spool towers (SPOOL_TOWERS of public-life-plan.js, yard.js props: 4.9 m, larch drums + a lamp) and the festoons of culture.js stand on the OSM outline of the bicycle shop Electra (92 m2, 2 levels), which city draws: verbatim source behaviour, a tower beside a kiosk, not a second building (the same finding as in vasilyevsky)' },
 };
 
+// Morskoy, cluster M (docs/gdm-M.md; landmarksMarineFacade). A separate statement (the blocks of the parallel port branches merge by keeping all of them).
+KNOWN_UNCLAIMED.morskoy = { ...(KNOWN_UNCLAIMED.morskoy || {}),
+  r7378336: { module: 'landmarksMarineFacade', why: 'the gold lattice crowns of Golden City (goldencity.js crown(): the overlays on the parts r12001859 / r12001860 of Chelyuskina 4 s1, 17 and 12 storeys, 788 triangles of thin rods and a silhouette proxy on the roofs) stand on the OSM outline of a building that city draws: a roof ornament on a generic block, the verbatim source behaviour (groups.js: "the crowns of r12001859 / r12001860 are overlays, not claimed")' },
+};
+
 // ---------------------------------------------------------------- engine
 const THREE = await import('three');
 const { createContext } = await import(pathToFileURL(path.join(root, 'src/core/ctx.js')).href);
