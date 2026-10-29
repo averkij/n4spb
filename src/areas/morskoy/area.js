@@ -28,7 +28,7 @@ import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as 
 // ---
 // PORT-IMPORT: landmarksMarineFacade
 // ---
-// PORT-IMPORT: landmarksPribaltiyskaya
+import { GROUPS_LIST as G_PRIBALTIYSKAYA } from '../../world/landmarksPribaltiyskaya/groups.js';
 // ---
 // PORT-IMPORT: bridgesMo
 
@@ -47,7 +47,7 @@ export const MODULES = [
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
   // PORT-MODULE: landmarksMarineFacade
   //
-  // PORT-MODULE: landmarksPribaltiyskaya
+  'landmarksPribaltiyskaya', // the Pribaltiyskaya hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, the Kirov memorial, Waterville
   //
   'landmarksVOStatues', // the monument to all polar explorers (the one piece of the module that stands in this territory, docs/vo-m3.md)
   'bridges',      // the bridges of the area: the Nalichny Bridge and the Novo-Andreevsky footbridge (docs/vo-br.md); the Shipbuilders' and Smolensky bridges and the WHSD follow (bridgesMo)
@@ -61,7 +61,7 @@ export const MODULES = [
 export const LABELS = {
   // PORT-LABEL: landmarksMarineFacade
   // ---
-  // PORT-LABEL: landmarksPribaltiyskaya
+  landmarksPribaltiyskaya: 'Прибалтийская, памятник Петру I, крейсер «Киров»',
   // ---
   landmarksVOStatues: 'Памятник всем полярникам',
   drive: 'машина на старте',
@@ -101,7 +101,7 @@ export const GROUPS = {};
 // ---
 // PORT-GROUPS: landmarksMarineFacade
 // ---
-// PORT-GROUPS: landmarksPribaltiyskaya
+GROUPS.landmarksPribaltiyskaya = G_PRIBALTIYSKAYA;      // all six: the hotel, Peter I, the Creators of the Fleet, the Kirov memorial, the Nakhimov statue, Waterville (all 100 % inside the territory)
 // ---
 // the polar explorers monument n5102741821 stands at (-6686, -1607), in the overlap with Vasilyevsky (both areas claim it): the other 18 pieces of the module lie on the island, far outside this territory
 GROUPS.landmarksVOStatues = G_VOSTATUES.filter((g) => g.key === 'vo-polar');
@@ -125,7 +125,10 @@ export function makeAreas(h) {
   // ---
   // PORT-AREAS: landmarksMarineFacade
   // ---
-  // PORT-AREAS: landmarksPribaltiyskaya
+  { name: 'Памятник Петру I · Peter I monument', c: [-7477, -791], r: 40 },
+  { name: 'Гостиница «Прибалтийская» · Pribaltiyskaya Hotel', c: [-7600, -735], r: 175 },
+  { name: 'Памятник крейсеру «Киров» · Cruiser Kirov monument', c: [-7970, -1075], r: 65 },
+  { name: 'Сквер Малые Гаванцы · Malye Gavantsy Square', poly: [-7233.7, -713.7, -7231.8, -709.9, -7237, -707.7, -7239.4, -707.5, -7241.6, -708.5, -7243.1, -709.9, -7258.8, -742.9, -7262.3, -747.4, -7267.2, -750.5, -7273.1, -753.2, -7279, -753.6, -7285.3, -751.8, -7291.1, -748.2, -7294.3, -743.6, -7296, -738.9, -7296.5, -733, -7295.2, -726.5, -7279.6, -693.3, -7279.7, -690.6, -7280.8, -687.8, -7282.7, -685.8, -7331.3, -662.8, -7355, -710.6, -7359, -713.4, -7361.8, -714.2, -7379.7, -716.5, -7404.9, -771.5, -7397.4, -774.9, -7395.4, -771.2, -7376.8, -780.1, -7374.4, -786.2, -7381.7, -789.9, -7384.1, -795.1, -7251.1, -857, -7248.6, -851.9, -7242.8, -854, -7242.5, -856.6, -7241.4, -858.8, -7232.4, -864, -7176.9, -737.9, -7177.5, -735.6, -7179.6, -733.9, -7199.5, -724.9, -7201.4, -728.9], margin: 4 },      // the park r19581548 (the source's GREEN polygon)
   // ---
   { name: 'ЗСД · Western High-Speed Diameter', road: NAMES.streets.whsd },
   { name: 'Морская набережная · Morskaya Embankment', road: NAMES.streets.morskayaNab },
@@ -195,7 +198,7 @@ export const TEST = {
     { id: 'r5574920', by: 'bridges', group: 'nalichny' },
     // PORT-CLAIMED: landmarksMarineFacade
     // ---
-    // PORT-CLAIMED: landmarksPribaltiyskaya
+    { id: 'w17559880', by: 'landmarksPribaltiyskaya', group: 'pribaltiyskaya-hotel' },
   ],      // one row per landmark module and its main sub-group
   viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'ShiftDigit1', 'ShiftDigit2', 'ShiftDigit3', 'ShiftDigit4', 'ShiftDigit5', 'ShiftDigit6', 'ShiftDigit7',
     'Place.nalichny', 'Place.mayak'],
@@ -203,7 +206,7 @@ export const TEST = {
     { x: -6702.1, z: -1707.9, has: 'наличный' }, { x: -6328.8, z: -1603, has: 'ново-андреевский' }, { x: -6686, z: -1607, has: 'полярник' },
     // PORT-HAVE: landmarksMarineFacade
     // ---
-    // PORT-HAVE: landmarksPribaltiyskaya
+    { x: -7516.6, z: -772.5, has: 'прибалтийская' }, { x: -7464.1, z: -796.1, has: 'петру' }, { x: -7992.7, z: -1065.3, has: 'киров' }, { x: -7309, z: -804, has: 'малые гаванцы' },
     // ---
     // PORT-HAVE: bridgesMo
   ],
@@ -340,7 +343,7 @@ export const PRUNE_SERVICES = [
   'city',
   // PORT-PRUNE: landmarksMarineFacade
   //
-  // PORT-PRUNE: landmarksPribaltiyskaya
+  // (landmarksPribaltiyskaya publishes no `entrances`: the hotel is closed, so it needs no row here)
 ];
 /** the area-specific hooks of the engine modules (milestone M6, docs/AREAS.md section 9: keep-outs of trees / tufts / props / ways / parking, the crowd garden, the deck services; the call sites read
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */

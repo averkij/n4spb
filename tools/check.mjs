@@ -132,7 +132,7 @@ const BUDGET_AREA = {
   gavan: { environment: 1.7e6, streets: 1.0e6, city: 650e3, props: 260e3,      // estimates: environment 1.0 - 1.3 M, streets ~0.75 M, city 0.42 - 0.50 M (2,009 buildings), props ~0.2 M
     // PORT-BUDGET: landmarksGavan
     //
-    // PORT-BUDGET: landmarksPribaltiyskaya
+    landmarksPribaltiyskaya: 122e3,      // measured 105,378 (hotel, Peter I, Creators of the Fleet, Kirov memorial, Nakhimov, Waterville; lamps / benches / planters / the Kirov wall are knock records) + 15 %
     //
     landmarksKirova: 218e3,      // measured in vasilyevsky 189,336 (the same module and groups) + 15 %
     //
@@ -147,7 +147,7 @@ const BUDGET_AREA = {
   morskoy: { environment: 1.3e6, streets: 720e3, city: 350e3, props: 130e3,      // estimates: environment 0.6 - 1.5 M (prototype 0.93 M), streets 0.45 - 0.55 M, city ~0.27 M (1,175 buildings), props ~0.1 M
     // PORT-BUDGET: landmarksMarineFacade
     //
-    // PORT-BUDGET: landmarksPribaltiyskaya
+    landmarksPribaltiyskaya: 122e3,      // measured 105,378 (the same module and six groups as in gavan) + 15 %
     //
     landmarksVOStatues: 13e3,      // estimate < 10 k (the polar explorers' monument only) + 30 %
     //

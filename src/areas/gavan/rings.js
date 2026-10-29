@@ -26,7 +26,7 @@ import * as SREDNY from '../../world/landmarksSredny/groups.js';
 // ---
 // PORT-IMPORT: landmarksGavan
 // ---
-// PORT-IMPORT: landmarksPribaltiyskaya
+import * as PRIBALTIYSKAYA from '../../world/landmarksPribaltiyskaya/groups.js';      // five paved rings (the hotel platform and plaza, the Kirov platform); no water ring, no keep-out: the module is inland
 // ---
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js)
 // ---
@@ -42,7 +42,7 @@ const SOURCES = [
   // ---
   // PORT-SOURCE: landmarksGavan
   // ---
-  // PORT-SOURCE: landmarksPribaltiyskaya
+  { module: 'landmarksPribaltiyskaya', ns: PRIBALTIYSKAYA },
   // ---
   { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
   // ---
