@@ -1,6 +1,6 @@
 // tools/area-smoke.mjs - ONE real-browser smoke of the live areas on their BAKES (GPU job: take /d/git2/gpulock first): the page loads from assets/baked/<id>/, the scene builds, the player starts, a handful of
 // poses are photographed, console / page errors are listed. A look, not a test: the owner wants to see the areas with his eyes first (docs/AREAS.md 13).
-//   node tools/area-smoke.mjs [--area palace|smolny|admiralty|all] [--out shots/smoke] [--only name,name]
+//   node tools/area-smoke.mjs [--area palace|smolny|admiralty|vladimirsky|vasilyevsky|all] [--out shots/smoke] [--only name,name]
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -56,10 +56,14 @@ const SHOTS = [
   ['vladimirsky', 'vladimirsky-station', [560, 192, -138.5, 8], '', 2.0],
   ['vladimirsky', 'vladimirsky-lavra-gate', [1939, 996, -144, 10], '', 2.0],
   ['vladimirsky', 'vladimirsky-obvodny', [218, 1930, 180, 4], '', 2.0],
+  // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v): the VIEWS poses of src/areas/vasilyevsky/area.js (yaw in degrees as the page takes it); the later waves add the poses of their modules
+  ['vasilyevsky', 'vasilyevsky-spit', [-2508.4, -1293.1, 120.8, 8], '', 2.0],
+  ['vasilyevsky', 'vasilyevsky-palace-bridge', [-2337, -848, 34.8, 4], '', 2.0],
+  ['vasilyevsky', 'vasilyevsky-academy', [-3407.5, -497.9, 13.3, 10], '', 2.0],
 ];
 const only = args.only ? String(args.only).split(',') : null, areaArg = args.area || 'all';
 const jobs = SHOTS.filter(([a, n]) => (areaArg === 'all' || a === areaArg) && (!only || only.includes(n)));
-const PAGE = { palace: 'index.html', smolny: 'smolny.html', admiralty: 'admiralty.html', vladimirsky: 'vladimirsky.html' };
+const PAGE = { palace: 'index.html', smolny: 'smolny.html', admiralty: 'admiralty.html', vladimirsky: 'vladimirsky.html', vasilyevsky: 'vasilyevsky.html' };
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-sandbox', '--no-first-run', '--disable-extensions', '--window-size=1280,720'] });
 const report = [];
 try {

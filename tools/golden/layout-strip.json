@@ -723,6 +723,22 @@
      "water": -2.8,
      "width": 11
     },
+    "smolenka": {
+     "bay": 2.7,
+     "bed": -4.4,
+     "key": "smolenka",
+     "name": "Смоленка",
+     "post": "twostep",
+     "postH": 1.1,
+     "postW": 0.45,
+     "rail": [
+      "bars"
+     ],
+     "shadeH": 3.2,
+     "wall": "smolenka",
+     "water": -3.4,
+     "width": 30
+    },
     "swan-canal": {
      "bay": 2,
      "bed": -4,

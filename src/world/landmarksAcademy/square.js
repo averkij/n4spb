@@ -18,6 +18,8 @@ import { treziniFig } from './monuments.js';
 import { figureMats, tube } from '../lib/figures.js';
 import { coverFn } from './surfaces.js';
 import { lathe } from './prims.js';
+import { knockBays, unitPanel } from '../lib/fence-bays.js';        // n4spb (docs/AREAS.md 13.7, docs/vo-m1.md): the pavement railing in front of the Trezzini house is a row of breakable bays,
+import { knockFurniture } from '../lib/knock-furniture.js';          // the hemispheres and the chained posts of the monument are knock records (bollards)
 
 const HH = 12.4;                                                    // the top of the painted hotel wall (the entablature stands above it)
 const frontOf = (edges, minLen) => edges.filter((e) => e.len > minLen).reduce((a, e) => ((e.n[0] * V_DIR[0] + e.n[1] * V_DIR[1]) > (a ? a.n[0] * V_DIR[0] + a.n[1] * V_DIR[1] : -9) ? e : a), null);
@@ -75,17 +77,22 @@ function hotel(K) {
   addPolyColliders(ctx, poly, 0, 17);
   // the railing along the edge of the pavement in front of the house (on both sides of the entrance)
   if (front) onEdge(P, front, (len, f) => {
-    const cover = coverFn(ctx), zz = 2.9;
+    const cover = coverFn(ctx), zz = 2.9, rb = [];
     for (const [a, c] of [[0.6, 13.0], [18.2, len - 0.6]]) {
       const n = Math.max(1, Math.round((c - a) / 4));
       for (let i = 0; i < n; i++) {
         const x0 = a + (c - a) * i / n, x1 = a + (c - a) * (i + 1) / n, wx = f.x + f.xa[0] * ((x0 + x1) / 2) + front.n[0] * zz, wz = f.z + f.xa[1] * ((x0 + x1) / 2) + front.n[1] * zz;
         if (cover(wx, wz) > -0.5) continue;                                                                   // never on a carriageway
-        P.quad(M.railing, [x0 + 0.1, 0.05, zz], [x1 - 0.1, 0.05, zz], [x1 - 0.1, 0.95, zz], [x0 + 0.1, 0.95, zz], [0, 0, 1], [[0, 0], [(x1 - x0), 0, ], [(x1 - x0), 1], [0, 1]]);
-        ph.addBox(wx, wz, x1 - x0, 0.3, Math.atan2(-f.xa[1], f.xa[0]), 0, 1.1);
+        const ax = f.x + f.xa[0] * x0 + front.n[0] * zz, az = f.z + f.xa[1] * x0 + front.n[1] * zz, bx = f.x + f.xa[0] * x1 + front.n[0] * zz, bz = f.z + f.xa[1] * x1 + front.n[1] * zz;
+        rb.push({ x0: ax, z0: az, x1: bx, z1: bz, y: 0 });      // n4spb: a breakable bay (the drawn panel between the granite posts, one thin collider, one knock record)
       }
       for (let i = 0; i <= n; i++) { const x = a + (c - a) * i / n, wx = f.x + f.xa[0] * x + front.n[0] * zz, wz = f.z + f.xa[1] * x + front.n[1] * zz; if (cover(wx, wz) > -0.5) continue; P.box(M.graniteGrey, x - 0.14, x + 0.14, 0, 1.0, zz - 0.14, zz + 0.14, 'b', 1); }
     }
+    // the panel spans x0 + 0.1 .. x1 - 0.1 of the bay (the posts stand at its ends): inset 0.1 m on both sides; the collider is the whole bay
+    knockBays(ctx, { name: 'lmacade-hotel-rail', bays: rb, far: 240,
+      parts: [{ geo: unitPanel(0.05, 0.95, { u1: 4 }), mat: M.railing, name: 'panel', stretch: true, inset: 0.1, shadow: false, receive: false }],
+      collider: { y0: 0, y1: 1.1, thick: 0.3, e0: 0, e1: 0 }, rec: () => ({ kind: 'fence', mass: 120, h: 1.0, anchored: 14, hitK: 0.3, metal: true, minDv: 0 }) });
+    K.extraTris += rb.length * 2;
   });
   const c = W(-134.6, 37.0);
   K.svc.entrances.push({ x: c.x, z: c.z, rotY: ACAD.rot, name: 'Дворец Трезини, отель', closed: true });
@@ -139,10 +146,18 @@ function monument(K) {
     treziniFig().place(P, mk, U, 2.39, Vv, 0, 1.83);
     // hemispheres (7) on the road side and chained posts (7) round the apron
     const hemis = [[-148.6, 57.0], [-146.5, 57.4], [-144.4, 57.1], [-142.4, 57.5], [-140.4, 57.1], [-138.4, 57.4], [-136.5, 57.0]];
-    for (const [u, v] of hemis) { const w = W(u, v); if (cover(w.x, w.z) > -0.5) continue; P.geo(M.bollard, hemi(), u, 0.0, v, 0, 0, 0, 0.25, 0.25, 0.25); ph.addCylinder(w.x, w.z, 0.28, 0, 0.3); }
+    // n4spb (docs/AREAS.md 13.7): the 7 hemispheres and the 7 chained posts are knock records (bollards; the chains between the posts are drawn only, as in the source)
+    const hSpots = [], hItems = [], pSpots = [], pItems = [];
+    for (const [u, v] of hemis) { const w = W(u, v); if (cover(w.x, w.z) > -0.5) continue; hSpots.push({ x: w.x, y: 0, z: w.z, rotY: 0 }); hItems.push(ph.addCylinder(w.x, w.z, 0.28, 0, 0.3)); }
     const posts = [[U - 2.8, Vv - 2.3], [U - 2.8, Vv + 2.3], [U, Vv + 2.3], [U + 2.8, Vv + 2.3], [U + 2.8, Vv - 2.3], [U - 2.8, Vv], [U + 2.8, Vv]];
     const chain = [[0, 5], [5, 1], [1, 2], [2, 3], [3, 6], [6, 4]];
-    for (const [u, v] of posts) { const w = W(u, v); if (cover(w.x, w.z) > -0.5) continue; P.box(M.post, u - 0.225, u + 0.225, 0, 0.8, v - 0.225, v + 0.225, 'b', 1); ph.addCylinder(w.x, w.z, 0.3, 0, 0.9); }
+    for (const [u, v] of posts) { const w = W(u, v); if (cover(w.x, w.z) > -0.5) continue; pSpots.push({ x: w.x, y: 0, z: w.z, rotY: ACAD.rot }); pItems.push(ph.addCylinder(w.x, w.z, 0.3, 0, 0.9)); }
+    {
+      const hg = hemi().clone(); hg.scale(0.25, 0.25, 0.25);
+      K.extraTris += knockFurniture(ctx, 'lmacade-hemispheres', { list: [{ mat: M.bollard, geo: hg }] }, hSpots, hItems, { kind: 'bollard', mass: 120, h: 0.3, r: 0.28, anchored: 24, hitK: 0.4 }, 200);
+      const pg = new THREE.BoxGeometry(0.45, 0.8, 0.45); pg.translate(0, 0.4, 0);
+      K.extraTris += knockFurniture(ctx, 'lmacade-chain-posts', { list: [{ mat: M.post, geo: pg }] }, pSpots, pItems, { kind: 'bollard', mass: 200, h: 0.9, r: 0.3, anchored: 28, hitK: 0.5 }, 200);
+    }
     for (const [a, c] of chain) for (const dy of [0.62, 0.52]) P.cyl(M.chain, [posts[a][0], dy, posts[a][1]], [posts[c][0], dy - 0.09, posts[c][1]], 0.012, 0.012, 4, false);
     const w = W(U, Vv);
     ph.addBox(w.x, w.z, 3.5, 2.7, ACAD.rot, -1, 6.0);

@@ -137,6 +137,27 @@ const KNOWN_UNCLAIMED = {
     w232367034: { module: 'landmarksJ', why: 'part of r1251285, see above' },
   },
 };
+// Vasilyevsky-Okrug 7, cluster M2 (docs/vo-m2.md); the rows are added with Object.assign so that the clusters of the other ports merge without a conflict
+Object.assign(OWNER_SKIPS.vasilyevsky ||= {}, {
+  w216655313: 'landmarksMakarova draws the bell frame of St Catherine (a 2.6 m frame of 12 cm steel posts and thin rails, 41 m2) with its triangle centroids within 1 m of the outline or under the 1.5 m band: nothing of it counts as the building, but it is drawn on the footprint (catherine.js bellFrame; the claim keeps the generic city from drawing a solid block there)',
+  w82802180: 'landmarksNavalCorps claims the 42 m2 shed in courtyard H2 of the Naval Cadet Corps on purpose (the source project removes it from the generic city and draws nothing in its place: groups.js note)',
+});
+Object.assign(KNOWN_UNCLAIMED.vasilyevsky ||= {}, {
+  r4164970: { module: 'landmarksNavalCorps', why: 'the outline of the Optina compound (Lieutenant Schmidt emb. 27/2, skip: 1: the generic city draws only its parts) is not claimed by design (groups.js): the module claims and draws its parts, the church r17488566 and the front house r4164973, which lie inside the outline' },
+});
+
+// Vasilyevsky-Okrug 7, cluster M4 (Smolensky cemetery, Kirov Palace of Culture / Erarta / garden, Sevkabel Port, Sea Terminal; docs/vo-m4.md). Written as separate statements (not inside the tables above) so that the
+// blocks of the parallel port branches merge by keeping all of them. Checked with --where / --where-high at the first run.
+OWNER_SKIPS.vasilyevsky = { ...(OWNER_SKIPS.vasilyevsky || {}),
+  w1423396925: 'landmarksKirova / kirova-garden draws the ruin (building=ruins) as a flat crushed-stone decal with rubble stumps below 1.5 m (garden.js ruin(): a patch, not a mass)',
+};
+GENERIC_WAIVERS.vasilyevsky = { ...(GENERIC_WAIVERS.vasilyevsky || {}),
+  'w45966107|streets': 'street lamps of the Bolshoy pr. V.O. kerb (lamps-D, 2.2 .. 4 m) stand about 2.3 m inside the outline of the Kirov Palace of Culture at its west corner (-5332, -196): hidden in the wall mass of the front that landmarksKirova draws; the lamp phase along the kerb differs per territory',
+};
+KNOWN_UNCLAIMED.vasilyevsky = { ...(KNOWN_UNCLAIMED.vasilyevsky || {}),
+  w820265264: { module: 'landmarksSevkabel', why: 'one of the eight timber cable-spool towers (SPOOL_TOWERS of public-life-plan.js, yard.js props: 4.9 m, larch drums + a lamp) and the festoons of culture.js stand on the OSM outline of the bicycle shop Electra (92 m2, 2 levels), which city draws: verbatim source behaviour, a tower beside a kiosk, not a second building' },
+  w133084710: { module: 'landmarksSevkabel', why: 'the portal crane T1a of the Baltic Shipyard (cranes.js, 60 m, instanced silhouette on its runway) reaches into the OSM outline of the yard hall Kosaya liniya 16 k43 (the source leaves the hall to city: "the yard hall w133084710 stays generic"): the crane gantry passes over the hall roof, verbatim source behaviour' },
+};
 
 // ---------------------------------------------------------------- engine
 const THREE = await import('three');

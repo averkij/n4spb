@@ -3,10 +3,11 @@
 // for the headless tools). The engine modules whose literals used to name places of the strip read their tables HERE, never from area.js directly: a minimal area module (no WATER, no ZONES ...)
 // then still boots, and the modules do nothing for what the area does not list. A namespace import is used on purpose: a named import of a table that the area module does not export would be a link error.
 // PURE DATA: no three.js, no layout.js (layout.js imports waterways.js, which imports this file).
-//   WATER            environment/waterways.js     plugs, bridgeZones, bridgeShades, clipLines, farSources, farCenter, farRadius, forcedBanks, openMouths, dataWater, slopeReaches
+//   WATER            environment/waterways.js     plugs, bridgeZones, bridgeShades, clipLines, farSources, farCenter, farRadius, forcedBanks, openMouths, dataWater, dataRings, pierFit, slopeReaches
 //   ZONES            wildlife, people, trams, field, far  pigeons, crowHaunts, crowds, fountains, peopleDensity, peopleCorridor, peopleHot, tramLines, clearDiscs, farCentres
 //   GARAGE           drive/cars/index.js, drive.js        poses { coupe, truck, lada, roadster }, spawn, boats (optional: the docks of the motor boats, drive/boat/index.js; absent = the shared docks)
 //   PRUNE_SERVICES   environment.js                       the services whose door entrances clear the trees
+//   BRIDGE_SITES_OFF bridges/sites.js                     (optional) ids of bridge sites that the area never builds although their centre lies in its data extent (a bridge of the data margin that no play rectangle reaches)
 //   HOOKS, HEIGHT_PATCHES  layout.js, drive/handling.js, environment/trees.js + lawns.js, props/world.js, streets.js + streets/parking.js, people/nav.js
 //                                                        the hooks and the height patches of milestone M6 (docs/AREAS.md section 9; the strip's are {} and []: every call site is a no-op without its key).
 //                                                        T3 (Tauride remake) added groundHoles (environment/ground.js: rings cut out of the ground mesh) and groundWayReject (environment/field.js: ways the class mask does not paint);
@@ -65,6 +66,10 @@ export const WATER = {
   forcedBanks: arr(W.forcedBanks),
   openMouths: arr(W.openMouths),
   dataWater: arr(W.dataWater),
+  /** [{ id, key, source } | { id, key, ring }]: a scenery ring of environment/waterways.js (FAR_SOURCES name, e.g. 'neva-malaya') that this area holds as DATA water inside its data region (a real polygon: banks, queries, the ground cut); the scenery goes on beyond (Vasilyevsky-Okrug 7: the Malaya Neva) */
+  dataRings: arr(W.dataRings),
+  /** { 'osm-id#polygon-index': { cx, cz, ax, az, len, wid } }: replaces the oriented bounding rectangle of a generated pier / landing stage (environment/boats.js pierRects) where the polygon is a long thin mole with bumps (Vasilyevsky-Okrug 7: w74745049, 255 m x 9 m, whose bounding rectangle is 40 m wide) */
+  pierFit: obj(W.pierFit),
   slopeReaches: arr(W.slopeReaches),
   /** { RIVER record name: waterway key } for the RIVER records whose data `key` is null (Admiralty-Haymarket: the Kryukov, Admiralty, Novo-Admiralty and New Holland canals) */
   keyByName: obj(W.keyByName),
@@ -100,8 +105,15 @@ export const GARAGE = {
   boats: Array.isArray(G.boats) ? G.boats : null,
 };
 
+/** ids of the bridge sites (bridges/sites.js) that the area leaves out although the data extent holds their centre: the area module's `BRIDGE_SITES_OFF` (absent = none, the same set of sites as before) */
+export const BRIDGE_SITES_OFF = new Set(arr(A.BRIDGE_SITES_OFF).filter((id) => typeof id === 'string'));
+
 /** the keys of the sub-groups of the area's GROUPS.bridges (= the ids of the bridge sites of bridges/sites.js that the area claims; the strip lists every site, a smaller area a subset, an area without a bridges module none) */
 export const BRIDGE_GROUP_KEYS = new Set(arr(obj(A.GROUPS).bridges).map((g) => g && g.key));
+
+/** [{ module, rings: [[[x, z], ...], ...] }]: ground that a landmark module of the area paves itself (its groups.js PAVED_RINGS), as flat claim rings for the field (environment/claims.js extraClaimRings: counted only when `module` is really built);
+ *  Vasilyevsky-Okrug 7 fills it from src/areas/vasilyevsky/rings.js (the Academy's own ring stays hard-wired in claims.js); the other areas export none */
+export const PAVED_RINGS = arr(A.PAVED_RINGS);
 
 export const PRUNE_SERVICES = arr(A.PRUNE_SERVICES);
 export const HOOKS = checkHooks(A.HOOKS);

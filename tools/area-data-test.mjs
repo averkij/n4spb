@@ -233,7 +233,8 @@ check('band parity: every array agrees - the same ids (BUILDINGS with every fiel
 
 // ---- 5. sanity queries
 const B = new Map(N.BUILDINGS.map((b) => [b.id, b]));
-check(area === 'vladimirsky' ? 'sights (Vladimirsky-Ligovka): the Moscow station r2404499, Hotel Moscow r3132622, the Lavra gate church r5677834 and the Nevsky Centre r1784115 exist' : 'sights: Tauride Garden bbox (918..1497, -1789..-1259) holds > 20 buildings; Chernyshevskaya vestibule w22999175, the Transfiguration r5802451 and Muruzi r946930 exist', () => {
+check(area === 'vasilyevsky' ? 'sights (Vasilyevsky-Okrug 7): the Academy of Arts r165182, the House of Academicians w79566434 and the Academic Garden pavilion w82802146 exist' : area === 'vladimirsky' ? 'sights (Vladimirsky-Ligovka): the Moscow station r2404499, Hotel Moscow r3132622, the Lavra gate church r5677834 and the Nevsky Centre r1784115 exist' : 'sights: Tauride Garden bbox (918..1497, -1789..-1259) holds > 20 buildings; Chernyshevskaya vestibule w22999175, the Transfiguration r5802451 and Muruzi r946930 exist', () => {
+  if (area === 'vasilyevsky') { for (const id of ['r165182', 'w79566434', 'w82802146']) assert(B.has(id), id + ' is missing'); return; }
   if (area === 'vladimirsky') { for (const id of ['r2404499', 'r3132622', 'r5677834', 'r1784115']) assert(B.has(id), id + ' is missing'); return; }
   const n = N.BUILDINGS.filter((b) => b.cx >= 918 && b.cx <= 1497 && b.cz >= -1789 && b.cz <= -1259).length;
   info('buildings in the Tauride Garden bbox: ' + n);
@@ -245,6 +246,7 @@ check('the Fontanka (RIVER key fontanka) and the Neva (key neva) are in RIVER', 
 });
 check('the unsplit arrays exist: SUBWAY_ROUTES 10, BUS_ROUTES >= 40, TROLLEY / TRAM_ROUTES non-empty, ENTRANCES / STATIONS of the Chernyshevskaya line', () => {
   assert.equal(N.SUBWAY_ROUTES.length, 10); assert(N.BUS_ROUTES.length >= 40); assert(N.TROLLEY.length > 0); assert(N.TRAM_ROUTES.length > 0);
+  if (area === 'vasilyevsky') { assert(N.STATIONS.some((s) => /Василеостровская|Спортивная|Горный институт/.test(s.name || '')), 'no metro station of Vasilyevsky Island'); return; }
   if (area === 'vladimirsky') { assert(N.STATIONS.some((s) => /Площадь Восстания|Маяковская|Владимирская|Достоевская/.test(s.name || '')), 'no metro station of the Vladimirsky districts'); return; }
   assert(N.STATIONS.some((s) => /Чернышевск/.test(s.name || '')), 'no Chernyshevskaya station');
 });
@@ -272,7 +274,7 @@ if (fs.existsSync(knownFile)) {
   const K = await import(url(knownFile));
   check('known-data.js: KNOWN_DATA is an object whose every id is a building (or the parent of a building) of the facade', () => {
     assert(K.KNOWN_DATA && typeof K.KNOWN_DATA === 'object');
-    const ids = new Set(N.BUILDINGS.map((b) => b.id)); const odd = Object.keys(K.KNOWN_DATA).filter((id) => !ids.has(id));
+    const ids = new Set(N.BUILDINGS.map((b) => b.id)), parents = new Set(N.BUILDINGS.map((b) => b.parent).filter(Boolean)); const odd = Object.keys(K.KNOWN_DATA).filter((id) => !ids.has(id) && !parents.has(id));      // (a part inherits the entry of its parent outline, also when the outline lies outside the facade: strip-data-known keeps it)
     assert(odd.length === 0, odd.length + ' ids are not buildings of the facade, e.g. ' + odd.slice(0, 4));
     const sids = new Set(S.BUILDINGS.map((b) => b.id));
     info('known-data.js: ' + Object.keys(K.KNOWN_DATA).length + ' rows, ' + Object.keys(K.KNOWN_DATA).filter((id) => !sids.has(id)).length + ' of them for buildings the strip does not have');

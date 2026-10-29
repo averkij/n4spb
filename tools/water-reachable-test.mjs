@@ -1,5 +1,5 @@
 // tools/water-reachable-test.mjs - THE RULE FOR CHECKING "water is reachable" (CLAUDE.md "World rules", docs/AREAS.md 13.7), CPU only, no GPU, no bake:
-//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky> tools/water-reachable-test.mjs [--quick]            npm run water   (the four live areas)
+//   node tools/area.mjs <palace|smolny|admiralty|vladimirsky|vasilyevsky> tools/water-reachable-test.mjs [--quick]            npm run water   (the five live areas)
 // It builds the REAL modules of the area headlessly (tools/lib/headless-world.mjs: environment, bridges, streets, the landmark modules ... everything that owns colliders; no city / people / traffic) and proves
 // with the area's real colliders, the real Physics + Player and the real car handling (drive/handling.js):
 //   1  no collider and no territory predicate classifies a water cell as blocked: every sampled water cell in the play area is inside the territory, reachable for the car (handling.blocked), has a finite ground
@@ -336,8 +336,10 @@ const ALLOW = [
   { why: 'lawn hedges of the environment (kept > 2.4 m off the shore: never a barrier to water)', ok: (m, it, t) => m === 'environment' && it.y1 <= 1.2 && t.thin >= 0.6 && t.thin <= 0.8 },
   { why: 'the clipped lattice hedges of the Summer Garden (living walls inside the garden)', ok: (m, it, t) => m === 'landmarksGarden' && t.thin >= 0.85 && t.thin <= 0.95 && it.y1 >= 3 && it.y1 <= 3.4 },
   { why: 'the railing round the Krylov monument and a shut leaf of the Neva gate (inside the garden, not at the water)', ok: (m, it, t) => m === 'landmarksGarden' && it.y1 <= 1.3 && t.thin <= 0.12 },
-  { why: 'the pier-head bastions of the Palace Bridge (granite blocks of the bridge structure, 2.8 m long, 1.6 m over the deck)', ok: (m, it) => m === 'bridges' && it.y1 >= 2.5 },
-  { why: 'the barrier kerbs of the Palace Bridge (a 0.3 m granite kerb between the roadway and the pavement, inside the deck)', ok: (m, it, t) => m === 'bridges' && t.thin <= 0.31 && t.len >= 5 && it.y1 <= 2.5 },
+  { why: 'the pier-head bastions of the Palace Bridge (granite blocks of the bridge structure, 2.8 m long, 1.6 m over the deck)', ok: (m, it, t) => m === 'bridges' && it.y1 >= 2.5 && t.thin >= 0.5 },      // (thin >= 0.5: a block, not a 0.3 m kerb: the kerb rows below carry their own limits)
+  { why: 'the barrier kerbs of the Palace Bridge (a 0.3 m granite kerb between the roadway and the pavement, inside the deck)', ok: (m, it, t) => m === 'bridges' && t.thin <= 0.31 && t.len >= 5 && it.y1 - it.y0 <= 2.0 },      // (the height is measured from the foot of the box, not from the street: the kerbs of the raised Blagoveshchensky / Birzhevoy / Tuchkov decks stand 3 - 4 m high)
+  { why: 'the barrier kerbs of the humped long decks of Vasilyevsky-Okrug 7 (Birzhevoy, Tuchkov: a 0.3 m kerb in slices of about 3 m, standing 0.25 m below the deck and kerbH over it: at most 1.3 m between the foot and the top of a slice on the slope, a kerb and not a 2 m wall; the deck itself lies up to 4 m over the street, so the old absolute top limit of 2.5 m does not fit them)', ok: (m, it, t) => m === 'bridges' && t.thin <= 0.31 && t.len >= 1.4 && t.len <= 3.01 && it.y1 - it.y0 <= 1.3 },
+  { why: 'the lawn hedges of the environment, cut open where a foot path leads onto a bridge (bridges/gaps.js openHedgeGaps: the same 0.7 m x 1.1 m box, two pieces)', ok: (m, it, t) => m === 'bridges' && it.y0 === 0 && Math.abs(it.y1 - 1.1) < 0.01 && t.thin >= 0.6 && t.thin <= 0.8 },
   { why: 'the two granite obelisks at the south entrance of the Troitsky Bridge (monument blocks 2 x 2 m, 8 m tall, on the Mars Field embankment: a structure, not a fence; the audit below names them)', ok: (m, it) => m === 'landmarksTroitsky' && it.type === 'box' && it.y1 >= 7 },
   { why: 'the café terrace fences of props/stands.js (1 m, a terrace beside a building)', ok: (m) => m === 'props' },
   { why: 'the bollard rings round the Kutuzov / Barclay monuments (landmarksF)', ok: (m, it) => m === 'landmarksF' && it.type === 'cyl' },
@@ -436,7 +438,7 @@ if (AREA === 'palace') {
     assert(n >= 20 && bad.length === 0, `${bad.length} of ${n} placements read the river bed: ${JSON.stringify(bad)}`);
   });
   // the pier decks and the lower landings of the quay descents: walkable floors at y below the road over the trench; the walker stands on them, so the car does too (placed, or DROPPED onto them from the quay)
-  const floors = ph.items.filter((it) => it.type === 'walk' && chain(it.cx, it.cz) === null && !it.sticky && it.top < 0.03 && L.heightAt(it.cx, it.cz) < -0.2 && it.top > L.heightAt(it.cx, it.cz) + 0.05 && !L.insideBuilding(it.cx, it.cz, 0));
+  const floors = ph.items.filter((it) => it.type === 'walk' && chain(it.cx, it.cz) === null && !it.sticky && it.top < 0.03 && L.heightAt(it.cx, it.cz) < -0.2 && it.top > L.heightAt(it.cx, it.cz) + 0.05 && !L.insideBuilding(it.cx, it.cz, 0) && L.inPlay(it.cx, it.cz, 0) && Math.abs(ph.surfaceAt(it.cx, it.cz, 0.5, false, {}).y - it.top) < 0.02);      // (a floor under a higher floor of its own descent, the landing rows under the last treads of the Mining D2, is not a place to stand: the highest surface wins) (a floor in the data margin outside the territory is not walkable: the play-edge slide holds there; Vasilyevsky-Okrug 7 has the Admiralty quay stairs 30 m outside its rectangles)
   check(`8 a car placed on a pier deck / a lower landing (${floors.length} such floors) stands on it like the walker, and a car that DROPS onto it from the road lands on it (a fall: the 'land' event) instead of falling through to the bed`, () => {
     if (floors.length < 3) { console.log('  (this area has no such floors)'); return; }
     const car = createHandling(ctx, null), bad = []; let n = 0, landed = 0;

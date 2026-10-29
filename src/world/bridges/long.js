@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { frameOf, toUV, frameBounds } from './sites.js';
 import { lampCross, lampRing, lampCobra, lampGlobes5 } from './sculpt4.js';
 import { knockBays } from '../lib/fence-bays.js';
+import { postBatch } from './knock-posts.js';      // n4spb: the lamp standards of buildLong are knock records (bridges/knock-posts.js)
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -86,14 +87,14 @@ export function closeBank(o) {
 }
 
 // ---------------------------------------------------------------------------------------------------- the three bridges (pure data)
-export const BIRZHEVOY = { id: 'birzhevoy', name: 'Биржевой мост', nameEn: 'Exchange (Birzhevoy) Bridge', cx: -2686.29, cz: -1425.70, b: 3.63, len: 238.7, hw: 13.65, road: 10.5, kerbW: 0.3, kerbH: 0.55, crown: 3.0,
+export const BIRZHEVOY = { id: 'birzhevoy', name: 'Биржевой мост', nameEn: 'Exchange (Birzhevoy) Bridge', cx: -2686.29, cz: -1425.70, b: 3.63, len: 238.7, hw: 13.65, road: 10.5, kerbW: 0.3, kerbH: 0.55, tightKerb: true, crown: 3.0,
   piers: [[35.6, 38.9, 'slim'], [83.1, 92.2, 'tower'], [145.0, 154.3, 'tower'], [197.4, 201.0, 'slim']], spans: ['arch', 'arch', 'bascule', 'arch', 'arch'], rise: [3.2, 3.6, 0, 3.6, 3.2],
   look: { fas: 'fasBirzh', dark: 'fasBirzhDark', granite: 'granitePink', parapet: 'parapetPink', pave: 'footAsphalt', kerb: 'kerb' },
   rail: { kind: 'trident', hex: '#4e7558', bay: 2.5 }, depth: { fascia: 0.95, pier: 3.3, mid: 1.25 },
   marks: { solid: [3.38, 3.62], dash: [-7, -3.5, 0, 7] }, tracks: null,
   lamps: { kind: 'cross', u: [4, 37.25, 84.6, 90.7, 146.5, 152.8, 199.2, 234.7], opts: { h: 11.8, n: 2, mat: 'fasBirzh' } },
   osm: ['r4074054', 'w362785969', 'w362785970', 'w102582397', 'w128494897'] };
-export const TUCHKOV = { id: 'tuchkov', name: 'Тучков мост', nameEn: 'Tuchkov Bridge', cx: -3739.33, cz: -1752.05, b: 34.69, len: 219.6, hw: 18.0, road: 14.5, kerbW: 0.3, kerbH: 0.75, crown: 3.2,
+export const TUCHKOV = { id: 'tuchkov', name: 'Тучков мост', nameEn: 'Tuchkov Bridge', cx: -3739.33, cz: -1752.05, b: 34.69, len: 219.6, hw: 18.0, road: 14.5, kerbW: 0.3, kerbH: 0.75, tightKerb: true, crown: 3.2,
   piers: [[74.5, 82.3, 'tower'], [134.7, 142.5, 'tower']], spans: ['girder', 'bascule', 'girder'],
   look: { fas: 'fasTuchkov', dark: 'fasTuchkovDark', granite: 'granitePink', parapet: 'parapetPink', pave: 'footAsphalt', kerb: 'steel' },
   rail: { kind: 'hairpin', hex: '#56665e', bay: 2.4 }, depth: { fascia: 0, pier: 2.9, mid: 1.05, bank: 2.4 }, pavilions: 1,
@@ -341,25 +342,30 @@ export function buildLong(env, sp) {
       if (sp.rail.posts === 'square') for (let i = 0; i <= nb; i++) { const up = ra + bw * i, y = yDeck(up) + PAVE; P.box(ironMat, up - 0.11, up + 0.11, y, y + 1.14, v - 0.11, v + 0.11, 'b', 1); P.box(ironMat, up - 0.14, up + 0.14, y + 1.14, y + 1.2, v - 0.14, v + 0.14, 'b', 1); for (const s2 of [-1, 1]) P.cyl(ironMat, [up, y + 0.95, v + s2 * 0.11], [up, y + 0.95, v + s2 * 0.13], 0.06, 0.06, 8, true); }   // square posts with a rosette
       if (sp.rail.posts === 'round') for (let i = 0; i <= nb; i++) { const up = ra + bw * i, y = yDeck(up) + PAVE; P.cyl(ironMat, [up, y, v], [up, y + 1.15, v], 0.1, 0.1, 8, false); P.cyl(ironMat, [up, y, v], [up, y + 0.12, v], 0.14, 0.12, 8, false); P.geo(ironMat, new THREE.SphereGeometry(1, 8, 3, 0, Math.PI * 2, 0, Math.PI / 2), up, y + 1.15, v, 0, 0, 0, 0.12, 0.1, 0.12); }
     }
+    // n4spb (docs/AREAS.md 13.7): the solid granite parapet runs are rows of breakable SECTIONS (bridges/rails.js parapet(): a plain 0.46 m box section, instanced, one knock record and one collider each) instead of merged quads
     for (const [pa, pb] of merged) {
       const n = Math.max(1, Math.ceil((pb - pa) / 2.4));
       for (let i = 0; i < n; i++) {
-        const u0 = pa + (pb - pa) * i / n, u1 = pa + (pb - pa) * (i + 1) / n, y0 = yDeck(u0) + PAVE, y1 = yDeck(u1) + PAVE, h = 1.1, va = v - 0.2, vb2 = v + 0.2;
-        for (const [vv, nz] of [[va, -1], [vb2, 1]]) P.quad(par, [u0, y0 - 0.05, vv], [u1, y1 - 0.05, vv], [u1, y1 + h, vv], [u0, y0 + h, vv], [0, 0, nz], [[0, 0], [0.5, 0], [0.5, 1], [0, 1]]);
-        P.quad(M.coping, [u0, y0 + h, va - 0.03], [u1, y1 + h, va - 0.03], [u1, y1 + h, vb2 + 0.03], [u0, y0 + h, vb2 + 0.03], [0, 1, 0]);
+        const u0 = pa + (pb - pa) * i / n, u1 = pa + (pb - pa) * (i + 1) / n, p0 = world(u0, v), p1 = world(u1, v);
+        rails.parapet({ x0: p0.x, z0: p0.z, x1: p1.x, z1: p1.z, y: yDeck(u0) + PAVE - 0.05, ye: yDeck(u1) + PAVE - 0.05, h: 1.15, th: 0.46, mat: par, box: true, center: true }); B.info.rails++;
       }
-      for (const [uu, nx] of [[pa, -1], [pb, 1]]) P.quad(par, [uu, yDeck(uu) + PAVE, v - 0.2], [uu, yDeck(uu) + PAVE, v + 0.2], [uu, yDeck(uu) + PAVE + 1.1, v + 0.2], [uu, yDeck(uu) + PAVE + 1.1, v - 0.2], [nx, 0, 0], [[0, 0], [0.1, 0], [0.1, 1], [0, 1]]);
     }
   }
   // ------------------------------------------------------------------ lamp standards
-  const lampAt = [];
+  // n4spb (docs/AREAS.md 13.7): a standard that stands on the deck is a KNOCK record (bridges/knock-posts.js: one geometry per kind, instanced, a collider and a record each); one on a pier block (`ped`) stays in the merged geometry
+  const lampAt = [], KP = postBatch('brg-' + sp.id);
   for (const sg of [-1, 1]) for (const u of sp.lamps.u) {
     const ped = sp.lamps.onPier && pedestals.find((q) => q.sg === sg && Math.abs(q.u - u) < 6 && q.top !== undefined);
     const uu = ped ? ped.u : u, v = sg * (ped ? HW + 0.25 : sp.lamps.v ? sp.lamps.v : sp.lamps.kind === 'cross' ? HW - 0.75 : ROAD + KW + 0.35), y = ped ? ped.top : yDeck(uu) + PAVE, mat = M[sp.lamps.opts.mat];
-    if (sp.lamps.kind === 'cross') lampCross(P, M, uu, y, v, 0, { ...sp.lamps.opts, mat });
-    else if (sp.lamps.kind === 'ring') lampRing(P, M, uu, y, v, 0, { ...sp.lamps.opts, mat });
-    else if (sp.lamps.kind === 'globes5') lampGlobes5(P, M, uu, y, v, 0, { ...sp.lamps.opts, mat });
-    else lampCobra(P, M, uu, y, v, sg > 0 ? Math.PI : 0, { ...sp.lamps.opts, mat });
+    const rot = sp.lamps.kind === 'cobra' && sg > 0 ? Math.PI : 0, opts = { ...sp.lamps.opts, mat };
+    const drawLamp = (Q, x, yy, z, r) => {
+      if (sp.lamps.kind === 'cross') lampCross(Q, M, x, yy, z, r, opts);
+      else if (sp.lamps.kind === 'ring') lampRing(Q, M, x, yy, z, r, opts);
+      else if (sp.lamps.kind === 'globes5') lampGlobes5(Q, M, x, yy, z, r, opts);
+      else lampCobra(Q, M, x, yy, z, r, opts);
+    };
+    if (ped) drawLamp(P, uu, y, v, rot);
+    else { const w = world(uu, v); KP.add(sp.lamps.kind + (rot ? 'r' : ''), (Q) => drawLamp(Q, 0, 0, 0, 0), { x: w.x, y, z: w.z, rotY: -T + rot }, { x: w.x, z: w.z, r: sp.lamps.kind === 'globes5' ? 0.16 : 0.28, y0: yDeck(uu) - 1, y1: yDeck(uu) + 9 }, sp.lamps.opts.h); }
     lampAt.push({ u: uu, v, ped: !!ped }); B.masts.push({ ...world(uu, v), y, h: sp.lamps.opts.h, kind: sp.lamps.kind });
   }
   // tram contact wires over the deck (streets/wires.js does not wire tracks on bridges: request 10 of vo-requests-streets.md; second pass of the Vasilievsky Island round, only for specs with tramWires: Tuchkov): one
@@ -423,15 +429,16 @@ export function buildLong(env, sp) {
   B.colliders = () => {
     const ph = ctx.physics, rampRot = Math.atan2(f.c, f.s), m = Math.ceil((U1 - U0) / 6);
     for (let i = 0; i < m; i++) { const u0 = U0 + (U1 - U0) * i / m, u1 = U0 + (U1 - U0) * (i + 1) / m, w = world((u0 + u1) / 2, 0); ph.addWalkRamp(w.x, w.z, 2 * HW + 0.2, u1 - u0 + 0.04, rampRot, yDeck(u0), yDeck(u1), 2.5); B.info.colliders++; }
-    const nR = Math.ceil((U1 - U0) / 8);
-    for (const sg of [-1, 1]) for (let i = 0; i < nR; i++) { const u0 = U0 + (U1 - U0) * i / nR, u1 = U0 + (U1 - U0) * (i + 1) / nR, w = world((u0 + u1) / 2, sg * (HW - 0.14)); ph.addBox(w.x, w.z, u1 - u0, 0.4, -T, -8, Math.max(yDeck(u0), yDeck(u1)) + PAVE + 1.2); B.info.colliders++; }
-    const K0 = 3.5, K1 = LEN - 3.5, nK = Math.ceil((K1 - K0) / 8);
-    if (!sp.lowKerb) for (const sg of [-1, 1]) for (let i = 0; i < nK; i++) { const u0 = K0 + (K1 - K0) * i / nK, u1 = K0 + (K1 - K0) * (i + 1) / nK, w = world((u0 + u1) / 2, sg * (ROAD + KW / 2)); ph.addBox(w.x, w.z, u1 - u0, KW, -T, Math.min(yDeck(u0), yDeck(u1)) - 1, Math.max(yDeck(u0), yDeck(u1)) + Math.max(0.55, sp.kerbH)); B.info.colliders++; }
-    for (const q of lampAt) if (!q.ped) { const w = world(q.u, q.v); ph.addCylinder(w.x, w.z, sp.lamps.kind === 'globes5' ? 0.16 : 0.28, yDeck(q.u) - 1, yDeck(q.u) + 9); B.info.colliders++; }
+    // n4spb (docs/AREAS.md 13.7): the 8 m solid rail boxes (-8 .. rail top, a wall from the bed across the river) are gone: every railing panel and every granite parapet section is a breakable bay with its own collider (bridges/rails.js)
+    // sp.tightKerb (Birzhevoy, Tuchkov: the long humped decks of Vasilyevsky-Okrug 7): the collider follows the real kerb, slices of about 3 m that stand 0.25 m below the deck and rise kerbH above it, not an 8 m slice 1 m below the deck and 0.55 above (a 1.5 - 2 m wall on the slope)
+    const K0 = 3.5, K1 = LEN - 3.5, nK = Math.ceil((K1 - K0) / (sp.tightKerb ? 3 : 8));
+    // the barrier kerbs between the roadway and the pavement stay solid: the granite kerb of the deck structure inside the railings, as at the Palace Bridge (water-reachable-test ALLOW 'barrier kerbs')
+    if (!sp.lowKerb) for (const sg of [-1, 1]) for (let i = 0; i < nK; i++) { const u0 = K0 + (K1 - K0) * i / nK, u1 = K0 + (K1 - K0) * (i + 1) / nK, w = world((u0 + u1) / 2, sg * (ROAD + KW / 2)); ph.addBox(w.x, w.z, u1 - u0, KW, -T, Math.min(yDeck(u0), yDeck(u1)) - (sp.tightKerb ? 0.25 : 1), Math.max(yDeck(u0), yDeck(u1)) + (sp.tightKerb ? sp.kerbH : Math.max(0.55, sp.kerbH))); B.info.colliders++; }
+    { const r = KP.flush(ctx); B.info.colliders += r.colliders; B.extraTris = (B.extraTris || 0) + r.tris; }      // the lamp standards: colliders + knock records
     for (const [pu, pv] of pylonFeet) { const w = world(pu, pv); ph.addBox(w.x, w.z, 2.0, 1.4, -T, -2, yDeck(pu) + 7); B.info.colliders++; }
     for (const [au, av] of anchors) { const w = world(au, av); ph.addBox(w.x, w.z, 1.2, 1.2, -T, -1, 0.95); B.info.colliders++; }
     for (const q of pedestals) if (!q.full) { const w = world(q.u, q.sg * (HW + 0.1)); ph.addBox(w.x, w.z, 2 * q.hu + 0.1, 1.0, -T, -8, yDeck(q.u) + 3); B.info.colliders++; }
-    for (const [uu, dir] of [[0, 1], [LEN, -1]]) for (const sg of [-1, 1]) B.info.colliders += closeBank({ site: sp, L, ph, u: uu, dir, sg, v0: HW - 0.3, len: 2.4, yTop: 0.05, draw: false });
+    for (const [uu, dir] of [[0, 1], [LEN, -1]]) for (const sg of [-1, 1]) B.info.colliders += closeBank({ site: sp, L, ph, ctx, u: uu, dir, sg, v0: HW - 0.3, len: 2.4, yTop: 0.05, draw: false });
   };
   return B;
 }

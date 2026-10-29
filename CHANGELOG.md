@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **3.0.0** (2026-10-29, major): New live area Vasilyevsky-Okrug 7 (vasilyevsky.html, map area 48): Strelka, University, Academy, Menshikov, Andrew, Makarova, Naval Corps, Mining + Krasin, Sredny, ModernVO, statues, Smolensky, Kirova, Sevkabel, Sea Terminal, 8 bridges, Gulf coast; edge gates e11..e14 to Palace-Liteyny and Admiralty; walls, fences, posts breakable; water reachable
 - **2.4.0** (2026-10-28, minor): Boats sail under every bridge of the live areas and stop at the bridge pillars and arch stone; tourist boats, pontoons and landings are solid for the motor boat (the scripted Moika tracks no longer cross each other or the piers); water birds fly away from a boat driven at them; new oracles boatpass, boat-craft-test, wildlifeboat
 - **2.3.5** (2026-10-28, patch): Road markings: the shared double line of paired carriageways no longer kinks at junction-mouth widenings and no longer breaks at a seam between two ways of the same street (Kirochnaya at -42,-1296)
 - **2.3.4** (2026-10-28, patch): Preloader of the main entrance shows just the city name 'Санкт-Петербург' (no area name)

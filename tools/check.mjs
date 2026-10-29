@@ -95,6 +95,38 @@ const BUDGET_AREA = {
   admiralty: { environment: 1.25e6, streets: 1.27e6, city: 1.55e6, props: 380e3 },      // measured: environment 1,084,289, streets 1,104,532, city 1,342,315, props 329,830
   vladimirsky: { environment: 770e3, streets: 1.3e6, city: 1.65e6, landmarksD: 345e3 },      // measured (node tools/area.mjs vladimirsky tools/check.mjs --area-modules): environment 662,706, streets 1,133,535, city 1,432,842, landmarksD 300,686 (all four sub-groups: the cathedral and the bell tower, the Tolstoy House, the Passage, the library), + about 15 %
   smolny: { streets: 1.25e6, city: 1.42e6, landmarksOktyabrsky: 57e3 },      // measured: streets 1,088,461, city 1,237,047, landmarksOktyabrsky 47,001 (with the Kapodistrias monument, as in the north)
+  // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; foundation, measured with `node tools/area.mjs vasilyevsky tools/check.mjs --area-modules`, + about 15 %): 11.2 km2 with the Neva, the Malaya Neva, the Smolenka and the Gavan harbour
+  // merged measured (all 13 ported modules + the bridge wave; environment re-measured after fix C, the Gulf and the Sea Terminal water: 1,036,903): environment 989,463, streets 994,103, city 1,175,519, landmarksAcademy 193,116, props 268,906; every row = measured + about 15 % (docs/AREAS.md 15.v).
+  vasilyevsky: { environment: 1.19e6, streets: 1.15e6, city: 1.35e6, props: 310e3, landmarksAcademy: 222e3,
+    landmarksStrelka: 213e3,      // measured 184,785 (the Exchange, the Rostral columns, the garden, the descent, the warehouses, the Customs house; docs/vo-m1.md) + 15 %
+    bridges: 104e3,      // measured 89,974 (Palace + Blagoveshchensky + Birzhevoy, Tuchkov, Uralsky, Smolensky, Nalichny, Novo-Andreevsky; the foundation had 49,900) + about 15 %
+    //
+    landmarksUniversity: 67e3,      // measured 57,786 (Kunstkamera, Academy of Sciences, Twelve Collegia, monuments, Rector wing, Peter II palace, Gostiny Dvor) + 15 %
+    //
+    landmarksMenshikov: 303e3,      // measured 263,278 (palace, forecourt, Corps, Rumyantsev garden with the obelisk, the descent with its pontoons), + about 15 %
+    //
+    landmarksAndrew: 245e3,      // measured 212,917 (vo-m3: + 15 %)
+    //
+    landmarksMakarova: 112e3,      // measured 97,043 (all seven sub-groups), + about 15 %
+    //
+    landmarksNavalCorps: 83e3,      // measured 71,622 (all four sub-groups), + about 15 %
+    //
+    landmarksMining: 76e3,      // measured 65,610 (all three sub-groups), + about 15 %
+    //
+    landmarksSredny: 96e3,      // measured 83,139 (vo-m3 82,349 + the breakable yard-wall bays of fix A) + 15 %
+    //
+    landmarksModernVO: 177e3,      // measured 153,951 (vo-m3: + 15 %)
+    //
+    landmarksKirova: 218e3,      // measured 189,336 (Palace of Culture, Erarta, the garden, Sobchak; the garden fence / hedges / passage walls are knock bays) + 15 %
+    //
+    landmarksSmolensky: 320e3,      // measured 277,547 (6 groups: churches, chapels, 2.4 km fence as knock bays, the forest and 13,000 graves) + 15 %
+    //
+    landmarksSevkabel: 222e3,      // measured 192,892 (8 groups; the culture kit, stalls and tables are knock records) + 15 %
+    //
+    landmarksSeaTerminal: 34e3,      // measured 29,383 (sea-terminal only; torpedo-boat, d2-narodovolets and lenexpo-site are not claimed) + 15 %
+    //
+    landmarksVOStatues: 176e3,      // measured 153,116 (vo-m3: + 15 %)
+  },
 };       // North: 47,001 triangles measured (the comment of M7 said 47,307: stale; 10.3 and the M7 polish re-measure say 47,001) + 20 %, rounded up
 const budgetOf = (name) => (BUDGET_AREA[AREA] && BUDGET_AREA[AREA][name]) || BUDGET[name] || null;
 const BUDGET = { environment: 500e3, streets: 500e3, city: 600e3, landmarksA: 400e3, landmarksB: 500e3, landmarksC: 500e3, landmarksD: 300e3, traffic: 400e3, props: 300e3, people: 200e3, wildlife: 100e3,

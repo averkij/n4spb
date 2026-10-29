@@ -26,6 +26,7 @@ import { WATER as AREA_WATER } from '../lib/area-tables.js';
 
 import { NEVA_DOWNSTREAM } from './neva-downstream.js';
 import { NEVA_MALAYA } from './neva-malaya.js';
+import { VO_SEA } from './vo-sea.js';
 
 // ---- the Neva scenery beyond the data. tools/strip-data-clip.mjs clips RIVER / WATER to the extent grown by DATA_MARGIN: the data region is DATA_RECTS. Beyond it the real OSM polygons of the Neva continue the river:
 // upstream (north-east) the 'Нева' polygon of data/east-water.js, downstream (west) the ring of the Bolshaya Neva of neva-downstream.js. They are drawn outside DATA_RECTS and inside FAR_WIN, the box round Vosstaniya Square
@@ -42,7 +43,9 @@ const FAR_SOURCES = [
   { name: 'neva-down', rings: [NEVA_DOWNSTREAM], box: null },
   // the Malaya Neva (neva-malaya.js) joins the Neva INSIDE the data region (the mouth edge is the closing edge of the data polygon of the Neva), where no data polygon holds it: `inData` = it is drawn there too (water and
   // shore walls; only clipped to FAR_WIN), and the mouth edge, which both rings share, is an open join (no wall on either side)
-  { name: 'neva-malaya', rings: [NEVA_MALAYA], box: null, inData: true },
+  { name: 'neva-malaya', rings: [NEVA_MALAYA], box: null, inData: !AREA_WATER.dataRings.some((d) => d.source === 'neva-malaya') },      // (an area that lists the ring in WATER.dataRings (source) has it as DATA water inside the data region: the scenery starts beyond it)
+  // the Gulf of Finland (vo-sea.js; Vasilyevsky-Okrug 7 lists it in WATER.dataRings, so it is DATA water inside the data region and the scenery starts beyond it, as with the Malaya Neva)
+  { name: 'vo-sea', rings: [VO_SEA], box: null, inData: !AREA_WATER.dataRings.some((d) => d.source === 'vo-sea') },
 ].filter((s) => AREA_WATER.farSources.includes(s.name));
 const keyOf = (r) => r.key || AREA_WATER.keyByName[r.name] || AREA_WATER.riverKeys[r.name] || null;      // (WATER.keyByName / WATER.riverKeys of the area: a keyless RIVER record by its name: the canals of the south-west, the Obvodny canal of Vladimirsky-Ligovka; none in the other areas)
 
@@ -62,6 +65,8 @@ export const WATERWAYS = {
   // and the Admiralty / Novo-Admiralty canals round New Holland; the inner canals of New Holland (East, South, the Kovsh basin) are walls + coping only: the loop railing, its colliders, the pier, the stairs and the footbridges are landmarksNewHolland's
   kryukov: { key: 'kryukov', name: 'Крюков канал', water: -2.9, bed: -4.3, wall: 'kryukov', rail: ['vase'], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 22, shadeH: 3.0 },
   admiralty: { key: 'admiralty', name: 'Адмиралтейский канал', water: -2.8, bed: -4.0, wall: 'admiralty', rail: ['moika'], post: 'moika', postW: 0.45, postH: 1.0, bay: 2.4, width: 10, shadeH: 2.8 },
+  // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; row of the source project, 102_3d_piter waterways.js): the Smolenka, the river between the Smolensky cemetery and the Petrograd-side shore, granite walls with a simple bar rail (water level of the Neva)
+  smolenka: { key: 'smolenka', name: 'Смоленка', water: -3.4, bed: -4.4, wall: 'smolenka', rail: ['bars'], post: 'twostep', postW: 0.45, postH: 1.1, bay: 2.7, width: 30, shadeH: 3.2 },
   'nh-inner': { key: 'nh-inner', name: 'Каналы Новой Голландии', water: -2.8, bed: -4.0, wall: 'admiralty', rail: [], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 11, shadeH: 2.8 },
 };
 const SEAM_TOL = 0.8;
@@ -202,6 +207,15 @@ function build() {
     r.polys.forEach((p, pi) => rings.push({ key, o: p.o, id: ri + ':' + pi, kind: 'data' }));
   });
   for (const dw of AREA_WATER.dataWater) WATER.forEach((w) => { if (w.id === dw.id) w.polys.forEach((p, i) => rings.push({ key: dw.key, o: p.o, id: dw.key + i, kind: 'data' })); });      // WATER.dataWater of the area (the strip: the castle moat r15750440, which the data keeps as a plain pond; ids 'moat0', 'moat1' ...)
+  // WATER.dataRings of the area: a scenery ring (FAR_SOURCES name) that the area holds as REAL water inside its data region (Vasilyevsky-Okrug 7: the Malaya Neva between the Spit and the Gulf runs through the middle of the territory, and the
+  // bake of the source holds it as a data polygon but this repo's data cut has none): the ring clipped to the box of the data region is a data ring (kind 'data': real banks inside, no bank on the cut), the scenery source starts beyond it (inData false above)
+  if (AREA_WATER.dataRings.length) {
+    const box = { x0: Math.min(...DATA_RECTS.map((r) => r.x0)), x1: Math.max(...DATA_RECTS.map((r) => r.x1)), z0: Math.min(...DATA_RECTS.map((r) => r.z0)), z1: Math.max(...DATA_RECTS.map((r) => r.z1)) };
+    for (const dr of AREA_WATER.dataRings) {
+      if (dr.ring) { rings.push({ key: dr.key, o: dr.ring, id: dr.id, kind: 'data' }); continue; }      // { id, key, ring: [x, z, ...] }: a ring of the area's own (a patch of water that neither the data nor a scenery source holds)
+      const src = FAR_SOURCES.find((s) => s.name === dr.source); if (src) src.rings.forEach((o, ri) => { const q = clipRingToRect(o, box); if (q.length >= 6) rings.push({ key: dr.key, o: q, id: dr.id + ri, kind: 'data' }); });
+    }
+  }
   PLUGS.forEach((p, i) => rings.push({ key: p.key, o: p.o, id: 'plug' + i, kind: 'plug' }));
   OWNER_WATER.forEach((p) => rings.push({ key: p.key, o: p.o, id: p.id, kind: 'data', owner: true }));      // (a landmark's own pit: water for the ground / the surface / inRiver, no bank of ours: flags below)
   // An OPEN MOUTH (below) that is SHORTER than the edge it lies on: the Swan Canal ends on the long straight north edge of the Moika under the Lower Swan Bridge, the Kryukov Canal on the edge of the Griboedov Canal at the

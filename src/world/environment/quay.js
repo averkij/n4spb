@@ -75,6 +75,7 @@ const WALLS = {
   kryukov: { tones: ['#a99b8f', '#9e9086', '#b3a498', '#968880', '#a8978c', '#9c8d84', '#b19c8e'], rows: 6, vein: 0.6 },
   'nh-inner': { tones: ['#a8968c', '#9c8a82', '#b2a096', '#94847c', '#a8928a', '#9e8c84'], rows: 6, vein: 0.5 },
   admiralty: { tones: ['#a39088', '#98867e', '#ad9a90', '#907f78', '#a68e84', '#9a8880'], rows: 6, vein: 0.5 },
+  smolenka: { tones: ['#a29a92', '#98908a', '#aaa198', '#908880', '#a49a90', '#9a928a'], rows: 6, vein: 0.4 },      // Vasilyevsky-Okrug 7: the Smolenka (source project's tones)
   neva: { tones: ['#ab9487', '#b49d90', '#9d8a7e', '#a68f84', '#b8a094', '#a08c80', '#b09584'], rows: 7, vein: 0.8, big: 1 },
 };
 function wallTexture(ctx, key, base = key) {
@@ -449,11 +450,12 @@ function railStyle(key, bank, x, z, nx, s, nz = 0) {
   }
   if (key === 'moika') return x > -1000 ? 'vase' : 'moika';
   if (key === 'winter-canal') return 'lancet';
+  if (key === 'smolenka') return 'bars';                                      // the Smolenka (source project quay.js): plain bars
   if (key === 'admiralty') return 'moika';                                    // the house bank of the Admiralty / Novo-Admiralty canals: the Moika pattern
   if (key === 'kryukov') return z < 500 ? 'moika' : 'vase';                    // the north reach (Moika -> Truda Sq, 12-13 m) the Moika pattern, the middle / south reach the Griboedov-type vase balusters
   return 'vase';
 }
-const POST = { fontanka: 'pyramid', griboedov: 'twostep', moika: 'moika', 'winter-canal': 'pylon', 'swan-canal': 'twostep', kryukov: 'twostep', admiralty: 'twostep', 'nh-inner': 'twostep', neva: null };
+const POST = { fontanka: 'pyramid', griboedov: 'twostep', moika: 'moika', 'winter-canal': 'pylon', 'swan-canal': 'twostep', kryukov: 'twostep', admiralty: 'twostep', smolenka: 'twostep', 'nh-inner': 'twostep', neva: null };
 const RAIL_H = { lattice: 0.88, clover: 0.88, bars: 1.0, vase: 1.0, loops: 1.02, moika: 1.0, lancet: 0.85, arcade: 0.95, trellis: 1.9 };
 const POST_TONES = {
   fontanka: (t) => (t < 0.12 ? '#a58274' : t < 0.45 ? '#a89a96' : '#b2a5a0'),
@@ -1008,7 +1010,8 @@ export function buildQuay(ctx, root) {
   const matFor = (k, deckMat) => ctx.mat.toon('#ffffff', { map: wallTexture(ctx, k), paint: 0.05, polygonOffset: deckMat ? 3 : 0, name: 'env-quay-wall-' + (deckMat ? 'deck-' : '') + k });
   const copingMat = (k) => ctx.mat.toon(k === 'neva' ? '#b69c92' : k === 'fontanka' ? (P.graniteCoping || '#a49a95') : '#b0a29a', { paint: 0.05, name: 'env-quay-coping-' + k });
   const mk = (B, mat, name, shadow = true, rec = true) => { if (B.empty) return null; const m = new T.Mesh(B.build(), mat); m.name = name; m.castShadow = shadow; m.receiveShadow = rec; root.add(m); return m; };
-  for (const k of keys) { mk(face[k], matFor(k, false), 'env-quay-wall-' + k); mk(faceDeck[k], matFor(k, true), 'env-quay-wall-deck-' + k, false); mk(coping[k], copingMat(k), 'env-quay-coping-' + k); }
+  // (n4spb: WATERWAYS lists the Smolenka in every area; where it has no wall at all it costs no 1024 x 512 canvas, so the other areas build as before)
+  for (const k of keys) { const skip = k === 'smolenka' && face[k].empty && faceDeck[k].empty; if (!skip) { mk(face[k], matFor(k, false), 'env-quay-wall-' + k); mk(faceDeck[k], matFor(k, true), 'env-quay-wall-deck-' + k, false); } mk(coping[k], copingMat(k), 'env-quay-coping-' + k); }
   mk(parapet, ctx.mat.toon('#ffffff', { map: parapetTexture(ctx), paint: 0.04, name: 'env-quay-parapet' }), 'env-quay-parapet');
   mk(grass, ctx.mat.toon('#ffffff', { map: grassTexture(ctx), paint: 0.06, name: 'env-quay-grass' }), 'env-quay-grass');
   mk(capB, ctx.mat.toon('#a69489', { paint: 0.05, side: 'double', name: 'env-quay-slope-caps' }), 'env-quay-slope-caps');

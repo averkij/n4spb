@@ -1,7 +1,7 @@
 // tools/edge-smoke.mjs - real-browser crossings of the edge gates between the live areas on the BAKED pages (GPU job: take /d/git2/gpulock first). A player is placed inside the FROM area (default Palace-Liteyny) near an edge
 // that faces the TO area (default Smolninskoye), the gate fires without a question, the page navigates, the destination loads from its bake behind the veil and starts by itself. A look + a check, not a suite.
 //   node tools/edge-smoke.mjs [--from palace] [--to smolny] [--out shots/edge] [--mode fly|walk] [--ret] [--net KBPS,LATENCY_MS] [--cpu N] [--fonts-delay MS] [--block-storage] [--remote https://host/path/] [--idle SECONDS]
-//   --from / --to    registry ids of two live areas that have an edge gate between them (docs/AREAS.md 15.y: palace, smolny, admiralty, vladimirsky; admiralty and smolny have none)
+//   --from / --to    registry ids of two live areas that have an edge gate between them (docs/AREAS.md 15.y: palace, smolny, admiralty, vladimirsky, vasilyevsky; admiralty and smolny have none, vasilyevsky has gates to palace and admiralty only)
 //   --ret            after the first crossing cross BACK (to -> from) as well, recording that arrival too
 //   --net / --cpu    throttle the network (download kbit/s, latency ms; applied after the origin page is up) / the CPU of the page (a factor, 4 = four times slower)
 //   --fonts-delay    the Google Fonts stylesheet (render-blocking in the head) answers after this many ms (default 2500 when --net is given, else 0)

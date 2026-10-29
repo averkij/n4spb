@@ -1,6 +1,7 @@
 // tools/views-check.mjs - proves HERO and every VIEWS pose of src/world/layout.js with the real street network and colliders: every static module of src/main.js MODULES (environment, streets, city, the landmarks, bridges, props)
 // built headless (NODE_OPTIONS=--max-old-space-size=14000); the dynamic modules (metro, traffic, people, wildlife, drive) are not needed.
 // usage: node tools/views-check.mjs [--fix]   per pose: inside the play area (10 m margin), off the roadway (streets net.cover), on land (ground height), not inside a collider, a free 6 m ahead, the HUD area name; RESULT: OK / FAIL
+// --land (additive) also fails a pose that stands in water (the camera would sit below the surface); every ok line then ends with the ground / water state. Without it a pose in water stays allowed (CLAUDE.md world rules).
 // --fix prints the nearest passing pose (1 m grid, 30 m) for every failing one.
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -59,7 +60,7 @@ ctx.buildList = mainModules();      // lib/claims.js: the owners of the landmark
 for (const m of ctx.buildList) { if (DYNAMIC.includes(m)) continue; const mod = await import(pathToFileURL(path.join(root, 'src/world/' + m + '.js')).href); await mod.build(ctx); }
 const net = ctx.services.streets && ctx.services.streets.net, ph = ctx.physics;
 const dir = (yaw) => { const b = -yaw * Math.PI / 180; return [Math.sin(b), -Math.cos(b)]; };
-const FIX = process.argv.includes('--fix');
+const FIX = process.argv.includes('--fix'), LAND = process.argv.includes('--land');
 /** the problems of a pose (empty = fine) */
 function problems(v) {
   const notes = [];
@@ -71,6 +72,7 @@ function problems(v) {
   // WATER IS REACHABLE (CLAUDE.md "World rules"): a pose in water is not a failure (the ground is then the bed, below the water level); a pose below the street that is NOT in water (a pit, a shaft) still is
   const wl = ph.waterLevel ? ph.waterLevel(v.x, v.z) : null, inWater = wl !== null && Number.isFinite(g) && g <= wl + 0.1;
   if (!Number.isFinite(g)) notes.push('no ground'); else if (g > 1.5 || (g < -0.5 && !inWater)) notes.push(`ground height ${g.toFixed(2)}`);
+  if (LAND && inWater) notes.push(`in water (ground ${g.toFixed(2)} <= water level ${wl.toFixed(2)}): the eye is below the surface`);
   const p = { x: v.x, z: v.z }; ph.resolve(p, 0.35, Number.isFinite(g) ? g : 0, 1.7);
   const push = Math.hypot(p.x - v.x, p.z - v.z); if (push > 0.05) notes.push(`inside a collider (pushed ${push.toFixed(2)} m)`);
   if (L.insideBuilding(v.x, v.z, 0.8)) notes.push('inside a building');

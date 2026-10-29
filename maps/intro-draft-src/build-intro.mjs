@@ -267,15 +267,15 @@ for (const pl of placeNodes) {
   const k = lab[y * GW + x]; if (k >= 0) mos[k].contains.push(pl);
 }
 
-// ---------- the live areas (P Palace-Liteyny, S Smolninskoye, A Admiralty-Haymarket, V Vladimirsky-Ligovka; docs/AREAS.md sections 13-15) in lon/lat from the registry (the parked strip and North are no longer drawn; 'area B' elsewhere on the page stays the size REFERENCE, the old North, 3.95 km2)
+// ---------- the live areas (P Palace-Liteyny, S Smolninskoye, A Admiralty-Haymarket, V Vladimirsky-Ligovka, W Vasilyevsky-Okrug 7; docs/AREAS.md sections 13-15) in lon/lat from the registry (the parked strip and North are no longer drawn; 'area B' elsewhere on the page stays the size REFERENCE, the old North, 3.95 km2)
 const REG = await import(new URL('../../src/areas/registry.js', import.meta.url).href);
 const OR = { lon: 30.351279, lat: 59.932421 };
 const KX0 = 111412.84 * Math.cos(OR.lat * Math.PI / 180) - 93.5 * Math.cos(3 * OR.lat * Math.PI / 180) + 0.118 * Math.cos(5 * OR.lat * Math.PI / 180);
 const lat0 = OR.lat * Math.PI / 180;
 const KY0 = 111132.954 - 559.822 * Math.cos(2 * lat0) + 1.175 * Math.cos(4 * lat0);
 const unproj = (x, z) => [OR.lon + x / KX0, OR.lat - z / KY0];
-// The live list comes from the registry: every row with a mapId that is not parked (docs/AREAS.md 13 / 15): palace P (98), smolny S (96), admiralty A (46), vladimirsky V (97). The letter is the badge on the page.
-const LIVE_LETTER = { palace: 'P', smolny: 'S', admiralty: 'A', vladimirsky: 'V' };
+// The live list comes from the registry: every row with a mapId that is not parked (docs/AREAS.md 13 / 15): palace P (98), smolny S (96), admiralty A (46), vladimirsky V (97), vasilyevsky W (48; V is taken). The letter is the badge on the page.
+const LIVE_LETTER = { palace: 'P', smolny: 'S', admiralty: 'A', vladimirsky: 'V', vasilyevsky: 'W' };
 const liveKeys = Object.keys(REG.REGISTRY).filter((k) => REG.REGISTRY[k].mapId != null && !REG.REGISTRY[k].parked);
 liveKeys.sort((a, b) => Object.keys(LIVE_LETTER).indexOf(a) - Object.keys(LIVE_LETTER).indexOf(b));
 for (const k of liveKeys) if (!LIVE_LETTER[k]) throw new Error('registry row ' + k + ' has a mapId but no letter in LIVE_LETTER (build-intro.mjs)');
@@ -299,7 +299,7 @@ for (const key of liveKeys) {
   const km2 = unionKm2(row.play);
   const overlap = new Float64Array(mos.length);
   for (let i = 0; i < mark.length; i++) if (mark[i] && lab[i] >= 0 && !water[i]) overlap[lab[i]]++;
-  // the edge gates of this area (the four-area graph, registry GATES): the letters of the live areas one walks into
+  // the edge gates of this area (the five-area graph, registry GATES): the letters of the live areas one walks into
   const edges = REG.GATES.filter((g) => g.kind === 'edge' && g.from === key && LIVE_LETTER[g.to]).map((g) => LIVE_LETTER[g.to]);
   existing.push({ id: letter, key, page: row.page, title: row.title, titleEn: row.titleEn, status: st, km2: Math.round(km2 * 100) / 100, rects, overlap,
     mapId: row.mapId, approxMB: row.approxMB, sights: row.sights, rectN: row.play.length, edges });
