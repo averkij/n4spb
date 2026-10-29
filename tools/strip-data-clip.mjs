@@ -32,6 +32,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const NOSPLIT = new Set(['SUBWAY_ROUTES', 'TROLLEY', 'TRAM_ROUTES', 'BUS_ROUTES', 'RIVER']);
 const WATERISH = new Set(['WATER', 'RIVER']);
 const KEEP_WHOLE = new Set(['SUBWAY_ROUTES', 'BUS_ROUTES', 'EXTENT_RECTS']);
+/**
+ * RECORDS that stay WHOLE (not cut to the union of the extent rectangles) when they touch it: array name -> Set of ids (gdm cluster B, docs/gdm-B.md). A polygon cut by the union becomes one polygon per slab of the
+ * union (7 pieces for the cemetery in Dekabristov), and a landmark module that reads polys[0] and INDEXES the vertices of the original ring would see a 14 % piece of it:
+ *   GREEN r2736670  the Smolensky Orthodox Cemetery (54 ha): landmarksSmolensky/frame.js cemeteryRing() takes polys[0] and place.js / fence.js classify its edges by index (edges 13 .. 27 = the river, 0 .. 12 = the Maly /
+ *                   Beringa fence). In Vasilyevsky the polygon lies inside the union and is never touched; the Dekabristov territory reaches only 85 % of it, so the same record is kept whole there as well (the 15 % beyond the
+ *                   extent is scenery that no player reaches; a vertex of the ring outside the extent is allowed for these records, tools/area-data-test.mjs). A record that does not touch the union at all is dropped as before.
+ */
+export const KEEP_WHOLE_IDS = { GREEN: new Set(['r2736670']) };
 
 export const grow = (r, g) => ({ x0: r.x0 - g, x1: r.x1 + g, z0: r.z0 - g, z1: r.z1 + g });
 const inRect = (r, x, z) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
@@ -127,6 +135,7 @@ function clipRecord(name, rec, rs, ext) {
   if (polys) {
     const pp = polyPieces(rec.polys, rs);
     if (!pp) return [rec];
+    if (pp.length && KEEP_WHOLE_IDS[name] && KEEP_WHOLE_IDS[name].has(rec.id)) return [rec];      // a KEEP_WHOLE_IDS record that touches the union stays as it is (see above)
     return pp.length ? [{ ...rec, polys: pp }] : [];
   }
   if (typeof rec.x === 'number' && typeof rec.z === 'number') return inUnion(ext, rec.x, rec.z) ? [rec] : [];

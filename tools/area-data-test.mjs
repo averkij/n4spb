@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { REGISTRY } from '../src/areas/registry.js';
 import { clipLineUnion, clipRingUnion, ringArea, round1 } from './osm-lib.mjs';
-import { EXPORT_RE, NOSPLIT, grow } from './strip-data-clip.mjs';
+import { EXPORT_RE, NOSPLIT, grow, KEEP_WHOLE_IDS } from './strip-data-clip.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -109,6 +109,7 @@ check('every vertex of every line / polygon / point lies in the extent union (RI
       if (k === 'BUILDINGS') { if (!inUnion(EXT, rec.cx, rec.cz)) bad.push(k + ' ' + rec.id + ' centroid'); continue; }
       if (k === 'OVERLAPS') continue;
       const v = vertsOf(rec);
+      if (KEEP_WHOLE_IDS[k] && KEEP_WHOLE_IDS[k].has(rec.id)) { let touch = false; for (const p of rec.polys || []) if (clipRingUnion(pairs(p.o).concat([pairs(p.o)[0]]), rs).length) touch = true; if (!touch) bad.push(k + ' ' + rec.id + ' (kept whole) does not touch the extent'); continue; }      // gdm cluster B: a record that stays whole (strip-data-clip.mjs KEEP_WHOLE_IDS) must touch the union; its vertices may lie outside
       if (k === 'TREE_ROWS') { let touch = false; for (let i = 0; i < v.length; i += 2) if (inUnion(EXT, v[i], v[i + 1])) touch = true; if (!touch && clipLineUnion(pairs(rec), EXT).length === 0) bad.push('TREE_ROWS row outside'); continue; }
       for (let i = 0; i < v.length; i += 2) if (!inUnion(rs, v[i], v[i + 1], TOL)) { bad.push(k + ' ' + (rec.id || '') + ' at ' + v[i] + ',' + v[i + 1]); break; }
     }
