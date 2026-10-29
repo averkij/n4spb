@@ -7,6 +7,7 @@
 //   ZONES            wildlife, people, trams, field, far  pigeons, crowHaunts, crowds, fountains, peopleDensity, peopleCorridor, peopleHot, tramLines, clearDiscs, farCentres
 //   GARAGE           drive/cars/index.js, drive.js        poses { coupe, truck, lada, roadster }, spawn, boats (optional: the docks of the motor boats, drive/boat/index.js; absent = the shared docks)
 //   PRUNE_SERVICES   environment.js                       the services whose door entrances clear the trees
+//   BRIDGE_SITES_OFF bridges/sites.js                     (optional) ids of bridge sites that the area never builds although their centre lies in its data extent (a bridge of the data margin that no play rectangle reaches)
 //   HOOKS, HEIGHT_PATCHES  layout.js, drive/handling.js, environment/trees.js + lawns.js, props/world.js, streets.js + streets/parking.js, people/nav.js
 //                                                        the hooks and the height patches of milestone M6 (docs/AREAS.md section 9; the strip's are {} and []: every call site is a no-op without its key).
 //                                                        T3 (Tauride remake) added groundHoles (environment/ground.js: rings cut out of the ground mesh) and groundWayReject (environment/field.js: ways the class mask does not paint);
@@ -103,6 +104,9 @@ export const GARAGE = {
   /** the docks of the motor boats of this area ([{ id, x, z, yaw }], drive/boat/index.js) or null = the SHARED docks of drive/boat/index.js, those that lie in the territory on water; [] = no boat */
   boats: Array.isArray(G.boats) ? G.boats : null,
 };
+
+/** ids of the bridge sites (bridges/sites.js) that the area leaves out although the data extent holds their centre: the area module's `BRIDGE_SITES_OFF` (absent = none, the same set of sites as before) */
+export const BRIDGE_SITES_OFF = new Set(arr(A.BRIDGE_SITES_OFF).filter((id) => typeof id === 'string'));
 
 /** the keys of the sub-groups of the area's GROUPS.bridges (= the ids of the bridge sites of bridges/sites.js that the area claims; the strip lists every site, a smaller area a subset, an area without a bridges module none) */
 export const BRIDGE_GROUP_KEYS = new Set(arr(obj(A.GROUPS).bridges).map((g) => g && g.key));
