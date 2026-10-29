@@ -89,6 +89,15 @@ test('the unfinished chunks of a crashed bake are removed at the start of the ar
   const dir = path.join(t.root, 'assets/baked/alpha'); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, `field.${'a'.repeat(20)}.part`), 'half'); fs.writeFileSync(path.join(dir, 'manifest.json.tmp'), '{');
   assert.equal(bake(t).status, 0); assert(checkBakes(t.root).ok);
 }));
+test('uncommitted changes in the closure: a warning naming the files; --require-clean refuses (needs git)', () => fixture((t) => {
+  const git = (...a) => spawnSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { cwd: t.root, encoding: 'utf8' });
+  if (git('init', '-q').status !== 0) { console.log('     (git is not available: skipped)'); return; }
+  fs.writeFileSync(path.join(t.root, '.gitignore'), 'node_modules/\nassets/baked/\n'); git('add', '-A'); git('commit', '-q', '-m', 'fixture');
+  let r = bake(t, ['--area', 'alpha']); assert.equal(r.status, 3, out(r)); assert(!r.stderr.includes('uncommitted'), r.stderr);
+  fs.appendFileSync(path.join(t.root, 'src/world/m2.js'), '// uncommitted\n');
+  r = bake(t, ['--area', 'alpha', '--force']); assert.match(r.stderr, /WARNING bake-scene: alpha: 1 file of its closure has uncommitted changes \(src\/world\/m2\.js\)/);
+  r = bake(t, ['--area', 'alpha', '--force', '--require-clean']); assert.equal(r.status, 1, out(r)); assert.match(r.stderr, /uncommitted changes/); assert(!r.stdout.includes('=== area'), 'refused before the browser');
+}));
 test('preflight in the real command: a wrong three.js version stops before any browser; a bake lock stops it too', () => fixture((t) => {
   writeTree(t.root, { 'node_modules/three/package.json': '{"version":"0.1.0"}' });
   let r = bake(t); assert.equal(r.status, 1); assert.match(r.stderr, /preflight: node_modules\/three is 0\.1\.0/); assert(!r.stdout.includes('=== area'));
