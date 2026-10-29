@@ -1494,7 +1494,7 @@ The owner (2026-10-26): a motor boat that moves on the water, parked near the An
 
 ## 15.g Gavan, Morskoy, Dekabristov Island: areas six to eight (branch `area-gdm`, map areas 49 / 47 / 51; foundation)
 
-The three western districts of the map, each a live area on the Vasilyevsky template (15.v, `docs/vo-m1..m4.md`, `docs/vo-br.md`): page, registry row, data cut, area module with the PORT-slot protocol, page.json, and edge gates to each other and to Vasilyevsky. State of this section: the FOUNDATION (shape, data, skeleton modules, gates, glue). The landmark modules, the shared-engine rows (waterways, quay, bridges) and the bake follow in later clusters, which append their notes here. No bake exists and `requireBake` is set, so the three pages show the error card until the single bake of all eight areas; the version is not bumped yet (the lead bumps 3.1.1 -> 4.0.0 once at the end).
+The three western districts of the map, each a live area on the Vasilyevsky template (15.v, `docs/vo-m1..m4.md`, `docs/vo-br.md`): page, registry row, data cut, area module with the PORT-slot protocol, page.json, and edge gates to each other and to Vasilyevsky. State of this section: the FOUNDATION (shape, data, skeleton modules, gates, glue) plus the six clusters merged by the integration round (the end of this section: modules, shared-engine rows, bridges, measured triangles, oracles). The bake is the lead's single step at the end. No bake exists and `requireBake` is set, so the three pages show the error card until the single bake of all eight areas; the version is not bumped yet (the lead bumps 3.1.1 -> 4.0.0 once at the end).
 
 | id | letter | map k | page | bake dir | rectangles | territory | water share | titles |
 |---|---|---|---|---|---|---|---|---|
@@ -1540,7 +1540,7 @@ Gavan and Morskoy are cut from the untouched source directory (`102_3d_piter/src
 
   Eleven gates pass the global rule (hops >= 1000 m, no dead strip over 300 m, bounce share at most 10 %; e18 sits exactly at the 300 m limit). **e16 fails the bounce rule** (15.1 %): the thin overlap of the two territories (1.09 km2, the Gulf between the Smolenka mouth and the Gavan coast) over a 2.5 km boundary is not a shape defect that a rectangle repairs, so `tools/areas-test.mjs` carries `LENS_RELAX = { e16: { nearMaxPct: 16 } }` with the measured numbers (the global rule is not loosened). A player who crosses at those 380 m can be carried back once the 6 s arrival grace (`core/gates.js graceS`) has passed: a known limit. The arrival check (the same x, z, yaw resolved with the destination layout, walk / fly / car, dry and wet, no fall back to the HERO) passes for all twelve gates. The ten + four gates of 15.y / 15.v are unchanged.
 
-**Port-slot protocol state** (the marker lines of `area.js`, `rings.js` and `tools/check.mjs`; one line per module so that parallel port branches merge; a slot is replaced by its real line and the separating `//` line stays). All slots are EMPTY: no landmark module has been ported.
+**Port-slot protocol state** (the marker lines of `area.js`, `rings.js` and `tools/check.mjs`; one line per module so that parallel port branches merge; a slot is replaced by its real line and the separating `//` line stays). (State of the FOUNDATION; all slots were empty then. The integration round below lists the slots that were filled and the ones left empty on purpose.)
 * gavan: PORT-IMPORT / MODULE / LABEL / GROUPS / AREAS / CLAIMED for `landmarksGavan` (the Kronshpits, the Shkipersky canal and bridge, the harbour crane / tower / guardhouse / club, the workers' town, the fire reserve, the church; source about 62 k triangles) and `landmarksPribaltiyskaya` (the hotel, Peter I, the Creators of the Fleet, Nakhimov, the Kirov memorial, Waterville; about 98 k); PORT-PRUNE `landmarksGavan`; PORT-GROUPS `bridges`; PORT-WATER rows that wait for the waterway key `gavan` (the Shkipersky Bridge deck row, `w10890576` Galerny Harbour, `r1648985` the Shkipersky canal); `rings.js` PORT-IMPORT / PORT-SOURCE for both modules; PORT-BUDGET for both.
 * morskoy: the same slots for `landmarksMarineFacade` (the Sea Facade passenger port, about 90 k triangles, 810 source colliders) and `landmarksPribaltiyskaya`, plus `bridgesMo` (PORT-IMPORT, GROUPS, AREAS, HAVE, ZONES x2, SOURCE, BUDGET: the Shipbuilders' and Smolenka-mouth bridges, WHSD at grade); PORT-HAVE for the landmark modules too; PORT-PRUNE for the two landmark modules.
 * dekabristov: the same slots for `landmarksDekabristov`, `landmarksPrimorskaya` (the metro pavilion, museum, square) and `landmarksFill` (dressing of the land fill); PORT-PRUNE for all three; PORT-ZONES (three table slots); PORT-BUDGET for all three.
@@ -1551,10 +1551,81 @@ Gavan and Morskoy are cut from the untouched source directory (`102_3d_piter/src
 **Open items.**
 1. The bake of all eight areas (the single bake at the end), `node tools/baked-revision-sync.mjs`, `tools/bake-manifest-check.mjs`; `approxMB` (45 / 35 / 50) are estimates.
 2. `tools/fixtures/closure-loads/<id>.json` for the three areas do not exist (they need a published bake: `node tools/closure-groundtruth.mjs <id> --record`); `tools/closure-real-test.mjs` skips them through `NO_FIXTURE_YET` (empty it after recording), and its `SCOUT` rows and the widened `SCOUT_UP` band for the three are the skeleton sizes (527 / 375 / 410 hashed files), to be set to the finished sizes after the ports.
-3. The `BUDGET_AREA` rows of `tools/check.mjs` are estimates + about 30 %, not measured (`node tools/area.mjs <id> tools/check.mjs --area-modules` after the ports).
+3. (Done by the integration round: the `BUDGET_AREA` rows of `tools/check.mjs` of the three areas are the measured values + about 15 %, table below.)
 4. The map (`maps/intro-draft-src`: `LIVE_LETTER`, `template.html`, the rebuild chain) is not updated; no version bump; `tools/area-data-test.mjs` has no rows for the three areas (not in CI); `docs/BAKE-REVISIONS.md` and 15.y still speak of five areas.
 5. Russian texts that need a human check: the `facts` of the three `page.json` files, the registry `sights` lists, the HUD names of `makeAreas`, the labels of `VIEWS`.
 6. e16's bounce share (above), and the seam parity of the Smolensky cemetery (dekabristov must build the same six groups as vasilyevsky).
+
+### Integration round of the area-gdm effort (the six clusters merged into `area-gdm`; CPU only)
+
+**Merge.** `gdm-p`, `gdm-m`, `gdm-g`, `gdm-b`, `gdm-d1`, `gdm-d2` merged with `--no-ff` in that order, no cluster failed. Conflicts and their resolution: `src/world/lib/owns-table.js` regenerated with `node tools/owns-table.mjs` after every merge that touched it (56 modules at the end); `src/areas/gavan/area.js` (the `mustHaveAreas` rows of G and P: union), `src/areas/morskoy/area.js` (the TEST.claimed rows of B and M: union), `src/areas/dekabristov/area.js` (the D1 / D2 import, ZONES, PEOPLE_HOT, PIGEON_ZONES and CROWDS rows and B's `MO_ROWS` import: union, the PORT-ZONES markers stay). Both `bridges.js` hunks (G's `EXT` deck hook and B's WHSD / Petrovsky glue) and both `quay.js` blocks (G's `gavan` tones / POST / canvas skip and B's Smolenka mouth arms) merged without a textual conflict and were re-read: the regions do not overlap. The six worktrees and branches were removed (the node_modules junctions had been unlinked by the agents).
+
+**Clusters** (each has its notes file with the owner hand-check items):
+* **P** (`docs/gdm-P.md`): `landmarksPribaltiyskaya` copied from the source project (0568f7af) with the owner rules (forecourt lamps, benches, planters and the Kirov wall as knock records / bays), claimed by gavan and morskoy (six groups each; the Kirov memorial lies 35 m beyond the gavan rectangles, inside the 120 m data margin); 104,868 triangles in the area builds.
+* **M** (`docs/gdm-M.md`): `landmarksMarineFacade` into morskoy (the Marine Facade passenger port, galleries, the two liners as solid hull boxes, Golden City quarter 6 with the spire; 2,225 colliders, the fences are knock bays); 89,587 triangles. Build order in morskoy: Marine Facade first, then Pribaltiyskaya.
+* **G** (`docs/gdm-G.md`): the `gavan` waterway key (`waterways.js`, `quay.js` tones + POST + canvas skip, `water.js`, `bridges/sites.js` WATER_Y, `wildlife/world.js` POST_Y, the `bridges.js` EXT hook for the Shkipersky deck, layout goldens regenerated), `landmarksGavan` ported (stair guard boxes removed, cheek ghost bays, the bridge walk box ends at the soffit, yacht-club float blocks), the Sea Terminal claim per area (gavan: four groups); 60,323 triangles for Gavan.
+* **B** (`docs/gdm-B.md`): the WHSD (at-grade stretch, open cutting, viaduct, portals, pylons; per-area clip, knock bays and posts), the Shipbuilders' and the 1st - 4th Smolensky mouth bridges, Betancourt, Serny and the WHSD fairway bridge, the Smolenka mouth arms in `quay.js` (pale granite, berm, no railing), `river.js` SITE_OF, `bridges/groups-mo.js`; the Smolensky cemetery kept whole in the Dekabristov cut (`KEEP_WHOLE_IDS`, `city-d41.js` re-cut: `landmarksSmolensky` 100,033 -> 275,967 triangles there); `water-reachable-test` pickFence skips one-post bays.
+* **D1** (`docs/gdm-D1.md`): `landmarksDekabristov`, a NEW module (the Lutheran and Armenian cemeteries, the siege memorial cemetery, the Decembrists' garden, the Volodin square with the Light-and-Music fountain); 86,678 triangles; view keys ShiftDigit5..8.
+* **D2** (`docs/gdm-D2.md`): `landmarksPrimorskaya` (the glazed vestibule on the mapped hall at (-6520, -1800), not at the platform point of the brief, which lies under apartment blocks; three entrances as door points, the doors stay shut, no metro network; two Smolenka bank stairs as water rings) and `landmarksFill` (the land fill dressed as a young district under construction: roadbeds, frames, cranes, yards, hoardings as knock bays).
+
+**Measured triangles** (`node tools/area.mjs <id> tools/check.mjs --area-modules`, one run per area; traffic and people draw no triangles in this mode). `BUDGET_AREA` of `tools/check.mjs` holds each value + about 15 % (the module rows were already measured by their clusters; the base rows environment / streets / city / props were estimates until this round):
+
+| module | gavan | morskoy | dekabristov |
+|---|---|---|---|
+| environment | 954,192 | 762,270 | 1,018,384 |
+| streets | 691,718 | 488,284 | 623,561 |
+| city | 612,005 | 343,223 | 618,655 |
+| props | 142,752 | 81,186 | 122,448 |
+| bridges | 71,830 | 79,384 | 88,356 |
+| landmarksGavan | 60,323 | | |
+| landmarksPribaltiyskaya | 104,868 | 104,868 | |
+| landmarksMarineFacade | | 89,587 | |
+| landmarksKirova | 189,336 | | |
+| landmarksSevkabel | 178,458 | | |
+| landmarksSeaTerminal | 63,258 | | |
+| landmarksModernVO | 10,507 | | |
+| landmarksSredny | 47,595 | | |
+| landmarksVOStatues | 19,406 | 9,746 | 14,748 |
+| landmarksSmolensky | | | 275,783 |
+| landmarksDekabristov | | | 86,678 |
+| landmarksPrimorskaya | | | 2,898 |
+| landmarksFill | | | 40,932 |
+| wildlife | 48,464 | 48,404 | 44,528 |
+| drive | 15,260 | 15,260 | 15,260 |
+
+Knock records registered: gavan 12,751, morskoy 12,180, dekabristov 18,833. Budget rows set in this round: gavan environment 1.10 M, streets 796 k, city 704 k, props 165 k, landmarksSredny 55 k, landmarksModernVO 12.1 k, landmarksVOStatues 22.4 k, landmarksSevkabel 206 k, landmarksPribaltiyskaya 121 k; morskoy environment 877 k, streets 562 k, city 395 k, props 94 k, landmarksVOStatues 11.2 k, landmarksPribaltiyskaya 121 k; dekabristov environment 1.172 M, streets 718 k, city 712 k, props 141 k, landmarksVOStatues 17 k (the module rows of the clusters stay as they were).
+
+**Port slots.** Filled: gavan IMPORT / MODULE / LABEL / GROUPS / AREAS / CLAIMED / HAVE for landmarksGavan and landmarksPribaltiyskaya, the `gavan` PORT-WATER rows, GROUPS `bridges` and the bridgesMo rows; morskoy the same for landmarksMarineFacade, landmarksPribaltiyskaya and bridgesMo; dekabristov for landmarksDekabristov, landmarksPrimorskaya, landmarksFill (PRUNE: landmarksPrimorskaya only) and bridgesMo. Left empty on purpose (the marker line is replaced by a comment that says why): PORT-PRUNE of landmarksDekabristov and landmarksFill (no entrances: a cemetery, a building site) and of landmarksMarineFacade (its `entrances` list is empty: no enterable terminal); `rings.js` PORT-IMPORT / PORT-SOURCE of landmarksFill (it draws no water ring, keep-out or paved ground). The `// PORT-ZONES` marker lines at the end of the dekabristov people / wildlife tables stay (the protocol's append point). `vasilyevsky/area.js` still has the foundation marker `PORT-IMPORT: landmarksGavan` of the Vasilyevsky wave (not touched: even a comment edit would stale that area's bake for nothing).
+
+**Oracles of the merged tree** (CPU only, `node tools/...`; the heavy ones ran once):
+
+| oracle | result |
+|---|---|
+| `areas-test` | 316 passed, 0 failed |
+| `gates-test` | 94 passed, 0 failed |
+| `gen-area-html --check` | OK, all eight pages |
+| `owns-table --check` | OK (56 modules) |
+| `closure-lint` | OK (10 closures: gavan 594, morskoy 436, dekabristov 473 files) |
+| `runtime-only-lint`, `import-lint` | OK |
+| `closure-real-test` | OK (the eight live areas) |
+| `layout-golden --diff`, strip and north | identical to `tools/golden/layout-strip.json` and `layout-north.json` (cluster G had regenerated them for the `gavan` WATERWAYS row) |
+| `bake-scene --plan` | all eight need a bake: palace, smolny, vladimirsky, admiralty, vasilyevsky STALE; gavan, morskoy, dekabristov MISSING; about 40 GPU minutes |
+| per new area: `layout-test`, `landmarks-groups-check`, `area-garage-check`, `views-check --land`, `cross-places-test`, `knock-stands-test` | all OK in gavan, morskoy, dekabristov |
+| `claims-draw-audit` | OK: gavan 2 warnings (WHSD crossings without a builder, as in the source), morskoy 18 warnings (open item 2), dekabristov 3 warnings (the metro museum point, Primorskaya notes) |
+| `water-reachable-test` (full) | gavan 16 / 16, morskoy 16 / 16, dekabristov 16 / 16 (after the shrub fix below) |
+| `boat-passage-test` | gavan 24 / 24, morskoy 20 / 20 (after the liner fix below), dekabristov 32 / 32 |
+| the five old areas: `layout-test`, `water-reachable-test --quick`, `boat-passage-test`, `landmarks-groups-check` | all pass except `boat-passage-test` of admiralty (3 failures at the New Holland footbridges; identical on the commit before the merge, 6705d04: not caused by this effort) |
+
+**Integration fixes made in the round.** (1) `tools/boat-passage-test.mjs` check b (no invisible wall) took the middle of a 32 m wide moored liner for a wall of water (the drawn hull crosses the waterline along its sides only, the middle of the beam is 16 m from them): inside the footprint of a hull that a service publishes as `ships` ({ c, ax, L, B }) the reach "a drawn wall within 6 m" is now the beam + 6 m, so the 7,753 false cells of morskoy go away; a wall with no hull drawn near it still fails. (2) `landmarksDekabristov/forest.js` sampled 8 directions when it dropped the collider of a 1.4 m shrub within 14 m of water; `water-reachable-test` check 6 samples 16 directions and found a shrub at (-7946, -2132) at the edge of a pond: the module samples 16 directions now. (3) The empty PORT slots were explained (above) and the `tools/check.mjs` budgets set.
+
+**Open items of the integration round** (for the lead and the owner).
+1. The bake of all eight areas, then `node tools/baked-revision-sync.mjs` and `tools/bake-manifest-check.mjs`; the version bump 3.1.1 -> 4.0.0 (`node tools/version.mjs major "..."`) with its CHANGELOG line; the `approxMB` rows of the registry are estimates. No GPU check was possible: floor decal z-fighting, ribbon vs kerb overlaps, fence cut-out textures, the night lights of the Volodin fountain, the look of the Marine Facade liners and of the Primorskaya glass are unseen.
+2. `claims-draw-audit` morskoy: 18 claimed points of `landmarksMarineFacade / mf-furniture` have nothing drawn within 2.5 m (warnings; the tool lists twelve, `--verbose` the rest). To decide: draw them or drop them from the claim.
+3. `node tools/closure-groundtruth.mjs <id> --record` for the three areas (the fixtures `tools/fixtures/closure-loads/` are still missing, `NO_FIXTURE_YET`; the `SCOUT` rows of `closure-real-test` still hold the skeleton sizes, the real closures are 589 / 431 / 468 files).
+4. `tools/area-data-test.mjs --area dekabristov` has 5 failing checks inherited from the foundation (strip-specific sights, TRAM_ROUTES, RIVER fontanka, header commit) and 2 LANDUSE vertices just outside the union; `area-data-test` is not in CI; the map (`maps/intro-draft-src`) and `docs/BAKE-REVISIONS.md` still speak of five areas.
+5. Cluster limits (from their notes): the Palace Bridge is built unconditionally in every area (14,540 triangles each, pre-existing); the second Korabelny pylon (-7883, 1594) and the WHSD beyond z about 1540 are outside every territory; the `whsd-crossings` (the Mikhmanskaya overpass, the park footbridge) have no builder, as in the source; the Bolshoy Petrovsky Bridge is outside every new territory; Primorskaya is a shut vestibule (no metro, no hall below) and the Metro Museum a signboard only; the Fill roadbeds stop a few metres short of real roads; the Golden City crowns of the four extra blocks are not drawn; the people / traffic modules do not know the new bays and no route was re-baked; the Peter I bollards and the hotel drive bollards have no collider.
+6. `TEST.mustHaveAreas` rows for the D1 / D2 HUD rows of dekabristov were not added by the clusters (shared table); the HUD rows exist and the tests pass. The view keys ShiftDigit5..8 of dekabristov are in `VIEWS` and in `viewKeys` once each (`views-check --land`: 21 poses, 0 failing).
+7. Russian texts that need the owner's check: the "owner hand-check" parts of `docs/gdm-P.md`, `gdm-M.md`, `gdm-G.md`, `gdm-B.md`, `gdm-D1.md`, `gdm-D2.md`, plus item 5 of the foundation list above.
 
 ## 15.y The four-area gate graph
 

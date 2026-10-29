@@ -66,8 +66,8 @@ export function plantForest(K, list, name = 'lmdek-forest') {
   const stem = mk(stemGeometry(), stemMat(ctx), total, `${name}-stem`);
   const env = {}; for (const fam of Object.keys(fams)) env[fam] = envelopeOf(fam);
   let colliders = 0;
-  // n4spb (docs/AREAS.md 13.7, 15.v): a low shrub (1.4 m) within 14 m of the water has no collider: a bush is not a wall, and water is never fenced by one (the audit of tools/water-reachable-test.mjs, check 6); trunks (4.5 m) stay solid
-  const nearWater = (x, z) => { if (!ph.waterLevel) return false; if (ph.waterLevel(x, z) !== null) return true; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; for (const d of [3.5, 7, 10.5, 14]) if (ph.waterLevel(x + Math.cos(a) * d, z + Math.sin(a) * d) !== null) return true; } return false; };
+  // n4spb (docs/AREAS.md 13.7, 15.v): a low shrub (1.4 m) within 14 m of the water (16 directions, the audit's own sampling) has no collider: a bush is not a wall, and water is never fenced by one (the audit of tools/water-reachable-test.mjs, check 6); trunks (4.5 m) stay solid
+  const nearWater = (x, z) => { if (!ph.waterLevel) return false; if (ph.waterLevel(x, z) !== null) return true; for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8; for (const d of [3.5, 7, 10.5, 14]) if (ph.waterLevel(x + Math.cos(a) * d, z + Math.sin(a) * d) !== null) return true; } return false; };
   for (const t of list) { if (t.fam === 'shrub' && nearWater(t.x, t.z)) continue; ph.addCylinder(t.x, t.z, t.tr, 0, t.fam === 'shrub' ? 1.4 : 4.5); colliders++; }
   // ---- LOD assignment
   const state = new Int8Array(list.length).fill(-1);
