@@ -44,7 +44,7 @@ Nothing under src/ was edited. Tools extended (not src): see section 6.
 | paint (zebra bars, stop lines, lane lines) hidden under paving | examples ex_audit9 only | 31,865 of 250,040 paint triangles, 558 zebra bars, 139 stop lines | consequence of S1-S3; acceptance = surface audit + the poses; no new tool needed |
 | trolleybus wire masts / spans after the merge | read wires.js use | masts follow cover; spans are facade to facade; contact wires run over the KERB lane (right side, not touched by fillL) | `node tools/wires-test.mjs` is a hard gate |
 | tram rails on the merged Liteyny / Vladimirsky | whatif f_1 | rails drawn in the asphalt, fine | none |
-| baked data staleness | tools/baked-revision.mjs hashes every src/**/*.js | any src edit = baked assets stale = procedural fallback | lead: `npm run bake` + `npm run bakedcheck` as the LAST step |
+| baked data staleness | tools/baked-revision.mjs hashes every src/**/*.js (history: since 2026-10-29 the revision is per area, the hash of the dependency closure of the page, docs/BAKE-REVISIONS.md) | an src edit = the bakes of the areas whose closure contains the file are stale = procedural fallback | lead: `node tools/bake-scene.mjs --plan`, `npm run bake` + `npm run bakedcheck` as the LAST step |
 | exit-code / whitelist semantics of the tools | read tools | furniture tool failed only on on_road, no whitelist; surface tool could not accept a documented residue | added `--allow`, `--strict`, `--extras-fail`, `--max-fail` (section 6) |
 
 Not a defect (checked): doubled asphalt (same material), 2 cobble ways (see S8), kerbs across other carriageways (0.13 %), tree crowns, overhead arms.

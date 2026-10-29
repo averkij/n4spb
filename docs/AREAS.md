@@ -41,7 +41,7 @@ module list of `AREA` (strip: `src/main.js MODULES`; another area: `MODULES` of 
   another area adds `MODULES, LABELS`. Every area module also exports the engine tables of section 3.1 (`WATER, ZONES, GARAGE, PRUNE_SERVICES, HOOKS, HEIGHT_PATCHES`). `layout.js` re-exports the first group, so the
   engine keeps importing it from `layout.js`; the engine tables are NOT re-exported (the layout golden dump would change): the modules read them through `src/world/lib/area-tables.js`.
 * `src/world/data/city.js`: the data facade of the area (OSM records, `PLAY_RECTS`, `EXTENT_RECTS`, `RECT_NAMES`, `REGIONS`). Another area has its own facade built by `tools/area-data-cut.mjs` (M3).
-* `assets/baked/` (strip) and `assets/baked/<id>/`: the baked products. ONE global revision covers all areas (`tools/baked-revision.mjs`).
+* `assets/baked/` (strip) and `assets/baked/<id>/`: the baked products. EACH live area has its own revision, the hash of its dependency closure (`tools/baked-revision.mjs`, section 4; manual: [BAKE-REVISIONS.md](BAKE-REVISIONS.md)).
 * `src/core/baked-world.js`: `setBakeDir(dir)` (called by `main.js` from the area module), `openBakedWorld(ctx, params, { required })` (a page reached by a hand-off must not fall back to a procedural
   build: it throws), `peekManifest(dir)` (the gate preflight).
 
@@ -85,11 +85,27 @@ waterway cross-sections `WATERWAYS`. Known strip literals that are NOT tables (g
 
 ## 4. The bake revision (what makes a bake stale)
 
-The revision is the first 20 hex digits of a sha256 over `index.html`, every other `*.html` with a `data-area` attribute, and every `*.js` under `src/` except `src/core/baked-revision.js` and the
-**runtime-only files** (`RUNTIME_ONLY` in `tools/baked-revision.mjs`: `src/core/gates.js`, `src/core/handoff.js`, `src/areas/registry.js`). Files are ordered by their POSIX-relative path (a native
-sort orders `landmarksNorth/` and `landmarksNorthFull.js` differently on Windows and Linux, and the CI would reject a Windows bake; `tools/baked-revision-test.mjs` pins the order).
-Runtime-only files never build or change anything that is baked; `tools/runtime-only-lint.mjs` enforces that only `src/main.js` imports them. Tuning a gate rectangle or a prompt text therefore
-does not make a bake stale. Two bakes of the same source are byte-identical: no wall-clock field is recorded (`city-base` service timings and the roof capture time were removed from the products).
+**Every live area has its own revision** (since 2026-10-29; before, ONE global revision over all of `src/` staled every area at every edit). The revision of an area is the first 20 hex digits of a sha256 over its
+**dependency closure**: its page (`REGISTRY[id].page`), the targets of the import map of that page (so the data and the area module of THAT area, not of the others) and every file reachable from the page, `src/main.js` and the
+module list of the area by `import`, `export ... from`, `import()`, `new URL(..., import.meta.url)` and the rules for computed imports (`tools/lib/closure.mjs`, `tools/lib/closure-rules.mjs`), plus the lock entry of three.js
+(`package-lock.json`: version and integrity), `BAKE_SCHEME` and the area id. Files are ordered by their POSIX-relative path (a native sort orders `landmarksNorth/` and `landmarksNorthFull.js` differently on Windows and Linux, and the
+CI would reject a Windows bake; `tools/baked-revision-test.mjs` pins the order and a golden revision); text files are hashed with CRLF read as LF. The function is `revisionOf(root, areaId)` in `tools/baked-revision.mjs`: a pure function of the committed tree,
+recomputed by the bake, by the CI and by the dev servers, with no `node_modules`, no browser and no git.
+
+* **A change stales exactly the areas whose closure contains the changed file.** A file of the engine, `lib`, the drive, the bridges or the north hooks is in all five closures; a landmark module is in the areas that list it; `src/areas/<id>/data` only in `<id>`.
+* **Runtime-only files** (`RUNTIME_ONLY` in `tools/lib/closure-rules.mjs`: `src/core/gates.js`, `src/core/handoff.js`, `src/core/version.js`, `src/areas/registry.js`) and the generated `src/core/baked-revision.js` (`EXCLUDED`) are traversed but never hashed. They never build or change anything that is baked;
+  `tools/runtime-only-lint.mjs` enforces that only `src/main.js` imports them. Tuning a gate rectangle or a prompt text therefore does not make a bake stale.
+* **Fail closed.** The scanner never guesses: a computed `import()` without a row in `DYNAMIC_IMPORTS`, an asset-looking literal without a row in `RUNTIME_ASSETS`, a missing import target or a bare specifier is a hard error, and a
+  file in no closure must be listed in `tools/lib/closure-orphans.txt`. `tools/closure-lint.mjs` (CI) enforces it, so the commit that adds the unknown thing is the one that must classify it.
+* **Not hashed on purpose:** the bake tooling itself (`tools/bake-scene.mjs`, `bake-osm`, the tools-side codec), the Google Fonts bytes, the Edge / GPU versions. After a change of those: bump `BAKE_SCHEME` (`tools/baked-revision.mjs`) and
+  re-bake with `node tools/bake-scene.mjs --area all --force`.
+* **Where it is stored:** the product names (`<key>.<revision>.bin.gz`), `assets/baked/<id>/manifest.json` (`revision`, `scheme`, `closure`, `sha256`) and `inputs.json` (the digests of the closure, for the list of changed files), and the GENERATED
+  `src/core/baked-revision.js` (`BAKED_REVISIONS`, one entry per live area; `BAKED_REVISION` = the entry of the page's own area). Never edit the generated file.
+* **Determinism.** Two bakes of the same source are byte-identical: no wall-clock field is recorded (`city-base` service timings and the roof capture time were removed from the products). That is why the products of the old global
+  revision could be RENAMED to the per-area revisions without a re-bake (BAKE-REVISIONS.md section 10).
+
+Revisions (the tree of v3.1.0): palace `94985718be22bd4e19a1`, smolny `ef98e125fd8348982945`, vladimirsky `14970360cb4fc427e1de`, admiralty `53ccc53190d6c0d3bc0c`, vasilyevsky `d4dfd3ab134a72f0290c`. Everything about reading, adding rules,
+troubleshooting and the migration: [BAKE-REVISIONS.md](BAKE-REVISIONS.md).
 
 ## 5. Checks (CPU unless noted)
 
@@ -103,7 +119,16 @@ node tools/area.mjs north tools/north-keepout-test.mjs [--parallel] [--footprint
 node tools/north-people-hooks-test.mjs [--scene]   the garden ring and cap row, the cap in a real North scene (npm run hooks:people)
 node tools/import-lint.mjs                relative imports exist with EXACTLY the spelling used (Windows develops, Linux hosts), module lists have files
 node tools/runtime-only-lint.mjs          only main.js imports the runtime-only files
-node tools/baked-revision-test.mjs        hash order and exclusions
+node tools/baked-revision-test.mjs        the per-area hash on fixture trees (order, CRLF, exclusions, isolation of areas, remap, dynamic rules, a pinned golden revision)
+node tools/closure-lint.mjs               the closure rules vs the whole of src/: every computed import() and loaded asset classified, orphans listed, the regex import scanner a subset of the tokenizer
+node tools/closure-real-test.mjs          the real tree: which areas an edit of a file moves, closure size bands, the recorded page loads inside the closure
+node tools/closure-mutation-test.mjs      9 broken scanners must all be killed by the tests above (the oracle can fail)
+node tools/bake-status.mjs                the status of every live area (FRESH / STALE / MISSING / UNSYNCED / ERROR), CPU, a second; node tools/baked-revision-sync.mjs [--check|--purge] repairs an UNSYNCED area without a GPU
+node tools/bake-manifest-check-test.mjs   fabricated bake directories: one case per failure of the check
+node tools/bake-plan-test.mjs             which areas a bake selects, the exit codes, fault injection of the publish
+node tools/dev-revision-test.mjs          the dev-server /__baked_revision (Referer to area, stat-signature cache); tools/dev-servers-lint.mjs: no tool bypasses it
+node tools/baked-revision-js-test.mjs     the generated src/core/baked-revision.js for each area
+node tools/closure-groundtruth.mjs <area|all> [--record]   LOCAL, browser (SwiftShader): the files the real page loads are inside the static closure
 node tools/handoff-test.mjs               the hand-off codec, the URL, resolveArrival (also on the real strip layout)
 node tools/gates-test.mjs                 gate geometry, the state machine (zone, arming, decline, teleports) and the preflight logic with fakes
 node tools/gate-hold-test.mjs             the four cars held while a question is open: stop inside the zone, never reverse
@@ -201,18 +226,25 @@ accumulation, not the per-scene floor: every crossing is a cold start of ~25-30 
 
 ### 6.1 Bake and deploy
 
-* `node tools/bake-scene.mjs --area strip|north|all` (default `strip`; `npm run bake` = `--area all`, `bake:strip`, `bake:north`). The page, the output directory and the manifest come from the registry: `assets/baked/` for the strip
-  (unchanged: 66 files, the URL every cached page knows), `assets/baked/<id>/` for the others. A `planned` area is skipped (asked for by name it is an error, exit 2). The bake runs the areas one after another in one browser with the
-  GPU lock of the session. The manifest is `{ format: 1, area, revision, files, sizes }`.
-* **One global revision** (`tools/baked-revision.mjs`) and publication after ALL requested areas succeeded: the manifests and `src/core/baked-revision.js` are written only then, and only then is each area's OWN directory purged of old
-  products (direct children only: the strip's directory contains `north/`). A failed or interrupted bake leaves the last good manifests and revision untouched. A bake of one area changes the global revision, so the manifests of the other
-  areas stay behind it (the script warns, `bakecheck` fails): scratch bakes in a worktree may do that, a committed bake is always `--area all`.
-* `bake-manifest-check` loops over the real areas (revision, `area`, required products, sizes, no `.part`; `--area <id>` for one); `baked-check [medium|performance] --area <id>` hydrates one area's bake against its generators
+* `node tools/bake-scene.mjs` with no flags (or `--area stale`) bakes the STALE or MISSING live areas and says "all fresh" when there are none; `--area a[,b]` bakes those areas if stale (fresh: "use `--force`"; a parked area
+  only by name); `--area all` = the stale live areas; `--force` (with `--area`) re-bakes the selected areas even if fresh, so `--area all --force` is the full bake (a toolchain or GPU change: also bump `BAKE_SCHEME`); `--plan` (CPU only) prints per
+  area the status (FRESH / STALE / MISSING / UNSYNCED / ERROR), the closure size, the files changed since the bake, the estimated GPU-minutes and the command; `--plan --check` exits 1 if anything is not FRESH.
+  (`npm run bake` = no flags; `--force` always needs `--area`; `node tools/bake-status.mjs` prints the status of every area in a second, CPU only.) The page, the output directory and the manifest come from the registry: `assets/baked/` for the strip (parked), `assets/baked/<id>/` for the
+  others. A `planned` area is skipped (asked for by name it is an error, exit 2). The bake runs the areas one after another in one browser with the GPU lock of the session. The manifest is
+  `{ format: 1, scheme, area, revision, closure, files, sizes, sha256 }` (the new fields are additive; the loader reads `revision`, `files`, `sizes`), next to an informational `inputs.json`.
+* **One revision per area, published per area** (`tools/baked-revision.mjs`, section 4). Before any GPU time the bake checks that the closures compute, that `node_modules/three` has the version of the lock and takes
+  `assets/baked/.bake.lock`. Per area, before the publish: the served-file audit (every repository file the bake page loaded must be in the closure or in `ALLOW_SERVED`) and a re-digest of the closure (an edit during the bake aborts
+  that area). Then `tools/lib/bake-publish.mjs` writes `inputs.json`, the manifest (the commit point), the merged `src/core/baked-revision.js` and purges the area's OWN old products (direct children only). An area is valid as soon as it
+  is published; an interrupted multi-area bake leaves the finished areas valid and the rest stale (exit 3 and the command). A bake of one area changes one line of `baked-revision.js` and does not touch the other areas.
+  **Commit the bake of every area your change made stale, in the same round.**
+* `bake-manifest-check` loops over the live areas (a parked one only with `--area <id>`): the manifest verifies (`format`, `scheme`, `area`, the revision of the closure, the 8 required products with the exact name `<key>.<revision>.bin.gz`,
+  sizes and sha256 of the gzip files, no `.part` / `.tmp`, no product of another revision) and the generated `baked-revision.js` equals `renderRevisionModule` of the manifests. It reports ALL failures, with the changed files and the
+  bake command (BAKE-REVISIONS.md section 8); `baked-check [medium|performance] --area <id>` hydrates one area's bake against its generators
   (the far streaming target is the farthest play rectangle, `TEST.farPoint` overrides). `.gitignore` ignores `assets/baked/**/*.part`.
 * `.github/workflows/pages.yml`: on a pull request only the CPU `verify` job runs (no `npm ci`: bake-manifest-check, gen-area-html --check, layout-test and landmarks-groups-check for every real area, areas-test, the M6 steps (both layout goldens, `hooks-syntax-check` (`node --check` of the engine files M6 edits), north-hooks-test, north-keepout-test --only pure, north-people-hooks-test: section 9.2), handoff-test, gates-test,
-  owns-table --check, runtime-only-lint, import-lint, baked-revision-test, `strip-data-clip --check` on every `src/world/data` and `src/areas/*/data` that exists); `deploy` needs `verify` and does not run on pull requests. The site is
+  owns-table --check, runtime-only-lint, import-lint, closure-lint, dev-servers-lint, baked-revision-test, closure-real-test, closure-mutation-test, bake-manifest-check-test, bake-plan-test, dev-revision-test, baked-revision-js-test, `strip-data-clip --check` on every `src/world/data` and `src/areas/*/data` that exists); `deploy` needs `verify` and does not run on pull requests. The site is
   `index.html`, every root page that names its area (`north.html` when it exists), `src`, `assets`, the manifest and the licences. The concurrency group is per ref, so a pull request never cancels a deployment of `main`.
-  While the bake is stale (until the committed bake of milestone M8) `verify` is red on purpose.
+  `verify` is red while any live area is stale (the per-area check of the committed bake, section 4): commit the bake of the areas your change staled.
 
 ## 7. The generic North (milestone M3)
 
@@ -391,7 +423,7 @@ Digit4 (900, -852, yaw 0, pitch 16) left the Paradny podium (the old pose (915, 
 * **The completeness of the claims is proven by geometry too since M7** (10.5: `tools/claims-draw-audit.mjs`, `npm run claims-draw`, both areas green, in CI; a mutant unclaiming r5802451 goes red). Before M7, **proven by id, not by geometry**: `areas-test` fails for a missing or mis-keyed band claim but passes if a claimed sub-group's module does not draw it. A CPU draw audit (per claimed id: owner triangles inside the footprint > 0, generic `city` triangles inside it = 0) was run once by a verifier (green) and is not in the repo.
 * **Knock parity: CLOSED for the cathedral fence in M7** (10.2: 32 piers and 24 chain spans are `ctx.knock` instances with colliders; the North census 4,460 -> 4,513 = +56 fence records -3 of the props cascade of 10.3). Corrections to the text below, measured in M7: the cathedral has NO benches (neither here nor in the source), the "48 catenary chains" are 24 spans of two strands, and `landmarksOktyabrsky` registers 23 records in the North since T1 (17 bollards: `plaza.js` tests each stump against the North's streets asphalt), 26 in the strip. STILL OPEN: the 5 campus benches of `landmarksKirochnaya/landscape.js` (drawn merged, no colliders) and the lantern and bin of the Kapodistrias setting (plain instances, as in the source); Smolny and Suvorov draw no furniture at all. Before M7: the landmark modules register 26 knockable records in total, all from `landmarksOktyabrsky` (4 lamps, 20 bollards, 2 city lights), identical in the strip and the North; `landmarksNorthFull`, `landmarksSmolny`, `landmarksSuvorov`, `landmarksKirochnaya`
   and the North's `landmarksD` register none. That is not parity: the captured-cannon fence of the Transfiguration Cathedral in `landmarksNorthFull` (32 granite piers with 96 bronze barrels and 48 catenary chains, merged into one mesh and without colliders) and its 4 benches are not knockable, while the strip's bollards, chains and benches are; the conversion to `ctx.knock` instances (pattern `landmarksF/garden.js:106`) is part of M7. The knock census of the whole page went 4,745 -> 4,792 (the 26 plus the street furniture of `props` that moved round the claimed buildings).
-* **The bake is stale** (every `src` file changes the global revision; `npm run revtest` prints the tree against the manifest, `bakecheck` is red on purpose) until the committed bake of M8. The GPU checks of this milestone are still to do: the sign at HERO looking east, the Kirochnaya gate stubs, the look of each module in the browser, the cold start.
+* **The bake is stale** (every `src` file changes the global revision; `npm run revtest` prints the tree against the manifest, `bakecheck` is red on purpose) until the committed bake of M8 [since 2026-10-29 the revision is per area: section 4]. The GPU checks of this milestone are still to do: the sign at HERO looking east, the Kirochnaya gate stubs, the look of each module in the browser, the cold start.
 * **Pedestrian test**: see "Known leftovers" of section 7 (the jump counter is red on `feat/areas` too). **M7: the jump counter is green in both areas (10.5); the carriageway samples at cross=145 and the `--at tauride` run (cross=437, 9.6) remain.**
 
 ### 8.8 Tools changed or added in M5
@@ -760,7 +792,7 @@ The oracles are run from the root of the worktree on the merged tree (HEAD of `m
 | strip simulations | `node tools/traffic-test.mjs`, `node tools/people-test.mjs` | identical lines after dropping the wall-clock numbers; both RESULT OK (people: jump counter 177, as on `feat/areas`) |
 | strip CPU suite | tree-instance, drive-edge (`npm run edge`: 960 runs, 1,556 hits, 0 outside, 0 stuck), drive-collision, physics, wires, streets-clip, street-paving, street-kerbs, people-cover / crosswalk / render / fence | same exit codes as at the foundation: all OK except `landmark-tree-bounds-test` (red on the clean `feat/areas` too: "splitting preserves the original distant tree silhouette", 2500 !== Infinity) |
 | gates | `npm run layout`, `landmarks`, `garage` (both areas), `owns-table --check`, `importlint` (1,502 imports), `runtimelint` (547 files), `areahtml:check`, `handoff` (24), `gates` (29) | all OK |
-| bake revision | `npm run revtest`, `npm run bakecheck` | revtest OK (the bake is STALE, as with every `src` change); bakecheck red, as on the clean `feat/areas`: the committed manifest says `ce34abb8...` and no tree matches it any more (the failure prints the revision of the tree, which differs per commit: `85bc4307...` on `feat/areas` at the foundation commit of M6, `e43c9e75...` on `m6-hooks`); it turns green with the committed bake of M8 |
+| bake revision | `npm run revtest`, `npm run bakecheck` | revtest OK (the bake is STALE, as with every `src` change); bakecheck red, as on the clean `feat/areas`: the committed manifest says `ce34abb8...` and no tree matches it any more (the failure prints the revision of the tree, which differs per commit: `85bc4307...` on `feat/areas` at the foundation commit of M6, `e43c9e75...` on `m6-hooks`); it turns green with the committed bake of M8 (history: the revision was global then; since 2026-10-29 `revtest` is `baked-revision-test` and `bakecheck` judges each area by its own closure, section 4) |
 | North layout golden | `node tools/area.mjs north tools/layout-golden.mjs --diff` (`npm run golden:north`) | identical to `tools/golden/layout-north.json` |
 | North counts | `npm run check:north` (14 modules) | 12 identical; `environment` 318,344 -> 318,314 triangles, 13,879 -> 13,864 instances, 9,439 -> 9,424 colliders (the keep-outs); `people` 72 -> 71 meshes (the cap; with the row removed `people` is identical) |
 | North streets | `node tools/area.mjs north tools/streets-signature.mjs --diff` | 590,243 -> 590,243 (+0) |
@@ -805,7 +837,7 @@ The jump counter moves by +-45 for any change of the nav lattice (an unrelated 1
   the Suvorov strip is the north 17 m of the museum's 30.7 m. The Kirochnaya campus polygon cuts the buildings r3127701 and r3127704.
 * **`tools/city-signature.mjs` cannot run as the North** (it reads `src/world/data/<region>` directly): there is no North city signature; the North's city is covered by `check:north` and the claims gates.
 * **Not run (need a GPU or a browser)** (M7: `nav-bake-equiv --area north` exists and prints a clear FAIL line until a scratch North bake is made, 10.5; the browser flows of the door gate and the place pick are listed in 10.6): `drive-test`, `drive-garage-test`, `nav-bake-equiv`, `baked-check`, the bake byte comparison, the screenshots. `signals-knock-test` exits 1 on the clean `feat/areas` too. The bake is stale (every `src` file
-  changes the global revision) until the committed bake of M8; the nav bake is not affected by the garden row (the graph uses the raw zone weights; a node check of `nav-bake-equiv-page.js` passed with the row).
+  changes the global revision; history, now per area) until the committed bake of M8; the nav bake is not affected by the garden row (the graph uses the raw zone weights; a node check of `nav-bake-equiv-page.js` passed with the row).
 * **CI** (M7: a second job `engine` with `npm ci` now runs `hooks:all`, the Tauride tests, the claims draw audit, `cross-places-test` and `north-knock-test`; it does not gate `deploy` yet, 5.3 and 10.5): `hooks:height`, `hooks:keepout` (engine part) and `north-people-hooks-test --scene` need three.js and run locally with `npm run hooks:all`; the `verify` job has no `npm ci` on purpose, so the engine call sites are exercised only locally (9.2) and the CI steps stay green when a call site
   is deleted. The optional source-equality parts of `north-hooks-test` (`--source <dir>`, else `PITER_SRC`, else `D:/git2/agi-fun-tests/102_3d_piter`) and of `north-people-hooks-test` (`PITER_SRC`, else the same default) skip themselves when the source repository is absent; the Paradny geometry is pinned
   without it by `tools/golden/paradny-deck.json`.
@@ -1104,7 +1136,7 @@ exit 0; `knock-stands` strip and North 7 passed, `knock` 16 passed, `northknock`
 * **Engine and strip.** `core/gates.js` `update()` no longer allocates per frame (runtime-only file, the bake revision does not move; `gates-test` keeps the old implementation as an oracle). `main.js` `goToView` keeps the answer of `drive.place()`: a place that is closed to cars (the garden) shows a toast instead of the place label. The strip's numbers are unchanged (M6 baselines: layout golden, the 25 modules of `npm run check`, the streets / city signatures, `environment-regress`).
 * **A strip-visible change that was never named:** `drive.js` `holdInput` holds the car for every open modal panel (the touch Menu and Controls panels included), not only for the gate question: full brake above 0.8 m/s, handbrake at rest (the old `brk 0.4` accelerated a stopped car backwards). Intended, kept.
 * **Tools.** `claims-draw-audit.mjs --strict` (warnings fail; `npm run claims-draw:north` uses it). `tools/tauride/car-keepout-sim.mjs` runs its positive controls without the fence colliders (the fence stops the cars before the hook is asked). `furniture-test`, `ground-test`, `vegetation-test`, `north-hooks-test` carry the new checks of the review.
-* **A new bake is needed** for the North (the module code, the palace parterre and the furniture plan changed; every `src/**/*.js` except the runtime-only files is part of the bake revision).
+* **A new bake is needed** for the North (the module code, the palace parterre and the furniture plan changed; every `src/**/*.js` except the runtime-only files was part of the one bake revision then; since 2026-10-29 only the areas whose closure contains a changed file need the bake, section 4).
 
 
 ## 12. The world map and the area overlap rules (draft v1, 2026-10-24)
@@ -1137,7 +1169,7 @@ The start screen of the app becomes a MAP of Saint Petersburg (`maps/intro-draft
 
 The strip and the North were re-cut to two areas of the map of section 12. Ids `palace` (Дворцовый–Литейный, map area 98, page `index.html`, the start page of the app) and `smolny` (Смольнинское, map area 96, page `smolny.html`).
 The old two scenes are PARKED (registry `parked: true`): `strip` (`strip.html`, now also the TEMPLATE of every generated page, `tools/gen-area-html.mjs`), `north` (`north.html`), `src/world/area.js`, `src/world/data`, `src/areas/north`, `assets/baked/`, `assets/baked/north/` stay as they were
-(nothing deleted) for the neighbour areas that are cut later. No gate leads to a parked area, `npm run bake` (`--area all`) skips them, and their bakes are stale against the new revision until they are baked by name (`--area strip` / `north`).
+(nothing deleted) for the neighbour areas that are cut later. No gate leads to a parked area, `npm run bake` (`--area all`) skips them, and their bakes are stale against the revision of their own closure (`strip`, `north` are computed but not baked, no entry in `BAKED_REVISIONS`) until they are baked by name (`--area strip` / `north`).
 
 ### 13.1 Shape
 The play rectangles of an area are its WALKABLE TERRITORY on the map (core + overlaps, section 12.1): `node tools/area-shape.mjs --k 98 --js palace` rasterises the outline of the map (`maps/intro-draft.html`, embedded data) in 80 m cells (a cell is in when 4 of 9 sample points are inside:
@@ -1286,7 +1318,7 @@ The Palace Bridge (Дворцовый мост, 254.5 m between the abutments, 2
 
 ## 14. Seamless hand-off (edge gates, freeze veil)
 
-Entering a neighbour area must feel like one scene: no question, no card. When the player reaches the edge of the area the frame **freezes, blurs a little and a single progress bar** fills in the middle of the screen while the next page loads; when the new area is ready the veil fades into the live scene and he walks on from the same pose (heading, time of day, car, mute). Code: `src/core/gates.js` (runtime-only, so none of it enters the bake revision; `index.html` and `src/main.js` do, the next rebake covers them). Tests: `tools/gates-test.mjs`, `tools/handoff-test.mjs` (CPU).
+Entering a neighbour area must feel like one scene: no question, no card. When the player reaches the edge of the area the frame **freezes, blurs a little and a single progress bar** fills in the middle of the screen while the next page loads; when the new area is ready the veil fades into the live scene and he walks on from the same pose (heading, time of day, car, mute). Code: `src/core/gates.js` (runtime-only, so none of it enters any bake revision; `index.html` and `src/main.js` do, so editing them stales every area it belongs to, section 4). The preflight compares the manifest revision of the TARGET area with `BAKED_REVISIONS[target]` of the generated `src/core/baked-revision.js` (not with the constant of the page it runs on: that would report every cross-area hop as stale); a target missing from the map is stale, and a cached origin page with an older map fails safe (the stale toast). Tests: `tools/gates-test.mjs`, `tools/handoff-test.mjs` (CPU).
 
 ### 14.1 The edge gate row
 
@@ -1335,7 +1367,7 @@ The arrival has no rectangle: the player lands at the **same x, z, yaw, pitch**;
 
 ### 14.3 The veil flow
 
-1. **Trigger** (an edge or border gate, E at a door gate, a pick from the HUD list of CROSS_PLACES): `go()` runs at once. The sim and the input are frozen (`ctx.travelPending`, `player.inputLock`). The preflight (HEAD of the page + manifest revision) is silent; a failure shows a short toast, starts the cooldown and unfreezes.
+1. **Trigger** (an edge or border gate, E at a door gate, a pick from the HUD list of CROSS_PLACES): `go()` runs at once. The sim and the input are frozen (`ctx.travelPending`, `player.inputLock`). The preflight (HEAD of the page + the manifest revision of the TARGET area against `BAKED_REVISIONS[target]`, section 4) is silent; a failure shows a short toast, starts the cooldown and unfreezes.
 2. **Freeze.** `ctx.captureFrame()` (main.js) is answered by the next `frame()` right after `pipeline.render`, in the same task (the WebGL drawing buffer is not preserved): `grabFrame` draws the canvas into a 2D canvas of at most 1280 px width and takes a JPEG (quality 0.72); an all-black frame is refused. Without a frame (a hidden tab: 0.8 s time-out, a failure) the veil is plain dark.
 3. **Veil on the origin page.** `#seam` (index.html: `.seam-snap`, `.seam-shade`, a thin rounded glowing track with a gradient fill in the gold accent #f2c14e, a shimmer, a tabular percentage; no other text) fades in: blur 0 -> 10 px and a vignette over 350 ms (`prefers-reduced-motion`: no shimmer or glow animation, the global rule drops the transitions). The snapshot and facts go to `sessionStorage` (below), then `api.navigate` (`location.replace`). Nothing of the destination is prefetched. If the new page has not committed in 25 s the travel is cancelled (`stop()`, toast, cooldown), the game goes on.
 4. **Veil on the destination page.** The head carries a tiny script that sees `ho=` in the URL and sets `html.seam-in` BEFORE the first paint; the head CSS then hides `#intro` and darkens the page (`#0b1230`), whatever else is late. The veil markup and its inline script are the FIRST thing in `<body>` (before the canvas and the splash): the script reads the stored entry (fresh: less than 60 s old, an image, written for THIS area) and paints the same veil at once (blurred picture, the bar at the entry's `p`, see 14.4); without an entry (private mode, blocked storage, a bookmarked URL with `ho`) the veil is plain dark, never the splash. `setProgress` drives the bar with the loader's 0..1.
