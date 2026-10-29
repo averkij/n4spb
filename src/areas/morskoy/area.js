@@ -26,7 +26,7 @@ import { GROUPS_VO } from '../../world/bridges/groups-vo.js';
 import { GROUPS_LIST as G_VOSTATUES } from '../../world/landmarksVOStatues/groups.js';
 import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as RINGS_PAVED } from './rings.js';
 // ---
-// PORT-IMPORT: landmarksMarineFacade
+import { GROUPS_LIST as G_MARINEFACADE } from '../../world/landmarksMarineFacade/groups.js';
 // ---
 import { GROUPS_LIST as G_PRIBALTIYSKAYA } from '../../world/landmarksPribaltiyskaya/groups.js';
 // ---
@@ -45,7 +45,7 @@ export const MODULES = [
   'environment',  // ground, embankment granite, the Gulf of Finland, the Smolenka mouth and the Kovsh water, trees, lawns, flowerbeds, far skyline
   'streets',      // roads, markings, kerbs, granite pavements, crossings, road furniture, trolleybus overhead wires
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
-  // PORT-MODULE: landmarksMarineFacade
+  'landmarksMarineFacade', // the Marine Facade passenger port (terminals, quay galleries, liners, fences, masts, marina), the Golden City quarter-6 spire (docs/gdm-M.md)
   //
   'landmarksPribaltiyskaya', // the Pribaltiyskaya hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, the Kirov memorial, Waterville
   //
@@ -59,7 +59,7 @@ export const MODULES = [
 ];
 /** Loading-screen words that differ from the strip's (main.js LABELS is the fallback for the rest). */
 export const LABELS = {
-  // PORT-LABEL: landmarksMarineFacade
+  landmarksMarineFacade: 'Морской фасад, Golden City',
   // ---
   landmarksPribaltiyskaya: 'Прибалтийская, памятник Петру I, крейсер «Киров»',
   // ---
@@ -99,7 +99,7 @@ export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, 
 // `['station', ...]` (only those); until then `city` / `environment` / `streets` still draw the claimed objects as a blockout (see lib/claims.js).
 export const GROUPS = {};
 // ---
-// PORT-GROUPS: landmarksMarineFacade
+GROUPS.landmarksMarineFacade = G_MARINEFACADE;      // all 8 sub-groups lie inside the territory (docs/gdm-M.md)
 // ---
 GROUPS.landmarksPribaltiyskaya = G_PRIBALTIYSKAYA;      // all six: the hotel, Peter I, the Creators of the Fleet, the Kirov memorial, the Nakhimov statue, Waterville (all 100 % inside the territory)
 // ---
@@ -123,7 +123,12 @@ export function makeAreas(h) {
   // ---
   { name: 'Памятник всем полярникам · Polar explorers monument', c: [-6686, -1607.2], r: 22 },
   // ---
-  // PORT-AREAS: landmarksMarineFacade
+  ...h._named(/Морской фасад/i, 40, { c: [-9040, -1750], r: 450 }).map((r) => ({ name: 'Морской фасад · Marine Facade', ...r })),
+  { name: 'Маяк · арт-объект · Mayak art object', c: [-8683.7, -810.8], r: 12 },
+  { name: 'Маяк · арт-объект · Mayak art object', c: [-8666.9, -541.2], r: 14 },
+  { name: 'Golden City · квартал 6 со шпилем', c: [-9149, -1078], r: 150 },
+  { name: 'Golden City · квартал 6 со шпилем', c: [-8700, -900], r: 140 },
+  { name: 'Морской фасад · Marine Facade', x0: -9700, x1: -8570, z0: -2400, z1: -1050, test: (x, z) => !inRiver(x, z) },
   // ---
   { name: 'Памятник Петру I · Peter I monument', c: [-7477, -791], r: 40 },
   { name: 'Гостиница «Прибалтийская» · Pribaltiyskaya Hotel', c: [-7600, -735], r: 175 },
@@ -196,7 +201,7 @@ export const TEST = {
     { id: 'n5102741821', by: 'landmarksVOStatues', group: 'vo-polar' },
     // ---
     { id: 'r5574920', by: 'bridges', group: 'nalichny' },
-    // PORT-CLAIMED: landmarksMarineFacade
+    { id: 'w41575292', by: 'landmarksMarineFacade', group: 'mf-terminals' },
     // ---
     { id: 'w17559880', by: 'landmarksPribaltiyskaya', group: 'pribaltiyskaya-hotel' },
   ],      // one row per landmark module and its main sub-group
@@ -204,7 +209,7 @@ export const TEST = {
     'Place.nalichny', 'Place.mayak'],
   mustHaveAreas: [
     { x: -6702.1, z: -1707.9, has: 'наличный' }, { x: -6328.8, z: -1603, has: 'ново-андреевский' }, { x: -6686, z: -1607, has: 'полярник' },
-    // PORT-HAVE: landmarksMarineFacade
+    { x: -8699, z: -1800, has: 'морской фасад' }, { x: -8700, z: -900, has: 'golden' },
     // ---
     { x: -7516.6, z: -772.5, has: 'прибалтийская' }, { x: -7464.1, z: -796.1, has: 'петру' }, { x: -7992.7, z: -1065.3, has: 'киров' }, { x: -7309, z: -804, has: 'малые гаванцы' },
     // ---

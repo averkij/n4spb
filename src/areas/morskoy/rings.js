@@ -14,7 +14,7 @@
 // ============================================================================
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js): the bridge lies in the overlap with Vasilyevsky, which draws the same pits
 // ---
-// PORT-IMPORT: landmarksMarineFacade
+import * as MARINEFACADE from '../../world/landmarksMarineFacade/groups.js';      // the berth apron, the helipad, forecourts and Mayak plazas (PAVED_RINGS), the two liners (KEEP_OUT)
 // ---
 import * as PRIBALTIYSKAYA from '../../world/landmarksPribaltiyskaya/groups.js';      // five paved rings (the hotel platform and plaza, the Kirov platform); no water ring, no keep-out: the module is inland
 // ---
@@ -24,7 +24,7 @@ import * as PRIBALTIYSKAYA from '../../world/landmarksPribaltiyskaya/groups.js';
 const SOURCES = [
   { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
   // ---
-  // PORT-SOURCE: landmarksMarineFacade
+  { module: 'landmarksMarineFacade', ns: MARINEFACADE },
   // ---
   { module: 'landmarksPribaltiyskaya', ns: PRIBALTIYSKAYA },
   // ---
