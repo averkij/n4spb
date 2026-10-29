@@ -275,7 +275,7 @@ const lat0 = OR.lat * Math.PI / 180;
 const KY0 = 111132.954 - 559.822 * Math.cos(2 * lat0) + 1.175 * Math.cos(4 * lat0);
 const unproj = (x, z) => [OR.lon + x / KX0, OR.lat - z / KY0];
 // The live list comes from the registry: every row with a mapId that is not parked (docs/AREAS.md 13 / 15): palace P (98), smolny S (96), admiralty A (46), vladimirsky V (97), vasilyevsky W (48; V is taken). The letter is the badge on the page.
-const LIVE_LETTER = { palace: 'P', smolny: 'S', admiralty: 'A', vladimirsky: 'V', vasilyevsky: 'W' };
+const LIVE_LETTER = { palace: 'P', smolny: 'S', admiralty: 'A', vladimirsky: 'V', vasilyevsky: 'W', gavan: 'G', morskoy: 'M', dekabristov: 'D' };
 const liveKeys = Object.keys(REG.REGISTRY).filter((k) => REG.REGISTRY[k].mapId != null && !REG.REGISTRY[k].parked);
 liveKeys.sort((a, b) => Object.keys(LIVE_LETTER).indexOf(a) - Object.keys(LIVE_LETTER).indexOf(b));
 for (const k of liveKeys) if (!LIVE_LETTER[k]) throw new Error('registry row ' + k + ' has a mapId but no letter in LIVE_LETTER (build-intro.mjs)');
