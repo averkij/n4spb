@@ -5,7 +5,18 @@
 // r1576084 and the Smolensky Bridge (water / bridges owners), the unclaimed LANDUSE garages r2736671 and the GREEN grassland r15700930 at the polygon edge.
 export const GROUPS_LIST = [
   { key: 'smolensky-grounds', name: 'Смоленское православное кладбище: территория', nameEn: 'Smolensky Orthodox Cemetery: the grounds (forest, graves, fence, gates); the GREEN polygon stops the generic trees',
-    ids: [], osm: ['r2736670', 'w203893164', 'w203893168', 'w201779490', 'w203893166', 'w453130760', 'w453130759', 'w1160929450', 'w1160929451', 'w312980908'], at: [-5730, -1231],
+    ids: [], osm: ['r2736670', 'w203893164', 'w203893168', 'w201779490', 'w203893166', 'w453130760', 'w453130759', 'w1160929450', 'w1160929451', 'w312980908',
+      // the 66 alleys of the cemetery (footway / path / service ways inside the polygon: place.js paths): grounds.js lays them as ribbons, so streets draws none of them (a second ribbon of its own at y 0.042 over
+      // the module's at 0.025 .. 0.033 was the z-fighting / 'ground changes while you walk' of the alleys; review 2026-10-29)
+      'w175631955', 'w175631959', 'w175631958', 'w175631956', 'w175631966', 'w101417037', 'w109078569', 'w312980919',
+      'w175631963', 'w1160929452', 'w120716655', 'w201779367', 'w201779374', 'w201779416', 'w201779420', 'w453130765',
+      'w175631961', 'w201779387', 'w101415904', 'w106950173', 'w106951471', 'w110722928', 'w110722930', 'w101415903',
+      'w106951470', 'w312980922', 'w453130766', 'w201779371', 'w120715343', 'w312980930', 'w106950172', 'w453130768',
+      'w201779406', 'w201779418', 'w110722932', 'w110722933', 'w438189053', 'w118074299', 'w120715344', 'w175631954',
+      'w201779370', 'w201779377', 'w201779379', 'w201779385', 'w201779389', 'w201779412', 'w201779422', 'w312980918',
+      'w312980924', 'w453130763', 'w453130764', 'w453130769', 'w453130771', 'w453130772', 'w453130773', 'w120715342',
+      'w312980921', 'w312980925', 'w453130770', 'w201779364', 'w438189052', 'w118074295', 'w118074294', 'w118074296',
+      'w118074297', 'w118074298'], at: [-5730, -1231],
     note: 'GREEN r2736670 (kind cemetery, 540 647 m2, 33 vertices, the river-side edge 13..28 coincides with the Smolenka polygon): claiming it stops the generic ~2 250 lawn trees; the module plants the forest, the shrubs and the graves itself and draws the fence ways listed (the generic modules draw no OSM fences: documentation only)' },
   { key: 'smolensky-resurrection', name: 'Воскресенская церковь', nameEn: 'Church of the Resurrection of Christ (Demyanovsky 1901-04): red brick with white belts, octagon tower with a gilded crown',
     ids: ['w101396308'], osm: [], at: [-5494.7, -1574.3], note: 'outline w101396308 (baked height null -> the generic 21 m box); the real cross top is 45 m; the module draws the gallery, central block, naves, apses, tower and the two small domes' },
