@@ -14,10 +14,10 @@ for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i]; if (a
 const root = args.root ? path.resolve(args.root) : here;      // --root <project dir>: serve another checkout (an A/B against an older revision); outputs and three.js stay here
 const out = args.out || 'shots/perf/metro-probe';
 fs.mkdirSync(path.dirname(path.resolve(here, out)), { recursive: true });
-const { bakedRevision } = await import('./baked-revision.mjs');
+const { handleBakedRevision } = await import('./lib/dev-revision.mjs');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png' };
 const server = http.createServer((req, res) => {
-  if (req.url === '/__baked_revision') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ revision: bakedRevision(root) })); }
+  if (handleBakedRevision(req, res, root)) return;
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
   const f = path.join(root, p);
   fs.readFile(f, (err, data) => { if (err) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' }); res.end(data); });

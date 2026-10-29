@@ -13,7 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { GATES } from '../src/areas/registry.js';
-import { bakedRevision } from './baked-revision.mjs';
+import { handleBakedRevision } from './lib/dev-revision.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = {}; for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i]; if (a.startsWith('--')) { args[a.slice(2)] = process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[++i] : '1'; } }
@@ -27,7 +27,7 @@ if (!G1 || !G2) { console.error('the registry has no real gates g1 / g2'); proce
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
 const server = http.createServer((req, res) => {
-  if (req.url === '/__baked_revision') { res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); return res.end(JSON.stringify({ revision: bakedRevision(root) })); }
+  if (handleBakedRevision(req, res, root)) return;
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname); if (p.endsWith('/')) p += 'index.html';
   const f = path.join(root, p); if (!f.startsWith(root)) { res.writeHead(403); return res.end(); }
   fs.readFile(f, (err, data) => { if (err) { res.writeHead(404); return res.end(); }

@@ -96,8 +96,9 @@ npm run touch                              # the touch controls' pure logic (cur
 GPU (one job at a time, nothing else running on the GPU; headless Edge through puppeteer-core, `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`):
 
 ```sh
-npm run bake                               # LAST step after every src/ or index.html edit; BAKE_VERBOSE=1, run it in the background (minutes)
-npm run bakecheck                          # node tools/bake-manifest-check.mjs: manifest revision == source revision == BAKED_REVISION, sizes, no *.part
+node tools/bake-scene.mjs --plan            # CPU: which areas are stale and why (node tools/bake-status.mjs: the status of each); docs/BAKE-REVISIONS.md
+npm run bake                               # LAST step after an edit that staled an area: bakes the stale live areas only; BAKE_VERBOSE=1, run it in the background (minutes)
+npm run bakecheck                          # node tools/bake-manifest-check.mjs: per area: manifest == revision of the area's closure, the map src/core/baked-revision.js, product names / sizes / sha256, no *.part
 npm run bakedcheck                         # node tools/baked-check.mjs medium|performance: hydrated nav, routes, field, teleport to the Admiralty, all regions
 npm run smoke -- --q medium                # walk, fly, roof landing, NPCs (its own static server: a static-hosting simulation)
 npm run touchbrowser                       # the touch UI in emulated multi-touch Edge (fast drive-only harness, screenshots in shots/touch/; --only full = the whole baked scene)
@@ -105,10 +106,12 @@ npm run load -- --q high --out shots/load/high
 node tools/shot.mjs --base /n4spb --load --q medium --out shots/load/subpath    # sub-path hosting
 ```
 
-`npm run bake` runs the real scene three times (high, medium, low) and writes `assets/baked/*.bin.gz`, `assets/baked/manifest.json` and `src/core/baked-revision.js`.
-The revision is the first 20 hex digits of a sha256 over every `*.js` under `src/` (except `baked-revision.js`) and `index.html` (line endings normalised), so **any edit to `src/` or `index.html` makes the bake stale**:
-the page then silently rebuilds everything procedurally (minutes of load, gigabytes of heap) and only prints `[baked]` in the console. After the last edit: re-bake, then `node tools/bake-manifest-check.mjs` must print `RESULT: OK` before anything is deployed.
-`tools/` and `docs/` are not hashed.
+`npm run bake` runs the real scene (the stages high, medium, low) of every stale live area and writes `assets/baked/<id>/*.bin.gz`, `assets/baked/<id>/manifest.json` and the generated `src/core/baked-revision.js`
+(the strip is parked since the areas exist: it is baked by name, `--area strip`, and its bake lives in `assets/baked/`).
+**The revision is per area** (since 2026-10-29; the text here described the one global revision of the strip era): the first 20 hex digits of a sha256 over the dependency closure of the area's page (docs/AREAS.md section 4,
+docs/BAKE-REVISIONS.md), so **an edit makes stale exactly the areas whose closure contains the edited file**, and the stale page silently rebuilds everything procedurally (minutes of load, gigabytes of heap) and only prints `[baked]`
+in the console. After the last edit: `node tools/bake-scene.mjs --plan`, re-bake what it lists, then `node tools/bake-manifest-check.mjs` must print `RESULT: OK` before anything is deployed.
+`tools/` and `docs/` are not hashed (a change of the bake tooling needs a `BAKE_SCHEME` bump and `--area all --force`, BAKE-REVISIONS.md section 6).
 
 Measured strip bake (2026-10-16, revision 67dc8314d0f73f796934): **63 files, 50.7 MiB gzip** (full city: 538 files, 450 MiB). Largest products: city-base meta 8.0 MiB, field-dtex 6.6 MiB, three nav graphs 3.7 MiB each, the 23 city-base regions 0.3-1.4 MiB each. The streamer cuts the strip into 48 regions of 640 m; 18 of them are awaited before the first frame at the hero pose, the rest stream in while walking or driving.
 Measured on an RTX 3090 Ti (headless Edge, 1280 x 720, local server without compression, new profile): intro ready after 26.2 s at high and 25.0 s at medium through a sub-path (full city: 43 s with its bake), JS heap 1.16 GB after load, walking 52 fps and driving 57 fps at medium (the display is vsync-limited), 0 console errors. The source tree that is downloaded is 16 MB raw (about 4 MB gzip on a compressing host).
@@ -123,7 +126,7 @@ index.html
 manifest.webmanifest       (PWA: fullscreen + landscape for add-to-home-screen, docs/MOBILE.md)
 src/                       (all .js; every module in MODULES is imported at page start)
 vendor/rapier/rapier.js    (+ vendor/rapier/LICENSE: Apache-2.0)
-assets/                    (assets/baked/manifest.json + *.bin.gz, assets/splash/*.jpg, assets/icons/*.png (the PWA icons), assets/bibliotochka.png)
+assets/                    (assets/baked/<id>/manifest.json + *.bin.gz per area, assets/splash/*.jpg, assets/icons/*.png (the PWA icons), assets/bibliotochka.png)
 ```
 
 Not needed at run time: `tools/`, `docs/`, `node_modules/`, `shots/`, `package*.json`, `.git`. LICENSE, NOTICE.md, README.md and LICENSE-sakuragaoka-station.txt are good to ship next to them.
@@ -136,15 +139,16 @@ Required static-host behaviour:
 
 * **`*.bin.gz` must be served as plain bytes, WITHOUT `Content-Encoding: gzip`.** The page gunzips them itself (`DecompressionStream` in a module Worker); a host that adds the header or auto-decompresses `.gz` breaks the load, and the failed core products fall back to procedural generation.
 * Content types: `text/javascript` for `.js` (modules and the worker, same origin), `application/json` for the bake manifest, `application/manifest+json` (or any JSON type) for `manifest.webmanifest` (GitHub Pages serves it correctly; `tools/serve.mjs` does too).
-* Cache headers (what `tools/serve.mjs` does): `*.<20 hex>.bin.gz` -> `public, max-age=31536000, immutable` (content-addressed by the revision); `assets/baked/manifest.json`, `index.html` and `src/**/*.js` -> `no-cache` / revalidate
-  (they are not content-hashed: a cached old `baked-revision.js` against a new manifest is a revision mismatch, i.e. the silent procedural rebuild); `vendor/` and `assets/splash/` may use a moderate `max-age`.
-* **Sub-path hosting works**: every URL is relative (`./src/main.js`, `new URL('../../assets/baked/', import.meta.url)`, the worker, the manifest). `/__baked_revision` is a 404 on a static host, which is handled (the page falls back to `BAKED_REVISION`; an SPA fallback answering `text/html` is fine too).
+* Cache headers (what `tools/serve.mjs` does): `*.<20 hex>.bin.gz` -> `public, max-age=31536000, immutable` (content-addressed by the revision); `assets/baked/**/manifest.json`, the pages and `src/**/*.js` -> `no-cache` / revalidate
+  (they are not content-hashed: a cached old `baked-revision.js` against a new manifest is a revision mismatch, i.e. the silent procedural rebuild; the gate preflight of a cached older map fails safe with the stale toast); `vendor/` and `assets/splash/` may use a moderate `max-age`.
+* **Sub-path hosting works**: every URL is relative (`./src/main.js`, `new URL('../../assets/baked/', import.meta.url)`, the worker, the manifest). `/__baked_revision` is a 404 on a static host, which is handled (the page falls back to `BAKED_REVISION`, the entry of its own area in the generated `BAKED_REVISIONS`; an SPA fallback answering `text/html` is fine too).
 * **Phones** (docs/MOBILE.md): the page needs HTTPS for the wake lock and device motion (GitHub Pages is), `manifest.webmanifest` + the `apple-mobile-web-app-*` meta tags make Add to Home Screen open fullscreen (the only fullscreen on an iPhone), and the pages workflow copies the manifest next to `index.html` (the icons are under `assets/icons/`, regenerate with `node tools/make-icons.mjs`).
 * No service worker, no `SharedArrayBuffer`, no COOP / COEP requirement. The largest single strip product is a few MiB, far below the 100 MB limit of GitHub-Pages-style hosts.
 * External run-time dependencies (not vendored): three 0.170.0 and its addons from `cdn.jsdelivr.net` (importmap in `index.html`), and Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`; the loader gives up after 6 s and uses system fonts).
 
-**Git:** every re-bake renames every baked file (the revision is in the name), so each committed bake adds about 60 MiB of new, non-deltaable blobs to the history. Commit source whenever you like (a source-only commit leaves the manifest stale: say so in the message),
-but bake and commit `assets/baked/` and `src/core/baked-revision.js` only at deployable checkpoints, and never more than the final bake of a series.
+**Git:** every re-bake of an area renames every baked file of THAT area (the area's revision is in the name), so each committed one-area bake adds about 55-63 MiB of new, non-deltaable blobs to the history (a full five-area bake about 280 MB).
+Commit source whenever you like (a source-only commit that stales an area leaves its manifest stale: say so in the message), but bake and commit `assets/baked/` and `src/core/baked-revision.js` only at deployable checkpoints, never more than the final bake of a series,
+and the bake of EVERY area the series staled (the CI check is per area). The 2026-10-29 migration to per-area revisions renamed the products (git renames, no new blobs): docs/BAKE-REVISIONS.md section 10.
 
 ## 8. Reading the older docs
 

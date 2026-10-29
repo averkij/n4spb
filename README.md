@@ -61,7 +61,7 @@ node tools/serve.mjs        # or:  npm start        (port 5176)
 ```
 
 Open <http://localhost:5176> and press **«В Питер»** (or Enter). Any static file server works too (ES modules need HTTP, not `file://`): see [`docs/STRIP.md`](docs/STRIP.md) section 7 for the deployment whitelist and the static-host requirements.
-Note that the page loads fast only while the shipping bake in `assets/baked/` matches the source: after any edit of `src/` or `index.html` it has to be rebuilt (`npm run bake`, then `npm run bakecheck`), otherwise the page builds everything procedurally and takes minutes.
+Note that the page loads fast only while the shipping bake in `assets/baked/` matches the source: after an edit that reaches the closure of an area (every area has its own bake revision, docs/BAKE-REVISIONS.md) that area has to be rebuilt (`node tools/bake-scene.mjs --plan` shows which, `npm run bake` rebakes the stale ones, then `npm run bakecheck`), otherwise the page builds everything procedurally and takes minutes.
 
 ### Controls
 

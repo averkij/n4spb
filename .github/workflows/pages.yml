@@ -28,9 +28,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # a stale bake makes the page silently rebuild everything procedurally (minutes of load): refuse to publish it (every area, one global revision)
-      - name: Baked scenes match the source
+      # a stale bake makes the page silently rebuild everything procedurally (minutes of load): refuse to publish it. Every live area has its OWN revision (the hash of its dependency closure,
+      # tools/baked-revision.mjs): the check recomputes it from the tree and compares it with the manifest, the products (names, sizes, sha256) and the generated src/core/baked-revision.js
+      - name: Baked scenes match the source (per area)
         run: node tools/bake-manifest-check.mjs
+      # the closure scan is fail-closed: a computed import(), a loaded asset kind or a file nothing imports must be classified (tools/lib/closure-rules.mjs, closure-orphans.txt)
+      - name: Dependency closure of every area is fully classified (closure-lint)
+        run: node tools/closure-lint.mjs
+      - name: No dev / test server answers the bake revision by itself, nobody uses the global revision (dev-servers-lint)
+        run: node tools/dev-servers-lint.mjs
       - name: Area pages are generated from index.html
         run: node tools/gen-area-html.mjs --check
       - name: Layout contract (every real area)
@@ -70,8 +76,26 @@ jobs:
         run: node tools/runtime-only-lint.mjs
       - name: Imports exist with exactly the spelling used (developed on Windows, hosted on Linux)
         run: node tools/import-lint.mjs
-      - name: Bake revision order and exclusions
+      # the per-area bake revision (docs/AREAS.md section 4): CPU oracles, none needs three.js, a browser or the node_modules (the lock entry of three is read from package-lock.json)
+      - name: Bake revision per area - order, exclusions, isolation, golden (fixture trees)
         run: node tools/baked-revision-test.mjs
+      - name: Bake revision per area - the real tree (which file moves which area), recorded page loads inside the closure
+        run: node tools/closure-real-test.mjs
+      - name: Bake manifest check - every failure kind (fabricated bake directories)
+        run: node tools/bake-manifest-check-test.mjs
+      - name: Bake plan, publish and the crash between manifest and map
+        run: node tools/bake-plan-test.mjs
+      - name: Bake publish (served-file audit, lock, purge) and the whole flow on fabricated trees
+        run: node tools/bake-publish-test.mjs && node tools/bake-flow-test.mjs
+      - name: MODULES parser fails closed (feeds the closure)
+        run: node tools/modules-list-test.mjs
+      - name: Generated src/core/baked-revision.js resolves the revision of its page's area
+        run: node tools/baked-revision-js-test.mjs
+      - name: Dev servers answer the revision of the area of the page (Referer, stat-signature cache)
+        run: node tools/dev-revision-test.mjs
+      # the scanner is tested against 9 broken scanners (each must be caught): about a minute
+      - name: The closure oracles catch 9 of 9 broken scanners
+        run: node tools/closure-mutation-test.mjs
       - name: Area data is clipped to its extent (idempotent)
         run: |
           for d in src/world/data src/areas/*/data; do

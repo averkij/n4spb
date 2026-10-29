@@ -1,27 +1,84 @@
-import fs from 'node:fs';
-import path from 'node:path';
+// The bake revision of an AREA (docs/AREAS.md section 4): the sha256 of its dependency closure - its page, the targets of the page's import map and every file reachable from them by import
+// (tools/lib/closure.mjs) - plus the lock entry of three.js and the area id. A pure function of the committed tree: the bake, the CI, the dev servers and the hand-off all recompute it, and every unknown
+// dependency is an error. A change stales exactly the areas whose closure contains the changed file. The generated src/core/baked-revision.js holds one revision per live area.
+//
+//   revisionOf(root, areaId, ctx?)    the 20 hex digits of one area
+//   revisionsOf(root, opts?)          { id: { revision, files, bytes, hashed[] } } for every area of the registry (one directory walk, one read cache)
+//   liveAreas(root, ctx?)             the registry rows that are baked (not parked, not planned)
+//   createRevisionContext(root, opts) a tree snapshot: { overlay, virtual, read, areas, rules, scanner } (tests overlay in-memory files; see tools/lib/closure.mjs createContext)
+//   digestsOf(ctx, hashed)            { rel: sha256[0:12] } of the hashed bytes (inputs.json)
+//
+// Not hashed on purpose: the bake tooling itself (tools/bake-scene.mjs, bake-osm, the codec on the tools side), Google Fonts bytes and the Edge / GPU versions: change those -> bump BAKE_SCHEME
+// and re-bake everything (node tools/bake-scene.mjs --area all --force).
 import { createHash } from 'node:crypto';
-/**
- * Runtime-only files: they never build or change anything that is baked (the gates, the hand-off codec, the area registry), so editing them must not make the bake stale. Tuning a gate
- * rectangle or a prompt text is then free. tools/runtime-only-lint.mjs enforces the contract: no other file under src/ imports them except src/main.js.
- */
-export const RUNTIME_ONLY = ['src/core/gates.js', 'src/core/handoff.js', 'src/core/version.js', 'src/areas/registry.js'];
-/** the files the bake revision covers, as { f: absolute path, rel: POSIX path relative to root }, in hash order */
-export function bakedRevisionFiles(root) {
-  const files = [];
-  const walk = dir => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const f = path.join(dir, e.name); if (e.isDirectory()) walk(f);
-    else if (e.name.endsWith('.js') && e.name !== 'baked-revision.js') files.push(f);
-  } };
-  walk(path.join(root, 'src')); files.push(path.join(root, 'index.html'));
-  // every other page of an area (north.html ...) is part of the bake too: it carries the import map that decides which data the modules see
-  for (const e of fs.readdirSync(root, { withFileTypes: true })) if (e.isFile() && e.name.endsWith('.html') && e.name !== 'index.html' && /<html[^>]*\sdata-area=/.test(fs.readFileSync(path.join(root, e.name), 'utf8'))) files.push(path.join(root, e.name));
-  // Order by the POSIX-relative path, never by the absolute native one: a native sort puts 'x\\' (Windows) and 'x/' (Linux) at different places among names such as
-  // landmarksNorth/ and landmarksNorthFull.js, so a bake made on Windows would be rejected by the Linux CI (docs/AREAS.md). The revision of a tree without such names is unchanged.
-  return files.map(f => ({ f, rel: path.relative(root, f).replaceAll('\\', '/') })).filter(x => !RUNTIME_ONLY.includes(x.rel)).sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
+import path from 'node:path';
+import { createContext, makeScanner, scanner as defaultScanner, ClosureError } from './lib/closure.mjs';
+import { RUNTIME_ONLY, EXCLUDED } from './lib/closure-rules.mjs';
+
+/** Bump when the bake TOOLCHAIN changes what a bake produces (renderer, codec, bake-osm, driver): it is part of every revision. */
+export const BAKE_SCHEME = 2;
+/** Runtime-only files (gates, hand-off codec, version, registry): traversed by the scan, never hashed (tools/runtime-only-lint.mjs: only src/main.js imports them). */
+export { RUNTIME_ONLY, EXCLUDED, ClosureError };
+export const TEXT_EXT = ['.js', '.mjs', '.html', '.json', '.css'];
+
+/** a revision context: the tree snapshot with the scanner it is read by (default: the real one) */
+export function createRevisionContext(root, opts = {}) {
+  const ctx = createContext(root, opts);
+  ctx.scanner = opts.scanner || defaultScanner;
+  return ctx;
 }
-export function bakedRevision(root) {
-  const hash = createHash('sha256');
-  for (const { f, rel } of bakedRevisionFiles(root)) { hash.update(rel); hash.update(fs.readFileSync(f, 'utf8').replaceAll('\r\n', '\n')); }
-  return hash.digest('hex').slice(0, 20);
+/** the bytes that enter the hash: text files with CRLF read as LF, everything else raw (cached per file in the context) */
+function hashBytes(ctx, rel) {
+  return ctx.memo(rel, 'hash', () => {
+    const b = ctx.bytes(rel);
+    return TEXT_EXT.includes(path.posix.extname(rel).toLowerCase()) ? Buffer.from(b.toString('utf8').replaceAll('\r\n', '\n'), 'utf8') : b;
+  });
 }
+/** the lock entry of three.js (package-lock.json: version + integrity); no npm ci needed. Throws when it is missing: the revision would silently ignore a three.js upgrade. */
+export function threeLockOf(ctx) {
+  return ctx.memo('package-lock.json', 'three', () => {
+    let lock; try { lock = JSON.parse(ctx.text('package-lock.json')); } catch (e) { throw new ClosureError('Lock', `package-lock.json cannot be read (${e.message})`); }
+    const e = lock && lock.packages && lock.packages['node_modules/three'];
+    if (!e || !e.version || !e.integrity) throw new ClosureError('Lock', 'package-lock.json has no node_modules/three entry with a version and an integrity');
+    return { version: e.version, integrity: e.integrity };
+  });
+}
+/** { revision, files, bytes, hashed } of one area on the tree of `ctx` */
+export function areaRevision(root, areaId, ctx) {
+  ctx = ctx || createRevisionContext(root);
+  const { hashed } = (ctx.scanner || defaultScanner).closureOf(root, areaId, ctx);
+  const h = createHash('sha256'); let bytes = 0;
+  h.update(`n4spb-bake-rev/${BAKE_SCHEME}\narea\0${areaId}\n`);
+  for (const rel of hashed) {
+    const buf = hashBytes(ctx, rel); bytes += buf.length;
+    h.update(rel + '\0' + buf.length + '\0'); h.update(buf); h.update('\0');
+  }
+  const lock = threeLockOf(ctx);
+  h.update('three\0' + lock.version + ' ' + lock.integrity);
+  return { revision: h.digest('hex').slice(0, 20), files: hashed.length, bytes, hashed };
+}
+export function revisionOf(root, areaId, ctx) { return areaRevision(root, areaId, ctx).revision; }
+/** { rel: sha256[0:12] } of the bytes that enter the hash, for the files of a closure (inputs.json of a bake: the informational diff of bake-manifest-check) */
+export function digestsOf(ctx, hashed) {
+  const out = {};
+  for (const rel of hashed) out[rel] = createHash('sha256').update(hashBytes(ctx, rel)).digest('hex').slice(0, 12);
+  return out;
+}
+/** the registry rows that are baked: not parked, not planned */
+export function liveAreas(root, ctx) {
+  ctx = ctx || createRevisionContext(root);
+  return ctx.rows().filter((r) => !r.parked && r.status !== 'planned');
+}
+/** every area of the registry (live and parked; planned rows have no files), one shared walk and read cache: { id: { revision, files, bytes, hashed } }. opts: the context options, plus `ids` to restrict. */
+export function revisionsOf(root, opts = {}) {
+  const ctx = opts.ctx || createRevisionContext(root, opts), out = {};
+  for (const row of ctx.rows()) {
+    if (row.status === 'planned') continue;
+    if (opts.ids && !opts.ids.includes(row.id)) continue;
+    out[row.id] = areaRevision(root, row.id, ctx);
+  }
+  return out;
+}
+
+// the legacy GLOBAL revision (v3.1.0 and before) lives only in tools/lib/legacy-revision.mjs, for the migration; tools/dev-servers-lint.mjs guards the door.
+export { makeScanner };

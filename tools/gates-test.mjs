@@ -119,17 +119,33 @@ const mkGates = (over = {}, params0 = new URLSearchParams('devgates=1')) => {
 {
   const mk = mkGates;
   const head = (ok) => async () => ({ ok, status: ok ? 200 : 404 });
+  // the generated map of the page (src/core/baked-revision.js BAKED_REVISIONS): one revision per live area. The preflight compares the TARGET manifest with the TARGET's own entry, never with the origin page's.
+  const REVS = { strip: 'r1', north: 'r1', smolny: 'r2' };
   const fresh = { revision: 'r1', area: 'strip' };
   const cases = [
-    ['a reachable page and a fresh manifest pass', { fetchImpl: head(true), peekManifest: async () => fresh, bakedRevision: 'r1' }, { ok: true }],
-    ['a missing page fails as "page"', { fetchImpl: head(false), peekManifest: async () => fresh, bakedRevision: 'r1' }, { ok: false, why: 'page' }],
-    ['an unreadable manifest fails as "manifest"', { fetchImpl: head(true), peekManifest: async () => null, bakedRevision: 'r1' }, { ok: false, why: 'manifest' }],
-    ['a manifest of another area fails as "area"', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'r1', area: 'north' }), bakedRevision: 'r1' }, { ok: false, why: 'area' }],
-    ['a stale manifest fails as "stale"', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'old', area: 'strip' }), bakedRevision: 'r1' }, { ok: false, why: 'stale' }],
-    ['a network error fails as "offline"', { fetchImpl: async () => { throw new TypeError('Failed to fetch'); }, peekManifest: async () => fresh, bakedRevision: 'r1' }, { ok: false, why: 'offline' }],
+    ['a reachable page and a fresh manifest pass', { fetchImpl: head(true), peekManifest: async () => fresh, bakedRevisions: REVS }, { ok: true }],
+    ['a missing page fails as "page"', { fetchImpl: head(false), peekManifest: async () => fresh, bakedRevisions: REVS }, { ok: false, why: 'page' }],
+    ['an unreadable manifest fails as "manifest"', { fetchImpl: head(true), peekManifest: async () => null, bakedRevisions: REVS }, { ok: false, why: 'manifest' }],
+    ['a manifest of another area fails as "area"', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'r1', area: 'north' }), bakedRevisions: REVS }, { ok: false, why: 'area' }],
+    ['a stale manifest fails as "stale"', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'old', area: 'strip' }), bakedRevisions: REVS }, { ok: false, why: 'stale' }],
+    ['a network error fails as "offline"', { fetchImpl: async () => { throw new TypeError('Failed to fetch'); }, peekManifest: async () => fresh, bakedRevisions: REVS }, { ok: false, why: 'offline' }],
   ];
   for (const [name, deps, want] of cases) {
     const g = mk(deps); const got = await g.preflight('strip');
+    check('preflight: ' + name, () => { assert.equal(got.ok, want.ok); if (want.why) assert.equal(got.why, want.why); });
+  }
+  // a hop to ANOTHER area: the origin page is the one at http://h/index.html (any area), the target is smolny, whose own entry of the map is r2
+  const cross = [
+    ['a cross-area hop to a target whose manifest equals ITS OWN entry passes', 'smolny', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'r2', area: 'smolny' }), bakedRevisions: REVS }, { ok: true }],
+    ['REGRESSION: a target manifest that equals the revision of the origin but not its own entry is stale', 'smolny', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'r1', area: 'smolny' }), bakedRevisions: REVS }, { ok: false, why: 'stale' }],
+    ['a target that has no entry in the map is stale (fail closed)', 'north', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'r1', area: 'north' }), bakedRevisions: { strip: 'r1', smolny: 'r2' } }, { ok: false, why: 'stale' }],
+    ['an empty map is stale for every target', 'smolny', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'r2', area: 'smolny' }), bakedRevisions: {} }, { ok: false, why: 'stale' }],
+    ['a target manifest of another area still fails as "area" before the revision is looked at', 'smolny', { fetchImpl: head(true), peekManifest: async () => ({ revision: 'r2', area: 'strip' }), bakedRevisions: REVS }, { ok: false, why: 'area' }],
+    ['a manifest without a revision for a target without an entry is stale (undefined must not equal undefined)', 'north', { fetchImpl: head(true), peekManifest: async () => ({ area: 'north' }), bakedRevisions: { smolny: 'r2' } }, { ok: false, why: 'stale' }],
+    ['a target manifest without a revision is stale', 'smolny', { fetchImpl: head(true), peekManifest: async () => ({ area: 'smolny' }), bakedRevisions: REVS }, { ok: false, why: 'stale' }],
+  ];
+  for (const [name, to, deps, want] of cross) {
+    const g = mk(deps); const got = await g.preflight(to);
     check('preflight: ' + name, () => { assert.equal(got.ok, want.ok); if (want.why) assert.equal(got.why, want.why); });
   }
   { const g = mk({}); const got = await g.preflight('nowhere'); check('preflight: an unknown area is refused (no throw)', () => assert.equal(got.ok, false)); }
