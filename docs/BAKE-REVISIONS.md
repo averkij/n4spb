@@ -239,7 +239,7 @@ All CPU, none needs `node_modules`, a browser or git, unless marked. They live i
   migration and its tests). Any edit staled every area; a committed bake was always `--area all` (about 25 GPU-minutes and about 280 MB of new blobs).
 * **2026-10-29: per-area revisions** (judged from three designs: the closure recomputed from the tree, a stored dependency list, an engine hash plus an area hash; the first won because it has the fewest trusted artefacts and
   every unknown is a hard error; the others contributed the golden pin, the orphan inventory, the lock file, the served-file audit, the recorded loads and the fault-injection tests).
-* **The migration was a rename, not a re-bake.** All 479 live products (2514 MiB raw) were streamed and the legacy revision `78fc35d9a53453f9fa9a` (and the old strip revision `72b2768af6595614e8cb`) occurs in none of them; the
+* **The migration was a rename, not a re-bake.** All 479 live products (2514 MiB raw) were streamed (by the design scouts, and again by the migration tool itself, which refuses to rename on a single hit) and the legacy revision `78fc35d9a53453f9fa9a` occurs in none of them (the scouts also found no `72b2768af6595614e8cb`); the
   codec metadata is `{root,nodes,schemas}` only, so the revision exists only in file names and manifests. `tools/bake-migrate-closure.mjs` asserted that `legacyGlobal(root)` equalled every manifest, renamed the products
   with `git mv` (`<key>.<old>.bin.gz` to `<key>.<new>.bin.gz`; `git diff -M --summary` shows 479 renames at 100%, no new blobs), rewrote the manifests with the new fields, wrote `inputs.json` and the map, and re-hashed
   every renamed file against the recorded sha256. Rollback: `git revert` the migration commit, or one `--area all --force`.
