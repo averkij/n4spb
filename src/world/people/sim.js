@@ -99,6 +99,17 @@ export function createSim(ctx, nav, crowd, opts = {}) {
   // Agents within that radius route exactly as before.
   const FAR_ROUTES = 1, FAR_POPS = 20000, FAR_OPTS = { maxPops: FAR_POPS }, FAR_OPTS_N = { maxPops: FAR_POPS };
   let farR2 = -1; const FAIL_S = 20;
+  // NO RIDERS IN THE GARDEN (people.js DENSITY.garden.noRiders, the Smolensky cemetery of vasilyevsky: nobody on a bike / scooter / kick scooter / balance bike rides between the graves): an area whose garden row has no `noRiders`
+  // runs none of this (banRide false: no test, no cache). A "rider" is an agent with a vehicle or the leader of one (the parent a kid on a scooter follows). Riders are not placed in the garden (the start, a re-placement), pick no
+  // target in it, are given routes that go round it (its edges cost 40 x their length more) and a route that still runs through it is refused (the goal is dropped), so they never cross it.
+  const banRide = nav.gardenActive === true && nav.gardenCfg.noRiders === true;
+  const rides = (a) => { if (a.spec.vehicle) return true; for (let i = 0; i < a.followers.length; i++) if (a.followers[i].spec.vehicle) return true; return false; };
+  const gCache = banRide ? new Int8Array(N.x.length).fill(-1) : null;
+  const gNode = (i) => { if (i >= gCache.length) return nav.inGarden(N.x[i], N.z[i]); let k = gCache[i]; if (k < 0) k = gCache[i] = nav.inGarden(N.x[i], N.z[i]) ? 1 : 0; return k === 1; };
+  const rideNoise = (ei) => { const c = nav.E.columns, e = c ? null : nav.E[ei]; return gNode(c ? c.a[ei] : e.a) || gNode(c ? c.b[ei] : e.b) ? (c ? c.len[ei] : e.len) * 40 : 0; };
+  const rideOpts = (base) => ({ ...base, noise: (ei) => rideNoise(ei) + (base && base.noise ? base.noise(ei) : 0) });
+  /** a route whose nodes touch the garden after the first one that is outside it (the start may stand inside: it must leave) */
+  const crossesGarden = (nodes) => { let k = 0; while (k < nodes.length && gNode(nodes[k])) k++; for (; k < nodes.length; k++) if (gNode(nodes[k])) return true; return false; };
   const routeTo = (a, node) => {
     const from = nodeFor(a, 14); if (from < 0 || node < 0 || nav.comp[from] !== nav.comp[node]) return false;
     let far = false; if (sim.farRoute && farR2 >= 0) { const dx = a.x - camPos.x, dz = a.z - camPos.z; far = dx * dx + dz * dz > farR2; }
@@ -107,7 +118,9 @@ export function createSim(ctx, nav, crowd, opts = {}) {
     // of kilometres: ~70 ms per failed search, and chooseGoal tries up to 5 goals, 3 per micro step) searches with the far cap for the next FAIL_S seconds. Off by default: in the node test
     // it also failed routes that the full search finds, and the station crowd thinned
     const capped = far || (sim.failCap && sim.t - a.rtFailT < FAIL_S);
-    let nodes = nav.route(from, node, capped ? (a.home >= 0 ? FAR_OPTS : FAR_OPTS_N) : a.home >= 0 ? undefined : ROUTE_OPTS);
+    const rideA = banRide && rides(a), ropts = capped ? (a.home >= 0 ? FAR_OPTS : FAR_OPTS_N) : a.home >= 0 ? undefined : ROUTE_OPTS;
+    let nodes = nav.route(from, node, rideA ? rideOpts(ropts) : ropts);
+    if (nodes && rideA && crossesGarden(nodes)) return false;          // a rider's route through the garden is no route (chooseGoal tries another goal)
     if (!nodes) { if (sim.failCap && !capped && nav.lastPops >= 60000) a.rtFailT = sim.t; return false; } if (nodes.length < 2) nodes = [nodes[0], nodes[0]];            // already there: a degenerate route (arrival at once)
     a.rt = makeRoute(nodes); a.rt.seg = 0; return true;
   };
@@ -193,10 +206,10 @@ export function createSim(ctx, nav, crowd, opts = {}) {
   const pickNode = (a) => {
     const arr = compNodes.get(a.comp); if (!arr || !arr.length) return -1;
     let best = -1, bw = -1, bestOut = -1, bwOut = -1;
-    const sameComp = (id) => nav.comp[id] === a.comp && kindOK(N.k[id]), inZone = nav.densityFactor(a.x, a.z) < 0.9, own = ownZone(a);
+    const sameComp = (id) => nav.comp[id] === a.comp && kindOK(N.k[id]), inZone = nav.densityFactor(a.x, a.z) < 0.9, own = ownZone(a), noG = banRide && rides(a);
     for (let k = 0; k < (inZone ? 10 : 7); k++) {                       // candidates 35-300 m away (people inside the station zone look farther, 35-455 m, to leave it) (the route costs ~ its length: 1000 m routes were the A* hot spot), snapped to the graph
       const r = 35 + (inZone ? 420 : 265) * Math.pow(R(), 1.6), ang = R() * TAU, id = nav.nearestNode(a.x + Math.sin(ang) * r, a.z + Math.cos(ang) * r, 14, sameComp); if (id < 0) continue;
-      const d = hyp(N.x[id] - a.x, N.z[id] - a.z); if (d < 25) continue;
+      const d = hyp(N.x[id] - a.x, N.z[id] - a.z); if (d < 25 || (noG && gNode(id))) continue;
       const dcx = N.x[id] - camPos.x, dcz = N.z[id] - camPos.z, near = 1 + 1.8 * Math.exp(-(dcx * dcx + dcz * dcz) / (170 * 170));       // the crowd gathers around the player
       const w = nav.zoneW(N.x[id], N.z[id]) * dFac(d) * (0.4 + R()) * near;
       if (crowdedAt(N.x[id], N.z[id], 40, own)) continue;               // absolute cap of the station zone: no new targets in cells that are already as dense as the zone allows
@@ -208,9 +221,9 @@ export function createSim(ctx, nav, crowd, opts = {}) {
     return best;
   };
   const pickFrom = (list, a, nodeOf, wOf, okOf = null) => {      // (okOf: round 4, a predicate instead of a filtered copy of the list per call)
-    let best = null, bw = -1; const own = ownZone(a);
+    let best = null, bw = -1; const own = ownZone(a), noG = banRide && rides(a);
     for (let k = 0; k < Math.min(8, list.length); k++) {
-      const e = list[Math.floor(R() * list.length)]; if (okOf && !okOf(e)) continue; if (nav.comp[nodeOf(e)] !== a.comp) continue;
+      const e = list[Math.floor(R() * list.length)]; if (okOf && !okOf(e)) continue; if (nav.comp[nodeOf(e)] !== a.comp) continue; if (noG && gNode(nodeOf(e))) continue;
       if (mZones.length && zoneFullFor(N.x[nodeOf(e)], N.z[nodeOf(e)], 40, own)) continue;          // benches / spots / doors / stops of a full Mars / Garden / castle zone are no targets
       const d = hyp(N.x[nodeOf(e)] - a.x, N.z[nodeOf(e)] - a.z); if (d < 8 || d > 450) continue;
       const w = wOf(e) * dFac(d) * (0.4 + R()); if (w > bw) { bw = w; best = e; }
@@ -240,6 +253,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
   const newGoal = (a, t) => {
     leaveQueue(a); a.rt = null; a.goal = null;
     if (a.script) { a.script(a, t); return; }
+    if (banRide && !a.leader && !a.hidden && nav.inGarden(a.x, a.z) && rides(a) && canVanish(a.x, a.z) && recycle(a, t)) return;          // a rider found in the garden (out of view) is put back on the streets
     deferred = false;
     const got = chooseGoal(a, t); if (got && a.rt && mZones.length) a.zHome = nav.marsZone(a.rt.x[a.rt.n - 1], a.rt.z[a.rt.n - 1]);
     if (!got) { if (deferred) { a.kind = 'stand'; a.until = t + 0.12; a.standG = [G.NONE]; a.goal = null; } else { a.kind = 'stand'; a.until = t + rr(3, 8); a.standG = a.spec.phone ? [G.PHONE, G.NONE] : [G.NONE, G.LOOKAROUND]; } }
@@ -424,7 +438,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
   /** mass: place anywhere 6-250 m around the camera (start / teleport); otherwise 60-290 m and never in view */
   const recycle = (a, t, mass = false) => {
     const party = [a, ...a.followers.filter(f => f.kind !== 'inside')];
-    const gardenBefore = gardenOn ? gardenHeads(party) : 0;
+    const gardenBefore = gardenOn ? gardenHeads(party) : 0, noG = banRide && party.some((q) => q.spec.vehicle);
     let best = -1, tot = 0; const lo = mass ? 6 : 60, hi = mass ? 250 : 290, ids = [], ws = [], zOwn = ownZone(a);
     for (let k = 0, kn = mass ? 26 : 14; k < kn; k++) {              // candidate points on the annulus around the camera, snapped to the nearest pavement node (more tries at a teleport: an avenue between quiet side streets fills only a few per cent of the disc)
       const r = lo + (hi - lo) * Math.pow(R(), mass ? 0.85 : 1), ang = R() * TAU, px = camPos.x + Math.sin(ang) * r, pz = camPos.z + Math.cos(ang) * r;
@@ -432,6 +446,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
       const dx = N.x[id] - camPos.x, dz = N.z[id] - camPos.z, d = hyp(dx, dz);
       if (mass ? (d < 6 || d > 250) : (d < 60 || d > 290 || (d < 110 && visible(N.x[id], N.z[id])))) continue;
       if (localCount(N.x[id], N.z[id]) >= 5 || crowdedAt(N.x[id], N.z[id], 0, zOwn)) continue;      // never pile people up: at most 5 within 2.5 m (a move inside the walker's own zone does not fill it)
+      if (noG && gNode(id)) continue;          // riders are not placed in the garden (noRiders)
       if (gardenOn && nav.inGarden(N.x[id], N.z[id]) && gardenCount - gardenBefore + party.length > nav.gardenCfg.maxPeople) continue;
       const zw = nav.zoneW(N.x[id], N.z[id]), w = Math.pow(zw, 0.8) * (1 + 4.5 * Math.exp(-(d * d) / (120 * 120)));
       ids.push(id); ws.push(w); tot += w;
