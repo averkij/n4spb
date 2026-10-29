@@ -80,7 +80,5 @@ export function revisionsOf(root, opts = {}) {
   return out;
 }
 
-// ---- transitional: the GLOBAL revision of v3.1.0 and before. bake-scene.mjs / bake-manifest-check.mjs and the dev servers still import these two until they are moved to the per-area functions above
-// (the legacy algorithm lives on in tools/lib/legacy-revision.mjs for the migration only). They disappear when the last caller does; tools/dev-servers-lint.mjs then guards the door.
-export { bakedRevision, bakedRevisionFiles } from './lib/legacy-revision.mjs';
+// the legacy GLOBAL revision (v3.1.0 and before) lives only in tools/lib/legacy-revision.mjs, for the migration; tools/dev-servers-lint.mjs guards the door.
 export { makeScanner };

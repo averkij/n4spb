@@ -13,9 +13,9 @@ import { fileURLToPath } from 'node:url';
 import { tokenize, lineAt } from './lib/closure.mjs';
 
 /** the files that may hold the endpoint string: the one shared handler, the bake server's own answer (it serves the revision of the area it bakes), the closure rule row for the loader's fetch, and the tests of this lint */
-export const ENDPOINT_EXEMPT = ['tools/lib/dev-revision.mjs', 'tools/bake-scene.mjs', 'tools/lib/closure-rules.mjs', 'tools/dev-revision-test.mjs', 'tools/dev-servers-lint.mjs'];
-/** the files that define or re-export the removed global (until the last caller is gone) */
-export const GLOBAL_EXEMPT = ['tools/lib/legacy-revision.mjs', 'tools/baked-revision.mjs', 'tools/dev-revision-test.mjs', 'tools/dev-servers-lint.mjs'];
+export const ENDPOINT_EXEMPT = ['tools/lib/dev-revision.mjs', 'tools/bake-scene.mjs', 'tools/lib/bake-server.mjs', 'tools/lib/fake-puppeteer/fake.mjs', 'tools/bake-publish-test.mjs', 'tools/lib/closure-rules.mjs', 'tools/dev-revision-test.mjs', 'tools/dev-servers-lint.mjs'];
+/** the file that defines the frozen global (migration only) and the tests of this lint */
+export const GLOBAL_EXEMPT = ['tools/lib/legacy-revision.mjs', 'tools/dev-revision-test.mjs', 'tools/dev-servers-lint.mjs'];
 export const REMOVED = ['bakedRevision', 'bakedRevisionFiles'];
 const ENDPOINT = '__baked_revision';
 
