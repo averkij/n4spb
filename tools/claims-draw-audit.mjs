@@ -159,6 +159,13 @@ KNOWN_UNCLAIMED.vasilyevsky = { ...(KNOWN_UNCLAIMED.vasilyevsky || {}),
   w133084710: { module: 'landmarksSevkabel', why: 'the portal crane T1a of the Baltic Shipyard (cranes.js, 60 m, instanced silhouette on its runway) reaches into the OSM outline of the yard hall Kosaya liniya 16 k43 (the source leaves the hall to city: "the yard hall w133084710 stays generic"): the crane gantry passes over the hall roof, verbatim source behaviour' },
 };
 
+// Dekabristov Island, cluster D2 (docs/gdm-D2.md): the Primorskaya vestibule hall (w149345779, 3.3 m) stands UNDER the raised parts of the office complex w85426975 (skip parent, parts from 5 m: w533259377 5 .. 11 m, w533259379 45 .. 49 m,
+// w533259380 11 .. 45 m): the audit tests the footprints without their height band. A separate statement (the blocks of the parallel clusters merge by keeping all of them).
+KNOWN_UNCLAIMED.dekabristov = { ...(KNOWN_UNCLAIMED.dekabristov || {}),
+  w85426975: { module: 'landmarksPrimorskaya', why: 'the office complex of the Metro Museum is a skip parent whose raised parts start 5 m above the ground (minH 5 / 11 / 45): the glazed hall of the Primorskaya vestibule (w149345779, walls 1.5 .. 3.3 m) stands under the arcade, inside the outline and below the parts; the city draws the parts' },
+  w533259377: { module: 'landmarksPrimorskaya', why: 'the part of w85426975 that spans 5 .. 11 m over the vestibule hall (the hall roof is at 3.3 m, 1.7 m below it): the hall walls lie inside its outline, under its soffit; the city draws the part' },
+};
+
 // Gavan (docs/AREAS.md 15.g): the territory lists the same Kirov Palace of Culture / Erarta / garden and Sevkabel modules as vasilyevsky, on the same data, so the audit finds the same three conditions (68 street-lamp triangles inside the Kirov DK outline,
 // the ruin decal, 1,078 spool-tower / festoon triangles on the Electra kiosk): the waivers of vasilyevsky above, repeated for this area. Separate statements (the blocks of the parallel port branches merge by keeping all of them).
 OWNER_SKIPS.gavan = { ...(OWNER_SKIPS.gavan || {}),

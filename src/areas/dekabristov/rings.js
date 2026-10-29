@@ -14,7 +14,7 @@
 // ============================================================================
 // PORT-IMPORT: landmarksDekabristov
 // ---
-// PORT-IMPORT: landmarksPrimorskaya
+import * as PRIMORSKAYA from '../../world/landmarksPrimorskaya/groups.js';      // the Smolenka bank stairs (water rings, keep-outs, paved ground)
 // ---
 // PORT-IMPORT: landmarksFill
 // ---
@@ -24,7 +24,7 @@ import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair p
 const SOURCES = [
   // PORT-SOURCE: landmarksDekabristov
   // ---
-  // PORT-SOURCE: landmarksPrimorskaya
+  { module: 'landmarksPrimorskaya', ns: PRIMORSKAYA },
   // ---
   // PORT-SOURCE: landmarksFill
   // ---

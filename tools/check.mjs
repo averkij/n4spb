@@ -162,9 +162,9 @@ const BUDGET_AREA = {
     //
     // PORT-BUDGET: landmarksDekabristov
     //
-    // PORT-BUDGET: landmarksPrimorskaya
+    landmarksPrimorskaya: 3.4e3,      // measured 2,898 (the glazed vestibule hall + block, the square furniture, the two Smolenka bank flights) + 15 %
     //
-    // PORT-BUDGET: landmarksFill
+    landmarksFill: 47.1e3,      // measured 40,932 (planned roadbeds, 21 sites: frames / foundation fields / cranes / yards / the batching plant, 473 hoarding bays, 489 knock records) + 15 %
     //
     bridges: 325e3,      // estimate 0.15 - 0.25 M (Uralsky, Smolensky, Nalichny, Novo-Andreevsky + the Smolenka mouth bridges) + 30 %
   },
