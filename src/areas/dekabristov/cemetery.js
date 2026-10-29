@@ -32,6 +32,16 @@ export const SIEGE_RING = [
   -5766.9, -1652.6, -5843.1, -1604.2, -5995.3, -1509.2,
 ];
 
+// Two more rings for the HUD rows of landmarksDekabristov (area.js makeAreas): NOT cemeteries, not part of inCemetery (the crowd rule stays as it was). Copied vertex for vertex from the GREEN records of the data:
+//   GARDEN   the Decembrists' Garden, GREEN w16237335 (park, 33 vertices, 57 137 m2);  VOLODIN  the square of Alexander Volodin, GREEN r10331754 (park, 10 vertices, 21 763 m2)
+export const GARDEN_RING = [
+  -6389.3, -2420, -6408.9, -2415.9, -6406.7, -2406, -6422.8, -2402.8, -6461, -2413.9, -6434.4, -2502.1, -6426.1, -2531.9, -6366.2, -2516.2, -6339.2, -2512, -6310.6, -2510.2, -6096.5, -2506.1,
+  -6089.2, -2505.3, -6082.4, -2501.5, -6077.9, -2494.6, -6044.1, -2430.2, -6178.7, -2364.9, -6210.3, -2392.5, -6248.8, -2382, -6222.3, -2332.6, -6254.9, -2317.6, -6361, -2287.2,
+];
+export const VOLODIN_RING = [
+  -7863.3, -2112.9, -7868.8, -2095, -7858.6, -2091.9, -7885.8, -2002.2, -7892, -2004.1, -7897.7, -1985.8, -7925.9, -1994.5, -7928.1, -1987.4, -8047.6, -2024.1, -8006.6, -2156.9,
+];
+
 /** The rings with their bounding boxes: [{ ring, x0, x1, z0, z1 }]. */
 const RINGS = [CEMETERY_RING, LUTHERAN_RING, ARMENIAN_RING, SIEGE_RING].map((ring) => {
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
