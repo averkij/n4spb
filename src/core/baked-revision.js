@@ -6,7 +6,7 @@ export const BAKED_REVISIONS = {
   kolomna: '22d14d2e0e584a6ba178',
   morskoy: '7630b7f2932c8bee38a0',
   palace: 'e44ee4cd3778e1d87348',
-  semyonovsky: '63ccbaa05806c2ad25b3',
+  semyonovsky: '13c95caf44a499c53aed',
   smolny: 'c1139ac842f0dc51263c',
   vasilyevsky: '3e8b6027778fc5688ea7',
   vladimirsky: '376c3a88eeaf266ee215',

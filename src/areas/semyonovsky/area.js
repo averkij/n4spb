@@ -13,6 +13,7 @@ export const REQUIRE_BAKE = true;
 export const MODULES = [
   'environment',
   'streets',
+  'streetsLocalRepairs',
   'city',
   'landmarksCentralSouth',
   'landmarksMoskovsky',

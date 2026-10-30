@@ -57,29 +57,42 @@ about 12.2 to 14.4 seconds and 13.6 to 16.3 seconds respectively. These are
 headless build timings, not shipping load or driving performance measurements.
 
 The full road-surface audit reports 90 non-exempt samples in Kolomna (within
-the unchanged budget of 120) and 169 in Semyonovsky (above budget). These are
-source-build measurements and should be rerun after further changes. They
+the unchanged budget of 120) and 154 in Semyonovsky (above budget). Both are
+integrated source-build measurements and should be rerun after further changes. They
 supersede earlier counts of 168 and 323: the audit was corrected to interpolate
 the partner road's width at the projected point, use the road generator's
 direction, name, water and building guards, and reject projections beyond a
 candidate segment's ends, with a 0.2 m tolerance. Other segments remain
 candidates. The earlier calculations could mistake wider reservations or
 clamped endpoints for narrow gaps. A Nikolsky Garden fix also clips its sett
-apron against roads, removing 13 reported carriageway samples.
+apron against roads, removing 13 reported carriageway samples. Localized
+asphalt repairs close the Marata Street divided-road gap and a paved tram
+junction on Zagorodny Prospekt, reducing Semyonovsky from 169 to 154. The
+Zagorodny site near `-1358.52, 1378.98` was checked against [Esri World
+Imagery](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/19/152485/306310);
+the imagery capture date has not been established. Proposed Ligovsky and
+Moskovsky repairs were removed after checks found that they overlapped mapped
+grass medians; remaining grass and tram reservations require individual review
+and have not been filled by these repairs. The focused headless
+`local-gap-test.mjs` checks both repairs' asphalt coverage, collision clearance,
+mapped traffic islands, buildings, water and green areas, and the tram rails.
+Both repairs were also reviewed in the normal-loaded scene. See
+[surface reservation research](research/south-surface-reservations.md) for
+examples of remaining mapped grass and reference-checked tram reservations.
 
 Do not treat every remaining median sample as a carriageway defect without
 checking the mapped geometry: some fall outside the street network's nominal
 asphalt coverage and may be real reservations, while some bare-ground samples
-lie inside nominal coverage. An abrupt taper in the median fill near улица
-Марата is one confirmed case to investigate. Carriageway cases include bare
+lie inside nominal coverage. Carriageway cases include bare
 ground, passage ribbons, bridge paving and five New Holland service-path
 samples; check whether the landmark paving is appropriate before changing it. Examples include:
 
 - Kolomna: bare ground on Staro-Petergofsky Prospekt at `-4036.98, 1829.66`,
   square paving near Stachek Prospekt at `-4296.39, 3616.2`, and New Holland
   service-path paving at `-3267.11, 285.13`.
-- Semyonovsky: bare ground at `-642.6, 1403.08` near Marata Street and at
-  `-1821.03, 3369.66` and `-1797.6, 3999.62` on Moskovsky Prospekt.
+- Semyonovsky: bare ground near Nikolsky Lane at `-2590.68, 1404.46`, on
+  Ligovsky Prospekt at `-479.65, 3063.13`, and on Moskovsky Prospekt at
+  `-1797.6, 3999.62`.
 
 Reproduce the checks from the project root:
 
@@ -88,6 +101,7 @@ node tools/area.mjs kolomna tools/streets-ribbon-audit.mjs --max-walls 4 --max-s
 node tools/area.mjs semyonovsky tools/streets-ribbon-audit.mjs --max-walls 4 --max-surf 150
 node tools/area.mjs kolomna tools/roads-surface-audit.mjs --max-fail 120 --json shots/south-k-surface.json
 node tools/area.mjs semyonovsky tools/roads-surface-audit.mjs --max-fail 120 --json shots/south-i-surface.json
+node tools/area.mjs semyonovsky tools/local-gap-test.mjs
 node tools/area.mjs kolomna tools/streets-markings-audit.mjs --geom --strict
 node tools/area.mjs semyonovsky tools/streets-markings-audit.mjs --geom --strict
 ```

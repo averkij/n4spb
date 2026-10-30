@@ -1441,7 +1441,7 @@ Adopted from `102_3d_piter` (its commits "Performance quality tier" and "two qua
 
 On the same RTX 3090 Ti / Edge (D3D11), 1280 x 720, medium quality, 20 s of
 fixed throttle, no profiler or mid-run screenshots, the baseline checkout
-`b2680c0` and final 5.0.0 products gave the following. Times are milliseconds;
+`b2680c0` and final southern-port products gave the following. Times are milliseconds;
 heap and backing are CDP `usedSize` and `backingStorageSize` in MiB.
 
 | Area / run | Load s | Mean / p50 / p95 ms | Frames >40 / >80 ms | Mean draws | Distance m | Heap / backing MiB |
@@ -1449,7 +1449,7 @@ heap and backing are CDP `usedSize` and `backingStorageSize` in MiB.
 | Palace baseline | 28.95 | 27.9 / 33.3 / 33.4 | 20 / 4 | 1359 | 380 | 409 / 729 |
 | Palace final | 28.35 | 26.2 / 33.2 / 33.4 | 11 / 3 | 1261 | 355 | 412 / 721 |
 | Kolomna final | 22.41 | 17.5 / 16.7 / 16.8 | 6 / 2 | 902 | 161 | 414 / 644 |
-| Semyonovsky final | 18.93 | 17.4 / 16.7 / 16.8 | 3 / 3 | 913 | 167 | 628 / 737 |
+| Semyonovsky final (5.0.1) | 22.44 | 20.7 / 16.7 / 33.4 | 7 / 3 | 890 | 167 | 459 / 692 |
 
 These are samples, not a precise performance comparison: traffic and final
 positions differ. Both southern cars were wrecked in traffic during the
