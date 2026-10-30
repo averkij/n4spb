@@ -15,11 +15,10 @@ before assuming its old project paths or ownership assignments still apply.
   the scene. Consult [docs/AREAS.md](docs/AREAS.md) and the area registry for the
   current implementation, boundaries, overlaps, and transitions; the draft map
   and implemented territories can differ as planning evolves.
-- The owner identified `D:\git2\agi-fun-tests\104_picnic_3d` as the source for
-  existing territory content. Inspect the relevant source before each port: at
-  the time of this note its README describes a Roadside Picnic scene rather than
-  a whole Saint Petersburg scene, so verify the material and location instead of
-  assuming the directory contains the intended district.
+- The whole-city Saint Petersburg source used by the existing area tools is
+  `D:\git2\agi-fun-tests\102_3d_piter`. The previously supplied
+  `104_picnic_3d` path is a different Roadside Picnic scene. Inspect source
+  coverage and relevant modules before each port; the full-city data has edges.
 - The whole source scene is too large to be usable at the desired performance.
   Port as much relevant territory and detail as practical into the planned,
   separately managed areas, while keeping integrated loading, rendering, and
