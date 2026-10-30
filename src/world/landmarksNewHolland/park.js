@@ -95,7 +95,7 @@ export function build(K) {
         const t = ((p0[0] - a0[0]) * d2[1] - (p0[1] - a0[1]) * d2[0]) / den, u = ((p0[0] - a0[0]) * d1[1] - (p0[1] - a0[1]) * d1[0]) / den;
         if (t > -0.02 && t < 1.02 && u > -0.02 && u < 1.02) gaps.push([t * L0 - q.w / 2 - 0.5, t * L0 + q.w / 2 + 0.5]);
       }
-      const blockedPt = (x, z) => { const s0 = Math.hypot(x - a0[0], z - a0[1]); return STAIRS.some((q) => segD(x, z, q.a, q.b) < 2.4) || gaps.some((g) => s0 > g[0] && s0 < g[1]); };
+      const blockedPt = (x, z) => { const s0 = Math.hypot(x - a0[0], z - a0[1]); return cover(x, z) >= -0.5 || STAIRS.some((q) => segD(x, z, q.a, q.b) < 2.4) || gaps.some((g) => s0 > g[0] && s0 < g[1]); };
       const ns = Math.max(1, Math.ceil(L0 / 0.5)), keepPc = []; let st = null;
       const at = (t) => [a0[0] + (c0[0] - a0[0]) * t, a0[1] + (c0[1] - a0[1]) * t];
       for (let k = 0; k <= ns; k++) { const t = k / ns, q = at(t), bl = blockedPt(q[0], q[1]); if (!bl && st === null) st = t; if ((bl || k === ns) && st !== null) { const t1 = bl ? (k - 1) / ns : t; if ((t1 - st) * L0 > 0.6) keepPc.push([at(st), at(t1)]); st = null; } }
@@ -106,7 +106,7 @@ export function build(K) {
         svc.fences.push({ id: b.id, pts: [a, c], h });
       }
     }
-    for (const p of pts) P.box(M.iron, p[0] - 0.05, p[0] + 0.05, 0, h + 0.05, p[1] - 0.05, p[1] + 0.05, 'b', 1);
+    for (const p of pts) if (cover(p[0], p[1]) < -0.5) P.box(M.iron, p[0] - 0.05, p[0] + 0.05, 0, h + 0.05, p[1] - 0.05, p[1] + 0.05, 'b', 1);
   }
   knockBays(ctx, { name: 'lmNH-fence', bays: fenceBays, far: 300,
     parts: [{ geo: unitPanel(0, 1), mat: picketMat, name: 'pickets', stretch: true, sy: (b) => b.h - 0.04, shadow: false, receive: false, when: (b) => !b.tall },

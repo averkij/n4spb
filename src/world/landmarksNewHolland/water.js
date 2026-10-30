@@ -7,7 +7,7 @@
 import * as L from '../layout.js';
 import { WATER, BRIDGES } from '../data/city.js';
 import { RING, inRing, ARCH, toArch, WATER_DEEP, pairs } from './frame.js';
-import { fillPolyFine, wall3D, ribbon, inflate } from './surfaces.js';
+import { fillPolyFine, wall3D, ribbon, inflate, roadTest } from './surfaces.js';
 import { addInstanced } from './inst.js';
 import * as G from './geo.js';
 import * as THREE_ from 'three';
@@ -68,6 +68,21 @@ export async function build(K) {
   const nearBridge = (x, z, m = 0) => myBridges.some((b) => dseg(x, z, b.a, b.b) < b.w / 2 + 0.9 + m);
   const gapLines = [...myBridges.map((b) => ({ a: b.a, b: b.b, h: b.w / 2 + 0.9 })), ...STAIRS.map((q) => ({ a: q.a, b: q.b, h: 2.0 }))];
   const blocked = (x, z) => gapLines.some((g) => dseg(x, z, g.a, g.b) < g.h);
+  const onRoad = roadTest(ctx);
+  // Test the entire collider footprint, including its overhang, against the
+  // actual street network. A bay that crosses asphalt would obstruct driving;
+  // keep the geometry, collision and knock record together when omitting it.
+  const roadClear = (bay, thick, off = 0) => {
+    const dx = bay.x1 - bay.x0, dz = bay.z1 - bay.z0, len = Math.hypot(dx, dz) || 1;
+    const tx = dx / len, tz = dz / len, nx = -tz, nz = tx, n = Math.max(1, Math.ceil((len + 0.1) / 0.3));
+    for (let i = 0; i <= n; i++) {
+      const u = -0.05 + (len + 0.1) * i / n;
+      for (const v of [off - thick / 2, off, off + thick / 2]) {
+        if (onRoad(bay.x0 + tx * u + nx * v, bay.z0 + tz * u + nz * v, 0.05)) return false;
+      }
+    }
+    return true;
+  };
   /** the pieces of a bank edge outside the bridge / stair gaps: [{ a, b }] */
   const pieces = (a, b) => {
     const l = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(l / 0.4)), out = []; let st = null;
@@ -111,7 +126,7 @@ export async function build(K) {
   for (const bk of banks) for (const pc of pieces(bk.a, bk.b)) {
     const a = pc.a, b = pc.b, l = Math.hypot(b[0] - a[0], b[1] - a[1]);
     if (l < 0.5) continue;
-    railBays.push(...splitBays(a[0], a[1], b[0], b[1], 2.4, { y: railTop }));
+    railBays.push(...splitBays(a[0], a[1], b[0], b[1], 2.4, { y: railTop }).filter((bay) => roadClear(bay, 0.5)));
   }
   const postGeo = new THREE_.BoxGeometry(0.14, 1.18, 0.14).translate(0, 0.59, 0);
   const railR = knockBays(ctx, { name: 'lmNH-bank-rail', bays: railBays, far: 300,
@@ -179,7 +194,7 @@ export async function build(K) {
     ph.addWalkBox(cx, cz, span, w, rot, 0.04, timber ? -0.6 : mode === 'flush' ? -0.5 : -1.15);      // (the bottom is the drawn soffit: a solid column down to the bed walled the canal for a boat, docs/water-transport-bridges.md)
     for (const sd of [-1, 1]) {      // the parapet bays: the line of a side is the bridge centre line moved by zl across (left of the travel a -> b = (-uz, ux))
       const zl = sd * (w / 2 + (timber ? 0.0 : 0.2)), ox = -uz * zl, oz = ux * zl;
-      footBays.push(...splitBays(cx - ux * span / 2 + ox, cz - uz * span / 2 + oz, cx + ux * span / 2 + ox, cz + uz * span / 2 + oz, 2.4, { y: 0.05, off: sd * (w / 2 + 0.05) - zl }));
+      footBays.push(...splitBays(cx - ux * span / 2 + ox, cz - uz * span / 2 + oz, cx + ux * span / 2 + ox, cz + uz * span / 2 + oz, 2.4, { y: 0.05, off: sd * (w / 2 + 0.05) - zl }).filter((bay) => roadClear(bay, 0.2, bay.off)));
     }
     svc.bridges.push({ id: b.id, x: cx, z: cz, rot, w: b.w, len: span, kind: b.kind });
   }

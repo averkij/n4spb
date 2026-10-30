@@ -110,9 +110,11 @@ const sweepCheck = () => check(`5 the sweep: no scripted hull overlaps a float b
 
 if (process.env.SWEEP_ONLY) { sweepCheck(); process.exit(fails ? 1 : 0); }          // (a quick loop while the tracks are tuned)
 const await_DOCKS = await import('../src/world/drive/boat/index.js');
+const { GARAGE } = await import('../src/world/lib/area-tables.js');
 if (AREA !== 'palace') {
   check(`area ${AREA}: a boat only where the dock is; every craft box that exists lies in this territory (${craftSvc ? craftSvc.list.length : 0} craft), nothing outside it is a solid`, () => {
-    const { DOCKS } = await_DOCKS; const docks = DOCKS.filter((k) => L.inPlay(k.x, k.z) && ph.waterLevel(k.x, k.z) != null).length;
+    const { DOCKS } = await_DOCKS;
+    const docks = (GARAGE.boats || DOCKS).filter((k) => L.inPlay(k.x, k.z) && ph.waterLevel(k.x, k.z) != null).length;
     assert.equal(d.boats.length, docks, 'a boat exactly where a dock lies in the territory'); assert.equal(d.vehicles.length, d.fleet.length + docks);
     for (const c of (craftSvc ? craftSvc.list : [])) { let inside = false; for (let k = 0; k < 16 && !inside; k++) { const o = { x: 0, z: 0, rot: 0 }; c.pose(k * 47, o); inside = L.inPlay(o.x, o.z, -40); if (!c.moving) break; } assert.ok(inside, `${c.id} is outside the territory`); }
     if (AREA === 'smolny') assert.ok(!craftSvc || craftSvc.list.length === 0, `${craftSvc.list.length} craft in the Smolninskoye`);

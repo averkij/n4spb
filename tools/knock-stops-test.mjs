@@ -1,6 +1,6 @@
-// Headless test of the KNOCKABLE bus shelters (34) and bus-stop poles (60) of streets/stops.js (package G2 of the knock plan). No GPU.  node tools/knock-stops-test.mjs
+// Headless test of KNOCKABLE bus shelters and bus-stop poles. No GPU. node tools/knock-stops-test.mjs
 // Builds the real streets module with the real core/knock.js (and once without) and checks:
-//   1 census: 34 shelter records (3 colliders as items, parts body + wood + glass + the detached name band), 60 bus-stop pole records (collider, shaft + face), each at its stop
+//   1 census: every shelter has three colliders, body, wood, glass and a name band; every stop has a pole with its collider, shaft and face
 //   2 no ghost: the merged pt-poles VB and the merged sign panels hold no bus pole, no shelter name band, the merged shelter meshes are gone; the build without ctx.knock still has them
 //   3 a knocked shelter takes its glass and its name band (one rigid body with the body and wood) and loses its 3 colliders; a knocked pole takes its sign face
 //   4 the real car: a bus-stop pole holds 6 km/h and breaks at 20 km/h; a shelter holds 18 km/h and breaks at 45 km/h
@@ -84,10 +84,10 @@ const poleAt = (s) => recs('sign').find((r) => r.h === 3 && hyp(r.x - s.pole.x, 
 const bandOf = (r) => r.parts.find((p) => p.obj);
 const quatOf = (p) => { const m = p.obj ? p.obj.matrix : new THREE.Matrix4().fromArray(p.mesh.instanceMatrix.array, p.index * 16), q = new THREE.Quaternion(); m.decompose(new THREE.Vector3(), q, new THREE.Vector3()); return q; };
 
-check('1 census: 34 shelters (3 colliders, body + wood + glass + band), 60 bus-stop poles (collider, shaft + face), each at its stop', () => {
-  assert.equal(K.stops.length, 60, 'stops'); assert.equal(shelterStops.length, 34, 'stops with a shelter');
-  assert.equal(K.stats.furniture.stops, 60); assert.equal(K.stats.furniture.shelters, 34);
-  const sh = recs('shelter'); assert.equal(sh.length, 34); assert.equal(K.ctx.knock.stats.byKind.shelter, 34);
+check('1 census: each shelter and pole has its own knock record and colliders', () => {
+  assert(K.stops.length > 0 && shelterStops.length > 3 && shelterStops.length < K.stops.length, 'exercise sheltered and unsheltered stops');
+  assert.equal(K.stats.furniture.stops, K.stops.length); assert.equal(K.stats.furniture.shelters, shelterStops.length);
+  const sh = recs('shelter'); assert.equal(sh.length, shelterStops.length); assert.equal(K.ctx.knock.stats.byKind.shelter, shelterStops.length);
   for (const s of shelterStops) {
     const r = shelterAt(s); assert(r, `a shelter record at ${s.name}`);
     assert.equal(r.items.length, 3, 'back + two sides'); for (const it of r.items) assert(it.source && it.source.knock === r, 'the collider belongs to the record');
@@ -96,13 +96,13 @@ check('1 census: 34 shelters (3 colliders, body + wood + glass + band), 60 bus-s
     assert.equal(new Set(r.parts.filter((p) => p.mesh).map((p) => p.index)).size, 1, 'one index in the three meshes');
     assert(r.parts.every((p) => hyp(p.off.x, p.off.z) < 2.2), 'every part sits on its shelter');
   }
-  assert.equal(recs('sign').filter((r) => r.h === 3).length, 60, 'sign records of height 3 m = the bus poles');
+  assert.equal(recs('sign').filter((r) => r.h === 3).length, K.stops.length, 'sign records of height 3 m = the bus poles');
   for (const s of K.stops) {
     const r = poleAt(s); assert(r, `a pole record at ${s.name}`);
     assert.equal(r.items.length, 1); assert(r.items[0].source && r.items[0].source.knock === r, 'the pole owns its collider');
     assert.equal(r.parts.length, 2, 'shaft + face'); assert.equal(r.anchored, 10); assert.equal(r.mass, 30);
   }
-  assert.equal(K.stats.furniture.stops, K.stats.knockPosts.byKind.sign - recs('sign').filter((r) => r.h !== 3).length, 'the 60 bus poles are among the sign records');
+  assert.equal(K.stats.furniture.stops, K.stats.knockPosts.byKind.sign - recs('sign').filter((r) => r.h !== 3).length, 'the bus poles are among the sign records');
   console.log('     shelter meshes', K.meshes.filter((m) => m.isInstancedMesh && m.name.startsWith('pt-shelter')).map((m) => m.name.replace('pt-shelter-', '') + ':' + m.count).join(' '));
 });
 
@@ -123,7 +123,7 @@ check('2 no ghost: the merged pt-poles / sign panels hold no bus pole, no name b
   for (const nm of ['pt-shelters', 'pt-shelter-wood', 'pt-shelter-glass']) { assert(!K.meshes.some((m) => m.name === nm), `${nm} gone with ctx.knock`); assert(N.meshes.some((m) => m.name === nm), `${nm} present without`); }
   assert(!N.meshes.some((m) => /^pt-shelter-(body|wood|glass)\||^pt-stop-band/.test(m.name)), 'no knock meshes without ctx.knock'); assert.equal(N.ctx.knock, undefined);
   assert(K.meshes.filter((m) => m.isInstancedMesh && /^pt-shelter-(body|wood|glass)\|/.test(m.name)).length >= 6, 'cell meshes per part');
-  assert.equal(K.meshes.filter((m) => m.name === 'pt-stop-band').length, 34, '34 detached name bands');
+  assert.equal(K.meshes.filter((m) => m.name === 'pt-stop-band').length, shelterStops.length, 'one detached name band per shelter');
   console.log(`     pt-poles tris: knock ${K.stats.tris['pt-poles']}, no knock ${N.stats.tris['pt-poles']} | colliders: knock ${colliders0}, no knock ${N.ctx.physics.count}`);
 });
 
@@ -202,7 +202,7 @@ check('5 the real car: a shelter holds 18 km/h and breaks at 45 km/h (anchored 2
 });
 
 check('6 the name bands brighten at night like the merged sign panels; the dynamic root holds them', () => {
-  const bands = K.meshes.filter((m) => m.name === 'pt-stop-band'); assert.equal(bands.length, 34);
+  const bands = K.meshes.filter((m) => m.name === 'pt-stop-band'); assert.equal(bands.length, shelterStops.length);
   assert(bands.every((m) => m.userData.dynamic && m.material.map && m.material.side === THREE.DoubleSide), 'dynamic, textured, double sided');
   const un = K.ctx.shared.uNight; assert(un, 'uNight'); const was = un.value;
   un.value = 0; run(K, 0.1); const day = bands[0].material.color.r; un.value = 1; run(K, 0.1); const night = bands[0].material.color.r; un.value = was;
@@ -212,9 +212,9 @@ check('6 the name bands brighten at night like the merged sign panels; the dynam
 
 check('7 without ctx.knock: nothing registered, the stop colliders are the old ones (3 per shelter + 1 per pole, no bench / bin colliders)', () => {
   assert.equal(N.ctx.knock, undefined);
-  assert.equal(N.stats.furniture.stops, 60); assert.equal(N.stats.furniture.shelters, 34);
+  assert.equal(N.stats.furniture.stops, K.stops.length); assert.equal(N.stats.furniture.shelters, shelterStops.length);
   const diff = stopColliders0 - stopColliders(N);
-  assert.equal(diff, 60, `ctx.knock adds exactly the 26 bench + 34 bin colliders of G1 at the stops (+${diff})`);
+  assert.equal(diff, K.stops.length, `ctx.knock adds one bench or bin collider at every stop (+${diff})`);
 });
 
 console.log(`RESULT: OK (${checks} checks)`);

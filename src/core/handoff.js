@@ -35,7 +35,13 @@ export function b64uDecode(s) {
 /** Build a hand-off object from what the origin page knows. Unknown / missing fields get their neutral values. */
 export function makeHo({ from, to, via = 'gate', gate = '', car = null, mute = false, noui = false, ret = null, n = 1 }) {
   const ho = { v: HANDOFF_V, from, to, via, gate, car: null, mute: !!mute, noui: !!noui, ret: null, n: Math.max(1, Math.min(50, Math.round(n) || 1)) };
-  if (car) ho.car = { id: String(car.id), view: car.view ?? 0, d: (car.d || [0, 0, 0, 0]).slice(0, 4).map((x) => Math.round((Number(x) || 0) * 1000) / 1000) };
+  if (car) {
+    ho.car = { id: String(car.id), view: car.view ?? 0, d: (car.d || [0, 0, 0, 0]).slice(0, 4).map((x) => Math.round((Number(x) || 0) * 1000) / 1000) };
+    if (car.kind === 'boat') {
+      ho.car.kind = 'boat';
+      if (typeof car.dock === 'string' && car.dock) ho.car.dock = car.dock;
+    }
+  }
   if (ret) ho.ret = { x: r2(ret.x), z: r2(ret.z), yaw: r2(ret.yaw), pitch: r2(ret.pitch ?? 0) };
   return ho;
 }
@@ -54,6 +60,8 @@ export function validateHo(ho, { to } = {}) {
   if (ho.car !== null) {
     const c = ho.car;
     if (!c || typeof c.id !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(c.id)) return bad('car.id');
+    if (c.kind !== undefined && c.kind !== 'boat') return bad('car.kind');
+    if (c.dock !== undefined && (c.kind !== 'boat' || typeof c.dock !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(c.dock))) return bad('car.dock');
     if (!(typeof c.view === 'number' || typeof c.view === 'string') || String(c.view).length > 16) return bad('car.view');
     if (!Array.isArray(c.d) || c.d.length !== 4 || !c.d.every((x) => num(x) && x >= 0 && x <= 100)) return bad('car.d');
   }

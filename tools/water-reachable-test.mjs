@@ -219,6 +219,31 @@ check('2 a walker runs along the bed for 10 s without being stuck or leaving the
 });
 
 // ---------------------------------------------------------------- 3 a fence bay knocked away opens the way
+// Only the selected bay is removed. At a bank corner another fence line can
+// overlap its walking corridor; treating all neighbouring fences as absent
+// would select a gap that a real walker cannot use after knocking one bay.
+function anotherFenceBlocks(items, excluded, x0, z0, x1, z1, radius = 0.35) {
+  const n = Math.max(1, Math.ceil(hyp(x1 - x0, z1 - z0) / 0.25));
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n;
+    for (const it of items) {
+      if (!it.fence || excluded.has(it) || it.y1 <= 0.45 || it.y0 >= 1.7) continue;
+      if (it.type === 'cyl') { if (hyp(x - it.cx, z - it.cz) < it.r + radius) return true; }
+      else if (it.type === 'box') {
+        const dx = x - it.cx, dz = z - it.cz, lx = dx * it.c - dz * it.s, lz = dx * it.s + dz * it.c;
+        const qx = Math.max(0, Math.abs(lx) - it.hw), qz = Math.max(0, Math.abs(lz) - it.hd);
+        if (hyp(qx, qz) < radius) return true;
+      }
+    }
+  }
+  return false;
+}
+check('3 fence candidate selection rejects a second line across the gap', () => {
+  const picked = { type: 'box', fence: true, cx: 0, cz: 0, c: 1, s: 0, hw: 1.5, hd: 0.1, y0: -1, y1: 1.2 };
+  const corner = { type: 'box', fence: true, cx: 0, cz: 0.5, c: 1, s: 0, hw: 0.1, hd: 1, y0: -1, y1: 1.2 };
+  assert(anotherFenceBlocks([picked, corner], new Set([picked]), 0, -2, 0, 2));
+  assert(!anotherFenceBlocks([picked], new Set([picked]), 0, -2, 0, 2));
+});
 function pickFence(filter = () => true, tries = 400, loose = false, stable = false) {
   const fs = fences().filter((r) => r.state === 'stand' && r.items.length && L.inPlay(r.x, r.z, 30));
   if (stable) fs.sort((a, b) => a.x - b.x || a.z - b.z);      // (the car run of check 4: the order of the picks must not depend on how many fence records the area has; a change of a bank elsewhere used to reshuffle the pseudo-random walk below and the run-up lottery was lost)
@@ -231,6 +256,7 @@ function pickFence(filter = () => true, tries = 400, loose = false, stable = fal
     const near = ph.querySolids(r.x, r.z, 4); for (const it of near) if (it.fence) ex.add(it);
     const sx = r.x - w.nx * 2.2, sz = r.z - w.nz * 2.2;                     // 2.2 m on the land side (the bay is 0.45 thick: the walker stands 2 m before its face)
     if (!loose && (L.insideBuilding(sx, sz, 1) || waterAt(sx, sz) !== null)) continue;
+    if (!loose && anotherFenceBlocks(near, new Set(r.items), sx, sz, r.x + w.nx * 1.2, r.z + w.nz * 1.2)) continue;
     if (!loose && !corridorFree(sx, sz, r.x + w.nx * 1.2, r.z + w.nz * 1.2, 0.35, 0, 1.7, ex)) continue;
     // the water side: at least 1.5 m of free water-side ground behind the bay is not needed (it is the trench), but the bay must be in front of the water
     const q = ph.querySolids(r.x, r.z, 0.2); void q;

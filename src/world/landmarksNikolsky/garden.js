@@ -40,7 +40,7 @@ export function build(K) {
     fillPoly(P, M.asphalt, avenueRing(), 0.052, { tile: 4 }); }
   // stone sett ring band round the cathedral (a 1.6 m apron right at the walls)
   { const ring = []; for (let i = 0; i < 48; i++) { const a = i * TAU / 48; ring.push([C0.x + Math.cos(a) * 31.5, C0.z + Math.sin(a) * 31.5]); }
-    ribbon(P, M.sett, ring, 1.4, 0.062, { closed: true, tile: 2 }); }
+    ribbon(P, M.sett, ring, 1.4, 0.062, { closed: true, clip, tile: 2 }); }
   const mine = ROADS.filter((r) => FOOT_IDS.has(r.id) && !r.bridge && !r.tunnel);
   const paths = [];
   for (const r of mine) {

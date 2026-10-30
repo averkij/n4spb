@@ -870,10 +870,19 @@ export function buildQuay(ctx, root) {
         const a = fr[i], sg = seg[i], nb = Math.max(1, Math.round(sg.len / 2.2));
         for (let j = 0; j < nb; j++) {
           const x0 = a.x + sg.tx * sg.len * j / nb, z0 = a.z + sg.tz * sg.len * j / nb, x1 = a.x + sg.tx * sg.len * (j + 1) / nb, z1 = a.z + sg.tz * sg.len * (j + 1) / nb;
-          // the collider box of the old wall: 0.4 m landward of the wall line, 0.45 thick; where a road runs over it the box moves seaward (up to 5 m) or is left out (a carriageway must not be walled: the bridge approaches)
-          const clash = (dd) => [0, 0.5, 1].some((f) => onRoad(x0 + (x1 - x0) * f + sg.nx * (0.4 - dd), z0 + (z1 - z0) * f + sg.nz * (0.4 - dd), dd > 0 ? 0.4 : 0.05));
-          let cdd = 0; if (clash(0)) { cdd = -1; for (let dd = 0.3; dd <= 5; dd += 0.3) if (!clash(dd)) { cdd = dd; break; } }
-          parapetBays.push(faceLeft(x0, z0, x1, z1, sg.nx, sg.nz, { y: Y_TOP, nx: sg.nx, nz: sg.nz, key, cdd }));
+          // A full parapet section must clear the real road, including pockets
+          // and fillets. Remove the whole section when it crosses asphalt: the
+          // old offset collider alone left its visible stone on the road and
+          // could put an invisible, shifted barrier in the water.
+          // The physical bay extends 0.25 m past each visible end; include
+          // those extensions when checking for intersections with asphalt.
+          const len = Math.hypot(x1 - x0, z1 - z0), extension = 0.25 / len, samples = Math.max(2, Math.ceil((len + 0.5) / 0.4));
+          let clear = true;
+          for (let k = 0; k <= samples && clear; k++) for (const v of [-0.05, 0.4, 0.93]) {
+            const t = -extension + (1 + 2 * extension) * k / samples, x = x0 + (x1 - x0) * t + sg.nx * v, z = z0 + (z1 - z0) * t + sg.nz * v;
+            if (onRoad(x, z, 0.06)) { clear = false; break; }
+          }
+          if (clear) parapetBays.push(faceLeft(x0, z0, x1, z1, sg.nx, sg.nz, { y: Y_TOP, nx: sg.nx, nz: sg.nz, key, cdd: 0 }));
         }
       }
       sweep(coping[key], [[0.88, Y_TOP], [1.4, Y_TOP]], (i) => segGap[i] || segIn[i] || segRoad[i], 0, flat);                // the granite kerb strip (not under a carriageway) behind the parapet

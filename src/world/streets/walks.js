@@ -198,8 +198,26 @@ export function buildWalks(net, MBs, opts = {}) {
   };
   const pave = (B, points, col) => {
     for (const poly of coverage.take(points)) {
-      const verts = poly.map(p => flat(B,p[0],WALK_Y,p[1],col));
-      for(let i=1;i+1<verts.length;i++) B.tri(verts[0],verts[i],verts[i+1],UP);
+      // A thinned pavement run may span up to 16 m. Its endpoints can both
+      // clear a crossing road while a triangle between them crosses asphalt.
+      // Split only triangles that actually meet asphalt, preserving the clear
+      // portion instead of dropping a whole stretch of pavement.
+      const ids = new Map();
+      const vertex = (p) => { let i=ids.get(p); if (i === undefined) { i=flat(B,p[0],WALK_Y,p[1],col); ids.set(p,i); } return i; };
+      const emit = (a, b, c) => B.tri(vertex(a),vertex(b),vertex(c),UP);
+      const mid = (a,b) => [(a[0]+b[0])/2,(a[1]+b[1])/2];
+      const carve = (a,b,c,depth) => {
+        const ab=mid(a,b),bc=mid(b,c),ca=mid(c,a),center=[(a[0]+b[0]+c[0])/3,(a[1]+b[1]+c[1])/3];
+        const inside = [a,b,c,ab,bc,ca,center].map(p=>net.cover(p[0],p[1]) > .1);
+        if (!inside.some(Boolean)) { emit(a,b,c); return; }
+        if (inside.every(Boolean)) return;
+        const edges=[[a,b,c],[b,c,a],[c,a,b]];
+        edges.sort((p,q)=>Math.hypot(q[0][0]-q[1][0],q[0][1]-q[1][1])-Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]));
+        const [p,q,r]=edges[0];
+        if (depth >= 12 || Math.hypot(p[0]-q[0],p[1]-q[1]) <= 1) return;
+        const m=mid(p,q); carve(p,m,r,depth+1); carve(m,q,r,depth+1);
+      };
+      for(let i=1;i+1<poly.length;i++) carve(poly[0],poly[i],poly[i+1],0);
     }
   };
   const nearStop = opts.nearStop || (() => false);

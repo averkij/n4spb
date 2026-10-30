@@ -317,6 +317,15 @@ check('the strip\'s table lists 4-6 places of the North through g1, every row wi
   check('a driver who picks a place takes the car along to the place (the arrival resolves the viewpoint as a walker\'s, drive.arrive parks the car beside it: tools/cross-places-test.mjs)', () => { const q = new URLSearchParams(url3.split('?')[1]); assert.equal(q.get('cam'), '2335,-1833,-90,21'); const ho = decodeHo(q.get('ho'), { to: 'north' }).ho; assert.equal(ho.car.id, 'coupe'); assert.equal(ho.ret.x, 579); });
   let url4 = null; const apiG = mkGates({ ui: fakeUi(), player, ctx: { onUpdate() {}, drive }, A: stripA }, new URLSearchParams('devgates=1&baked=0')); apiG.navigate = (u) => { url4 = u; }; await apiG.go(G1, 'gate');
   check('a border crossing (via gate) is unchanged: cam = the car\'s own pose, the car along', () => { const q = new URLSearchParams(url4.split('?')[1]); assert.equal(q.get('cam').split(',')[0], '579'); assert.equal(decodeHo(q.get('ho'), { to: 'north' }).ho.via, 'gate'); });
+  let boatUrl = null;
+  const boat = { ...drive, vehicle: { id: 'boat', kind: 'boat' } };
+  const apiB = mkGates({ ui: fakeUi(), player, ctx: { onUpdate() {}, drive: boat }, A: stripA }, new URLSearchParams('devgates=1&baked=0'));
+  apiB.navigate = (u) => { boatUrl = u; }; await apiB.go(G1, 'gate');
+  check('a boat crossing records its identity and vehicle kind in the actual gate URL', () => {
+    const q = new URLSearchParams(boatUrl.split('?')[1]);
+    const h = decodeHo(q.get('ho'), { to: 'north' }).ho;
+    assert.equal(h.car.id, 'boat'); assert.equal(h.car.kind, 'boat');
+  });
 }
 
 // review fix: the per-frame update() of the machine no longer allocates (it runs every frame on the strip too). The old implementation is kept here as the oracle: same chips and offers, step for step, over a long random drive of the three modes

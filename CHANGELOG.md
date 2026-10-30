@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **5.0.0** (2026-10-30, major): Add Kolomna–Yekateringofsky and Semyonovsky–Izmaylovsky, with connected waterways and boat handoffs
 - **4.0.0** (2026-10-29, major): New live areas Gavan (gavan.html, map 49), Morskoy (morskoy.html, map 47) and Dekabristov Island (dekabristov.html, map 51): Galerny Harbour, Shkipersky canal, Sea Terminal d-2 and torpedo boat, Pribaltiyskaya, Marine Facade, Kirov DK, Sevkabel, WHSD highway, Shipbuilders and Smolenka-mouth bridges, authored Dekabristov cemeteries, garden, Primorskaya and the land fill; 12 edge gates e15..e26; territories trim open water to 600 m; map merges Kolomna-Yekateringofsky and Semyonovsky-Izmaylovsky
 - **3.1.1** (2026-10-29, patch): Per-area bake revisions: a change stales only the areas whose import closure contains it; products renamed, not re-baked
 - **3.1.0** (2026-10-29, minor): Smolensky cemetery: alleys owned by the module (no z-fighting / changing ground), floor decal lifted, crowds 4x lower and no riders there, five new famous graves (Blok memorial, Sologub, Balabanov, Samokhina, Khil) + Shevchenko inscription; hip roof of the Naval Cadet Corps fixed; orphan road-line stubs in wide junctions dropped

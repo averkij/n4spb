@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "title": "Коломна–Екатерингофский · Saint Petersburg",
+  "appTitle": "Коломна",
+  "canvasLabel": "Kolomna and Yekateringof, Saint Petersburg: canals, theatres and parks in a 3D scene",
+  "intro": { "kicker": "Прогулка по городу: Коломна и Екатерингоф", "title": "Санкт-Петербург · Коломна–Екатерингофский" },
+  "heavy": { "ramGB": 1, "ru": "Тяжёлая сцена: ~{mb} МБ и ~{ram} ГБ памяти, лучше на новом телефоне или планшете, горизонтально", "en": "Heavy scene: ~{mb} MB and ~{ram} GB RAM, best on a recent phone or tablet in landscape" },
+  "places": { "title": "Список мест отключён: до нужных мест можно дойти самому · The places list is off for now: walk to the places yourself" },
+  "help": {
+    "walk": "<kbd>WASD</kbd> Walk · <kbd>Shift</kbd> Run · <kbd>Space</kbd> Jump · <kbd>F</kbd> Fly · <kbd>E</kbd> Use / car · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI · <kbd>M</kbd> Mute",
+    "air": "<kbd>W</kbd> Fly where you look · <kbd>A</kbd><kbd>D</kbd> Strafe · <kbd>Space</kbd>/<kbd>E</kbd> Up · <kbd>Q</kbd>/<kbd>C</kbd> Down · <kbd>Shift</kbd> Boost · <kbd>F</kbd> Land · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI"
+  },
+  "sights": [],
+  "facts": [
+    ["Здание Мариинского театра на Театральной площади открыли в 1860 году; театр назван в честь императрицы Марии Александровны."],
+    ["Петербургская консерватория основана в 1862 году по инициативе Антона Рубинштейна; с 1944 года она носит имя Николая Римского-Корсакова."],
+    ["Никольский Морской собор построил Савва Чевакинский в 1753–1762 годах; его пятиглавый храм и отдельная колокольня стоят у Крюкова канала."],
+    ["Остров Новая Голландия возник в начале XVIII века, когда прорыли Адмиралтейский канал; здесь хранили корабельный лес."],
+    ["Крюков канал соединяет Мойку с каналом Грибоедова и проходит рядом с Мариинским театром."],
+    ["Канал Грибоедова проходит через центр Петербурга и впадает в Фонтанку у Большого Калинкина моста."],
+    ["На Театральной площади расположены Мариинский театр и Санкт-Петербургская консерватория."],
+    ["Екатерингофский парк находится на острове, который омывают Екатерингофка и Обводный канал."]
+  ]
+}

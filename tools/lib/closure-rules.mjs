@@ -39,7 +39,7 @@ export const DYNAMIC_IMPORTS = {
  */
 export const RUNTIME_ASSETS = {
   'vendor/rapier/rapier.js': { 'rapier_wasm3d_bg.wasm': { path: null, hash: false, why: 'the default URL of the wasm in the compat bundle (new URL(..., "<deleted>")): the wasm is embedded in rapier.js, nothing is fetched' } },
-  'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html']
+  'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html']
     .map((p) => [p, { path: null, hash: false, why: 'the page name of a registry row (runtime-only file: a hand-off navigates to it; the page of an area is an entry of its own closure)' }])),
   'src/world/drive/model.js': { './assets/bibliotochka.png': { path: 'assets/bibliotochka.png', hash: true, why: 'the car logo texture (drawn into the model)' } },
   'src/core/baked-world.js': {

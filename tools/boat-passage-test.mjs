@@ -96,7 +96,9 @@ function components(ok) {
 const FREE = components((k) => D[k] >= R_FREE), WETC = components(isWet), FREEX = components((k) => DX[k] >= R_FREE);
 // UNREACHABLE WATER: a body of water that no boat can reach, listed here with the reason (it is not a transport water: nothing is claimed about it, the checks a / c skip it). Only a body that is NOT joined to the main water by any wet cell counts;
 // a name in this table is the waterway key of EVERY sampled cell of the body, and the body must be small (a lake of the map is no excuse).
-const UNREACHABLE = { moat: 'the moat of the Mikhailovsky Castle: a separate 1.2 m deep body (1506 m2) behind the Fontanka quay, ringed by its own causeway decks (landmarksCastle/bridge.js); no connection to the Fontanka' };
+const UNREACHABLE = { moat: AREA === 'kolomna'
+  ? 'an isolated pond in Yekateringof Park, using the shallow moat water profile; the pond has no connection to the river'
+  : 'the moat of the Mikhailovsky Castle: a separate 1.2 m deep body (1506 m2) behind the Fontanka quay, ringed by its own causeway decks (landmarksCastle/bridge.js); no connection to the Fontanka' };
 const isolated = new Map();      // WETC component -> { key, size, reason }
 {
   let main = 1; for (let c = 1; c < WETC.sizes.length; c++) if (WETC.sizes[c] > WETC.sizes[main]) main = c;

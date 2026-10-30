@@ -11,6 +11,17 @@ import { faceRot, nearestWall, walk, streetClass } from './sites.js';
 import { ringHas } from './kit.js';
 import { inMergedStrip } from '../streets/furn.js';
 
+// The occupancy raster can miss road corners and narrow service lanes. Check the
+// whole bin footprint against the actual road geometry before placing it.
+const binClear = (S, x, z) => {
+  const net = S.ctx.services.streets?.net;
+  if (!net) return true;
+  for (const dx of [-0.35, 0, 0.35]) for (const dz of [-0.35, 0, 0.35]) {
+    if (net.cover(x + dx, z + dz, {}) > -0.15) return false;
+  }
+  return true;
+};
+
 export function placeWalks(S) {
   const { W, R, F } = S;
   const sts = S.stations;
@@ -76,7 +87,7 @@ export function placeWalks(S) {
       let px, pz;
       if (cls === 'nevsky' && st.eb > 2.8) { const wl = nearestWall(st.x - st.nx * st.eb, st.z - st.nz * st.eb, 2.5); if (!wl) return false; px = wl.x + wl.nx * 0.4; pz = wl.z + wl.nz * 0.4; }
       else { const off = Math.min(st.ek, 8) - 0.85; if (off < 0.35) return false; px = st.x + st.nx * off; pz = st.z + st.nz * off; }
-      if (!W.fits(px, pz, 0.5, 0.5, 0, { margin: 0.02, allow: F.LAWN | F.BLD }) || S.placed.near(px, pz, 1.2) || S.inDoorBox(px, pz, 0.35) || S.placed.near(px, pz, 2.4, 'cross') || S.placed.near(px, pz, 2.4, 'metro')) return false;
+      if (!W.fits(px, pz, 0.5, 0.5, 0, { margin: 0.02, allow: F.LAWN | F.BLD }) || !binClear(S, px, pz) || S.placed.near(px, pz, 1.2) || S.inDoorBox(px, pz, 0.35) || S.placed.near(px, pz, 2.4, 'cross') || S.placed.near(px, pz, 2.4, 'metro')) return false;
       if (W.span(px + st.nx * 0.5, pz + st.nz * 0.5, st.nx, st.nz, 8, F.ROAD | F.WATER) < 0.5 && cls !== 'nevsky') { /* kerb-side bins stand at the kerb: fine */ }
       { const net = S.ctx.services.streets && S.ctx.services.streets.net; if (net && inMergedStrip(net, px, pz)) return false; }       // the strip between two carriageways closer than 7.5 m is no pavement (road integrity rules)
       const roll = R();
@@ -118,7 +129,7 @@ export function placeWalks(S) {
         if (!W.fits(px, pz, 1.8, 0.55, rot, { margin: 0.04, allow: F.LAWN }) || S.placed.near(px, pz, 1.8, 'bench')) continue;
         if (!S.placeBench(px < -595 ? 'benchWhite' : BENCHES[Math.floor(R() * BENCHES.length)], px, pz, rot)) continue;
         cnt.bench++; cnt.garden++;
-        if (R() < 0.45) { const bx = px + (-nz) * 1.4, bz = pz + nx * 1.4; if (W.fits(bx, bz, 0.5, 0.5, 0, { allow: F.LAWN }) && !S.placed.near(bx, bz, 0.8)) { S.add('binCast', bx, bz, 0); S.svc.bins.push({ x: bx, z: bz }); S.solidCyl(bx, bz, 0.26, 0.9); S.occupy(bx, bz, 0.6, 'bin'); cnt.bin++; } }
+        if (R() < 0.45) { const bx = px + (-nz) * 1.4, bz = pz + nx * 1.4; if (W.fits(bx, bz, 0.5, 0.5, 0, { allow: F.LAWN }) && binClear(S, bx, bz) && !S.placed.near(bx, bz, 0.8)) { S.add('binCast', bx, bz, 0); S.svc.bins.push({ x: bx, z: bz }); S.solidCyl(bx, bz, 0.26, 0.9); S.occupy(bx, bz, 0.6, 'bin'); cnt.bin++; } }
       }
       acc += l;
     }

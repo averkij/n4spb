@@ -10,6 +10,7 @@ import { nearestWay, wayAt } from './net.js';
 import { WALK_Y, KERB_W } from './surface.js';
 import { knockInstances } from '../lib/knock-inst.js';
 import { registerLOD } from '../../core/spatial.js';
+import * as L from '../layout.js';
 
 const SHEL_W = 3.0, SHEL_D = 1.4;                                      // the shelter (shelterModel): along the road x deep
 /** the shelter place of a stop beside way w at arclength s on `side`: the platform node is a hint (its lateral distance is kept when it lies 1.4 .. 6 m behind the kerb, else 1.0 m + half the depth) */
@@ -19,6 +20,27 @@ function kerbSpot(b, w, s, side) {
   const d = clamp(dNode > 1.4 && dNode < 6 ? dNode : KERB_W + 1.0 + SHEL_D / 2, KERB_W + 1.0 + SHEL_D / 2, 6);
   return { at, edge, cx: at.x + nOut[0] * (edge + d), cz: at.z + nOut[1] * (edge + d), tx: at.tx, tz: at.tz, nOut, dirT: w.oneway ? 1 : (side > 0 ? 1 : -1) };
 }
+/** Keep the entire shelter, sign and associated bin clear of all carriageways,
+ * including other roads, parking pockets and junction fillets. The mapped
+ * platform is a hint: shift along / away from the kerb only when needed. */
+function clearStop(net, b, w, s, side, shelter) {
+  const clear = (sp, cx, cz) => {
+    const { tx, tz, nOut, dirT } = sp;
+    const pts = [[-2.4 * dirT, -0.6], [1.95, 0.2]]; // pole, bin
+    if (shelter) for (const u of [-1.55, 0, 1.55]) for (const v of [-0.75, 0, 0.75]) pts.push([u, v]);
+    else for (const u of [-0.85, 0, 0.85]) for (const v of [0.05, 0.55]) pts.push([u, v]);
+    return pts.every(([u, v]) => { const x = cx + tx * u + nOut[0] * v, z = cz + tz * u + nOut[1] * v; return net.cover(x, z, {}) <= -0.25 && !L.insideBuilding(x, z, 0.2); });
+  };
+  for (let along = 0; along <= 6; along++) for (const sign of along ? [1, -1] : [1]) {
+    const ss = clamp(s + along * sign, 0, w.L), sp = kerbSpot(b, w, ss, side);
+    if (nodeNear(net, sp.at.x, sp.at.z, 14)) continue;
+    for (let away = 0; away <= 6; away += 0.5) {
+      const cx = sp.cx + sp.nOut[0] * away, cz = sp.cz + sp.nOut[1] * away;
+      if (clear(sp, cx, cz)) return { ...sp, s: ss, cx, cz };
+    }
+  }
+  return null;
+}
 /** stops whose platform lies beside a road: { x, z, name, shelter, w, side, s } (the cycle track gives way to the shelter there) */
 export function planStops(net) {
   const out = [];
@@ -27,10 +49,12 @@ export function planStops(net) {
     const h = nearestWay(net, b.x, b.z, 22, 2); if (!h) continue;
     const { w, i, q } = h;
     const s = w.s[i] + (w.s[i + 1] - w.s[i]) * q.t, at = wayAt(w, s);
-    const side = q.side >= 0 ? 1 : -1, edge = side > 0 ? at.hR : at.hL;
+    const side = q.side >= 0 ? 1 : -1;
     // skip platforms that sit in the middle of a junction mouth
     if (nodeNear(net, at.x, at.z, 14)) continue;                        // (furn.js: the junction nodes hashed once; this scanned every node per platform)
-    const rec = { id: b.id, x: b.x, z: b.z, name: b.name || '', shelter: !!b.shelter, bench: !!b.bench, bin: !!b.bin, bus: !!b.bus, trolley: !!b.trolley, tram: !!b.tram, routes: b.routes || {}, w, s, side, at, edge, cx: at.x, cz: at.z };
+    const sp = clearStop(net, b, w, s, side, !!b.shelter); if (!sp) continue;
+    if (out.some((p) => Math.hypot(p.x - sp.cx, p.z - sp.cz) < 6)) continue;
+    const rec = { id: b.id, x: sp.cx, z: sp.cz, name: b.name || '', shelter: !!b.shelter, bench: !!b.bench, bin: !!b.bin, bus: !!b.bus, trolley: !!b.trolley, tram: !!b.tram, routes: b.routes || {}, w, s: sp.s, side, at: sp.at, edge: sp.edge, cx: sp.cx, cz: sp.cz, sp };
     out.push(rec);
   }
   return out;
@@ -90,19 +114,16 @@ export function buildStops(ctx, net, stops, shared, root) {
   const woodM = mVC;
   const list = [];
   const dummy = new THREE.Object3D();
-  const placed = [];
   const shelterSpots = [], bandMats = [];                                       // with ctx.knock: the shelters are knockable instances, their name band a detached mesh that travels with the record
   const bandGeo = ctx.knock ? new THREE.PlaneGeometry(3.1, 0.31) : null;
   const benchSpots = [], binSpots = [];                                         // with ctx.knock: the stop benches and the shelter bins are knockable instances (below), not merged pole parts
   for (const st of stops) {
     const { at, side, edge } = st;
     // the shelter place: beside the kerb of the stop's way, away from the road on the stop's side (kerbSpot)
-    const sp = kerbSpot(st, st.w, st.s, side);
+    const sp = st.sp;
     const tx = sp.tx, tz = sp.tz, nOut = sp.nOut;
     const frontX = -nOut[0], frontZ = -nOut[1];
-    const cx = sp.cx, cz = sp.cz;
-    if (placed.some((p) => Math.hypot(p[0] - cx, p[1] - cz) < 6)) continue;
-    placed.push([cx, cz]);
+    const { cx, cz } = sp;
     const rotY = Math.atan2(frontX, frontZ);
     // pole + blue sign 2.4 m before the shelter (looking along the travel direction of the nearest lane)
     const dirT = sp.dirT;                                                         // direction the traffic nearest the stop travels (one-way carriageways: with the polyline)

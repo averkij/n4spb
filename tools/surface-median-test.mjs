@@ -1,0 +1,21 @@
+// Guard against phantom medians in the surface audit.
+import assert from 'node:assert/strict';
+import { partnerWidth, pairedStreet, projectsToSegment } from './lib/surface-median.mjs';
+const way = (name, rank = 2) => ({ name, rank, hL: [2, 6], hR: [3, 9] });
+const w = way('A'), same = way('A'), other = way('B');
+const dry = { inRiver: () => false, insideBuilding: () => false };
+assert.equal(partnerWidth(w, 0, 0.5, false), 4);
+assert.equal(partnerWidth(w, 0, 0.5, true), 6);
+assert.equal(14 - partnerWidth(w, 0, 0.5, true), 8, 'an interpolated width can turn a supposed narrow gap into a real wide reservation');
+assert(projectsToSegment(0.5, 6), 'parallel segment interiors remain eligible');
+assert(projectsToSegment(-0.02, 6), 'small numeric or segment-join variation remains eligible');
+assert(!projectsToSegment(-0.2, 6), 'a segment ending more than one metre before the projection cannot create a median');
+assert(!projectsToSegment(2, 6), 'a segment beyond the other endpoint cannot create a median');
+assert(pairedStreet(w, same, -0.95, 5, 0, 0, dry));
+assert(!pairedStreet(w, same, -0.82, 5, 0, 0, dry), 'a Y split is not a parallel opposite carriageway');
+assert(!pairedStreet(w, other, -0.95, 5, 0, 0, dry), 'different side streets are not automatically a median');
+assert(pairedStreet(w, other, -0.95, 2, 0, 0, dry), 'close ranked links follow the production pairing rule');
+assert(pairedStreet(way('A', 3), way('B', 3), -0.95, 5, 0, 0, dry), 'major junction arms follow the production pairing rule');
+assert(!pairedStreet(w, same, -0.95, 5, 0, 0, { ...dry, inRiver: () => true }));
+assert(!pairedStreet(w, same, -0.95, 5, 0, 0, { ...dry, insideBuilding: () => true }));
+console.log('PASS interpolated partner widths and production median pairing guards');

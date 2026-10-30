@@ -45,7 +45,7 @@ export async function build(ctx) {
   const player = ctx.playerObj || null;                       // set by main.js before the modules are built
   // a page reached in a car by an edge gate (docs/AREAS.md 14, 15.z) must put the player into THAT car even when this area's garage does not keep it (admiralty: ONE purple Zhiguli): the carried car is built too, parked at the arrival pose
   const hoCar = ctx.handoff && ctx.handoff.mode === 'car' && ctx.handoff.ho && ctx.handoff.ho.car && ctx.handoff.pose ? ctx.handoff : null;
-  const garage = await loadGarage(ctx, { carry: hoCar ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // drive/cars/index.js: the coupe + whichever of the truck / Lada load
+  const garage = await loadGarage(ctx, { carry: hoCar && hoCar.ho.car.kind !== 'boat' ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // A boat id can coincide with a car id; do not create a car for it.
   if (!garage.length) { console.warn('[drive] the area has no garage (GARAGE.poses): no cars'); return; }      // an area without cars: no drive service (the callers test ctx.drive)
   const wrecks = await getCarWrecks(ctx);
   // ONE VEHICLE PER CAR: its own model, handling state (parked pose included), damage state, parked physics box. V is the car the player drives or last drove; the closure
@@ -62,7 +62,8 @@ export async function build(ctx) {
   // (the cars of the station, which the tests count) but in `boats`; `vehicles` is both. A boat floats at the water level, takes the car's controls and has its own wake, sound and key line.
   const boats = [];
   try {
-    for (const def of loadBoats(ctx)) {
+    const carry = hoCar?.ho.car.kind === 'boat' ? { id: hoCar.ho.car.id, dock: hoCar.ho.car.dock, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null;
+    for (const def of loadBoats(ctx, { carry })) {
       const model = def.makeModel(ctx); ctx.add(model.root);
       const car = createBoatHandling(ctx, def.tuning), p = def.parked;
       car.reset(p.x, p.z, p.yaw);
@@ -411,20 +412,38 @@ export async function build(ctx) {
   // ---------------------------------------------------------------- the prompts next to the parked cars (the interaction layer offers the NEAREST one in reach: E gets into that car)
   if (ctx.interact) {
     for (const v of vehicles) ctx.interact.add({
-      id: v.id === 'coupe' ? 'drive-car' : 'drive-' + v.id, radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
+      id: v.kind === 'boat' && v.id !== 'boat' ? 'drive-boat-' + v.id : v.id === 'coupe' ? 'drive-car' : 'drive-' + v.id, radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
       at: () => ({ x: v.parked.x + Math.sin(v.parked.yaw) * v.spec.centerZ, y: v.parked.y + 0.8, z: v.parked.z + Math.cos(v.parked.yaw) * v.spec.centerZ }),
-      enabled: () => !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
+      enabled: () => !v.retired && !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
       onUse: () => enter(v),
     });
   }
 
   /** Arrival of a hand-off (docs/AREAS.md): get into car `spec.id`, put it at (x, z) facing the camera yaw (degrees), restore its view and its four damage scalars. false (and the walker stays) when the car cannot be placed there. */
   function arrive(spec, x, z, yawDeg) {
-    if (state.active || !spec || !enter(spec.id)) return false;
-    if (!placeVehicle(x, z, yawDeg)) { exit(true); if (player) player.setPose(x, z, yawDeg, 0); return false; }      // (exit puts the walker beside the garage car: back to the resolved arrival pose)
+    if (state.active || !spec) return false;
+    // Vehicle ids are local to their type: a boat dock may use an id that is
+    // also a car model name. Older hand-offs omit kind and mean a car.
+    const incoming = spec.kind === 'boat'
+      ? boats.find((v) => v.def.carried && v.def.carriedFrom === spec.id) || boats.find((v) => spec.dock && v.def.dock === spec.dock) || boats.find((v) => v.id === spec.id && (!spec.dock || !v.def.dock))
+      : fleet.find((v) => v.id === spec.id);
+    if (!incoming || !enter(incoming)) return false;
+    if (!placeVehicle(x, z, yawDeg)) {
+      exit(true);
+      // A newly created carried boat has no safe dock to return to. Do not
+      // leave its hull, collider or interaction embedded in a bank/obstacle.
+      if (incoming.kind === 'boat' && incoming.def.carried) {
+        dropBox(incoming); incoming.retired = true;
+        if (incoming.model.root.parent) incoming.model.root.parent.remove(incoming.model.root);
+        boats.splice(boats.indexOf(incoming), 1); vehicles.splice(vehicles.indexOf(incoming), 1);
+        use(fleet[0]);
+      }
+      if (player) player.setPose(x, z, yawDeg, 0);
+      return false;
+    }      // (exit puts the walker beside the garage car: back to the resolved arrival pose)
     if (spec.view !== undefined && spec.view !== null) api.setView(Number(spec.view) || 0);
     const d = Array.isArray(spec.d) ? spec.d : [0, 0, 0, 0];
-    if (d.some((v) => v > 0)) {
+    if (V.kind !== 'boat' && d.some((v) => v > 0)) {
       [damage.state.front, damage.state.rear, damage.state.left, damage.state.right] = d.map((v) => Math.max(0, Math.min(1, Number(v) || 0)));
       damage.state.revision++; damage.sync(); wasted.reset(damage.amount);
       car.damage = damage.amount; car.damageStage = damage.stage; car.damageSmoke = damage.smoke; car.collisionSpec = crushedSpec(SPEC, damage.state); collisionRevision = damage.revision;

@@ -12,7 +12,7 @@ const D = JSON.parse(fs.readFileSync(process.argv[2] || path.join(here, 'intro-d
 const EDITS = JSON.parse(fs.readFileSync(path.join(here, 'edits.json'), 'utf8'));
 const REACH_M = 450;
 const MEAN_W_M = 12;                                 // the page rings are simplified with a 18 m tolerance, each independently: the mean offset of a shared edge stays well below that
-const LIVE_K = { 46: 'A', 47: 'M', 48: 'W', 49: 'G', 51: 'D', 96: 'S', 97: 'V', 98: 'P' };   // the registry mapIds of the live areas (src/areas/registry.js)
+const LIVE_K = { 42: 'K', 45: 'I', 46: 'A', 47: 'M', 48: 'W', 49: 'G', 51: 'D', 96: 'S', 97: 'V', 98: 'P' };   // the registry mapIds of the live areas (src/areas/registry.js)
 const KX = toM([1, 0])[0], KY = toM([0, 1])[1];
 const bbox = (rs) => { const b = [1e9, 1e9, -1e9, -1e9]; for (const r of rs) for (const p of r) { b[0] = Math.min(b[0], p[0]); b[1] = Math.min(b[1], p[1]); b[2] = Math.max(b[2], p[0]); b[3] = Math.max(b[3], p[1]); } return b; };
 const reachM = (a) => { const c = bbox(a.outer), f = bbox(a.fp); return Math.round(Math.max((c[0] - f[0]) * KX, (c[1] - f[1]) * KY, (f[2] - c[2]) * KX, (f[3] - c[3]) * KY)); };

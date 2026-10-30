@@ -27,16 +27,37 @@ export const BOAT_SOUND = { types: ['triangle', 'sawtooth', 'sine'], f0: 26, fk:
 export const boatTuning = (spec = SPEC_BOAT) => ({ ...BOAT_TUNING, spec, hf: spec.front - 0.02, hr: -spec.rear - 0.05, hw: spec.W / 2 + 0.02 });
 
 /** the boats of this area: the area's own list (GARAGE.boats) or the shared docks, those that lie in the territory on water */
-export function loadBoats(ctx) {
-  const L = ctx.L, ph = ctx.physics, list = Array.isArray(GARAGE.boats) ? GARAGE.boats : DOCKS;
+export function loadBoats(ctx, { carry = null, docks: suppliedDocks = null } = {}) {
+  const L = ctx.L, ph = ctx.physics, list = suppliedDocks || (Array.isArray(GARAGE.boats) ? GARAGE.boats : DOCKS);
   const out = [];
-  for (const d of list) {
+  const docks = [...list];
+  // The same named dock represents the same shared boat, including after a
+  // collision renamed its local id. Different
+  // named docks can reuse an id: keep the destination's boat and give the
+  // incoming one an unambiguous local id. Old hand-offs without a dock keep
+  // the previous id-only behaviour.
+  const usable = (d) => d && Number.isFinite(d.x) && Number.isFinite(d.z) && (!L.inPlay || L.inPlay(d.x, d.z)) && (!ph.waterLevel || ph.waterLevel(d.x, d.z) != null);
+  const same = (d) => usable(d) && (carry?.dock && d.dock ? d.dock === carry.dock : (d.id || 'boat') === carry?.id);
+  if (carry && typeof carry.id === 'string' && Number.isFinite(carry.x) && Number.isFinite(carry.z) && Number.isFinite(carry.yaw) && !docks.some(same)) {
+    // The arrival resolver can land just outside a shoreline. Match the
+    // placement search's first 4 m ring rather than discarding the boat before
+    // drive.arrive has a chance to check the whole hull and nearby colliders.
+    const candidates = [[0, 0], ...Array.from({ length: 8 }, (_, i) => [4 * Math.cos(i * Math.PI / 4), 4 * Math.sin(i * Math.PI / 4)])];
+    const wet = candidates.map(([dx, dz]) => ({ x: carry.x + dx, z: carry.z + dz })).find(({ x, z }) => (!L.inPlay || L.inPlay(x, z)) && (!ph.waterLevel || ph.waterLevel(x, z) != null));
+    if (wet) {
+      const ids = new Set(docks.filter(usable).map((d) => d.id || 'boat'));
+      let id = carry.id;
+      for (let n = 1; ids.has(id); n++) { const suffix = '_carry' + (n === 1 ? '' : n); id = carry.id.slice(0, 32 - suffix.length) + suffix; }
+      docks.push({ ...carry, ...wet, id, carried: true, carriedFrom: carry.id });
+    }
+  }
+  for (const d of docks) {
     if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) continue;
     if (L.inPlay && !L.inPlay(d.x, d.z)) continue;                         // the dock is outside the territory of this area
     if (ph.waterLevel && ph.waterLevel(d.x, d.z) == null) continue;        // no water at the dock (a data change): no boat rather than a boat on the pavement
     const spec = { ...SPEC_BOAT };
     out.push({
-      id: d.id || 'boat', kind: 'boat', ...PRESENTATION, spec, tuning: boatTuning(spec), parked: { x: d.x, z: d.z, yaw: Number.isFinite(d.yaw) ? d.yaw : 0 },
+      id: d.id || 'boat', kind: 'boat', dock: d.dock || null, carried: !!d.carried, carriedFrom: d.carriedFrom || null, ...PRESENTATION, spec, tuning: boatTuning(spec), parked: { x: d.x, z: d.z, yaw: Number.isFinite(d.yaw) ? d.yaw : 0 },
       sound: BOAT_SOUND, hud: { boat: true, gearD: true, noBoost: true, noCondition: true, keys: HUD_KEYS }, exhaust: [], makeModel: (c) => createBoatModel(c),
     });
   }

@@ -146,7 +146,7 @@ export const nodeNear = (net, x, z, r) => nodeDist(net, x, z, r) < r;
 
 /** MERGED STRIP: the ground between two carriageways of ONE street that are closer than 7.5 m (streets/net.js fillMedians merges them into one roadway) is no median and no pavement: no furniture base there
  *  (the audit tools/roads-furniture-audit.mjs 'median gap<7.5' rows). Same measure as the audit, in the asphalt of the network (net.cover / segInfo, incl. pockets and fillets): from the point, along the normal
- *  of its nearest way, the first asphalt on each side within 9 m; two DIFFERENT ways of the same name that run in opposite directions with an asphalt-to-asphalt gap < 7.5 m (0.2 m ray steps: tested < 7.9 m). */
+ *  of its nearest way, the first asphalt on each side within 9 m; two DIFFERENT ways of the same name that run in opposite directions with an asphalt-to-asphalt gap < 7.5 m (0.15 m ray steps: tested < 7.9 m). */
 const stripProbe = (net, x, z) => {
   let best = null;
   net.each(x, z, 3, (w, i) => {
@@ -159,7 +159,7 @@ const stripProbe = (net, x, z) => {
   if (f > best.m + 0.01) best.m = f;
   return best;
 };
-export const inMergedStrip = (net, x, z, step = 0.2, lim = 7.9) => {       // (step 0.15, lim 7.5: exactly the audit's measure, for a rule that must not touch a real median of 7.5 m)
+export const inMergedStrip = (net, x, z, step = 0.15, lim = 7.9) => {      // match the audit's ray step, including short angled carriageway ends
   const cen = stripProbe(net, x, z); if (!cen) return false;
   // The march (up to 90 probes on the pavement): a local cover round the base (net.js coverLocal, exact above -0.3) says 'no asphalt here' without the segment walk of stripProbe.
   // Exact: net.cover is >= the segInfo measure of every way stripProbe sees (same segments, same arithmetic, no exclusions), so a probe whose cover is <= 0.02 can never be a hit; only a

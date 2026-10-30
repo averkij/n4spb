@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { PATTERNS2, paint2 } from './rails2.js';
 import { knockBays, unitProfile } from '../lib/fence-bays.js';
+import { deckAt } from '../streets/decks.js';
 
 const PX = 400;
 /** pattern table: bay width W (m), height H (m), draw(g, W, H) in px with 0,0 top left */
@@ -170,11 +171,26 @@ export function makeRailBatch(ctx) {
     flush(root) {
       void root;
       const bays = [];
+      // Bridge-end rails can cross a separate road or a junction fillet just
+      // outside the deck. Test their whole collider footprint on the same
+      // asphalt network used by streets; on-deck railings remain bridge-owned.
+      const net = ctx.services.streets?.net || ctx._roadPlan;
+      const roadClear = (b, thickness, offset = 0) => {
+        if (!net) return true;
+        const mx = (b.x0 + b.x1) / 2, mz = (b.z0 + b.z1) / 2;
+        if (deckAt(mx, mz, 0.3)) return true;
+        const dx = b.x1 - b.x0, dz = b.z1 - b.z0, len = Math.hypot(dx, dz) || 1, nx = -dz / len, nz = dx / len;
+        const n = Math.max(2, Math.ceil(len / 0.5));
+        for (let i = 0; i <= n; i++) for (const v of [offset - thickness / 2 - 0.05, offset, offset + thickness / 2 + 0.05]) {
+          if (net.cover(b.x0 + dx * i / n + nx * v, b.z0 + dz * i / n + nz * v, {}) > -0.06) return false;
+        }
+        return true;
+      };
       // ---- the railing panels: one bay each (the overlays travel with their panel)
       const pb = panels.map((o) => {
         const tx = Math.cos(o.rotY), tz = -Math.sin(o.rotY), spec = PATTERNS[o.kind];
         return { x0: o.x, z0: o.z, x1: o.x + tx * o.len, z1: o.z + tz * o.len, y: o.y, ye: o.y + Math.tan(o.roll || 0) * o.len, h: o.h || spec.H, kind: o.kind, hex: o.hex, over: o.over || null };
-      });
+      }).filter((b) => roadClear(b, 0.3));
       const geo = new T.PlaneGeometry(1, 1).translate(0.5, 0.5, 0), parts = [], seen = new Set();
       const panelPart = (kind, hex, v, when) => parts.push({ geo, mat: railMat(ctx, kind, hex), name: 'rail-' + kind, noOutline: true, shadow: true, receive: false, far: RAIL_FAR, stretch: true, v, sy: (b) => b.h, when });
       for (const b of pb) {
@@ -188,16 +204,17 @@ export function makeRailBatch(ctx) {
         stats.panels = pb.length; bays.push(...pb);
       }
       // ---- the granite parapets: sections (bays) of a swept cross-section
-      if (parapets.length) {
+      const safeParapets = parapets.filter((b) => roadClear(b, Math.max(0.3, b.th), b.center ? 0 : (b.mirror ? -1 : 1) * b.th / 2));
+      if (safeParapets.length) {
         const keys = new Map(), pparts = [];
-        for (const b of parapets) {
+        for (const b of safeParapets) {
           const k = [b.h, b.th, b.mirror ? 1 : 0, b.box ? 1 : 0, b.center ? 1 : 0, b.mat && b.mat.uuid].join('|'); b.pk = k;
           if (!keys.has(k)) { keys.set(k, 1); pparts.push({ geo: parapetGeo(b.h, b.th, b.mirror, b.box, b.center), mat: b.mat, name: 'parapet', receive: true, far: RAIL_FAR, stretch: true, when: (q) => q.pk === k }); }
         }
-        knockBays(ctx, { name: 'brg-parapets', bays: parapets, parts: pparts, far: RAIL_FAR,
+        knockBays(ctx, { name: 'brg-parapets', bays: safeParapets, parts: pparts, far: RAIL_FAR,
           collider: (b) => ({ y0: Math.min(b.y, b.ye ?? b.y) - 0.6, y1: Math.max(b.y, b.ye ?? b.y) + Math.max(1.3, b.h + 0.25), thick: Math.max(0.3, b.th), off: b.center ? 0 : (b.mirror ? -1 : 1) * b.th / 2, e0: 0.03, e1: 0.03 }),
           rec: (b) => ({ kind: 'fence', mass: 700, h: b.h, r: Math.max(0.1, b.th / 2), anchored: 18, hitK: 0.6, metal: false, minDv: 0 }) });
-        stats.parapets = parapets.length; bays.push(...parapets);
+        stats.parapets = safeParapets.length; bays.push(...safeParapets);
       }
       // ---- the old solid boxes along the faces: only where nothing is drawn (a ghost bay, breakable, invisible)
       if (walls.length) {
@@ -214,7 +231,8 @@ export function makeRailBatch(ctx) {
           for (let i = 0; i < n; i++) {
             const a = i / n, b2 = (i + 1) / n, mx = w.x0 + (w.x1 - w.x0) * (a + b2) / 2, mz = w.z0 + (w.z1 - w.z0) * (a + b2) / 2;
             if (covered(mx, mz)) continue;
-            ghosts.push({ x0: w.x0 + (w.x1 - w.x0) * a, z0: w.z0 + (w.z1 - w.z0) * a, x1: w.x0 + (w.x1 - w.x0) * b2, z1: w.z0 + (w.z1 - w.z0) * b2, y: w.y ?? w.y0, y0: w.y0, y1: w.y1, th: w.th, ghost: true });
+            const ghost = { x0: w.x0 + (w.x1 - w.x0) * a, z0: w.z0 + (w.z1 - w.z0) * a, x1: w.x0 + (w.x1 - w.x0) * b2, z1: w.z0 + (w.z1 - w.z0) * b2, y: w.y ?? w.y0, y0: w.y0, y1: w.y1, th: w.th, ghost: true };
+            if (roadClear(ghost, w.th)) ghosts.push(ghost);
           }
         }
         if (ghosts.length) knockBays(ctx, { name: 'brg-ghost', bays: ghosts, parts: [], far: RAIL_FAR,

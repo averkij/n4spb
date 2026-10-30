@@ -1435,3 +1435,35 @@ Adopted from `102_3d_piter` (its commits "Performance quality tier" and "two qua
 * Not adopted from 102: the static-scene stage and the decoder-worker buffer split (n4spb has no baked static scene).
 
 **Default tier (2026-10-17, later the same day):** `performance` is now the default on every device (it was medium on desktop and performance on phones); `?q=medium` or a remembered `piter.q` still wins, the quality menu lists Performance first. Phones keep the touch GPU overrides (shadow map 1024, MSAA 2).
+
+
+## 2026-10-30: southern districts, normal baked loading
+
+On the same RTX 3090 Ti / Edge (D3D11), 1280 x 720, medium quality, 20 s of
+fixed throttle, no profiler or mid-run screenshots, the baseline checkout
+`b2680c0` and final 5.0.0 products gave the following. Times are milliseconds;
+heap and backing are CDP `usedSize` and `backingStorageSize` in MiB.
+
+| Area / run | Load s | Mean / p50 / p95 ms | Frames >40 / >80 ms | Mean draws | Distance m | Heap / backing MiB |
+|---|---:|---|---|---:|---:|---|
+| Palace baseline | 28.95 | 27.9 / 33.3 / 33.4 | 20 / 4 | 1359 | 380 | 409 / 729 |
+| Palace final | 28.35 | 26.2 / 33.2 / 33.4 | 11 / 3 | 1261 | 355 | 412 / 721 |
+| Kolomna final | 22.41 | 17.5 / 16.7 / 16.8 | 6 / 2 | 902 | 161 | 414 / 644 |
+| Semyonovsky final | 18.93 | 17.4 / 16.7 / 16.8 | 3 / 3 | 913 | 167 | 628 / 737 |
+
+These are samples, not a precise performance comparison: traffic and final
+positions differ. Both southern cars were wrecked in traffic during the
+fixed-throttle runs, so neither is evidence of a continuous clear 20-second
+drive. Headless car-physics routes without moving NPC traffic covered 849 m in
+each area. All runs reported zero failed regions; visual screenshots loaded
+the real scenes. The default strip car test passed entry, acceleration, nitro,
+drift, braking and exit. The Semyonovsky road-surface audit remains over its
+budget; see `docs/SOUTH-AREA-PORT.md`.
+
+Reproduce with `node tools/drive-bench.mjs --area <area> --q medium --seconds
+20 --start "x,z,yaw" --json --diagnostics --load-timeout 900000
+--protocol-timeout 900000 --out <prefix>`: Palace start
+`498.2286,135.1625,76.0322`, Kolomna `-3100,2058,93.71`, Semyonovsky
+`-1849,2750,-178.32`. The matching baseline is a clean `b2680c0` checkout
+with its own baked products. GPU captures under `shots/south-final/` and
+benchmark JSON under `shots/south-perf/` are local diagnostic artifacts.

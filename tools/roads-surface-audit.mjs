@@ -16,6 +16,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
 import { mainModules } from './modules-list.mjs';
+import { partnerWidth, pairedStreet, projectsToSegment } from './lib/surface-median.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -281,12 +282,16 @@ for (const w of net.ways) {
       net.each(ex, ez, 20, (v, vi) => {
         if (v === w || !v.oneway || v.rank < 2 || v.bridge || v.skipDraw) return;
         const dx = v.x[vi + 1] - v.x[vi], dz = v.z[vi + 1] - v.z[vi], l = Math.hypot(dx, dz) || 1;
-        if ((dx * tx + dz * tz) / l > -0.8) return;                       // must run the opposite way
-        const t = Math.max(0, Math.min(1, ((ex - v.x[vi]) * dx + (ez - v.z[vi]) * dz) / (l * l)));
+        const dot = (dx * tx + dz * tz) / l;
+        if (dot > -0.85) return;                                          // same opposing-direction guard as fillMedians
+        const projection = ((ex - v.x[vi]) * dx + (ez - v.z[vi]) * dz) / (l * l);
+        if (!projectsToSegment(projection, l)) return;
+        const t = Math.max(0, Math.min(1, projection));
         const cx = v.x[vi] + dx * t, cz = v.z[vi] + dz * t;
         if ((cx - ex) * lx + (cz - ez) * lz <= 0) return;                // and lie on our left
-        const hh = (-dz / l * (ex - cx) + dx / l * (ez - cz)) > 0 ? v.hR[vi] : v.hL[vi];
+        const hh = partnerWidth(v, vi, t, (-dz / l * (ex - cx) + dx / l * (ez - cz)) > 0);
         const dist = Math.hypot(cx - ex, cz - ez), gap = dist - hh;
+        if (!pairedStreet(w, v, dot, gap, (ex + cx) / 2, (ez + cz) / 2, L)) return;
         // the samples run from our edge TOWARDS the partner's closest point (the measured gap): where the partner lies obliquely (a Y-split node: Lt Schmidt embankment at (-4550, 344), the pair begins) the old probe
         // along our left normal walked past the end of the pair into the corner pavement, a strip that is no gap between two carriageways
         if (gap > -1 && gap < 16 && (!best || gap < best.gap)) best = { gap, v, dx: dist > 1e-6 ? (cx - ex) / dist : lx, dz: dist > 1e-6 ? (cz - ez) / dist : lz };
