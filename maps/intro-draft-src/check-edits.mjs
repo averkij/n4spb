@@ -6,7 +6,7 @@
 //    and the same on the rings of the page (simplified, 18 m) with python/shapely: along the cut the overlap and the gap between the areas are thin (mean width under MEAN_W_M metres)
 import fs from 'node:fs';
 import path from 'node:path';
-import { here, toM, pyCarve } from './lib.mjs';
+import { here, toM, pyCarve, inRings } from './lib.mjs';
 
 const D = JSON.parse(fs.readFileSync(process.argv[2] || path.join(here, 'intro-data.json'), 'utf8'));
 const EDITS = JSON.parse(fs.readFileSync(path.join(here, 'edits.json'), 'utf8'));
@@ -34,6 +34,12 @@ for (const mg of EDITS.merge || []) {
 for (const [k, id] of Object.entries(LIVE_K)) if (!D.areas[k] || D.areas[k].live !== id) fails.push(`live area ${id} is not at k=${k}`);
 // the stable merges keep the k of the first district: Kolomna-Yekateringofsky at 42, Semyonovsky-Izmaylovsky at 45 (tools/area-shape.mjs --k and the docs name them so)
 for (const [k, ru] of [[42, 'Коломна–Екатерингофский'], [45, 'Семёновский–Измайловский']]) if (!D.areas[k] || D.areas[k].ru !== ru) fails.push(`k=${k} is ${D.areas[k] && D.areas[k].ru}, expected ${ru}`);
+
+// Representative points in the three large southern pockets formerly enclosed
+// by the Kolomna–Yekateringofsky walkable outline.
+for (const p of [[30.27315, 59.90956], [30.28001, 59.90217], [30.26414, 59.89943]]) {
+  if (!inRings(p, D.areas[42].fp)) fails.push(`Коломна–Екатерингофский: southern pocket ${p} is outside the footprint`);
+}
 
 // 2. the area of the cut: Okrug 7 (before the merge) or the merged Vasilyevsky-Okrug 7
 for (const a of D.areas) if (a.ru === 'Округ № 7' || a.ru === 'Васильевский–Округ № 7') { const r = reachM(a); if (r > REACH_M) fails.push(`${a.ru}: the territory reaches ${r} m beyond its land (max ${REACH_M})`); else console.log(`ok ${a.ru}: reach ${r} m`); }

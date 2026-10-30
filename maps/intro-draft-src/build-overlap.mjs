@@ -190,9 +190,41 @@ log('water cells: assigned', waterAssigned, 'open (beyond 2 km of any shore)', w
 // ------------------------------------------------------------------ output
 const coreCells = A.map(() => []);
 for (let i = 0; i < GW * GH; i++) { const a = lab[i]; if (a >= 0 && !water[i]) coreCells[a].push(i); }
+// Fill explicitly planned enclosed pockets, without changing core ownership or
+// claiming open-ended neighbouring territory. Water remains in the water layer.
+function fillFootprintHoles(a, fp, edit) {
+  const cells = [...fp];
+  const xs = cells.map((i) => i % GW), ys = cells.map((i) => (i / GW) | 0);
+  const x0 = Math.max(0, Math.min(...xs) - 1), x1 = Math.min(GW - 1, Math.max(...xs) + 1);
+  const y0 = Math.max(0, Math.min(...ys) - 1), y1 = Math.min(GH - 1, Math.max(...ys) + 1);
+  const seen = new Set(); let filled = 0, holes = 0;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const start = y * GW + x; if (fp.has(start) || seen.has(start)) continue;
+    const q = [start]; seen.add(start); let edge = false, sx = 0, sy = 0;
+    for (let h = 0; h < q.length; h++) {
+      const i = q[h], xx = i % GW, yy = (i / GW) | 0;
+      sx += xx + 0.5; sy += yy + 0.5;
+      if (xx === x0 || xx === x1 || yy === y0 || yy === y1) edge = true;
+      for (const [nx, ny] of [[xx - 1, yy], [xx + 1, yy], [xx, yy - 1], [xx, yy + 1]]) {
+        if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
+        const j = ny * GW + nx; if (!fp.has(j) && !seen.has(j)) { seen.add(j); q.push(j); }
+      }
+    }
+    const [lon, lat] = fromG(sx / q.length, sy / q.length), [w, s, e, n] = edit.bbox;
+    if (edge || lon < w || lon > e || lat < s || lat > n) continue;
+    let added = 0;
+    for (const i of q) if (!water[i] && lab[i] >= 0) {
+      fp.add(i); ext[a.k].add(i); added++;
+      tally[a.k].set(lab[i], (tally[a.k].get(lab[i]) || 0) + 1);
+    }
+    if (added) { holes++; filled += added; }
+  }
+  log('edit: filled footprint pockets', a.ru, holes, 'land cells', filled);
+}
 for (const a of A) {
   const k = a.k, E = ext[k];
   const fp = new Set(coreCells[k]); for (const i of E) fp.add(i);
+  for (const edit of EDITS.fillFootprintHoles || []) if (edit.area === a.ru) fillFootprintHoles(a, fp, edit);
   const extOnly = [...E].filter((i) => !core(k, i));
   a.fp = traceRings(fp, 22, 80);
   a.ext = traceRings(extOnly, 24, 80);

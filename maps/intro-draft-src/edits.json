@@ -11,6 +11,10 @@
     { "from": ["Московская застава", "Волковское"], "into": "Семёновский–Измайловский", "street": "Лиговский проспект", "side": "west", "expectOuter": 1,
       "note": "The north-west (top) parts of Moskovskaya zastava and Volkovskoye, on the side of Ligovsky prospekt that touches Semyonovsky and Izmaylovskoye, join the merged Semyonovsky-Izmaylovsky area. The cut line is the centerline of the street (dual carriageways collapsed), extended along its end bearings through the rest of the districts; the remainders of 6 and 90 keep their k and share the new edge." }
   ],
+  "fillFootprintHoles": [
+    { "area": "Коломна–Екатерингофский", "bbox": [30.25, 59.895, 30.30, 59.912],
+      "note": "Include enclosed southern land pockets in the walkable territory; municipal boundaries remain unchanged." }
+  ],
   "cut": [
     { "street": "Большой проспект В.О.", "end": "sw", "to": "coast", "maxM": 400,
       "note": "OSM stops Bolshoy prospekt V.O. about 200 m short of the Gulf shore: the shore strip of Gavan west of it was one face with the south-west tip of Okrug 7, and that face (owned by Okrug 7) dragged the walkable territory of Okrug 7 along the whole west coast. The cut closes the gap." }
