@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "title": "Кронверкское–Введенский–Петровский · Saint Petersburg",
+  "appTitle": "Петроградская сторона",
+  "canvasLabel": "Kronverkskoye–Vvedensky–Petrovsky, Saint Petersburg: walkable 3D scene",
+  "intro": {
+    "kicker": "Прогулка по городу: Кронверкское–Введенский–Петровский",
+    "title": "Кронверкское–Введенский–Петровский"
+  },
+  "heavy": {
+    "ramGB": 1,
+    "ru": "Тяжёлая сцена: ~{mb} МБ и ~{ram} ГБ памяти, лучше на новом телефоне или планшете, горизонтально",
+    "en": "Heavy scene: ~{mb} MB and ~{ram} GB RAM, best on a recent phone or tablet in landscape"
+  },
+  "places": {
+    "title": "Список мест отключён: до нужных мест можно дойти самому · The places list is off for now: walk to the places yourself"
+  },
+  "help": {
+    "walk": "<kbd>WASD</kbd> Walk · <kbd>Shift</kbd> Run · <kbd>Space</kbd> Jump · <kbd>F</kbd> Fly · <kbd>E</kbd> Use / car · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI · <kbd>M</kbd> Mute",
+    "air": "<kbd>W</kbd> Fly where you look · <kbd>A</kbd><kbd>D</kbd> Strafe · <kbd>Space</kbd>/<kbd>E</kbd> Up · <kbd>Q</kbd>/<kbd>C</kbd> Down · <kbd>Shift</kbd> Boost · <kbd>F</kbd> Land · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI · <kbd>M</kbd> Mute"
+  },
+  "sights": [],
+  "facts": [
+    [
+      "Кронверкское–Введенский–Петровский: Здания крепости: Монетный двор, Комендантский и Инженерный дома, гауптвахта, цейхгауз, тюрьма Трубецкого бастиона"
+    ],
+    [
+      "Кронверкское–Введенский–Петровский: Кронверк: Артиллерийский музей (Арсенал)"
+    ],
+    [
+      "Кронверкское–Введенский–Петровский: Петропавловская крепость: бастионы, куртины, равелины, ворота"
+    ],
+    [
+      "Кронверкское–Введенский–Петровский: Доходные дома Каменноостровского и Большого проспектов"
+    ],
+    [
+      "Кронверкское–Введенский–Петровский: Судебный квартал (стройплощадка)"
+    ],
+    [
+      "Кронверкское–Введенский–Петровский: Народный дом: Балтийский дом, Планетарий, Мюзик-холл, Великан Парк"
+    ],
+    [
+      "Кронверкское–Введенский–Петровский: Петропавловский собор, Великокняжеская усыпальница, Ботный дом"
+    ],
+    [
+      "Кронверкское–Введенский–Петровский: Стадион «Петровский»"
+    ]
+  ]
+}

@@ -15,6 +15,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import puppeteer from 'puppeteer-core';
+import { createGateMachine, EDGE_DIRS } from '../src/core/gates.js';
+import { edgeLens } from './lib/edge-geometry.mjs';
 
 const here = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = {}; for (let i = 2; i < process.argv.length; i++) { const a = process.argv[i]; if (a.startsWith('--')) args[a.slice(2)] = process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[++i] : true; }
@@ -29,20 +31,30 @@ const inU = (rs, x, z, m = 0) => rs.some((r) => x >= r.x0 + m && x <= r.x1 - m &
 const FROM = args.from || 'palace', TO = args.to || 'smolny';
 for (const id of [FROM, TO]) if (!REGISTRY[id] || REGISTRY[id].parked) { console.log(`unknown or parked area "${id}" (live: ${Object.values(REGISTRY).filter((a) => !a.parked).map((a) => a.id).join(', ')})`); process.exit(2); }
 if (!GATES.some((g) => g.kind === 'edge' && g.from === FROM && g.to === TO)) { console.log(`no edge gate ${FROM} -> ${TO} (the territories do not overlap)`); process.exit(2); }
-// a start point inside FROM, 40 m (the probe rule of the edge gate) before a point that is outside FROM but >= 60 m inside TO, heading east / west / north / south: the first hit of a 20 m grid over the territory of FROM
-// (HEADS: dx, dz, yaw; yaw 0 = north, 90 = west, -90 = east, 180 = south)
-const HEADS = [[1, 0, -90], [-1, 0, 90], [0, -1, 0], [0, 1, 180]];
+// Choose an approach that the full registry machine offers to this destination.
 function findStart(from, to) {
-  const rs = REGISTRY[from].play, x0 = Math.min(...rs.map((r) => r.x0)), x1 = Math.max(...rs.map((r) => r.x1)), z0 = Math.min(...rs.map((r) => r.z0)), z1 = Math.max(...rs.map((r) => r.z1));
-  for (let z = z0; z < z1; z += 20) for (let x = x0; x < x1; x += 20) for (const [dx, dz, yaw] of HEADS) {
-    const qx = x + 40 * dx, qz = z + 40 * dz;
-    if (inU(rs, x, z, 10) && !inU(rs, qx, qz) && inU(REGISTRY[to].play, qx, qz, 60) && inU(REGISTRY[to].play, x, z, 60)) return { x: x - 40 * dx, z: z - 40 * dz, yaw, dx, dz };
+  const rs = REGISTRY[from].play, own = GATES.filter(g => g.from === from && g.kind === 'edge');
+  // The first geometric overlap may belong to a higher-priority third area.
+  // Use the same lens and real offer machine as the registry CPU regression;
+  // include diagonal/narrow approaches that the old 20 m cardinal grid missed.
+  for (const p of edgeLens(rs, REGISTRY[to].play, { backMax: 0 }).points) {
+    const [dx, dz] = EDGE_DIRS[p.k], x = p.x - 60 * dx, z = p.z - 60 * dz;
+    if (!inU(rs, x, z)) continue;
+    const m = createGateMachine({ gates: own, config: { graceS: 0 } });
+    for (let i = 0; i < 40; i++) m.update({ dt: .1, x, z, mode: MODE, blocked: false });
+    for (let s = 0; s <= 62; s++) {
+      const r = m.update({ dt: .1, x: x + s * dx, z: z + s * dz, mode: MODE, blocked: false });
+      if (!r.offer) continue;
+      if (r.offer.to === to) return { x, z, yaw: Math.atan2(-dx, -dz) * 180 / Math.PI, dx, dz };
+      break;
+    }
   }
   return null;
 }
 const S1 = findStart(FROM, TO), S2 = findStart(TO, FROM);
 if (!S1 || (args.ret && !S2)) { console.log('no start point found'); process.exit(2); }
 console.log(`crossing ${FROM} -> ${TO}`, 'start', JSON.stringify(S1), args.ret ? JSON.stringify(S2) : '', 'mode', MODE, 'net', NET ? NET.join(',') : 'off', 'cpu', args.cpu || 1, 'fonts-delay', FONTS_DELAY);
+if (args.plan) process.exit(0);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json', '.gz': 'application/gzip' };
 let server = null, ORIGIN = args.remote ? String(args.remote).replace(/\/+$/, '') : '';
 if (!args.remote) {

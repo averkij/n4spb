@@ -12,7 +12,8 @@ const runs = [
 ];
 let code = 0;
 for (const [script, ...args] of runs) {
-  const r = spawnSync(process.execPath, ['--max-old-space-size=12288', path.join(dir, script), ...args], { stdio: 'inherit' });
+  const run=process.env.AREA&&process.env.AREA!=='strip'?[path.join(dir,'area.mjs'),process.env.AREA,path.join(dir,script)]:[path.join(dir,script)];
+  const r = spawnSync(process.execPath, ['--max-old-space-size=12288', ...run, ...args], { stdio: 'inherit' });
   const c = r.status ?? 1;
   console.log(`[roads] ${script} exit ${c}`);
   if (c !== 0) code = 1;

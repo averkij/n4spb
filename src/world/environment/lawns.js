@@ -260,7 +260,7 @@ export function buildTufts(ctx, root, field) {
   const one = new Float64Array(6);
   // the live part of put(): claims and courtyards can change; ANDed with the cached verdict, so the order is free
   const keepOut = HOOKS.tuftReject?.(ctx);                                         // the area's no-grass places (the North: the Paradny podium, the Kirochnaya campus; hooks/keep-out.js), once per build
-  const live = (x, z) => !(field.claimed(x, z) || inCourt(x, z) || (keepOut && keepOut(x, z)));
+  const live = (x, z) => !(field.claimed(x, z) || inCourt(x, z) || (keepOut && keepOut(x, z)) || (ctx._roadPlan ? ctx._roadPlan.cover(x,z,{}) > -0.8 : L.roadsNear(x,z,0.8,{drivable:true}).some(q=>q.gap<0.8)));
   function emit(x, z, out, o) {
     const h = out[o], w = out[o + 1];
     col.setRGB(out[o + 3], out[o + 4], out[o + 5]);

@@ -68,15 +68,15 @@ const bbox = (rs) => ({ x0: Math.min(...rs.map((r) => r.x0)), x1: Math.max(...rs
 const DIRS = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]].map(([x, z]) => { const n = Math.hypot(x, z); return [x / n, z / n]; });
 /** The poses at which a car triggers gate g: for every point (lattice `step`) of FROM's territory near the overlap that lies on a drivable lane of the destination's layout (the overlap carries the same streets),
  *  both directions along the lane (`anywhere`: any point, a pseudo-random octant), speeds `speeds` m/s: the machine (fed the last 3 s of a steady approach) offers the gate at q but did not one step (0.1 s) before. */
-function triggers(g, step, speeds, anywhere = false) {
+function triggers(g, step, speeds, anywhere = false, window = null) {
   const out = [], tb = bbox(rectsOf(g.to)), fb = bbox(rectsOf(g.from)), R = rectsOf(g.from);
-  const x0 = Math.max(tb.x0, fb.x0) - 300, x1 = Math.min(tb.x1, fb.x1) + 300, z0 = Math.max(tb.z0, fb.z0) - 300, z1 = Math.min(tb.z1, fb.z1) + 300;
+  const x0 = window?.x0??Math.max(tb.x0, fb.x0) - 300, x1 = window?.x1??Math.min(tb.x1, fb.x1) + 300, z0 = window?.z0??Math.max(tb.z0, fb.z0) - 300, z1 = window?.z1??Math.min(tb.z1, fb.z1) + 300;
   const offered = (x, z, dx, dz, v) => { const m = createGateMachine({ gates: [g], rectsOf }); m.update({ dt: 7, x: x - dx * v * 3, z: z - dz * v * 3, mode: 'car', blocked: false }); let r; for (let t = 0.1; t < 3.0001; t += 0.1) r = m.update({ dt: 0.1, x: x - dx * v * (3 - t), z: z - dz * v * (3 - t), mode: 'car', blocked: false }); return !!r.offer; };
   for (let sx = x0; sx <= x1; sx += step) for (let sz = z0; sz <= z1; sz += step) {
     if (!inUnion(R, sx, sz, 0)) continue;
     const lane = anywhere ? null : L.roadsNear(sx, sz, 0, { drivable: true }).find((q) => q.gap <= 0); if (!anywhere && !lane) continue;
     for (const sgn of [1, -1]) for (const v of speeds) {
-      const k = (Math.round(sx / step) * 3 + Math.round(sz / step) * 5 + (sgn > 0 ? 0 : 4) + 800) % 8;
+      const k = ((Math.round(sx / step) * 3 + Math.round(sz / step) * 5 + (sgn > 0 ? 0 : 4)) % 8 + 8) % 8;
       const dx = anywhere ? DIRS[k][0] : lane.tx * sgn, dz = anywhere ? DIRS[k][1] : lane.tz * sgn;
       if (!inUnion(R, sx - dx * v * 3, sz - dz * v * 3, 0)) continue;      // the approach itself lies in FROM's territory
       if (offered(sx, sz, dx, dz, v) && !offered(sx - dx * v * 0.1, sz - dz * v * 0.1, dx, dz, v)) out.push({ x: sx, z: sz, v, yaw: Math.atan2(-dx, -dz) / DEG, road: !anywhere });
@@ -103,7 +103,8 @@ const DAMAGE = [[0, 0, 0, 0], [0.3, 0, 0.1, 0]];
 // strip of e11: the Palace Bridge head and the University embankment; 3 poses at step 20, 7 at step 10, 13 at step 5) a coarse lattice misses most triggers that exist. The bar stays MIN_POSES; the lattice is refined (20, 10, 5, 2.5 m) only
 // until it is met, so a gate that has enough poses at step 20 is sampled exactly as before.
 const MIN_POSES = 6, STEPS = [20, 10, 5, 2.5], STEP_OF = new Map();
-function streetPoses(g) { let out = []; for (const step of STEPS) { STEP_OF.set(g, step); out = triggers(g, step, [8, 22, 40]); if (out.length >= MIN_POSES) break; } return out; }
+function streetPoses(g) { let out = []; for (const step of STEPS) { STEP_OF.set(g, step); out = triggers(g, step, [8, 22, 40]); if (out.length >= MIN_POSES) break; }
+  if(out.length&&out.length<MIN_POSES){const found=new Map(out.map(p=>[JSON.stringify(p),p]));for(const step of [.5,.125]){for(const p of out.slice(0,4))for(const q of triggers(g,step,[8,22,40],false,{x0:p.x-6,x1:p.x+6,z0:p.z-6,z1:p.z+6}))found.set(JSON.stringify(q),q);out=[...found.values()];STEP_OF.set(g,step);if(out.length>=MIN_POSES)break;}}return out; }
 const SC = new Map(edges.map((g) => [g, [...streetPoses(g), ...triggers(g, 60, [8, 40], true).filter((_, i) => i % 5 === 0).slice(0, 14)]]));
 let total = 0, bad = 0;
 const rows = [];

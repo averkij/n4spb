@@ -1,5 +1,99 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-10-31: Petrograd and northern islands, 6.0.0
+
+The three planning-map territories now ship as `kronverk`, `aptekarsky` and
+`islands`; provenance, coverage and the water/knock adaptations are in
+[PETRO-AREAS.md](PETRO-AREAS.md). Source landmarks and fixtures are scoped to
+their page. They are not constructed or simulated in the old centre.
+
+Measurements below use Edge / ANGLE D3D11 / RTX 3090 Ti, 1280 × 720, medium,
+full scenery/population/shadows, ordinary fresh baked loading. GPU jobs ran
+serially without CPU audits during the timed intervals. Each drive holds W for
+10 seconds; JSON, diagnostics and screenshots are retained locally under
+`shots/perf/petro-*`. Baseline is detached `f55930c` (the old 5.0.1 game plus
+unintegrated area data), with its matching original bakes. The final revision
+is 6.0.0, with all 13 live-area bakes fresh.
+
+| Run | Intro ready (s) | Travel (m) | Frame mean / p50 / p95 (ms) | Max (ms) | Frames >40 / >80 ms | Mean draws | CDP used / backing storage (MiB) |
+| --- | ---: | ---: | --- | ---: | --- | ---: | --- |
+| Vosstaniya baseline, paired | 31.6 | 345 | 29.4 / 34.6 / 44.4 | 315 | 24 / 3 | 1291 | 477 / 1347 |
+| Vosstaniya final, paired | 28.7 | 345 | 34.5 / 35.0 / 54.1 | 336 | 51 / 4 | 1270 | 497 / 1327 |
+| Admiralty baseline | 33.1 | 95 | 36.0 / 35.0 / 53.5 | 257 | 42 / 5 | 1122 | 444 / 1134 |
+| Admiralty final | 36.2 | 122 | 42.2 / 35.4 / 69.6 | 300 | 85 / 5 | 1313 | 461 / 1214 |
+| Kronverk final | 29.6 | 92 | 23.8 / 17.8 / 35.9 | 176 | 11 / 3 | 981 | 646 / 777 |
+| Aptekarsky final | 19.7 | 47 | 21.3 / 17.7 / 35.2 | 265 | 16 / 3 | 1085 | 383 / 616 |
+| Islands final | 27.3 | 380 | 20.6 / 17.6 / 35.3 | 81 | 3 / 1 | 874 | 299 / 386 |
+
+The paired Vosstaniya runs cover the same route and end at approximately
+`(164,50)`. Their observed change is **+5.1 ms/frame**, +20 MiB retained JS and
+−20 MiB backing storage, with similar draw counts. An earlier final run was
+44.7 ms versus the original morning baseline's 32.1 ms; the paired rerun reduces
+that timing uncertainty but does not establish a performance improvement.
+Admiralty's traffic/obstacle encounters differ (95 versus 122 m, both stopped
+at the end), so its frame/draw increase is not a same-view overhead estimate.
+Kronverk and Aptekarsky also stop before the interval ends; their numbers must
+be read with their short travel distances. Islands covers 380 m and finishes
+at 169 km/h. These are driving probes, not a guarantee of sustained road speed.
+
+**Comfortable 30 FPS is not consistently reached in the old centre.** The final
+paired centre render diagnostic still takes 18.1 ms of JS submission for 1145
+draws (baseline 14.0 ms / 1197); timed centre runs also have 4–5 frames above
+80 ms while regions attach. The next performance investigation is separate CPU
+sampling of draw submission and those streaming/GC hitches, including the live
+tuft-road rejection query; fewer draws alone have not solved frame timing.
+The new districts themselves average approximately 42, 47 and 49 FPS on these
+routes. No timed run has a page/module error or failed region.
+
+Reproduce the final drives (use the baseline checkout for the before runs):
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 10 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/perf/petro-after-paired
+node tools/drive-bench.mjs --area admiralty --q medium --seconds 10 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/perf/petro-admiralty-after
+node tools/drive-bench.mjs --area kronverk --q medium --seconds 10 --start "-2268.888,-2758.424,-153.99" --json --diagnostics --out shots/perf/petro-kronverk
+node tools/drive-bench.mjs --area aptekarsky --q medium --seconds 10 --start "-1942.856,-3160.215,25.586" --json --diagnostics --out shots/perf/petro-aptekarsky
+node tools/drive-bench.mjs --area islands --q medium --seconds 10 --start "-5163.95,-4261.441,4.894" --json --diagnostics --out shots/perf/petro-islands
+node tools/drive-test.mjs --area palace --q medium --nofuzz --out shots/perf/petro-controls
+```
+
+The car control test passes entry, acceleration, nitro, drift, braking and exit.
+Aurora's nested distant mass retains the real hull/waterline, three funnels,
+deck houses and tall masts with **3014 triangles / four post-batch meshes**,
+shared untextured factory materials and an authored 1400 m range. The detailed
+model remains local. It uses no new textures, update callbacks or shadow draws;
+near and opposite-bank views were checked on the final bake. Northern final
+logs use `petro-kronverk-shipping`, `petro-islands-shipping` and
+`petro-aptekarsky-mass-shipping`.
+Normal-loading views cover the fortress and timber bridge, botanical garden,
+TV tower, Aurora, Yelagin Palace and park canals, including camera turns and
+teleports. Palace–Kronverk and Kronverk–Aptekarsky browser crossings pass in both
+directions, including destination loading and the transition veil. The smoke
+harness now selects an approach with the full registry machine: its former
+coarse selector could aim for a third district in a multiple-area overlap.
+The complete bake has 1236 products / 613.6 MiB gzip. New pages contribute
+58.1 MiB (Kronverk), 31.8 MiB (Aptekarsky) and 24.5 MiB (Islands); separate
+pages retain local region loading rather than loading all districts together.
+The closure lint, revision sync, generated HTML and version checks pass.
+The final imported-source whitespace cleanup changed only revision names:
+all 81 Aptekarsky and 98 Islands products are byte-identical to the tested
+snapshot (`bake-product-compare.mjs`, no ignored timing differences).
+
+Focused verification: topology/arrivals **490/0**, gate machine **95/0**;
+water access **18/0, 18/0, 17/0** and real boat-passage **88, 46, 140** passes
+for Kronverk, Aptekarsky and Islands respectively. All three garages and their
+boat hull/boarding/exit checks pass. Car handoffs retain the car in all sampled
+arrivals (256, 276 and 236). Layout/claims cover all 15 registry rows. The knock,
+signals, ported solids, fixture cells, shadow sectors and authored LOD focused
+regressions pass. All 18 landmark tree generators pass 8784 frustum queries.
+
+Known audit limits remain explicit: Kronverk's surface audit has **127 residual
+samples / 33 clusters against the 120-sample budget** (paving/median/end seams).
+Aptekarsky (108 residual samples) and Islands (45) surface/ribbon audits and all three strict furniture
+audits pass. New-area marking audits pass. Castle railing intrusion on the old
+strip, marking failures in Palace/Smolny/Vladimirsky/Dekabristov, and the old
+Ostrovsky static tree splitter's Infinity-to-2500 range assertion all reproduce
+on the untouched baseline. Those full suites are not reported as passing.
+
 > **Full-city numbers.** Every figure, timing, triangle count, region count and bake size in this file was measured on the whole 102_3d_piter city (up to 82 km2 of play area, 53-57 regions, a 450 MiB bake) before it was cut down to the Nevsky strip (4.9 km2, see [STRIP.md](STRIP.md)). Sections about islands, Krestovsky, Vasilievsky, Petrograd, the Moskovsky corridor and their tools (`islands-*`, `coverage-check`, `south-extension-check`, ...) describe code and docs that are no longer in this repository: the links to `ISLANDS-2026.md`, `SOUTH-EXTENSION.md`, `SEVKABEL-CULTURE.md` and `coverage.html` below are dead and kept only as history. The method (what costs what, how to measure) still applies; re-measure on the strip before quoting a number.
 
 > **Bake revisions.** Every "source hash", "static revision" and "bake revision" below is the ONE global revision of the time (a hash of all of `src/`). Since 2026-10-29 each live area has its own revision, the hash of its dependency closure (docs/AREAS.md section 4, docs/BAKE-REVISIONS.md); the measurements and the `/__baked_revision` 404 notes stay as they were. `tools/bake-manifest-check.mjs` now checks every area against its own closure.

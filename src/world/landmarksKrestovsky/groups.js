@@ -1,0 +1,8 @@
+// Exact IDs from the 2026-10-12 enlarged OSM extract. Generic park terrain,
+// tree cover, ponds and footways are deliberately not claimed by this module.
+export const GROUPS_LIST = [
+  {key:'krestovsky-arena',name:'Стадион на Крестовском острове',nameEn:'Krestovsky stadium exterior',ids:['r8841754'],osm:[],at:[-7310,-4518.9],note:'Operator-scaled flying-saucer roof, eight structural pylons, glazed colonnade and mapped low annexes. Main oval part r8846006 determines roof scale; parent outline includes a south field deployment wing.'},
+  {key:'krestovsky-metro',name:'Метро «Крестовский остров»: павильон',nameEn:'Krestovsky Ostrov pavilion',ids:['w44389559'],osm:[],at:[-5136.5,-4386],note:'Mapped glass cube intersected by a rotated stone arcade; surface exterior only. Actual mapped entrances n4486084294 and n4486084318.'},
+  {key:'krestovsky-park-details',name:'Приморский парк Победы: Центральная аллея',nameEn:'Primorsky Victory Park central avenue',ids:[],osm:[],at:[-6000,-4470],note:'Benches beside mapped pedestrian axis. Generic mapped paths, trees, lawns and ponds remain intact.'},
+  {key:'krestovsky-promenade',name:'Пешеходная эстакада у стадиона',nameEn:'Stadium elevated promenade (deck polygon only)',ids:[],osm:['w636982567'],at:[-7152,-4216],note:'OSM man_made=bridge deck polygon w636982567 (layer 1, 12 m wide, bent ~250 m band south-east of the arena) over dry ground. Claimed only so the quay fallback deck is not built: its oriented rectangle (263 x 86 m) put two invisible 1.3 m parapets across the plaza (the 2026-10-13 invisible wall). The footway w591418021 on it stays with streets.'},
+];

@@ -140,16 +140,17 @@ export function buildSignals(ctx, net, graph, T, shared, opts = {}) {
     return best;
   };
   const clearSpot = (lane, s0, maxOff = 14, keep = null) => {
+    const baseClear=(x,z)=>{for(let i=0;i<24;i++){const a=i*Math.PI/12;if(net.cover(x+Math.cos(a)*.35,z+Math.sin(a)*.35,{})>=-.05)return false;}return true;};
     const off0 = lane.width / 2 + KERB_W + 0.7;
     for (let back = 0; back <= 30 && s0 - back >= 0; back++) {
       const q = laneAtS(lane, s0 - back); if (!q) break;
       const off = Math.max(off0, rightEdge(q) + KERB_W + 0.7), x = q.x - q.tz * off, z = q.z + q.tx * off;
-      if (poleClear(net, x, z) && !(keep && Math.hypot(keep[0] - x, keep[1] - z) < 1.5)) return { x, z, off, tx: q.tx, tz: q.tz };
+      if (poleClear(net, x, z) && net.cover(x,z,{})<-.35 && baseClear(x,z) && !(keep && Math.hypot(keep[0] - x, keep[1] - z) < 1.5)) return { x, z, off, tx: q.tx, tz: q.tz };
     }
     const q = laneAtS(lane, s0); if (!q) return null;
     const rx = -q.tz, rz = q.tx, c = clearNear(net, q.x + rx * off0, q.z + rz * off0, 14, (x, z) => (x - q.x) * rx + (z - q.z) * rz > 0.5 && (x - q.x) * rx + (z - q.z) * rz <= maxOff && !(keep && Math.hypot(keep[0] - x, keep[1] - z) < 1.5));
     const n = c && laneNear(lane, c[0], c[1]);
-    return n ? { x: c[0], z: c[1], off: (c[0] - n.x) * -n.tz + (c[1] - n.z) * n.tx, tx: n.tx, tz: n.tz } : null;
+    return n && net.cover(c[0],c[1],{})<-.35 && baseClear(c[0],c[1]) ? { x: c[0], z: c[1], off: (c[0] - n.x) * -n.tz + (c[1] - n.z) * n.tx, tx: n.tx, tz: n.tz } : null;
   };
 
   // ================================================================ approaches of signalised junctions: stop-line pole with a head + (arterial arms) a black mast arm
@@ -333,6 +334,7 @@ export function buildSignals(ctx, net, graph, T, shared, opts = {}) {
 
   // ================================================================ road signs (blue 'P' parking squares at the parking pockets; round signs have alpha corners)
   const roadSign = (tex, x, z, nx, nz, size = 0.7, h = 2.75, round = false) => {
+    if(net.cover(x,z,{})>-.3)return;
     if (K) K.signPost({ x, z, nx, nz, h, r: 0.045, tex, w: size, ht: size, my: h - size / 2 - 0.05, mount: { round } });
     else { post(x, z, h, 0.045); panels.mount(poles, tex, x, WALK_Y + h - size / 2 - 0.05, z, nx, nz, size, size, { pole: 0.045, round }); }
     out.signs++;
@@ -353,6 +355,7 @@ export function buildSignals(ctx, net, graph, T, shared, opts = {}) {
       for (const [x, z] of far) {
         let nx = x - cx, nz = z - cz; const l = Math.hypot(nx, nz) || 1; nx /= l; nz /= l;                   // pointing out of the island along its axis
         const px = x - nx * 0.5, pz = z - nz * 0.5;
+        if(net.cover(px,pz,{})>-.3)continue;
         if (K) K.signPost({ x: px, z: pz, nx, nz, h: 1.7, r: 0.035, tex: chevTex, w: 0.4, ht: 0.8, my: 0.15 + 1.35 - WALK_Y, mount: { kind: 'plate' }, rec: { mass: 15, anchored: 8 } });
         else { post(px, pz, 1.7, 0.035); panels.mount(poles, chevTex, px, 0.15 + 1.35, pz, nx, nz, 0.4, 0.8, { pole: 0.035, kind: "plate" }); }
         out.islandPosts++;
@@ -361,6 +364,7 @@ export function buildSignals(ctx, net, graph, T, shared, opts = {}) {
   }
   /** a tall bay sign (blue P over a plate, 0.6 x 0.9) on a 2.6 m post: tallSign(tex, x, z, nx, nz) with (nx, nz) = the face normal (towards the approaching traffic) */
   out.tallSign = (tex, x, z, nx, nz, wd = 0.6, ht = 0.9, H = 2.6) => {
+    if(net.cover(x,z,{})>-.3)return;
     if (K) K.signPost({ x, z, nx, nz, h: H, r: 0.045, tex, w: wd, ht, my: H - ht / 2 - 0.08 });
     else { post(x, z, H, 0.045); panels.mount(poles, tex, x, WALK_Y + H - ht / 2 - 0.08, z, nx, nz, wd, ht, { pole: 0.045 }); }
     out.signs++;

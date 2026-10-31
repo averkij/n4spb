@@ -71,6 +71,11 @@ export const WATERWAYS = {
   gavan: { key: 'gavan', name: 'Галерная гавань', water: -3.4, bed: -4.5, wall: 'gavan', rail: [], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.7, width: 40, shadeH: 3.0 },
   'nh-inner': { key: 'nh-inner', name: 'Каналы Новой Голландии', water: -2.8, bed: -4.0, wall: 'admiralty', rail: [], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 11, shadeH: 2.8 },
 };
+// Northern source keys share the Neva datum. The smaller channels retain
+// their own bank chains so bridge openings never become water barriers.
+for (const [key, name, width] of [['park-pond','Чухонка',80],['malaya-neva','Малая Нева',400],['karpovka','Карповка',20],['zhdanovka','Ждановка',45],['kronverk-moat','Кронверкский канал',30]]) {
+  WATERWAYS[key] = { ...WATERWAYS.neva, key, name, width };
+}
 const SEAM_TOL = 0.8;
 
 /** strips that OSM leaves out of the water polygons: the WATER.plugs of the area (the strip: under the Palace Bridge, between the west polygon edge and the east polygon edge of the Neva) */
@@ -95,7 +100,20 @@ export function ownerWaterAt(x, z, m = 0.5) {
   }
   return false;
 }
-export const ownerWaterBoxes = () => _owBox;
+const OWNER_BANKS=AREA_WATER.bankRings.map(w=>_flat(w.ring||w.o||[])).filter(o=>o.length>=6);
+const BANK_BOXES=OWNER_BANKS.map(o=>[Math.min(...o.filter((_,i)=>i%2===0)),Math.max(...o.filter((_,i)=>i%2===0)),Math.min(...o.filter((_,i)=>i%2)),Math.max(...o.filter((_,i)=>i%2))]);
+export const ownerWaterBoxes = () => _owBox.concat(BANK_BOXES);
+// A drawn bank hand-over opens the generic quay without turning its terrace
+// into water. Ground holes remain restricted to the actual stair-pit rings.
+export function ownerQuayAt(x,z,m=.5) {
+  if(ownerWaterAt(x,z,m))return true;
+  return OWNER_BANKS.some((o,k)=>{
+    const b=BANK_BOXES[k];if(x<b[0]-m||x>b[1]+m||z<b[2]-m||z>b[3]+m)return false;
+    if(pointInFlat(x,z,o))return true;
+    for(let i=0,j=o.length-2;i<o.length;j=i,i+=2)if(segDist(x,z,o[j],o[j+1],o[i],o[i+1])<m)return true;
+    return false;
+  });
+}
 /** true where no generated descent, landing stage or boat may be (m = extra margin) */
 export function keepOut(x, z, m = 0) {
   for (const k of KEEP_OUT) {
@@ -204,9 +222,10 @@ let _built = null;
 function build() {
   const rings = [];                                          // { key, o, id, kind }
   RIVER.forEach((r, ri) => {
+    if(AREA_WATER.skipRiverNames.includes(r.name)||AREA_WATER.skipRiverKeys.includes(r.key))return;
     const key = keyOf(r);
     if (!key || !WATERWAYS[key]) return;
-    r.polys.forEach((p, pi) => rings.push({ key, o: p.o, id: ri + ':' + pi, kind: 'data' }));
+    (AREA_WATER.riverRings[r.id]||r.polys.map(p=>p.o)).forEach((o,pi)=>rings.push({key,o,id:ri+':'+pi,kind:'data'}));
   });
   for (const dw of AREA_WATER.dataWater) WATER.forEach((w) => { if (w.id === dw.id) w.polys.forEach((p, i) => rings.push({ key: dw.key, o: p.o, id: dw.key + i, kind: 'data' })); });      // WATER.dataWater of the area (the strip: the castle moat r15750440, which the data keeps as a plain pond; ids 'moat0', 'moat1' ...)
   // WATER.dataRings of the area: a scenery ring (FAR_SOURCES name) that the area holds as REAL water inside its data region (Vasilyevsky-Okrug 7: the Malaya Neva between the Spit and the Gulf runs through the middle of the territory, and the
@@ -219,6 +238,7 @@ function build() {
     }
   }
   PLUGS.forEach((p, i) => rings.push({ key: p.key, o: p.o, id: 'plug' + i, kind: 'plug' }));
+  for(const p of AREA_WATER.channels)rings.push({key:p.key,o:p.ring,id:p.id,kind:'data'});
   OWNER_WATER.forEach((p) => rings.push({ key: p.key, o: p.o, id: p.id, kind: 'data', owner: true }));      // (a landmark's own pit: water for the ground / the surface / inRiver, no bank of ours: flags below)
   // An OPEN MOUTH (below) that is SHORTER than the edge it lies on: the Swan Canal ends on the long straight north edge of the Moika under the Lower Swan Bridge, the Kryukov Canal on the edge of the Griboedov Canal at the
   // Staro-Nikolsky Bridge. The long edge ran as a quay wall across the mouth (a boat could not enter or leave the canal). It is split at the two ends of the mouth (collinear vertices, the water polygon is unchanged), so that only

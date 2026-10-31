@@ -30,6 +30,7 @@ export class Physics {
     this.heightAt = heightAt;
     this.waterway = waterway;
     this.waters = [];       // ponds / fountain basins: { box, fn, ring, holes, level } (addWater)
+    this.waterShores = []; // Authored beach ramps: the visible sand displaces water above its waterline.
     this.grid = new Map();
     this.items = [];
     this.dynamic = [];
@@ -46,7 +47,12 @@ export class Physics {
   }
   /** y of the water surface at (x, z): a waterway, a pond or a basin; null on dry ground */
   waterLevel(x, z) {
-    const k = this.waterway ? this.waterway(x, z) : null; if (k !== null && k !== undefined) return k;
+    const k = this.waterway ? this.waterway(x, z) : null;
+    if(k!==null&&k!==undefined){
+      for(const b of this.waterShores){const dx=x-b.cx,dz=z-b.cz,u=dx*b.c-dz*b.s,v=dx*b.s+dz*b.c;
+        if(Math.abs(u)<=b.hw&&Math.abs(v)<=b.hd&&b.yA+(b.yB-b.yA)*(v/(2*b.hd)+.5)>k-.15)return null;}
+      return k;
+    }
     for (let i = 0; i < this.waters.length; i++) {
       const w = this.waters[i];
       if (w.fn) { const y = w.fn(x, z); if (y !== null && y !== undefined) return y; continue; }

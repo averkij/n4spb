@@ -145,7 +145,9 @@ function probe(x, z) {
   }
   const w = best.w, i = best.i, t = best.q.t;
   const lerp = (a) => a[i] + (a[i + 1] - a[i]) * t;
-  const out = { m: best.m, w, side: best.q.side, hL: lerp(w.hL), hR: lerp(w.hR), hb: lerp(w.hb), t, i, cx: best.q.c.x, cz: best.q.c.z, tx: best.q.dx, tz: best.q.dz };
+  // segInfo's clamped projection has a round end cap. The drawn network has
+  // clipped junction ends; an obstacle beyond that cap is beside the asphalt.
+  const out = { m: Math.min(best.m,f), w, side: best.q.side, hL: lerp(w.hL), hR: lerp(w.hR), hb: lerp(w.hb), t, i, cx: best.q.c.x, cz: best.q.c.z, tx: best.q.dx, tz: best.q.dz };
   if (f > out.m + 0.01) { out.m = f; out.fillet = true; }
   return out;
 }
@@ -333,7 +335,7 @@ for (const c of colliders) {
     samples = samplesRect(cs.map(([lx, lz]) => [it.cx + lx * it.c + lz * it.s, it.cz - lx * it.s + lz * it.c])); ext = Math.max(2 * it.hw, 2 * it.hd);
   }
   objs.push({ src: 'collider', module: c.mod, file: site.file.replace(/^world\//, ''), line: site.line, chain: c.frames.slice(0, 4).map((f) => `${f.file.replace(/^world\//, '')}:${f.line}`).join(' < '),
-    cat: catOfFile(site.file, site.line, h, it.type), shape: it.type, x: it.cx, z: it.cz, r: it.type === 'cyl' ? it.r : null, size: it.type === 'box' ? [+(2 * it.hw).toFixed(2), +(2 * it.hd).toFixed(2)] : null,
+    cat: it.bridgeItem ? 'bridge_item' : catOfFile(site.file, site.line, h, it.type), shape: it.type, x: it.cx, z: it.cz, r: it.type === 'cyl' ? it.r : null, size: it.type === 'box' ? [+(2 * it.hw).toFixed(2), +(2 * it.hd).toFixed(2)] : null,
     h: it.y1 > 300 ? null : +it.y1.toFixed(2), ext, samples });
 }
 // B. instanced meshes (visible furniture, also where no collider exists)
@@ -396,7 +398,7 @@ for (const o of objs) {
   if (!status) { excluded.offroad++; continue; }
   let reason = null;
   if (o.src !== 'service' && inIsland(o.x, o.z)) reason = 'island';
-  else if (deckAt(o.x, o.z, 0.3) || o.cat === 'bridge_item') reason = 'bridge_owned';
+  else if (deckAt(o.x, o.z, 0.3) || ctx.services.bridges?.deckY(o.x,o.z)!=null || o.cat === 'bridge_item') reason = 'bridge_owned';
   else if ((o.cat === 'landmark_item' || o.cat === 'ad_pillar') && ev && ev.p.w && ev.p.w.rank === 0) reason = 'courtyard';
   if (reason) { excluded[reason]++; if (ALLROWS) exRows.push({ cat: o.cat, x: +o.x.toFixed(1), z: +o.z.toFixed(1), reason, file: o.file }); continue; }
   const w = (cen && cen.w) || (ev && ev.p.w) || null;

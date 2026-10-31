@@ -16,6 +16,7 @@ export const EXCLUDED = ['src/core/baked-revision.js'];
  * A row whose expression is gone from its file is a hard error; so is a computed import() without a row.
  */
 export const DYNAMIC_IMPORTS = {
+  'src/world/landmarksKamennoostrovsky.js': { '`./landmarksKamennoostrovsky/${file}.js`': { rule: 'glob', dir: 'src/world/landmarksKamennoostrovsky', pattern: '*.js', why: 'literal list of avenue landmark parts' } },
   // MODULES template: the module list of the area (src/areas/<id>/area.js; src/main.js for the strip)
   'src/main.js': { '`./world/${n}.js`': { rule: 'area-modules', why: 'the page imports the modules of its MODULES list' } },
   // fallback for a module that is missing in OWNS_TABLE (src/world/lib/owns-table.js covers every module today, so it loads nothing)
@@ -39,7 +40,7 @@ export const DYNAMIC_IMPORTS = {
  */
 export const RUNTIME_ASSETS = {
   'vendor/rapier/rapier.js': { 'rapier_wasm3d_bg.wasm': { path: null, hash: false, why: 'the default URL of the wasm in the compat bundle (new URL(..., "<deleted>")): the wasm is embedded in rapier.js, nothing is fetched' } },
-  'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html']
+  'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html', 'kronverk.html', 'aptekarsky.html', 'islands.html']
     .map((p) => [p, { path: null, hash: false, why: 'the page name of a registry row (runtime-only file: a hand-off navigates to it; the page of an area is an entry of its own closure)' }])),
   'src/world/drive/model.js': { './assets/bibliotochka.png': { path: 'assets/bibliotochka.png', hash: true, why: 'the car logo texture (drawn into the model)' } },
   'src/core/baked-world.js': {

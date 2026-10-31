@@ -16,6 +16,7 @@ import { WATERWAYS, keepOut } from './waterways.js';
 import { WATER as AREA_WATER } from '../lib/area-tables.js';
 import { Acc, hash2 } from './util.js';
 import { craftSolids, addFloatBlock, obbGap } from '../lib/craft-solids.js';
+import { pierParts } from './pier-parts.js';
 
 const C = (h) => new THREE.Color(h);
 
@@ -120,7 +121,8 @@ export function pierRects() {
     if (!key || key === 'fontanka') return;       // (the Fontanka stages are landmarksC's)
     if (!L.inPlay(r.cx, r.cz, -30)) return;
     if (L.claimedBy(p.id) || keepOut(r.cx, r.cz)) return;                // a landing stage that a sight module draws itself / its berth (waterways.js KEEP_OUT: a landmark's own pier)
-    out.push({ ...r, key, y: WATERWAYS[key].water, id: p.id + '#' + pi });
+    const parts=AREA_WATER.precisePiers.includes(p.id)?pierParts(poly.o,r):[r];
+    parts.forEach((q,i)=>out.push({ ...q, key, y: WATERWAYS[key].water, id: p.id + '#' + pi+(parts.length>1?'#'+i:'') }));
   });
   return out;
 }
@@ -147,7 +149,7 @@ export function buildBoats(ctx, root, quay) {
     return ov ? { ...r, ...ov, attached: true } : r;
   });
   for (const p of piers) {
-    const yaw = Math.atan2(-p.az, p.ax), top = p.y + 0.32, wid = Math.max(2.2, p.wid), len = Math.max(5, p.len);
+    const yaw = Math.atan2(-p.az, p.ax), top = p.y + 0.32, wid = Math.max(p.exact?.5:2.2, p.wid), len = Math.max(p.exact?.5:5, p.len);
     const lc = (u, v) => [p.cx + p.ax * u - p.az * v, p.cz + p.az * u + p.ax * v];
     const place = (u, v, cy, sx, sy, sz, col) => {                                  // an axis-aligned (in the pier frame) box
       const [x, z] = lc(u, v), A2 = new Acc(true); boxC(A2, 0, 0, 0, sx, sy, sz, col);
@@ -162,11 +164,11 @@ export function buildBoats(ctx, root, quay) {
     for (let u = -len / 2 + 1; u < len / 2; u += 3) for (const sg of [-1, 1]) place(u, sg * (wid / 2 + 0.1), p.y + 0.16, 0.34, 0.32, 0.2, TYRE);
     // railing along the water side (the side away from the wall = the side with more water around)
     const wallSide = bankSide(p), rs = -wallSide, rail = '#e6e8e6';
-    if (!p.attached) {      // (the railing of a pier at a descent is a row of breakable bays built by quay.js: docs/AREAS.md 13.7)
+    if (!p.attached && !p.exact) {      // Finger pontoons have open edges; quay rails own attached landings.
     place(0, rs * (wid / 2 - 0.08), top + 0.95, len - 0.2, 0.05, 0.05, rail); place(0, rs * (wid / 2 - 0.08), top + 0.5, len - 0.2, 0.04, 0.04, rail);
     for (let u = -len / 2 + 0.2; u <= len / 2; u += 2.4) place(u, rs * (wid / 2 - 0.08), top + 0.5, 0.06, 1.0, 0.06, rail);
     }
-    if (len > 14) {                                                                  // the ticket kiosk: a booth with a green tarpaulin roof
+    if (len > 14 && !p.exact) {                                                                  // the ticket kiosk: a booth with a green tarpaulin roof
       place(-len / 2 + 3, -rs * 0.0, top + 1.25, 3.0, 2.5, Math.min(2.4, wid - 0.5), '#e4e6e2'); place(-len / 2 + 3, 0, top + 1.55, 3.08, 0.9, Math.min(2.48, wid - 0.42), GLASS);
       place(-len / 2 + 3, 0, top + 2.62, 3.5, 0.16, Math.min(2.9, wid - 0.2), '#3d6f46');
     }
@@ -191,6 +193,7 @@ export function buildBoats(ctx, root, quay) {
   // moored: along the outer side of the pontoons, alternating types
   const pierBoxes = piers.map((p) => ({ cx: p.cx, cz: p.cz, hw: (Math.max(5, p.len) + 0.04) / 2, hd: (Math.max(2.2, p.wid) + 0.4) / 2, c: Math.cos(Math.atan2(-p.az, p.ax)), s: Math.sin(Math.atan2(-p.az, p.ax)) })), berthed = [];      // (the float blocks; the boats already moored)
   piers.forEach((p, pi) => {
+    if(p.exact)return;
     const wallSide = bankSide(p), outer = -wallSide, kinds = p.key === 'neva' ? ['tram', 'open', 'tram'] : ['open', 'tram', 'speed', 'open'];
     const yaw = Math.atan2(-p.az, p.ax);
     let u = -p.len / 2 + 1.2, k = pi;

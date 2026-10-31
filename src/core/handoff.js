@@ -124,6 +124,7 @@ export function makeProbe(L, { inset = 25 } = {}) {
     blocked: (x, z) => L.insideBuilding(x, z, 1.5),      // (water is reachable, docs/AREAS.md 13.7: a player in the river arrives in the river; a car still needs a lane, so it is put on the nearest road)
     /** the carriageway under (x,z): { tx, tz } unit tangent, or null when it is not on a vehicle road */
     lane: (x, z) => { const r = L.roadsNear(x, z, 0, { drivable: true }); const h = r.find((q) => q.gap <= 0); return h ? { tx: h.tx, tz: h.tz } : null; },
+    candidates: (x,z,r) => L.roadsNear(x,z,r,{drivable:true}).map(q=>({x:q.x,z:q.z,tx:q.tx,tz:q.tz})),
     hero: L.HERO,
   };
 }
@@ -133,7 +134,7 @@ export function makeProbe(L, { inset = 25 } = {}) {
  * where an arrival is meant to be (null: anywhere). 1. clamp into the rect; 2. valid there (probe.inside, not blocked, a car also on a lane within 30 degrees of its heading, either
  * direction)? take it; 3. else the nearest valid point of a ring search (3..60 m, 12 angles); 4. else the destination HERO with how = 'hero'. Never throws; pure.
  */
-export function resolveArrival(probe, desired, mode, rect, { ringMax = 60, ringStep = 3, angles = 12, laneDeg = 30 } = {}) {
+export function resolveArrival(probe, desired, mode, rect, { ringMax = mode === 'car' ? 120 : 60, ringStep = 3, angles = 12, laneDeg = 30 } = {}) {
   const clampRect = (x, z) => (rect ? [Math.min(rect.x1, Math.max(rect.x0, x)), Math.min(rect.z1, Math.max(rect.z0, z))] : [x, z]);
   const [fx, fz] = forwardOf(desired.yaw), cosMax = Math.cos(laneDeg * DEG);
   const valid = (x, z) => {
@@ -152,6 +153,13 @@ export function resolveArrival(probe, desired, mode, rect, { ringMax = 60, ringS
       const d = Math.hypot(x - cx, z - cz); if (!best || d < best.d) best = { x, z, d };
     }
     if (best) return res(best.x, best.z, 'ring');
+  }
+  // Twelve radial rays can miss a narrow marina lane even when it is close.
+  // Project onto nearby road segments before considering the distant HERO.
+  if(mode==='car'&&probe.candidates){
+    const candidates=probe.candidates(cx,cz,ringMax).flatMap(q=>[-3,0,3].map(d=>({x:q.x+q.tx*d,z:q.z+q.tz*d})))
+      .map(p=>({...p,d:Math.hypot(p.x-cx,p.z-cz)})).filter(p=>p.d<=ringMax).sort((a,b)=>a.d-b.d);
+    for(const p of candidates){const [x,z]=clampRect(p.x,p.z);if(valid(x,z))return res(x,z,'ring');}
   }
   const h = probe.hero; return { x: h.x, z: h.z, yaw: h.yaw, how: 'hero', moved: Math.hypot(h.x - desired.x, h.z - desired.z) };
 }

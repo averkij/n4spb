@@ -34,7 +34,7 @@ export function createBoatHandling(ctx, tuning = null) {
   const T = tuning ? { ...BOAT_TUNING, ...tuning } : BOAT_TUNING, SPEC = T.spec || SPEC_BOAT;
   const collide = createCarCollisions(ph, SPEC);
   /** the surface y of the water at (x, z) (a waterway, a pond, a basin) or null: the one hook (core/physics.js waterLevel) */
-  const waterY = (x, z) => { const w = ph.waterLevel ? ph.waterLevel(x, z) : null; return w !== null && w !== undefined ? w : (L.waterLevelAt ? L.waterLevelAt(x, z) : null); };
+  const waterY = (x, z) => ph.waterLevel ? ph.waterLevel(x,z) : (L.waterLevelAt ? L.waterLevelAt(x,z) : null);
   /** terrain a boat cannot be on although there is water: a building footprint (a vault over a canal), a hole */
   const solidBlocked = (x, z) => ph.inHole(x, z, 0.2) || L.insideBuilding(x, z);
   /** the shore: no water under the point (or a solid footprint) */

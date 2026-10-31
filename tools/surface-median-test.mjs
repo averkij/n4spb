@@ -1,6 +1,6 @@
 // Guard against phantom medians in the surface audit.
 import assert from 'node:assert/strict';
-import { partnerWidth, pairedStreet, projectsToSegment } from './lib/surface-median.mjs';
+import { partnerWidth, pairedStreet, projectsToSegment, mappedMedian } from './lib/surface-median.mjs';
 const way = (name, rank = 2) => ({ name, rank, hL: [2, 6], hR: [3, 9] });
 const w = way('A'), same = way('A'), other = way('B');
 const dry = { inRiver: () => false, insideBuilding: () => false };
@@ -19,3 +19,8 @@ assert(pairedStreet(way('A', 3), way('B', 3), -0.95, 5, 0, 0, dry), 'major junct
 assert(!pairedStreet(w, same, -0.95, 5, 0, 0, { ...dry, inRiver: () => true }));
 assert(!pairedStreet(w, same, -0.95, 5, 0, 0, { ...dry, insideBuilding: () => true }));
 console.log('PASS interpolated partner widths and production median pairing guards');
+const plaza=[{hw:'square',polys:[{o:[0,0,2,0,2,2,0,2]}]}],inside=(x,z)=>x>0&&x<2&&z>0&&z<2;
+assert(mappedMedian({kind:'median',cause:'area-square-flush',x:1,z:1},plaza,inside));
+assert(!mappedMedian({kind:'carriageway',cause:'area-square-flush',x:1,z:1},plaza,inside),'a mapped square never exempts asphalt on a real lane');
+assert(!mappedMedian({kind:'median',cause:'pavement-paver/paired-carriageway',x:1,z:1},plaza,inside));
+assert(!mappedMedian({kind:'median',cause:'area-square-flush',x:3,z:1},plaza,inside));

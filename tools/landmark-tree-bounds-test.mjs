@@ -1,5 +1,6 @@
 // No-GPU regression of the real landmark tree generators: full placement bounds survive LOD
 // repacking, wind displacement, nonuniform scale, empty buckets and the static proxy builder.
+// --generators-only checks the dynamic landmark generators independently of the static Ostrovsky splitter regression.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from 'three';
@@ -65,6 +66,7 @@ const maxD = 6 * 1.5 * (0.05 + 0.011) * 1.7 ** 2, maxF = 0.009 * 1.5 * 1.7 ** 2;
 assert.ok(Math.hypot(maxD + Math.SQRT2 * maxF, maxF * 0.5 + maxD * maxD * 0.3) < TREE_WIND_MARGIN);
 // Immutable Ostrovsky trees can enter the ordinary cell splitter, but unit crown geometry
 // must not acquire a short radius-based range: their existing far silhouette stays visible.
+if(process.argv.includes('--generators-only')){console.log(`RESULT: OK (${modules.length} generators, ${buckets} buckets, ${vertices.toLocaleString()} transformed vertices, ${queries} frustum queries; wind, nonuniform scales, empty LODs and proxy exclusion)`);process.exit(0);}
 const staticRoot = new THREE.Group(), staticTrees = new THREE.Group(); staticRoot.add(staticTrees); LOD.init(staticRoot);
 const K = { tris: 0, ctx: { mat: { toon: color => new THREE.MeshToonMaterial({ color }) }, physics: { addCylinder() {} } } };
 const E = makeTrees(K);

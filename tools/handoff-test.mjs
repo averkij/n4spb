@@ -86,6 +86,14 @@ check('a car needs a lane: the same spot is kept when a lane runs along its head
 });
 
 console.log('resolveArrival (the real strip layout):');
+check('road projection finds a narrow lane missed by the radial rays and still validates it', () => {
+  const probe=fake({lane:(x,z)=>Math.abs(x-17.13)<.1&&Math.abs(z-24.71)<.1?{tx:1,tz:0}:null});
+  probe.candidates=()=>[{x:17.13,z:24.71,tx:1,tz:0}];
+  const r=H.resolveArrival(probe,{x:0,z:0,yaw:90},'car',null);
+  assert.equal(r.how,'ring');assert.equal(r.x,17.13);assert.equal(r.z,24.71);
+  probe.blocked=()=>true;
+  assert.equal(H.resolveArrival(probe,{x:0,z:0,yaw:90},'car',null).how,'hero');
+});
 {
   const L = await import(pathToFileURL(path.join(root, 'src/world/layout.js')).href);
   const probe = H.makeProbe(L);

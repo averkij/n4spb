@@ -1,5 +1,8 @@
 # Areas: one page per scene
 
+The 6.0.0 northern port is documented in [PETRO-AREAS.md](PETRO-AREAS.md):
+Kronverk–Vvedensky–Petrovsky, Aptekarsky–Posadsky and Krestovsky–Kamenny–Yelagin.
+
 n4spb used to be ONE scene (the Nevsky strip). A scene that grows keeps growing in memory and frame time (the whole source city needed 84-90 s to load, ~5 GB and 17-33 fps), so the world is
 now split into **areas**: each area is its own page, with its own data, module list and bake. The player walks in one area; near the border toward another area the game asks whether to load it,
 and the answer is a page navigation (`location.replace`). The old page dies with its memory; the new one loads from its own bake. The plan and the decisions behind it: the approved plan of
