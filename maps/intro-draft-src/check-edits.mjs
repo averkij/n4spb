@@ -32,6 +32,19 @@ for (const mg of EDITS.merge || []) {
   console.log(`ok merge ${mg.ru}: k=${merged[0].k}, ${merged[0].km2} km2 (${merged[0].kind}), ${merged[0].rayon}`);
 }
 for (const [k, id] of Object.entries(LIVE_K)) if (!D.areas[k] || D.areas[k].live !== id) fails.push(`live area ${id} is not at k=${k}`);
+for (const rn of EDITS.rename || []) {
+  if (D.areas.filter((a) => a.ru === rn.ru && a.en === rn.en).length !== 1 || D.areas.some((a) => plain(a.ru) === rn.name)) fails.push(`rename ${rn.name}: expected exactly one ${rn.ru} with its English name`);
+}
+// The three islands stay north of Malaya Nevka; the Chkalovskoye part on
+// Petrogradsky Island joins the southern merge. Test actual land on both banks.
+for (const [name, points] of [
+  ['Крестовский—Каменный—Елагин', [[30.259, 59.973], [30.289, 59.982], [30.259, 59.981]]],
+  ['Кронверкское–Введенский–Петровский', [[30.291, 59.966], [30.274, 59.960], [30.308, 59.950]]],
+  ['Аптекарский–Посадский', [[30.324, 59.972], [30.326, 59.959]]],
+]) {
+  const a = D.areas.find((a) => a.ru === name);
+  for (const p of points) if (!a || !inRings(p, a.outer) || inRings(p, a.inner)) fails.push(`${name}: expected land point ${p} inside the area`);
+}
 // the stable merges keep the k of the first district: Kolomna-Yekateringofsky at 42, Semyonovsky-Izmaylovsky at 45 (tools/area-shape.mjs --k and the docs name them so)
 for (const [k, ru] of [[42, 'Коломна–Екатерингофский'], [45, 'Семёновский–Измайловский']]) if (!D.areas[k] || D.areas[k].ru !== ru) fails.push(`k=${k} is ${D.areas[k] && D.areas[k].ru}, expected ${ru}`);
 
@@ -46,12 +59,12 @@ for (const a of D.areas) if (a.ru === 'Округ № 7' || a.ru === 'Васил
 
 // 3. carves
 const geomOf = (a) => ({ outer: a.outer, inner: a.inner });
-(EDITS.carve || []).forEach((cv, i) => {
+[...(EDITS.carve || []), ...(EDITS.riverCarve || [])].forEach((cv, i) => {
   const rep = D.edits && D.edits.carve && D.edits.carve[i];
   if (!rep) { fails.push(`carve ${cv.street}: no report in the data (rebuild with build-intro.mjs)`); return; }
   const into = D.areas.find((a) => a.ru === cv.into);
   if (!into) { fails.push(`carve ${cv.street}: the target area ${cv.into} is missing`); return; }
-  const rems = cv.from.map((n) => D.areas.find((a) => plain(a.ru) === n));
+  const rems = cv.from.map((n) => D.areas.find((a) => plain(a.ru) === ((EDITS.rename || []).find((r) => r.name === n)?.ru || n)));
   cv.from.forEach((n, j) => { if (!rems[j]) fails.push(`carve ${cv.street}: the remainder of ${n} is missing`); });
   if (fails.length && rems.some((r) => !r)) return;
   let gain = 0;

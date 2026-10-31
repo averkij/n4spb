@@ -5,11 +5,20 @@
     { "names": ["Адмиралтейский", "Сенной", "№ 78"], "ru": "Адмиралтейский–Сенной", "en": "Admiralty–Haymarket" },
     { "names": ["Васильевский", "№ 7"], "ru": "Васильевский–Округ № 7", "en": "Vasilyevsky–Okrug № 7", "stable": true },
     { "names": ["Коломна", "Екатерингофский"], "ru": "Коломна–Екатерингофский", "en": "Kolomna–Yekateringofsky", "stable": true },
-    { "names": ["Семёновский", "Измайловское"], "ru": "Семёновский–Измайловский", "en": "Semyonovsky–Izmaylovsky", "stable": true }
+    { "names": ["Семёновский", "Измайловское"], "ru": "Семёновский–Измайловский", "en": "Semyonovsky–Izmaylovsky", "stable": true },
+    { "names": ["Посадский", "Аптекарский остров"], "ru": "Аптекарский–Посадский", "en": "Apothecary–Posadsky", "stable": true },
+    { "names": ["Кронверкское", "Введенский", "Петровский"], "ru": "Кронверкское–Введенский–Петровский", "en": "Kronverkskoye–Vvedensky–Petrovsky", "stable": true }
   ],
   "carve": [
     { "from": ["Московская застава", "Волковское"], "into": "Семёновский–Измайловский", "street": "Лиговский проспект", "side": "west", "expectOuter": 1,
       "note": "The north-west (top) parts of Moskovskaya zastava and Volkovskoye, on the side of Ligovsky prospekt that touches Semyonovsky and Izmaylovskoye, join the merged Semyonovsky-Izmaylovsky area. The cut line is the centerline of the street (dual carriageways collapsed), extended along its end bearings through the rest of the districts; the remainders of 6 and 90 keep their k and share the new edge." }
+  ],
+  "riverCarve": [
+    { "from": ["Чкаловское"], "into": "Кронверкское–Введенский–Петровский", "river": "Малая Невка", "side": "south", "expectOuter": 1,
+      "note": "The Petrogradsky Island side joins the merged southern area; Krestovsky, Kamenny and Yelagin islands stay together north of the river." }
+  ],
+  "rename": [
+    { "name": "Чкаловское", "ru": "Крестовский—Каменный—Елагин", "en": "Krestovsky–Kamenny–Yelagin" }
   ],
   "fillFootprintHoles": [
     { "area": "Коломна–Екатерингофский", "bbox": [30.25, 59.895, 30.30, 59.912],

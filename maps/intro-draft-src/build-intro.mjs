@@ -231,24 +231,38 @@ function streetCenterline(name, extM) {
   const full = [eN.pt, ...line, eS.pt];
   return { line, full, ways: ways.length, bins: line.length, spread: Math.round(spread), northBearing: eN.bearing, southBearing: eS.bearing, lengthM: Math.round(line.slice(1).reduce((s, p, i) => s + Math.hypot((p[0] - line[i][0]) * KXm2, (p[1] - line[i][1]) * KYm), 0)) };
 }
-for (const cv of EDITS.carve || []) {
+// River cuts keep the exact cached OSM centreline, including bends. Close the
+// south side beyond the city bounds; never approximate the river by latitude.
+function riverSouthRing(name) {
+  const ways = raw('rivers').elements.filter((e) => e.tags?.name === name && e.geometry && e.nodes);
+  const chains = chainWays(ways.map((e) => ({ ids: e.nodes, pts: geomOf(e.geometry) })), false);
+  if (chains.length !== 1 || chains[0].closed) throw new Error('river carve: expected one open river chain for ' + name);
+  const line = chains[0].pts;
+  if (line[0][0] > line[line.length - 1][0]) line.reverse();
+  const full = [[W - 1, line[0][1]], ...line, [E + 1, line[line.length - 1][1]]];
+  const ring = [...full, [E + 1, S - 1], [W - 1, S - 1], full[0]];
+  return { ring, full, ways: ways.length, lengthM: Math.round(line.slice(1).reduce((s, p, i) => s + Math.hypot((p[0] - line[i][0]) * KXm, (p[1] - line[i][1]) * KYm), 0)) };
+}
+for (const cv of [...(EDITS.carve || []), ...(EDITS.riverCarve || [])]) {
   const into = mos.find((m) => plainName(m.rawName) === cv.into);
   const from = cv.from.map((n) => mos.find((m) => plainName(m.rawName) === n));
   if (!into) throw new Error('carve: the target area ' + cv.into + ' is not an area (check the merge that creates it)');
   if (from.some((p) => !p)) throw new Error('carve: not found: ' + cv.from.filter((n, i) => !from[i]).join(', '));
-  const cl = streetCenterline(cv.street, 40000);
+  const cl = cv.river ? riverSouthRing(cv.river) : streetCenterline(cv.street, 40000);
+  const cutName = cv.river || cv.street;
   const side = cv.side || 'west';
-  if (side !== 'west' && side !== 'east') throw new Error('carve: side must be west or east');
-  // the half-plane polygon: the extended line + two corners 1 degree beyond the far side (the line is monotone in latitude, so the ring is simple)
+  if (cv.river ? side !== 'south' : side !== 'west' && side !== 'east') throw new Error('carve: invalid side');
+  // Street half-plane: close the latitude-monotone extended line on its far
+  // side. River cuts supply their own south-side ring instead.
   const f = cl.full, lonFar = side === 'west' ? Math.min(...f.map((p) => p[0])) - 1 : Math.max(...f.map((p) => p[0])) + 1;
-  const ring = [...f, [lonFar, f[f.length - 1][1]], [lonFar, f[0][1]], f[0]];
+  const ring = cl.ring || [...f, [lonFar, f[f.length - 1][1]], [lonFar, f[0][1]], f[0]];
   const res = pyCarve({ op: 'carve', west: ring, parts: from.map((m) => ({ name: plainName(m.rawName), geom: m.rings })), target: into.rings });
   const km = (v) => Math.round(v * 1000) / 1000;
-  log('edit: carve', cv.street, '(' + cl.ways + ' ways, ' + cl.bins + ' bins, ' + cl.lengthM + ' m, monotone in latitude, carriageways at most ' + cl.spread + ' m apart; end bearings N ' + cl.northBearing + ', S ' + cl.southBearing + ' deg) ->', cv.into);
-  const rep = { street: cv.street, into: cv.into, side, from: [], cut: res.cut.map((l) => l.map(rpt)), northBearing: cl.northBearing, southBearing: cl.southBearing, lengthM: cl.lengthM };
+  log('edit: carve', cutName, '(' + cl.ways + ' ways, ' + cl.lengthM + ' m) ->', cv.into);
+  const rep = { street: cv.street, river: cv.river, into: cv.into, side, from: [], cut: res.cut.map((l) => l.map(rpt)), northBearing: cl.northBearing, southBearing: cl.southBearing, lengthM: cl.lengthM };
   from.forEach((m, i) => {
     const r = res.parts[i];
-    if (r.westKm2 <= 0) throw new Error('carve: ' + r.name + ' has nothing on the ' + side + ' side of ' + cv.street);
+    if (r.westKm2 <= 0) throw new Error('carve: ' + r.name + ' has nothing on the ' + side + ' side of ' + cutName);
     rep.from.push({ name: r.name, srcKm2: km(r.srcKm2), carvedKm2: km(r.westKm2), restKm2: km(r.restKm2), restPieces: r.restPieces, carvedPieces: r.westPieces });
     log('  ', r.name, 'km2 (exact)', km(r.srcKm2), '->', km(r.restKm2), 'left +', km(r.westKm2), 'to', cv.into, '| pieces: left', r.restPieces, 'carved', r.westPieces);
     m.rings = r.rest;
@@ -263,6 +277,12 @@ for (const cv of EDITS.carve || []) {
   CARVE_REPORT.push(rep);
 }
 
+// Rename after carving so edits can refer to the original municipal name.
+for (const rn of EDITS.rename || []) {
+  const m = mos.find((m) => plainName(m.rawName) === rn.name);
+  if (!m) throw new Error('rename: no area named ' + rn.name);
+  m.rawName = rn.ru; m.nameEnOsm = rn.en || '';
+}
 
 // rayon of each
 for (const m of mos) {
