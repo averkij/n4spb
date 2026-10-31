@@ -17,6 +17,7 @@
 // A pose in water is never a failure; a wall of water is.
 import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
+import { clipHeightBand } from './lib/vertical-band.mjs';
 
 const QUICK = process.argv.includes('--quick');
 const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7) || process.env.ONLY || null;
@@ -24,7 +25,7 @@ const AREA = process.env.AREA || 'palace';
 let checks = 0, fails = 0;
 const check = (name, fn) => { try { fn(); checks++; console.log('PASS', name); } catch (e) { fails++; console.log('FAIL', name, '\n    ', String(e.message).split('\n').slice(0, 8).join('\n     ')); } };
 const t0 = Date.now();
-const { ctx, L, built, errors } = await buildWorld({});
+const { ctx, L, THREE, built, errors } = await buildWorld({});
 console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0) / 1000).toFixed(0)} s; ${ctx.physics.items.length} colliders${errors.length ? '; build errors: ' + errors.slice(0, 2).join(' | ') : ''}`);
 const ph = ctx.physics;
 ph.refreshDynamic();      // the dynamic solids (the bascule leaves of the Troitsky / Palace bridges) in their state at t = 0
@@ -96,7 +97,9 @@ function components(ok) {
 const FREE = components((k) => D[k] >= R_FREE), WETC = components(isWet), FREEX = components((k) => DX[k] >= R_FREE);
 // UNREACHABLE WATER: a body of water that no boat can reach, listed here with the reason (it is not a transport water: nothing is claimed about it, the checks a / c skip it). Only a body that is NOT joined to the main water by any wet cell counts;
 // a name in this table is the waterway key of EVERY sampled cell of the body, and the body must be small (a lake of the map is no excuse).
-const UNREACHABLE = { moat: AREA === 'kolomna'
+const UNREACHABLE = { moat: AREA === 'okrug65'
+  ? 'the mapped Elagin pond system (OSM r1567031 Third Northern Pond and r8613894 Elagin Ponds): enclosed shallow garden water with no connection to the Gulf'
+  : AREA === 'kolomna'
   ? 'an isolated pond in Yekateringof Park, using the shallow moat water profile; the pond has no connection to the river'
   : 'the moat of the Mikhailovsky Castle: a separate 1.2 m deep body (1506 m2) behind the Fontanka quay, ringed by its own causeway decks (landmarksCastle/bridge.js); no connection to the Fontanka' };
 const isolated = new Map();      // WETC component -> { key, size, reason }
@@ -232,6 +235,18 @@ const unverified = [];      // { id, why }: a crossing the oracle could NOT sail
 for (const c0 of crossings) {
   if (ONLY && c0.id !== ONLY) continue;
   let c = c0;
+  const mappedSegments = ctx.services.coastalBridges?.segments?.filter(s => s.id === c.id) || [];
+  if (mappedSegments.length) {
+    let wetAxis = 0, axisSamples = 0;
+    for (const s of mappedSegments) {
+      const n = Math.max(1, Math.ceil(s.len));
+      for (let i = 0; i <= n; i++) { axisSamples++; if (isWet(idx(s.ax + (s.bx - s.ax) * i / n, s.az + (s.bz - s.az) * i / n))) wetAxis++; }
+    }
+    // OSM also labels land boardwalks beside the Park 300 beach as bridges.
+    // Water on opposite sides of their land strip does not make an underpass:
+    // there must be actual water beneath the mapped deck's centreline.
+    if (!wetAxis) { report.push(`${c.id}: no water crossing under the mapped deck (${axisSamples} actual centreline samples on dry land or outside the territory)`); continue; }
+  }
   if (c.key === 'pond') { unverified.push({ id: c.id, why: 'over a pond / basin, not a waterway (not transport water)' }); continue; }
   { const iso = isolatedAt(c.c[0], c.c[1], Math.min(12, Math.max(4, c.len / 2))); if (iso) { unverified.push({ id: c.id, why: 'UNREACHABLE water (' + iso.key + ', ' + iso.size + ' m2): ' + iso.reason.split(':')[0] }); continue; } }
   // the cluster axis of a deck is a guess (a chain of decks along a river clusters into one long deck): the first try is that axis, the second the way the water runs
@@ -290,7 +305,26 @@ console.log(report.map((s) => '     ' + s).join('\n'));
 if (unverified.length) console.log(`     ${unverified.length} UNVERIFIED crossings (not sailed, each with its reason):\n` + unverified.map((u) => `       ${u.id}: ${u.why}`).join('\n'));
 
 // ---------------------------------------------------------------- b  the pillars
-const BRIDGE_MESH = /bridge|^brg-|troitsky|palace/i, NOT_PILLAR = /leaf|weight|boat|swan|duck|pontoon|env-piers|quay/i;
+const BRIDGE_MESH = /bridge|^brg-|troitsky|palace|^sea-gates-|^okrug65/i, NOT_PILLAR = /leaf|weight|boat|swan|duck|pontoon|env-piers|quay/i;
+// Docks use spatial knock instances. Their drawn walls must be checked in the
+// same world frame as ordinary bridge / Piterland meshes, not silently skipped.
+function worldTriangles(mesh, visit) {
+  const pos = mesh.geometry.attributes.position, ix = mesh.geometry.index, n = ix ? ix.count : pos.count;
+  const instance = new THREE.Matrix4(), world = new THREE.Matrix4(), V = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const count = mesh.isInstancedMesh ? mesh.count : 1;
+  for (let j = 0; j < count; j++) {
+    if (mesh.isInstancedMesh) { mesh.getMatrixAt(j, instance); world.multiplyMatrices(mesh.matrixWorld, instance); }
+    else world.copy(mesh.matrixWorld);
+    const e = world.elements;
+    for (let t = 0; t + 2 < n; t += 3) {
+      for (let k = 0; k < 3; k++) {
+        const i = ix ? ix.getX(t + k) : t + k, x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = V[k];
+        v[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; v[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; v[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
+      }
+      visit(V);
+    }
+  }
+}
 const pillars = [];      // { owner, pts: [[x, z, w, ymax, covered]], x, z, ext }
 {
   const tiny = { W: 0.6, len: 0.6, centerZ: 0, hgt: HULL }, car = { x: 0, z: 0, y: 0, yaw: 0, floats: true }, out = {};
@@ -298,22 +332,25 @@ const pillars = [];      // { owner, pts: [[x, z, w, ymax, covered]], x, z, ext 
   ctx.scene.updateMatrixWorld(true);
   const samples = new Map();      // owner -> [[x, z, w, covered]]
   ctx.scene.traverse((m) => {
-    if (!m.isMesh || m.isInstancedMesh || !m.geometry || (m.userData && m.userData.submerged) || !m.geometry.attributes.position) return;
+    if (!m.isMesh || !m.geometry || (m.userData && m.userData.submerged) || !m.geometry.attributes.position) return;
     const owner = `${m.name || '?'}<${m.parent && m.parent.name}`;
     if (!BRIDGE_MESH.test(m.name) && !BRIDGE_MESH.test(String(m.parent && m.parent.name))) return;
     if (NOT_PILLAR.test(m.name)) return;
-    const pos = m.geometry.attributes.position, ix = m.geometry.index, e = m.matrixWorld.elements, n = ix ? ix.count : pos.count;
-    const V = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    for (let t = 0; t + 2 < n; t += 3) {
-      let ymin = 1e9, ymax = -1e9;
-      for (let k = 0; k < 3; k++) { const i = ix ? ix.getX(t + k) : t + k, x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = V[k]; v[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; v[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; v[2] = e[2] * x + e[6] * y + e[10] * z + e[14]; ymin = Math.min(ymin, v[1]); ymax = Math.max(ymax, v[1]); }
-      const px = (V[0][0] + V[1][0] + V[2][0]) / 3, pz = (V[0][2] + V[1][2] + V[2][2]) / 3, k = idx(px, pz); if (!isWet(k)) continue;
-      const w = ph.waterLevel(px, pz); if (w === null) continue; if (!(ymin < w + 0.05 && ymax > w + 0.5)) continue;
+    worldTriangles(m, V => {
+      const ymin = Math.min(...V.map(v => v[1])), ymax = Math.max(...V.map(v => v[1]));
+      let w = NaN;
+      for (const [x, z] of [[(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3], ...V.map(v => [v[0], v[2]])]) { const k = idx(x, z); if (isWet(k)) { w = wl[k]; break; } }
+      if (!(w === w && ymin < w + 0.05 && ymax > w + 0.5)) return;
       const ux = V[1][0] - V[0][0], uy = V[1][1] - V[0][1], uz = V[1][2] - V[0][2], vx = V[2][0] - V[0][0], vy = V[2][1] - V[0][1], vz = V[2][2] - V[0][2];
-      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; if (Math.abs(ny / (Math.hypot(nx, ny, nz) || 1)) > 0.5) continue;
-      if (Dwet[k] < 2) continue;      // beside the bank: the quay wall is the environment's
-      for (const [qx, qz] of [[px, pz], [V[0][0], V[0][2]], [V[1][0], V[1][2]], [V[2][0], V[2][2]]]) { const q = idx(qx, qz); if (!isWet(q) || Dwet[q] < 1.5) continue; (samples.get(owner) || samples.set(owner, []).get(owner)).push([qx, qz, wl[q], covered(qx, qz, wl[q]), process.env.DBGP ? m.name + ' tri ' + V.map((v) => v[0].toFixed(1) + ',' + v[1].toFixed(1) + ',' + v[2].toFixed(1)).join(' | ') + ' mesh ' + m.id : '']); }
-    }
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; if (Math.abs(ny / (Math.hypot(nx, ny, nz) || 1)) > 0.5) return;
+      // A leaning pylon can move many metres between its footing and its head.
+      // Only its actual wall at hull height can be hit by a floating boat.
+      // Projecting its 120 m high vertices made that whole lean a false pillar.
+      const foot = clipHeightBand(V, w + .05, w + .5);
+      if (!foot.length) return;
+      const centre = [foot.reduce((s, v) => s + v[0], 0) / foot.length, foot.reduce((s, v) => s + v[2], 0) / foot.length];
+      for (const [qx, qz] of [centre, ...foot.map(v => [v[0], v[2]])]) { const q = idx(qx, qz); if (!isWet(q) || Dwet[q] < 1.5) continue; (samples.get(owner) || samples.set(owner, []).get(owner)).push([qx, qz, wl[q], covered(qx, qz, wl[q]), process.env.DBGP ? m.name + ' hull-height wall ' + foot.map((v) => v[0].toFixed(1) + ',' + v[1].toFixed(1) + ',' + v[2].toFixed(1)).join(' | ') + ' mesh ' + m.id : '']); }
+    });
   });
   // clusters of the samples of one owner (2.5 m cells, 8 neighbours); a cluster under 0.8 m across is a facet, not a pillar
   for (const [owner, S] of samples) {
@@ -378,18 +415,37 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
 }
 
 // ---------------------------------------------------------------- b2 no invisible wall in the river
-{ // every solid that stops a floating hull in open water (>= 2.5 m from the bank) has something drawn at the waterline within 6 m of it (the middle of a wide pier is 5 m from its walls): a pier, a pontoon, a boat, a wall. A collider that is wider than its pillar (or has none) is a wall of water.
+{ // Every solid that stops a floating hull in open water (>= 2.5 m from the bank) has a drawn surface in the hull-height band within 6 m: a pier, pontoon, boat or wall. Horizontal floating-deck triangles count over their actual drawn area. A collider wider than its drawing is a wall of water.
   const drawn = new Set(), key = (x, z) => Math.floor(x) + ',' + Math.floor(z);
   ctx.scene.traverse((m) => {
-    if (!m.isMesh || m.isInstancedMesh || !m.geometry || !m.geometry.attributes.position) return;
-    const pos = m.geometry.attributes.position, ix = m.geometry.index, e = m.matrixWorld.elements, n = ix ? ix.count : pos.count, V = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    for (let t = 0; t + 2 < n; t += 3) {
-      let ymin = 1e9, ymax = -1e9;
-      for (let k = 0; k < 3; k++) { const i = ix ? ix.getX(t + k) : t + k, x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = V[k]; v[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; v[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; v[2] = e[2] * x + e[6] * y + e[10] * z + e[14]; ymin = Math.min(ymin, v[1]); ymax = Math.max(ymax, v[1]); }
-      const k0 = idx((V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3); if (k0 < 0 || wlx[k0] !== wlx[k0]) continue;
-      const w = wlx[k0]; if (!(ymin < w + 0.3 && ymax > w + 0.3)) continue;      // (touches or crosses the surface; the walls of a boat hull, a pontoon, a pier)
-      for (let a = 0; a < 3; a++) { const p = V[a], q = V[(a + 1) % 3], l = Math.hypot(q[0] - p[0], q[2] - p[2]), nn = Math.max(1, Math.ceil(l)); for (let i = 0; i <= nn; i++) drawn.add(key(p[0] + (q[0] - p[0]) * i / nn, p[2] + (q[2] - p[2]) * i / nn)); }
-    }
+    if (!m.isMesh || !m.geometry || !m.geometry.attributes.position) return;
+    worldTriangles(m, V => {
+      const ymin = Math.min(...V.map(v => v[1])), ymax = Math.max(...V.map(v => v[1]));
+      let w = NaN;
+      for (const [x, z] of [[(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3], ...V.map(v => [v[0], v[2]])]) {
+        const k = idx(x, z); if (k >= 0 && wlx[k] === wlx[k]) { w = wlx[k]; break; }
+      }
+      if (!(w === w && ymin < w + HULL && ymax > w + .05)) return;
+      const band = clipHeightBand(V, w + .05, w + HULL);
+      // Sampling only the hull-height wall avoids projecting a leaning pylon's
+      // head, or a long triangle's elevated diagonal, into otherwise empty water.
+      for (let a = 0; a < band.length; a++) {
+        const p = band[a], q = band[(a + 1) % band.length], l = Math.hypot(q[0] - p[0], q[2] - p[2]), nn = Math.max(1, Math.ceil(l));
+        for (let i = 0; i <= nn; i++) drawn.add(key(p[0] + (q[0] - p[0]) * i / nn, p[2] + (q[2] - p[2]) * i / nn));
+      }
+      // A broad floating dock has an actual horizontal deck in the hull's
+      // height band. Its middle need not lie within 6 m of a vertical wall.
+      // Count only the drawn triangle, rather than exempting its collider box.
+      let area = 0; for (let i = 0; i < band.length; i++) { const a = band[i], b = band[(i + 1) % band.length]; area += a[0] * b[2] - b[0] * a[2]; }
+      if (Math.abs(area) > .5) {
+        const xs = band.map(v => v[0]), zs = band.map(v => v[2]);
+        for (let x = Math.floor(Math.min(...xs)); x <= Math.ceil(Math.max(...xs)); x++) for (let z = Math.floor(Math.min(...zs)); z <= Math.ceil(Math.max(...zs)); z++) {
+          let positive = false, negative = false;
+          for (let i = 0; i < band.length; i++) { const a = band[i], b = band[(i + 1) % band.length], cross = (b[0] - a[0]) * (z + .5 - a[2]) - (b[2] - a[2]) * (x + .5 - a[0]); if (cross > 1e-6) positive = true; if (cross < -1e-6) negative = true; }
+          if (!(positive && negative)) drawn.add(key(x, z));
+        }
+      }
+    });
   });
   // n4spb (Vasilyevsky, the Rumyantsevsky apron): the pit ring of a landmark module (WATER.ownerRings) may hold a walkable PLATFORM that stands over the water (the apron floor, 2.2 m over the Neva, its pink skirt drawn along the river edge):
   // the walk slabs stop a hull, and the middle of an 18 m wide platform is more than 6 m from any drawn waterline surface. A solid cell under such a platform is the platform itself, not a wall of water: the skirt at the river edge
@@ -409,11 +465,15 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
     const x = cx(k), z = cz(k); if (!L.waterwayAt(x, z)) continue;      // (a waterway: the ponds of the gardens have islands, rocks and trees of their own)
     let near = false; const R = hulls.length ? hullReach(x, z) : 6;
     for (let dz = -R; dz <= R && !near; dz++) for (let dx = -R; dx <= R; dx++) if (drawn.has(key(x + dx, z + dz))) { near = true; break; }
-    if (!near) { const c = Math.floor(x / 20) + ',' + Math.floor(z / 20), e = bad.get(c) || { n: 0, x, z, ids: new Set() }; e.n++; bad.set(c, e); }
+    if (!near) {
+      const c = Math.floor(x / 20) + ',' + Math.floor(z / 20), e = bad.get(c) || { n: 0, x, z, ids: new Set() }; e.n++;
+      for (const b of ph.querySolids(x, z, 3)) if (carContact({ x, z, y: wl[k], yaw: 0, floats: true }, { W: 2.2, len: 2.2, centerZ: 0, hgt: HULL }, b)) e.ids.add(`${b.type}@${b.cx.toFixed(1)},${b.cz.toFixed(1)} y${b.y0.toFixed(1)}..${b.y1.toFixed(1)}`);
+      bad.set(c, e);
+    }
   }
   const total = [...bad.values()].reduce((a, e) => a + e.n, 0);
-  check('b no invisible wall in the river: every solid cell of open water has a drawn wall within 6 m (' + total + ' cells without)', () => {
-    assert.equal(total, 0, total + ' blocked water cells with nothing drawn near them, e.g. ' + [...bad.values()].sort((a, b) => b.n - a.n).slice(0, 6).map((e) => e.n + ' at ' + e.x.toFixed(0) + ', ' + e.z.toFixed(0)).join('; '));
+  check('b no invisible wall in the river: every solid cell of open water has a drawn hull-height surface within 6 m (' + total + ' cells without)', () => {
+    assert.equal(total, 0, total + ' blocked water cells with nothing drawn near them, e.g. ' + [...bad.values()].sort((a, b) => b.n - a.n).slice(0, 6).map((e) => e.n + ' at ' + e.x.toFixed(0) + ', ' + e.z.toFixed(0) + ' [' + [...e.ids].slice(0, 2).join('; ') + ']').join('; '));
   });
 }
 
@@ -427,17 +487,16 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
   const bare = new Map(), seenE = new Set(); let tested = 0, pondPts = 0;
   ctx.scene.updateMatrixWorld(true);
   ctx.scene.traverse((m) => {
-    if (!m.isMesh || m.isInstancedMesh || !m.geometry || (m.userData && m.userData.submerged) || !m.geometry.attributes.position) return;
+    if (!m.isMesh || !m.geometry || (m.userData && m.userData.submerged) || !m.geometry.attributes.position) return;
     if (!BRIDGE_MESH.test(m.name) && !BRIDGE_MESH.test(String(m.parent && m.parent.name))) return;
     if (NOT_PILLAR.test(m.name)) return;
-    const owner = m.name || '?', pos = m.geometry.attributes.position, ix = m.geometry.index, e = m.matrixWorld.elements, n = ix ? ix.count : pos.count, V = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    for (let t = 0; t + 2 < n; t += 3) {
-      for (let k = 0; k < 3; k++) { const i = ix ? ix.getX(t + k) : t + k, x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), v = V[k]; v[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; v[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; v[2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
+    const owner = m.name || '?';
+    worldTriangles(m, V => {
       let w = NaN; for (const q of [[(V[0][0] + V[1][0] + V[2][0]) / 3, (V[0][2] + V[1][2] + V[2][2]) / 3], [V[0][0], V[0][2]], [V[1][0], V[1][2]], [V[2][0], V[2][2]]]) { const l = ph.waterLevel(q[0], q[1]); if (l !== null) { w = l; break; } }
-      if (w !== w) continue;
+      if (w !== w) return;
       const pl = w + 0.62, d = [V[0][1] - pl, V[1][1] - pl, V[2][1] - pl], cross = [];
       for (let a = 0; a < 3; a++) { const b = (a + 1) % 3; if ((d[a] > 0) !== (d[b] > 0)) { const f = d[a] / (d[a] - d[b]); cross.push([V[a][0] + (V[b][0] - V[a][0]) * f, V[a][2] + (V[b][2] - V[a][2]) * f]); } }
-      if (cross.length < 2) continue;
+      if (cross.length < 2) return;
       const [p, q] = cross, l = Math.hypot(q[0] - p[0], q[1] - p[1]), nn = Math.max(1, Math.ceil(l / 0.4));
       for (let i = 0; i <= nn; i++) {
         const x = p[0] + (q[0] - p[0]) * i / nn, z = p[1] + (q[1] - p[1]) * i / nn, k = idx(x, z); if (!isWet(k) || !openWater(x, z, 1.4)) continue;
@@ -445,7 +504,7 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
         const gk = Math.floor(x * 2) + ',' + Math.floor(z * 2); if (seenE.has(gk)) continue; seenE.add(gk); tested++;
         if (!stops(x, z, wl[k])) { const r = bare.get(owner) || { n: 0, x, z }; r.n++; bare.set(owner, r); }
       }
-    }
+    });
   });
   for (const [o, why] of Object.entries(LOW_CLEARANCE_BRIDGES)) if (bare.has(o)) console.log(`     known low-clearance bridge ${o} (no soffit collider, not part of check e): ${why}`);
   const list = [...bare.entries()].sort((a, b) => b[1].n - a[1].n);
@@ -518,6 +577,15 @@ const ROUTES = {
   gavan: [
     // the Kronshpits mouth (between the two moles, c -6957 402), the Shkipersky canal and the Shkipersky Bridge (-7010 -31: the walk box ends at the soffit, the bents stand 22 m apart) into Galerny Harbour
     { name: 'the Gulf off the Kronshpits mouth -> the Shkipersky canal -> Galerny Harbour (under the Shkipersky Bridge)', from: [-6955, 480], to: [-7120, -150] },
+  ],
+  'morskie-vorota': [
+    { name: 'Sea Gates motorboat landing -> the container-ship anchorage in the open Gulf', from: [-7610, 2980], to: [-8100, 3350] },
+    { name: 'the open Gulf anchorage -> Kanonersky floating Dock 3, through its open end', from: [-8100, 3350], to: [-7409, 2824] },
+    { name: 'Kanonersky floating Dock 3 -> floating Dock 5, through the harbour channel', from: [-7409, 2824], to: [-7059, 2421] },
+  ],
+  okrug65: [
+    { name: 'Park 300 beach motorboat landing -> the Yacht Bridge bay beside Piterland', from: [-8500, -5100], to: [-8100, -5100] },
+    { name: 'Park 300 beach motorboat landing -> the western park coast', from: [-8500, -5100], to: [-8850, -5450] },
   ],
 }[AREA] || [];
 {

@@ -189,6 +189,12 @@ KNOWN_UNCLAIMED.morskoy = { ...(KNOWN_UNCLAIMED.morskoy || {}),
   r7378336: { module: 'landmarksMarineFacade', why: 'the gold lattice crowns of Golden City (goldencity.js crown(): the overlays on the parts r12001859 / r12001860 of Chelyuskina 4 s1, 17 and 12 storeys, 788 triangles of thin rods and a silhouette proxy on the roofs) stand on the OSM outline of a building that city draws: a roof ornament on a generic block, the verbatim source behaviour (groups.js: "the crowns of r12001859 / r12001860 are overlays, not claimed")' },
 };
 
+// The WHSD crosses above this single-storey port house. Only geometry at least
+// 45 m high is permitted here: a future pier/support through the house must fail.
+KNOWN_UNCLAIMED['morskie-vorota'] = {
+  w1015862793: { module: 'coastalBridges', minY: 45, why: 'the WHSD deck/truss passes at y 50..59.33 above the 3.3 m house; mapped piers avoid its footprint (docs/NEW-COAST-DATA.md)' },
+};
+
 // ---------------------------------------------------------------- engine
 const THREE = await import('three');
 const { createContext } = await import(pathToFileURL(path.join(root, 'src/core/ctx.js')).href);
@@ -281,7 +287,7 @@ console.log(`claims-draw-audit area ${AREA}: ${claimedBy.size} claimed ids (${ta
 //   own: of hi, those that are not foliage and belong to THIS building and not to a deeper neighbour of another claim group (rule 1) }
 const counts = new Map();
 //   fol / low / shallow / stolen: of the centroids inside a claimed building that are NOT own, why (a plant; at or below the band; within the inset of the outline; deeper inside a neighbour of another claim group)
-const bump = (m, i, f) => { const k = m + '|' + i; let c = counts.get(k); if (!c) counts.set(k, (c = { n: 0, hi: 0, deep: 0, overlap: 0, own: 0, fol: 0, low: 0, shallow: 0, stolen: 0 })); c.n++; if (f.hi) c.hi++; if (f.deep) c.deep++; if (f.overlap) c.overlap++; if (f.own) c.own++; else if (f.why) c[f.why]++; };
+const bump = (m, i, f) => { const k = m + '|' + i; let c = counts.get(k); if (!c) counts.set(k, (c = { n: 0, hi: 0, deep: 0, minDeepY: Infinity, overlap: 0, own: 0, fol: 0, low: 0, shallow: 0, stolen: 0 })); c.n++; if (f.hi) c.hi++; if (f.deep) { c.deep++; c.minDeepY = Math.min(c.minDeepY, f.y); } if (f.overlap) c.overlap++; if (f.own) c.own++; else if (f.why) c[f.why]++; };
 const groupOf = (t) => (t.claim ? t.claim.module + '/' + t.claim.key : 'unclaimed:' + t.id);
 const V = new THREE.Vector3(), M = new THREE.Matrix4(), tmpM = new THREE.Matrix4();
 const centroidsOf = (o, out, meshIdx, owners) => {
@@ -319,8 +325,8 @@ for (const name of names) {
         else { own = true; for (let h2 = 0; h2 < hits.length; h2 += 2) { const j = hits[h2]; if (j !== i && targets[j].building && hits[h2 + 1] > d && groupOf(targets[j]) !== groupOf(t)) { own = false; why = 'stolen'; break; } } }
       }
       if (own && t.claim && name === t.claim.module && undrawIds.has(t.id)) continue;                       // --mutant undraw: the owner's own geometry of this building is left out of the audit's view
-      if (own && t.claim && name === t.claim.module && citydrawIds.has(t.id) && names.includes('city')) { bump('city', i, { hi, deep: y > ABOVE && d >= DEEP, overlap: false, own, why }); continue; }          // --mutant citydraw: ... and counted as city's
-      bump(name, i, { hi, deep: y > ABOVE && d >= DEEP, overlap: hi && t.claim && inUnclaimed, own, why });
+      if (own && t.claim && name === t.claim.module && citydrawIds.has(t.id) && names.includes('city')) { bump('city', i, { y, hi, deep: y > ABOVE && d >= DEEP, overlap: false, own, why }); continue; }          // --mutant citydraw: ... and counted as city's
+      bump(name, i, { y, hi, deep: y > ABOVE && d >= DEEP, overlap: hi && t.claim && inUnclaimed, own, why });
       if (WHERE.size && WHERE.has(t.id) && (!argv.includes('--where-high') || hi)) { const k = t.id + '|' + name; const s = samples[k] || (samples[k] = []); if (s.length < 10) s.push(`(${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)}) d ${d.toFixed(2)} ${meshNames[owners[q]]}`); }
     }
   }
@@ -371,7 +377,7 @@ for (let i = 0; i < targets.length; i++) {
     const label = `${t.id}${t.rec.name ? ' (' + t.rec.name + ')' : ''}${t.rec.addr ? ' ' + JSON.stringify(t.rec.addr) : ''}`;
     if (c.deep >= MIN_UNCLAIMED) {
       const k = known[t.id];
-      if (k && k.module === m) { unclaimedHits.push({ m, id: t.id, n: c.deep, known: true }); notes.push(`${m} draws ${c.deep} triangles deep inside the unclaimed building ${label}: known, ${k.why}`); }
+      if (k && k.module === m && (k.minY === undefined || c.minDeepY >= k.minY)) { unclaimedHits.push({ m, id: t.id, n: c.deep, known: true }); notes.push(`${m} draws ${c.deep} triangles deep inside the unclaimed building ${label}: known, ${k.why}`); }
       else { unclaimedHits.push({ m, id: t.id, n: c.deep }); failed = true; problems.push(`${m} draws ${c.deep} triangles above ${ABOVE} m and deeper than ${DEEP} m inside the UNCLAIMED building ${label}: claimed by nobody${mutantIds.has(t.id) ? ' (the --mutant)' : ''}`); }
     } else if (VERBOSE) unclaimedHits.push({ m, id: t.id, n: c.deep, edge: c.hi - c.deep, low: c.n - c.hi, minor: true });      // low: on the outline (a party wall), within the inset, or below ABOVE (a floor)
   }

@@ -1728,3 +1728,54 @@ The owner's report (pose -1226.7, -0.7, -1602, yaw 459.6, standing in the gap of
 * **The counterweight of the leaf** (the blocks in the pit beside the hinge pier, swinging down below the water as the leaf rises) is its own mesh `troitsky-leaf-weight`, out of the outline pass for the same reason (`landmarksTroitsky/leaf.js`).
 
 Not changed: the leaf's soffit and girders (several parallel dark / light slabs under the raised leaf) are the drawn steel girders and stay; the soft darker band to the side of the hinge span is the shade of the part of the leaf that still stands over the water. Known, not part of this fix: with `?troitsky=open` / `?palacebridge=open` forced there is no wait for a clear span, so NPC pedestrians that were on the deck can stand in the air over the gap at t = 200 s of a shot (the normal AUTO schedule waits for a clear span).
+
+## 16. Морские ворота and Округ № 65 (7.0.0)
+
+The two coastal areas are live as `morskie-vorota.html` (planning map 71,
+badge H) and `okrug65.html` (map 100, badge O). The implementation overview,
+ship controls, world contracts and integration checks are in
+[COASTAL-AREAS.md](COASTAL-AREAS.md); exact data snapshots, regeneration and
+coverage limitations are in [NEW-COAST-DATA.md](NEW-COAST-DATA.md).
+
+| Area | Territory | Authored content |
+| --- | --- | --- |
+| Морские ворота | M01–M56, 16.0128 km² | Kanonersky/Bely islands and port basins, surveyed floating docks, portal cranes and loose cargo, Epiphany Church, WHSD crossings, an operable 399.9 × 61 m container ship |
+| Округ № 65 | O01–O56, 18.0800 km² | Primorsky streets, Park 300th Anniversary with open fountain, granite lighthouse and mapped sandy beaches, Piterland and Fly Arena, Yacht and coastal bridges |
+
+The correct source scene, `D:/git2/agi-fun-tests/102_3d_piter` at `022e72ca`,
+contains only two marine building outlines and 116 Okrug 65 records on the
+southern fringe (the draft map reports 0% and 3% coverage). The new areas use
+fresh OpenStreetMap extracts from 2026-10-31 through the existing offline
+facade/bake path. Runtime does not query OSM. Landmark dossiers link primary
+references and inspected photographs, and distinguish mapped dimensions from
+photo-derived estimates: [port and ship](research/sea-gates-landmarks.md),
+[park and Piterland](research/okrug65-landmarks.md),
+[Epiphany Church](research/port-church-landmark.md).
+
+The territories follow the existing B600 policy: 80 m cells rasterized from
+the draft's land footprint and nearby navigable water. Marine approach bands
+provide usable transitions to **Vasilyevsky, Gavan and Kolomna**, with one
+reciprocal edge-gate pair for each neighbour. Okrug 65 has no live neighbour
+in this checkout; its accidental water-only overlap with Dekabristov was
+removed. `node tools/connect-coastal-areas.mjs` discovers current live overlaps
+and checks gate priority against the real gate machine. Rerun it after the
+three separately developed Petrograd areas are integrated to connect Okrug's
+southern border; those areas are a parallel dependency, not implemented by
+this coastal branch. Their planning map indices remain stable.
+
+The coastal work is isolated in `feat/coastal-areas` from that concurrent
+Petrograd checkout. Its data-only predecessor contains 130 pending Petrograd
+files, explicitly classified by `tools/classify-pending-area-data.mjs`; rerun
+the classifier when their area modules land. The registry remains the source
+of truth for the live graph. Refresh the draft's live catalogue with
+`node maps/intro-draft-src/refresh-live.mjs` after registry changes; full planning
+rebuild instructions are in [the map README](../maps/intro-draft-src/README.md).
+
+Water stays reachable on foot and by car, island holes stay dry, and navigable
+channels have no blanket exclusion wall. The fountain uses shallow registered
+water over its ground-level floor. Loose port objects, fixtures and bridge
+rails use the shared knock system. Height-aware bridge services preserve both
+WHSD floors, while the motorboat and container ship retain distinct dimensions,
+clearance and controls. `npm run coast` covers new geography, water, bridges
+and ship behaviour; final render/bake and performance evidence belongs in
+[PERFORMANCE.md](PERFORMANCE.md).

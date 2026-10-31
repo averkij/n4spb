@@ -82,6 +82,8 @@ svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #layers summary { cursor: pointer; list-style: none; } #layers summary::-webkit-details-marker { display: none; } #layers summary::after { content: ' ▾'; color: var(--muted); } #layers[open] summary { margin-bottom: 4px; }
 #legend { left: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 12px; max-width: 270px; }
 #legend .row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+#legend .live-legend { display: block; margin-top: 8px; }
+#legend .live-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 4px; }
 #legend .sw { width: 22px; height: 14px; border-radius: 3px; border: 1px solid var(--line); flex: none; }
 #legend .sw.hatch { background: repeating-linear-gradient(45deg, rgba(190,50,40,.75) 0 2px, transparent 2px 6px); }
 #legend .sw.dots { border: 2px dotted #5b6bd6; background: transparent; }
@@ -519,10 +521,12 @@ function renderCard(a) {
     const ms = (a.mergeGroup || []).filter((k) => k !== a.k).map((k) => D.areas[k]); const links = ms.map((m) => `<a href="#" data-go="${m.k}">${nm(m)}</a>`).join(' + ');
     const note = a.mergeLone ? (a.mergeSum > D.meta.B_HI * 1.5 ? s.isolated : s.bestEffort) : (a.mergeSum >= D.meta.B_LO && a.mergeSum <= D.meta.B_HI ? s.mergeOk : s.mergeNear);
     plan = `<div class="plan"><b>${s.cls.small}</b> · ${s.clsLong.small}${ms.length ? `<br>${s.mergeWith}: ${links}<br>${a.mergeLone ? '' : fmt(a.mergeSum) + ' ' + s.km2 + ' · '}${note}` : ''}</div>`; }
-  const ex = a.exist.map((e) => { const x = D.existing.find((q) => q.id === e.id); return `<span class="tag ${e.id}">${e.id}</span> ${lang === 'ru' ? x.title : x.titleEn} ${e.pct}% ${s.cover} · ${x.status === 'Live' ? s.live : s.wip}`; });
-  const goLinks = a.exist.map((e) => { const x = D.existing.find((q) => q.id === e.id); return `<a class="go" href="../${x.page || 'index.html'}">${s.open} ${e.id} →</a>`; }).join(' ');
   const lv = a.live ? D.existing.find((q) => q.id === a.live) : null;
+  const ex = a.exist.filter((e) => e.id !== lv?.id).map((e) => { const x = D.existing.find((q) => q.id === e.id); return `<span class="tag ${e.id}">${e.id}</span> ${lang === 'ru' ? x.title : x.titleEn} ${e.pct}% ${s.cover} · ${x.status === 'Live' ? s.live : s.wip}`; });
+  if (lv) ex.unshift(`<span class="tag ${lv.id}">${lv.id}</span> ${lang === 'ru' ? lv.title : lv.titleEn} · ${s.live}`);
+  const goLinks = [...new Set([lv?.id, ...a.exist.map(e => e.id)].filter(Boolean))].map((id) => { const x = D.existing.find((q) => q.id === id); return `<a class="go" href="../${x.page || 'index.html'}">${s.open} ${id} →</a>`; }).join(' ');
   const liveBox = lv ? `<div class="liveBox"><h3><span class="tag live">${s.liveBadge}</span> <span class="tag ${lv.id}">${lv.id}</span> ${lang === 'ru' ? lv.title : lv.titleEn}</h3>
+    <a class="go" href="../${lv.page}">${s.open} ${lv.id} →</a>
     <div><b>${s.liveSights}:</b> ${lv.sights.join(' · ')}</div>
     <div class="row2">${s.liveSize}: ≈ ${lv.approxMB} MB · ${s.liveWalk}: ${fmt(lv.km2)} ${s.km2} (${lv.rectN} ${s.liveRects})</div>
     ${lv.edges.length ? `<div class="row2">${s.liveEdges}: ${lv.edges.map((l) => { const t = D.existing.find((q) => q.id === l); return `<span class="tag ${l}">${l}</span> ${lang === 'ru' ? t.title : t.titleEn}`; }).join(' · ')}</div>` : `<div class="row2">${s.liveEdges}: —</div>`}</div>` : '';
@@ -602,7 +606,7 @@ function buildLayers() {
     <div class="row"><span class="sw dots"></span><span><b>${s.cls.small}</b> &lt; ${fmt(D.meta.B_LO)} (+)</span></div>
     <div class="row"><span class="sw" style="border:2px solid #d62a1e;background:rgba(214,40,30,.12)"></span><span><b>${s.hoverRed}</b></span></div>
     <div class="row"><span class="sw" style="background:repeating-linear-gradient(-45deg, rgba(20,120,60,.65) 0 3px, transparent 3px 8px)"></span><span>${s.srcHatch} (${fmt(D.source.km2)} ${s.km2})</span></div>
-    <div class="row"><span style="display:inline-flex;gap:3px;flex:none">${D.existing.map((e) => `<span class="tag ${e.id}">${e.id}</span>`).join('')}</span><span><b>${s.liveBadge}</b>: ${s.liveLegend}</span></div>`;
+    <div class="row live-legend"><span class="live-tags">${D.existing.map((e) => `<span class="tag ${e.id}">${e.id}</span>`).join('')}</span><span><b>${s.liveBadge}</b>: ${s.liveLegend}</span></div>`;
 }
 function applyLayers() {
   gStr.forEach((g, c) => { g.style.display = layerOn.roads && (c < 3 || (c === 3 && view.k > 0.008) || (c === 4 && view.k > 0.02)) ? '' : 'none'; });

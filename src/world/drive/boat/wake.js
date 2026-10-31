@@ -13,24 +13,25 @@ export function createWake(ctx) {
     update(dt, car, driven) {
       if (driven && dt > 0) {
         const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw), lx = cy, lz = -sy, v = Math.abs(car.vF), k = Math.min(1, v / 14), y = car.y + 0.05;
+        const big = (car.spec?.len || 0) > 20, stern = big ? car.spec.rear : -2.9, beam = big ? car.spec.W / 2 : 1, foamScale = big ? 6 : 1;
         acc += dt * (4 + 70 * k * k + 10 * (car.thrS || 0));
         while (acc >= 1) {
           acc -= 1;
-          const side = Math.random() < 0.5 ? 1 : -1, back = -2.45 - Math.random() * 0.4, half = 0.75 + 0.4 * Math.random();
+          const side = Math.random() < 0.5 ? 1 : -1, back = stern + 0.45 - Math.random() * 0.4, half = beam * (0.75 + 0.4 * Math.random());
           const px = car.x + sy * back + lx * side * half, pz = car.z + cy * back + lz * side * half;
           const out = (0.3 + 1.3 * k) * side * (0.6 + 0.8 * Math.random());       // the V opens outward as the wash rolls off the quarters
-          foam.emit({ x: px + rnd(0.2), y, z: pz + rnd(0.2), vx: lx * out + car.vx * 0.12 + rnd(0.2), vz: lz * out + car.vz * 0.12 + rnd(0.2), vy: 0, life: 1.8 + 1.6 * k, s0: 0.45 + 0.3 * k, s1: 1.5 + 2.0 * k, a: 0.38 * (0.35 + 0.65 * k), r: 0.96, g: 0.99, b: 1.0, drag: 0.8 });
+          foam.emit({ x: px + rnd(0.2), y, z: pz + rnd(0.2), vx: lx * out + car.vx * 0.12 + rnd(0.2), vz: lz * out + car.vz * 0.12 + rnd(0.2), vy: 0, life: 1.8 + 1.6 * k, s0: (0.45 + 0.3 * k) * foamScale, s1: (1.5 + 2.0 * k) * foamScale, a: 0.38 * (0.35 + 0.65 * k), r: 0.96, g: 0.99, b: 1.0, drag: 0.8 });
         }
         // a churn right behind the transom, strongest on the throttle
         if ((car.thrS || 0) > 0.05 || k > 0.1) {
           ripple += dt * (10 + 30 * (car.thrS || 0));
           while (ripple >= 1) {
             ripple -= 1;
-            foam.emit({ x: car.x + sy * -2.9 + rnd(0.2), y, z: car.z + cy * -2.9 + rnd(0.2), vx: -sy * (0.8 + 2 * k) + rnd(0.2), vz: -cy * (0.8 + 2 * k) + rnd(0.2), vy: 0, life: 1.1 + 0.9 * k, s0: 0.35, s1: 1.2 + 1.4 * k, a: 0.55, r: 0.98, g: 1, b: 1, drag: 1.4 });
+            foam.emit({ x: car.x + sy * stern + rnd(0.2), y, z: car.z + cy * stern + rnd(0.2), vx: -sy * (0.8 + 2 * k) + rnd(0.2), vz: -cy * (0.8 + 2 * k) + rnd(0.2), vy: 0, life: 1.1 + 0.9 * k, s0: 0.35 * foamScale, s1: (1.2 + 1.4 * k) * foamScale, a: 0.55, r: 0.98, g: 1, b: 1, drag: 1.4 });
           }
         }
         // bow spray: droplets thrown sideways and up from the stem when the boat is fast
-        if (k > 0.45) {
+        if (k > 0.45 && !big) {
           sprayAcc += dt * 30 * (k - 0.35);
           while (sprayAcc >= 1) {
             sprayAcc -= 1;

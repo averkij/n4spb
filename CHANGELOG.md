@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **7.0.0** (2026-10-31, major): Open Sea Gates and Okrug 65 with coastal landmarks, navigable bridges and a giant drivable container ship
 - **6.0.0** (2026-10-31, major): Map Sea Gates and Okrug 65 from fresh OSM data and prepare coastal territories
 - **5.0.1** (2026-10-30, patch): Repair road surface tapers on Marata Street and Zagorodny Prospekt
 - **5.0.0** (2026-10-30, major): Add Kolomna–Yekateringofsky and Semyonovsky–Izmaylovsky, with connected waterways and boat handoffs

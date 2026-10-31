@@ -60,10 +60,10 @@ export function createHandling(ctx, tuning = null) {
   const collide = createCarCollisions(ph, SPEC);
   const KEEP_OUT = HOOKS.carKeepOut;      // the area's own closed ground (the Tauride Garden, T2): a plain (x, z) => boolean, absent for the strip
   const DS = HOOKS.deckServices || [];      // the area's own deck services (a podium, stairs): their deckY comes before the bridge decks (docs/AREAS.md section 9)
-  const oldDeckY = (x, z) => ctx.services.landmarksC?.bridge?.deckY?.(x, z) ?? ctx.services.bridges?.deckY(x, z) ?? null;      // the chain of before M6: this is all the strip runs (no deck service)
-  const deckY = () => (DS.length ? (x, z) => {
-    for (let i = 0; i < DS.length; i++) { const d = ctx.services[DS[i]]?.deckY?.(x, z); if (Number.isFinite(d)) return d; }      // null / undefined / NaN / Infinity = no deck here (the old chain answers); 0 is a deck
-    return oldDeckY(x, z);
+  const oldDeckY = (x, z, ref) => ctx.services.landmarksC?.bridge?.deckY?.(x, z, ref) ?? ctx.services.bridges?.deckY(x, z, ref) ?? null;
+  const deckY = () => (DS.length ? (x, z, ref) => {
+    for (let i = 0; i < DS.length; i++) { const d = ctx.services[DS[i]]?.deckY?.(x, z, ref); if (Number.isFinite(d)) return d; }
+    return oldDeckY(x, z, ref);
   } : oldDeckY);
   const deck = deckY();
   /** the vertical speed of the deck surface under (x, z) (a moving bascule leaf: lib/bascule.js deckVy), 0 for a static deck / the ground */
@@ -71,7 +71,7 @@ export function createHandling(ctx, tuning = null) {
 
   /** the height a deck service gives a car at height ref at (x, z): d + 0.03 when a deck is there AND the car is on or above it (under a bridge the car is on the bed), else null */
   function deckAt(x, z, ref) {
-    const d = deck ? deck(x, z) : null;
+    const d = deck ? deck(x, z, ref) : null;
     return d !== null && ref > d - 1.2 ? d + 0.03 : null;
   }
   /** road surface height at (x, z) for a car at height ref (default: its own): the humped Anichkov deck / the Troitsky leaf (for a car that is on or above it: under a bridge the car is on the bed; deckRef = the height the deck

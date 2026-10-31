@@ -286,7 +286,9 @@ const catOfFile = (rel, line, h, kind) => {
   if (/props\/osm\.js/.test(rel)) return line === 54 ? 'bin' : line === 65 ? 'post_box' : 'prop';
   if (/props\//.test(rel)) return 'prop';
   if (/^world\/city\//.test(rel) || /world\/city\.js/.test(rel)) return 'building';
-  if (/bridges/.test(rel)) return 'bridge_item';
+  // Bridge module names also include coastalBridges. Their owner draws edge
+  // furniture; supports still obey its actual ground-network footprint rule.
+  if (/bridges/i.test(rel)) return 'bridge_item';
   if (/landmarks|rail\//.test(rel)) return 'landmark_item';
   return 'other';
 };
@@ -297,7 +299,7 @@ const meshCat = (name) => {
   if (/lamps?-/.test(n) || /lamp|lantern|candelabr/.test(n)) return 'lamp';
   if (/bench/.test(n)) return 'bench';
   if (/(^|-)bin|urn|trash/.test(n)) return 'bin';
-  if (/^brg-rail/.test(n)) return 'bridge_item';        // a bridge railing is a bridge item whatever its pattern is called (brg-rail-tubes was taken for planters)
+  if (/^brg-rail|^coastal-rail/.test(n)) return 'bridge_item'; // bridge railings, including the coastal modules
   if (/tub|planter|pot/.test(n)) return 'planter';
   if (/sign|plate|pole/.test(n)) return 'sign_pole';
   if (/tree|trunk/.test(n)) return 'tree';

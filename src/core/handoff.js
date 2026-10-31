@@ -40,6 +40,7 @@ export function makeHo({ from, to, via = 'gate', gate = '', car = null, mute = f
     if (car.kind === 'boat') {
       ho.car.kind = 'boat';
       if (typeof car.dock === 'string' && car.dock) ho.car.dock = car.dock;
+      if (car.vessel === 'container-ship') ho.car.vessel = car.vessel;
     }
   }
   if (ret) ho.ret = { x: r2(ret.x), z: r2(ret.z), yaw: r2(ret.yaw), pitch: r2(ret.pitch ?? 0) };
@@ -61,6 +62,7 @@ export function validateHo(ho, { to } = {}) {
     const c = ho.car;
     if (!c || typeof c.id !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(c.id)) return bad('car.id');
     if (c.kind !== undefined && c.kind !== 'boat') return bad('car.kind');
+    if (c.vessel !== undefined && (c.kind !== 'boat' || c.vessel !== 'container-ship')) return bad('car.vessel');
     if (c.dock !== undefined && (c.kind !== 'boat' || typeof c.dock !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(c.dock))) return bad('car.dock');
     if (!(typeof c.view === 'number' || typeof c.view === 'string') || String(c.view).length > 16) return bad('car.view');
     if (!Array.isArray(c.d) || c.d.length !== 4 || !c.d.every((x) => num(x) && x >= 0 && x <= 100)) return bad('car.d');

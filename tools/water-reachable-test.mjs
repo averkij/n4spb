@@ -26,7 +26,7 @@ console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0)
 const ph = ctx.physics;
 const troitskyItems = marks.landmarksTroitsky ? ph.items.slice(marks.landmarksTroitsky[0], marks.landmarksTroitsky[1]) : [];      // (taken before any test knocks something: knocking splices ph.items)
 const { Player } = await import('../src/core/player.js');
-const { createHandling } = await import('../src/world/drive/handling.js');
+const { createHandling, STUNT } = await import('../src/world/drive/handling.js');
 const { SPEC } = await import('../src/world/drive/model.js');
 const { MASS, tuningFor } = await import('../src/world/drive/cars/tuning.js');
 const { HOOKS } = await import('../src/world/lib/area-tables.js');
@@ -470,21 +470,30 @@ if (AREA === 'palace') {
   const floors = ph.items.filter((it) => it.type === 'walk' && chain(it.cx, it.cz) === null && !it.sticky && it.top < 0.03 && L.heightAt(it.cx, it.cz) < -0.2 && it.top > L.heightAt(it.cx, it.cz) + 0.05 && !L.insideBuilding(it.cx, it.cz, 0) && L.inPlay(it.cx, it.cz, 0) && Math.abs(ph.surfaceAt(it.cx, it.cz, 0.5, false, {}).y - it.top) < 0.02);      // (a floor under a higher floor of its own descent, the landing rows under the last treads of the Mining D2, is not a place to stand: the highest surface wins) (a floor in the data margin outside the territory is not walkable: the play-edge slide holds there; Vasilyevsky-Okrug 7 has the Admiralty quay stairs 30 m outside its rectangles)
   check(`8 a car placed on a pier deck / a lower landing (${floors.length} such floors) stands on it like the walker, and a car that DROPS onto it from the road lands on it (a fall: the 'land' event) instead of falling through to the bed`, () => {
     if (floors.length < 3) { console.log('  (this area has no such floors)'); return; }
-    const car = createHandling(ctx, null), bad = []; let n = 0, landed = 0;
+    const car = createHandling(ctx, null), bad = []; let n = 0, landed = 0, expectedDrops = 0;
     for (const f of [...spread(floors.filter((q) => Math.min(q.hw, q.hd) < 3.5), 15), ...floors.filter((q) => Math.min(q.hw, q.hd) >= 3.5)]) {      // (the 3 m wide landings of the stairs hold the car's centre but not its body: placement and walker only; the pier decks carry the car: stay and drop too)
       const th = L.heightAt(f.cx, f.cz), big = Math.min(f.hw, f.hd) >= 3.5; n++;
       car.reset(f.cx, f.cz, 0); if (Math.abs(car.y - (f.top + 0.03)) > 1e-6) { bad.push(['place', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2)]); continue; }
       if (big) for (let t = 0; t < 1; t += 1 / 60) car.step(1 / 60, idle);
       if (big && car.y < f.top - 0.3) bad.push(['stay', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2)]);
       if (big && !floorItems.includes(f)) {      // (the floor of an undrawn OSM bridge lies AT the road level: nothing to drop from, so no 'land' event)
-        car.reset(f.cx, f.cz, 0); car.y = 0.03; let ev = false;      // dropped from the road level
+        car.reset(f.cx, f.cz, 0);
+        // Road-level decks can be a few centimetres below the asphalt. Handling
+        // follows steps up to STUNT.dropMax without launching a ballistic fall;
+        // only a larger actual floor gap can require the impact 'land' event.
+        const drop = 0.03 - car.y, expectsEvent = drop > STUNT.dropMax + 1e-6;
+        if (expectsEvent) expectedDrops++;
+        car.y = 0.03; let ev = false;      // released from the road level
         for (let t = 0; t < 3; t += 1 / 60) { car.step(1 / 60, idle); if (car.events.some((e) => e.type === 'land')) ev = true; }
-        if (car.y < f.top - 0.3 || car.fall) bad.push(['drop', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2), th]); else if (ev) landed++;
+        if (car.y < f.top - 0.3 || car.fall) bad.push(['drop', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +car.y.toFixed(2), th]);
+        else if (expectsEvent && !ev) bad.push(['missing-land-event', +f.cx.toFixed(0), +f.cz.toFixed(0), +drop.toFixed(3)]);
+        if (ev) landed++;
       }
       const p = walker(f.cx, f.cz); p.pos.y = f.top + 0.3; for (let t = 0; t < 1; t += 1 / 60) { p.time += 1 / 60; p.update(1 / 60); }
       if (Math.abs(p.pos.y - f.top) > 0.1) bad.push(['walker', +f.cx.toFixed(0), +f.cz.toFixed(0), +f.top.toFixed(2), +p.pos.y.toFixed(2)]);
     }
-    assert(n >= 3 && bad.length === 0 && (landed >= 1 || !floors.some((q) => Math.min(q.hw, q.hd) >= 3.5 && !floorItems.includes(q))), `${bad.length} of ${n} floors failed (${landed} landings with the event): ${JSON.stringify(bad.slice(0, 5))}`);
+    console.log(`  floor checks: ${n} placements, ${expectedDrops} drops greater than ${STUNT.dropMax} m, ${landed} land events`);
+    assert(n >= 3 && bad.length === 0, `${bad.length} of ${n} floors failed (${landed} landings with the event, ${expectedDrops} ballistic drops required): ${JSON.stringify(bad.slice(0, 5))}`);
   });
 }
 

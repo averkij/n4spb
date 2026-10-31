@@ -1,6 +1,6 @@
 {
   "name": "n4spb-nevsky",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "A walkable anime cel-shaded 3D strip of Saint Petersburg: Moscow Railway Station, Nevsky Prospekt, the district around it, Palace Square, the Hermitage and the Admiralty, with seven metro stations, cars, people, trains, boats and a drivable car; plain three.js, static deploy",
   "private": true,
   "type": "module",
@@ -100,7 +100,8 @@
     "hop": "node tools/drive-hop-test.mjs",
     "touch": "node tools/touch-logic-test.mjs",
     "touchbrowser": "node tools/touch-browser-test.mjs",
-    "icons": "node tools/make-icons.mjs"
+    "icons": "node tools/make-icons.mjs",
+    "coast": "node tools/area.mjs morskie-vorota tools/coastal-area-test.mjs && node tools/area.mjs okrug65 tools/coastal-area-test.mjs && node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine && node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs"
   },
   "devDependencies": {
     "puppeteer-core": "^23.11.1",

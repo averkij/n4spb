@@ -289,10 +289,10 @@ check('8 R (place at the start) leaves the boat where it floats and sets the pla
 });
 check('8 hand-off arrival: on water the boat comes along, on land the player is on foot', () => {
   walker(L.HERO.x, L.HERO.z);
-  assert.equal(d.arrive({ id: 'boat', view: 0, d: [0, 0, 0, 0] }, DOCK.x, DOCK.z + 20, 0), true); assert.ok(d.active && d.vehicle === boat && water(d.car.x, d.car.z) !== null);
+  assert.equal(d.arrive({ id: 'boat', kind: 'boat', view: 0, d: [0, 0, 0, 0] }, DOCK.x, DOCK.z + 20, 0), true); assert.ok(d.active && d.vehicle === boat && water(d.car.x, d.car.z) !== null);
   d.exit(true); d.enter('boat'); d.teleport(DOCK.x, DOCK.z, DOCK.yaw); d.exit(true);
   walker(L.HERO.x, L.HERO.z);
-  assert.equal(d.arrive({ id: 'boat', view: 0, d: [0, 0, 0, 0] }, L.HERO.x, L.HERO.z, L.HERO.yaw), false); assert.ok(!d.active); assert.ok(Math.hypot(player.pos.x - L.HERO.x, player.pos.z - L.HERO.z) < 1.5);
+  assert.equal(d.arrive({ id: 'boat', kind: 'boat', view: 0, d: [0, 0, 0, 0] }, L.HERO.x, L.HERO.z, L.HERO.yaw), false); assert.ok(!d.active); assert.ok(Math.hypot(player.pos.x - L.HERO.x, player.pos.z - L.HERO.z) < 1.5);
   assert.equal(d.arrive({ id: 'nothing', view: 0, d: [0, 0, 0, 0] }, DOCK.x, DOCK.z + 20, 0), false);
   assert.ok(boat.damage.state.front === 0 && Array.isArray([boat.damage.state.front, boat.damage.state.rear, boat.damage.state.left, boat.damage.state.right]), 'the hand-off reads the damage state');
 });
@@ -314,9 +314,9 @@ check('10 the helmsman: absent while the boat is parked (build, moored, after ex
   d.exit(true); frames(); assert.equal(M.driver.visible, false, 'the figure stays after exit');
   walker(DOCK.x - 3, DOCK.z); d.enter('boat'); step(0.1, {}); assert.equal(M.driver.visible, true);
   d.place(L.HERO.x, L.HERO.z, L.HERO.yaw); frames(); assert.ok(!d.active); assert.equal(M.driver.visible, false, 'the figure stays after R');
-  walker(L.HERO.x, L.HERO.z); assert.equal(d.arrive({ id: 'boat', view: 0, d: [0, 0, 0, 0] }, DOCK.x, DOCK.z + 20, 0), true); step(0.1, {}); assert.equal(M.driver.visible, true, 'no helmsman after a hand-off on water');
+  walker(L.HERO.x, L.HERO.z); assert.equal(d.arrive({ id: 'boat', kind: 'boat', view: 0, d: [0, 0, 0, 0] }, DOCK.x, DOCK.z + 20, 0), true); step(0.1, {}); assert.equal(M.driver.visible, true, 'no helmsman after a hand-off on water');
   d.exit(true); frames(); assert.equal(M.driver.visible, false);
-  walker(L.HERO.x, L.HERO.z); assert.equal(d.arrive({ id: 'boat', view: 0, d: [0, 0, 0, 0] }, L.HERO.x, L.HERO.z, L.HERO.yaw), false); frames(); assert.equal(M.driver.visible, false, 'a figure after a refused hand-off');
+  walker(L.HERO.x, L.HERO.z); assert.equal(d.arrive({ id: 'boat', kind: 'boat', view: 0, d: [0, 0, 0, 0] }, L.HERO.x, L.HERO.z, L.HERO.yaw), false); frames(); assert.equal(M.driver.visible, false, 'a figure after a refused hand-off');
   d.enter('boat'); d.teleport(DOCK.x, DOCK.z, DOCK.yaw); d.exit(true); frames(); assert.equal(M.driver.visible, false);
   assert.ok(M.root.getObjectByName('boat-driver') === M.driver, 'the figure is its own mesh (a draw of its own)');
 });

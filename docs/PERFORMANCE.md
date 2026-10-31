@@ -1467,3 +1467,81 @@ Reproduce with `node tools/drive-bench.mjs --area <area> --q medium --seconds
 `-1849,2750,-178.32`. The matching baseline is a clean `b2680c0` checkout
 with its own baked products. GPU captures under `shots/south-final/` and
 benchmark JSON under `shots/south-perf/` are local diagnostic artifacts.
+
+## 2026-10-31: Sea Gates and Okrug 65 (7.0.0)
+
+RTX 3090 Ti / Edge 156 / D3D11, 1280 × 720, medium quality, normal shipping
+bakes and 20 seconds of real W input. CPU audits, profiling and mid-run
+screenshots were kept out of the measurement intervals. Baseline is the clean
+`f55930c` tree with its matching committed bakes. Heap/backing are CDP MiB,
+sampled after the drive; garbage collection was not forced.
+
+| Area / busy-road attempt | Load s | Mean / p50 / p95 ms | Frames >40 / >80 ms | Mean draws | Distance m | Heap / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Palace baseline | 26.41 | 23.8 / 16.7 / 33.4 | 15 / 3 | 1177 | 352 | 417 / 715 |
+| Palace final | 26.47 | 27.8 / 22.6 / 48.1 | 59 / 3 | 1384 | 379 | 547 / 1337 |
+| Sea Gates final | 11.66 | 18.9 / 17.6 / 28.5 | 17 / 2 | 722 | 273 | 246 / 441 |
+| Okrug 65 final | 16.12 | 19.1 / 17.6 / 31.4 | 16 / 2 | 728 | 281 | 449 / 519 |
+
+Every attempt had zero failed regions. All four cars collided and ended
+stationary, so these are streaming/frame-cost samples, not continuous clear
+20-second drives. NPC collisions also changed the Palace endpoint and visible
+work: final mean draws rose 17.6%, alongside a 16.8% mean-frame increase. The
+final Palace loaded 39 regions versus 36 in the baseline; the raw memory
+samples do not establish retained-memory growth.
+
+A separate matched Palace camera at `498.2286,2,135.1625,76.0322,0`, frozen at
+t=20, drew exactly **1,531 calls / 4,651,262 triangles** in both trees. Ninety
+back-to-back renders measured **15.46 → 15.87 ms** (2.7% sample difference);
+the two images are visually indistinguishable. All 84 Palace bake products
+also have identical SHA-256 values before and after. This fixed-view diagnostic
+does not replace the normal driving attempts above.
+
+Reproduce the attempts with `node tools/drive-bench.mjs --area <id> --q medium
+--seconds 20 --start "x,z,yaw" --json --diagnostics --out <prefix>`. Starts:
+Palace `498.2286,135.1625,76.0322`, Sea Gates
+`-6037.87275,2589.45754,-91.1664`, Okrug 65
+`-7538.90,-6068.84,-104.4955`. Fixed-view diagnostic:
+`node tools/shot.mjs --area palace --q medium --t 20 --cams
+"498.2286,2,135.1625,76.0322,0" --eval "JSON.stringify(window.__bench(90))"`.
+Local JSON/images are under `shots/coastal-perf/`.
+
+Two additional normal-bake runs follow uninterrupted WHSD deck corridors, with
+normal traffic and parked cars still enabled. Motorway decks are outside the
+NPC lane graph, so both cars completed the full 20-second drive at 170 km/h,
+with 100% body condition. End screenshots show each car on its mapped deck.
+
+| Area / clear WHSD run | Load s | Mean / p50 / p95 ms | Frames >40 / >80 ms | Mean draws | Distance m | Heap / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Sea Gates | 13.84 | 18.2 / 17.6 / 18.6 | 8 / 0 | 552 | 856 | 229 / 431 |
+| Okrug 65 | 16.25 | 18.9 / 17.6 / 31.9 | 10 / 0 | 687 | 857 | 440 / 540 |
+
+These runs had no long tasks, no failed regions and no frames above 80 ms;
+47/83 marine and 67/117 Okrug regions were resident at the end. Use the same
+benchmark command with Sea Gates start `-7731.233,3210.042,-125.796095` or
+Okrug 65 start `-6683.636,-7225.692,-5.965367`. Their local artifacts are
+`shots/coastal-perf/clear-marine*` and `clear-okrug*`. Independent normal-Lada
+physics runs on the same routes covered 848.69 m without collision, falling,
+airborne frames or broken objects. The browser runs advance by real frame
+time, accounting for their slightly longer distances.
+
+The final normal-bake browser test (`tools/coastal-playtest.mjs`) passes 41
+checks: visible E prompts, ship thrust/steering/braking, both chase views and
+the forward helm, safe exit/respawn, both ordinary boats, the purple Zhiguli
+and walking through the fountain. The existing car input/Anichkov deck test
+passes; its saved damaged-car sequence contains one camera-occluded stopped
+frame, documented in [COASTAL-AREAS.md](COASTAL-AREAS.md).
+
+Four integrated depth probes at the new viewpoints measure 0–0.004% noisy
+pixels, below 0.02%; both area images and the ship views were inspected. Both
+full boat-passage suites pass (95 marine / 58 Okrug), including five sailed
+routes, with zero invisible hull-height collision surfaces. The unchanged
+Palace passage regression passes 108 checks. Geography, dry islands, bridge
+floors, garage/view poses, claims and water access pass. New landmarks add no
+frame callbacks; the ship uses bounded moving LODs.
+
+Both road wrappers pass. Okrug retains **140 / 520,977 procedural surface
+samples (0.0269%)**, locked as its explicit baseline; all other areas retain
+the 120-sample cap. No material/geometry exemption was added. Bespoke bridge
+and landmark surface intrusions are cleared. The historical strip residual
+rate is 91 / 221,118 (0.0412%). Marine retains 28 samples within its 120 cap.

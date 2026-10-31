@@ -10,8 +10,24 @@ samples, water cells within 600 m of land. Water remains reachable terrain.
 
 | Area | Rectangles | Play area | Local-coordinate bounds |
 | --- | ---: | ---: | --- |
-| Морские ворота | M01–M59 | 15.0464 km² | x −10800…−4560, z 1200…5840 |
-| Округ № 65 | O01–O58 | 17.856 km² | x −10160…−4800, z −9200…−4000 |
+| Морские ворота | M01–M56 | 16.0128 km² | x −10800…−4560, z 800…5840 |
+| Округ № 65 | O01–O56 | 18.0800 km² | x −10160…−4800, z −9200…−4080 |
+
+`tools/marine-data-territory.mjs` is the shared, deterministic territory source
+for the data generator and configuration tool. It canonically unions 80 m cells
+before merging rectangles, so overlapping transition bands create no internal
+walls. The final marine territory adds three approach bands to connect actual
+walking, driving and boat routes to Gavan, Vasilyevsky and Kolomna. Okrug 65
+removes an accidental 80 × 160 m water-only overlap with Dekabristov. Registry
+gates and the existing seam contracts were checked on these final territories;
+the contract limits were retained.
+
+Final water connectivity adds two 80 m marine cells, eleven northern Okrug 65
+cells along the real Kamenka and ten cells around Krestovsky's western shore.
+The latter corridor clears the existing Dekabristov territory. It joins the
+small southern Gulf tip to the main bay. Sixteen enclosed raster cells are
+filled by an outside flood fill so the new wet corridors cannot leave internal
+territory walls on adjoining land. All exterior coastal notches remain.
 
 ## Source coverage checked
 
@@ -33,6 +49,12 @@ uses the complete geometry of the already fetched bay and river relations.
 This includes their current coastline beyond the local extent. No older
 `vo-sea.js` approximation was substituted.
 
+The final marine transition band reaches north of the initial query. A fresh
+146-element supplement at **2026-10-31T09:48:50Z** covers local x
+−8200…−6200, z 680…1080, including its 120 m scenery margin. The raw query
+sidecars retain the actual fetch bounds rather than relabeling the earlier
+snapshot as a larger request.
+
 ## Authoring and regeneration
 
 `tools/marine-data.mjs` fetches current tagged nodes, ways and relations from
@@ -50,6 +72,16 @@ centroid; line/polygon records are clipped to the scenery extent, water to a
 further 600 m ring. Part assignment is deterministic and follows the area's
 first extent rectangle. Natural water, bay and coastline records never enter
 the landuse/green surface arrays.
+
+The legacy converter could leave a long unnamed river polygon only in `WATER`,
+outside the engine's `RIVER` water mask, when its centroid lay more than 25 m
+from a named centreline. The new-area pipeline preserves every mapped river or
+canal polygon in the actual mask, matching a name by centreline length within
+the polygon. This restores the real Ekateringofka, Tarakanovka, Olhovka,
+Pryazhka and missing Neva branches. Explicit OSM `water=pond` relations retain
+their pond classification and use the existing shallow pond profile (`moat`),
+including the enclosed Elagin pond system. Their water remains reachable by
+the real walking, car and boat physics.
 
 ```powershell
 node tools/marine-data.mjs --area morskie-vorota --reuse-mapped-water
@@ -71,23 +103,27 @@ pieces because the engine's river bank index consumes outer rings. Shared cuts
 are coincident open-water seams. They are emitted into `RIVER` with `key: 'neva'`.
 This preserves the actual Kanonersky/port and Primorsky coast instead of drawing
 a sea triangle across islands or restricting boat movement to a rectangle.
+The same exact subtraction applies to river and lake holes, retaining the
+22,600 m² island in Ekateringofka, the southern harbour island and Lakhta islets
+as dry terrain. The geography test probes six mapped island points and requires
+all emitted river polygons to be hole-free for the real bank index.
 
 ## Final extract counts
 
 | Records | Морские ворота | Округ № 65 |
 | --- | ---: | ---: |
-| Buildings, including parts | 997 | 2,641 |
-| Building outlines | 934 | 1,989 |
-| Roads and mapped paths | 1,739 | 8,529 |
+| Buildings, including parts | 1,009 | 2,641 |
+| Building outlines | 940 | 1,989 |
+| Roads and mapped paths | 1,745 | 8,528 |
 | Water polygons | 66 | 58 |
-| River/canal/waterway records | 16 | 21 |
+| River/canal/waterway records | 21 | 27 |
 | Green areas | 183 | 1,963 |
 | Individual mapped trees | 166 | 571 |
-| Bridge records | 76 | 137 |
-| Barrier lines / nodes | 423 / 252 | 1,206 / 1,182 |
-| Piers | 16 | 42 |
-| Railway ways | 156 | 12 |
-| POIs | 134 | 2,453 |
+| Bridge records | 77 | 137 |
+| Barrier lines / nodes | 427 / 253 | 1,206 / 1,182 |
+| Piers | 19 | 42 |
+| Railway ways | 157 | 12 |
+| POIs | 137 | 2,453 |
 
 Route-network tables are deliberately empty in these new area extracts; mapped
 roads, bus stops, rail and tram infrastructure are present. They do not include a
@@ -110,13 +146,14 @@ The Kanonersky floating docks are `w537286433` (Док № 3), `w537286434`
 nodes include `n6991139132`, `n6991139133`, and `n6991139134`; portal-crane rail
 strips include `w747160227`, `w747160228`, and `w747160229`.
 
-For the operable container ship, a 400 × 62 m hull grid at centre
-**−7731.696, 3166.416** (30.213° E, 59.904° N) and axis
-`[sin(150°), cos(150°)]` passes **51/51** water-and-territory probes spaced 25 m
-along the hull. The suggested earlier point 30.224° E, 59.900° N is dry cargo
-quay and was rejected. Motorboat positions −7610, 2980 and −7700, 3110 each pass
-9/9 wet/in-play probes over a 4 × 14 m footprint. Runtime collision, bridge
-clearance and boarding are separate integration checks.
+The operable container ship's final centre is **−8100, 3350**, with its entire
+400 × 62 m hull wet and in territory and **zero collider contacts**. An earlier
+candidate at −7731.696, 3166.416 passed all 51 water-only probes but was rejected
+by the real collision check: the hull intersected 55 WHSD colliders. The still
+earlier point 30.224° E, 59.900° N is dry cargo quay. Motorboat positions −7610,
+2980 and −7700, 3110 each pass 9/9 wet/in-play probes over a 4 × 14 m footprint.
+The integration tests also verify boarding, controls, moving-hull clearance and
+returning to walking beside the ship.
 
 ## Data checks
 
@@ -127,3 +164,50 @@ overlap-reference checks, and `strip-data-clip --check` is a fixpoint. The legac
 routes for unrecognized area IDs; those assumptions do not describe these
 new coastal extracts. Area-specific runtime, road, water, bridge and performance
 results are recorded by the integration checkpoint.
+
+The final full boat passage audits pass **95 marine checks and 58 Okrug 65
+checks**, including all five named boat routes and zero invisible water walls.
+The strict transition suite passes **95/95** checks. The two Park 300th
+Anniversary shore boardwalk axes are mapped dry land strips (0/106 and 0/42 wet
+samples), reported as shore boardwalks rather than imaginary water crossings.
+
+The dense Okrug 65 road surface audit records 140 residual samples out of
+520,977 (0.0269%), with no bespoke bridge or landmark surface offenders. Its
+explicit `roads.mjs` budget is 140; other areas retain 120. This is below the
+surface audit's 0.3% acceptance rule and below the original strip's measured
+91/221,118 residue rate (0.0412%). Furniture has zero unallowed carriageway
+incursions and the ribbon audit passes. Residue comes from generic service-road
+edges, tram bedding and narrow median paving; no geometry/material exemptions
+were added for it.
+
+`tools/marine-data-bridges-test.mjs` independently probes every original mapped
+bridge centreline at intervals of at most 2 m, including its endpoints, and
+checks 69 shared joints across 2,035 densified deck segments. OSM layer changes
+do not create elevation steps. Connected road and footbridge approaches retain
+continuous grades. The marine WHSD matches the existing Gavan profile through
+z 2600, then rises to a lower girder soffit 52 m above the sea, following the
+[official Sea Canal clearance](https://www.gov.spb.ru/press/governor/96074/).
+Its opposing carriageway is 8 m higher, an authoring estimate. The Yacht Bridge
+uses a constant 16.5 m width within the official 16.3–17.1 m range, asphalt
+surfacing and 16 m water clearance from
+[Mostotrest](https://mostotrest-spb.ru/bridges/yahtennyj-most-416).
+
+The optional `--engine` test builds the real marine modules and real
+`createHandling`. At the mapped double-deck crossing it checks the lower deck,
+upper deck and seabed separately, including three seconds of idle simulation
+on each floor. Piers avoid the footprints of actual ground roads and buildings;
+low approach railings leave ground carriageways open. Bridge rails use
+individually breakable panels no longer than 6.4 m, with matching visual and
+collision dimensions and a finite 260 m dynamic distance.
+
+The benchmark starts follow actual mapped roads. A CPU run of the real car at
+full throttle for 20 s travels 788.3 m from each, with zero collisions or falls;
+all sampled centre positions remain inside a mapped carriageway. Marine uses
+Dvinskaya Street (minimum mapped edge clearance 0.50 m), Okrug 65 uses Savushkina
+Street (minimum 3.14 m). Normal rendered benchmarks still run separately on the
+final shipping bake:
+
+```powershell
+node tools/drive-bench.mjs --area morskie-vorota --q medium --seconds 20 --start "-6037.87275,2589.45754,-91.1664" --json --diagnostics --out shots/perf/marine
+node tools/drive-bench.mjs --area okrug65 --q medium --seconds 20 --start "-7538.90,-6068.84,-104.4955" --json --diagnostics --out shots/perf/okrug
+```

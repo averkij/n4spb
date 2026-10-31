@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { here, raw, geomOf, dpRing, dp, ringAreaM2, bboxOf, extentM, toM, rpt, r5, chainWays, ringsFromWays, inRings, clipPolyline, pyCarve } from './lib.mjs';
+import { LIVE_LETTER } from './live-areas.mjs';
 
 const BBOX = [59.55, 29.40, 60.25, 30.90];     // S W N E
 const W = BBOX[1], S = BBOX[0], E = BBOX[3], N = BBOX[2];
@@ -382,7 +383,6 @@ const lat0 = OR.lat * Math.PI / 180;
 const KY0 = 111132.954 - 559.822 * Math.cos(2 * lat0) + 1.175 * Math.cos(4 * lat0);
 const unproj = (x, z) => [OR.lon + x / KX0, OR.lat - z / KY0];
 // The live list comes from the registry: every row with a mapId that is not parked (docs/AREAS.md 13 / 15): palace P (98), smolny S (96), admiralty A (46), vladimirsky V (97), vasilyevsky W (48; V is taken). The letter is the badge on the page.
-const LIVE_LETTER = { palace: 'P', smolny: 'S', admiralty: 'A', vladimirsky: 'V', vasilyevsky: 'W', gavan: 'G', morskoy: 'M', dekabristov: 'D', kolomna: 'K', semyonovsky: 'I' };
 const liveKeys = Object.keys(REG.REGISTRY).filter((k) => REG.REGISTRY[k].mapId != null && !REG.REGISTRY[k].parked);
 liveKeys.sort((a, b) => Object.keys(LIVE_LETTER).indexOf(a) - Object.keys(LIVE_LETTER).indexOf(b));
 for (const k of liveKeys) if (!LIVE_LETTER[k]) throw new Error('registry row ' + k + ' has a mapId but no letter in LIVE_LETTER (build-intro.mjs)');

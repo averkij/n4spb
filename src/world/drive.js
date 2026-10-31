@@ -62,7 +62,7 @@ export async function build(ctx) {
   // (the cars of the station, which the tests count) but in `boats`; `vehicles` is both. A boat floats at the water level, takes the car's controls and has its own wake, sound and key line.
   const boats = [];
   try {
-    const carry = hoCar?.ho.car.kind === 'boat' ? { id: hoCar.ho.car.id, dock: hoCar.ho.car.dock, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null;
+    const carry = hoCar?.ho.car.kind === 'boat' ? { id: hoCar.ho.car.id, vessel: hoCar.ho.car.vessel, dock: hoCar.ho.car.dock, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null;
     for (const def of loadBoats(ctx, { carry })) {
       const model = def.makeModel(ctx); ctx.add(model.root);
       const car = createBoatHandling(ctx, def.tuning), p = def.parked;
@@ -85,7 +85,7 @@ export async function build(ctx) {
   const addBox = (v = V) => {
     if (v.box) return;
     const { parked: p, spec } = v, sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
-    const draft = v.kind === 'boat' ? 0.45 : 0.03;      // (a boat's box reaches below the waterline: a walker on the shallow bed of a pond cannot stand inside the hull)
+    const draft = v.kind === 'boat' ? (spec.draft ?? 0.45) : 0.03;      // reach below the waterline, including the cargo ship's deep hull
     v.box = ph.addBox(p.x + sy * spec.centerZ, p.z + cy * spec.centerZ, spec.W + 0.08, spec.len + 0.08, p.yaw, p.y - draft, p.y - 0.03 + spec.hgt);
   };
   const dropBox = (v = V) => { if (v.box) { ph.remove(v.box); v.box = null; } };
@@ -147,10 +147,13 @@ export async function build(ctx) {
   /** the spot beside the car where the walker can stand: tries the left / right side, then behind */
   function exitSpot() {
     const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw), lx = cy, lz = -sy, c = car.carCenter, y = car.y;
-    const spots = [[2.0, 0], [-2.0, 0], [2.7, 0.6], [-2.7, 0.6], [2.0, -1.5], [-2.0, -1.5], [3.4, 0], [-3.4, 0], [0, -3.9], [0, 3.9], [4.2, 1], [-4.2, 1]];
+    const spots = V.def.boarding ? [[V.def.boarding.x, V.def.boarding.z], [-V.def.boarding.x, V.def.boarding.z]] : [[2.0, 0], [-2.0, 0], [2.7, 0.6], [-2.7, 0.6], [2.0, -1.5], [-2.0, -1.5], [3.4, 0], [-3.4, 0], [0, -3.9], [0, 3.9], [4.2, 1], [-4.2, 1]];
     for (let r = 3; r <= 9; r += 1.5) for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; spots.push([Math.cos(a) * r, Math.sin(a) * r]); }      // a ring search when the car is jammed against a wall / bollards
     const boat = V.kind === 'boat', bad = boat ? car.walkerBlocked : car.blocked;      // a boat: the walker may stand on the water bed (wading) or on a bank, the water is no wall for him
     for (const [side, back] of spots) {
+      // The active hull has no parked collider. Motorboat-sized fallback
+      // rings must never put a walker inside the container ship on exit.
+      if (V.def.boarding && Math.abs(side) < SPEC.W / 2 + .4 && back > SPEC.rear - SPEC.centerZ - .4 && back < SPEC.front - SPEC.centerZ + .4) continue;
       const x = c.x + lx * side + sy * back, z = c.z + lz * side + cy * back;
       if (bad(x, z) || ph.columnBlocked(x, z, 0.35, y + 0.3, y + 1.7)) continue;
       if (boat && !(ph.groundHeight(x, z, y + 0.35 - STEP_HEIGHT + 0.05, false) > -Infinity)) continue;      // the pose must have a floor the walker is set down on (player.setPose stand): the bed, a landing; not a quay 3 m over the boat
@@ -171,7 +174,8 @@ export async function build(ctx) {
     if (camera.fov !== view.baseFov) { camera.fov = view.baseFov; camera.updateProjectionMatrix(); }
     camera.up.set(0, 1, 0); cockpitNear(false);
     player.inputLock = Math.max(0, player.inputLock - 1);
-    const s = spot || { x: car.carCenter.x + Math.cos(car.yaw) * 2.2, z: car.carCenter.z - Math.sin(car.yaw) * 2.2 };
+    const fallbackSide = Math.max(2.2, SPEC.W / 2 + 1.2);
+    const s = spot || { x: car.carCenter.x + Math.cos(car.yaw) * fallbackSide, z: car.carCenter.z - Math.sin(car.yaw) * fallbackSide };
     // face the way the car was heading (camera yaw convention: forward = (-sin, -cos))
     const yawDeg = ((car.yaw + Math.PI) / DEG + 540) % 360 - 180;
     player.setPose(s.x, s.z, yawDeg, 0, parked.y + 0.35, { stand: true });
@@ -184,9 +188,11 @@ export async function build(ctx) {
     for (let r = 0; r <= (V.kind === 'boat' ? 6 : 40); r += 4) for (let a = 0; a < (r ? 8 : 1); a++) {      // (a boat is only set where there is water: the spot itself or a few metres around it, never 40 m away)
       const px = x + Math.cos(a * Math.PI / 4) * r, pz = z + Math.sin(a * Math.PI / 4) * r;
       const sy = Math.sin(yaw), cy = Math.cos(yaw);
-      let ok = !car.blocked(px, pz);
-      const pf = Math.max(2, SPEC.front - 0.1), pr = Math.max(2, -SPEC.rear - 0.1), pw = Math.max(0.85, SPEC.W / 2 - 0.1);      // the probes follow the car's own body (the coupe keeps 2 / 2 / 0.85)
-      for (const [fx_, bx] of [[pf, pw], [pf, -pw], [-pr, pw], [-pr, -pw]]) ok = ok && !car.blocked(px + sy * fx_ + cy * bx, pz + cy * fx_ - sy * bx);
+      let ok = car.canPlace ? car.canPlace(px, pz, yaw) : !car.blocked(px, pz);
+      if (!car.canPlace) {
+        const pf = Math.max(2, SPEC.front - 0.1), pr = Math.max(2, -SPEC.rear - 0.1), pw = Math.max(0.85, SPEC.W / 2 - 0.1);      // the probes follow the car's own body (the coupe keeps 2 / 2 / 0.85)
+        for (const [fx_, bx] of [[pf, pw], [pf, -pw], [-pr, pw], [-pr, -pw]]) ok = ok && !car.blocked(px + sy * fx_ + cy * bx, pz + cy * fx_ - sy * bx);
+      }
       if (!ok) continue;
       const p = { x: px, z: pz }; ph.resolve(p, Math.max(0.9, SPEC.W / 2), car.groundAt(px, pz), SPEC.hgt); if (Math.hypot(p.x - px, p.z - pz) > 0.05) continue;
       car.reset(px, pz, yaw); view.snap = true; view.camYaw = yaw; wasted.hide(); return true;
@@ -221,7 +227,7 @@ export async function build(ctx) {
       let seen = near;
       if (!seen) {
         if (!frustum) { _vm.compose(camera.position, camera.quaternion, _one).invert(); _pm.multiplyMatrices(camera.projectionMatrix, _vm); cullF.setFromProjectionMatrix(_pm); frustum = true; }
-        seen = cullF.intersectsSphere(_sph.set(_v.set(p.x, p.y + 1, p.z), 14));
+        seen = cullF.intersectsSphere(_sph.set(_v.set(p.x, p.y + v.spec.hgt / 2, p.z), Math.max(14, Math.hypot(v.spec.len, v.spec.W, v.spec.hgt) / 2)));
       }
       v.model.root.visible = seen;
       if (seen) poseVehicle(v, 0, false);
@@ -262,14 +268,16 @@ export async function build(ctx) {
     const tYaw = vel > 6 && car.vF > 0 ? car.yaw + clamp(angDiff(velYaw, car.yaw), -0.7, 0.7) * 0.55 : car.yaw;
     view.camYaw += angDiff(tYaw, view.camYaw) * Math.min(1, (view.snap ? 100 : 3.6) * dt);
     const a = view.camYaw + view.orbitY;
-    const far = view.mode === 1, dT = (far ? 11.5 : 6.4) + 0.8 * (SPEC.len - 4.14) + 2.0 * sp + (car.boosting ? 0.9 : 0), hT = (far ? 5.2 : 2.35) + 0.9 * (SPEC.hgt - 1.3) + 0.4 * sp;       // a longer / taller car (the pickup) is followed from a bit further back and higher
+    const far = view.mode === 1, chase = V.def.chase;
+    const dT = chase ? (far ? chase.far : chase.near) : (far ? 11.5 : 6.4) + 0.8 * (SPEC.len - 4.14) + 2.0 * sp + (car.boosting ? 0.9 : 0);
+    const hT = chase ? chase.height : (far ? 5.2 : 2.35) + 0.9 * (SPEC.hgt - 1.3) + 0.4 * sp;
     // distance / height / shake follow their targets smoothly (a nitro start used to pop the camera 0.9 m back in one frame)
     const ks = view.snap ? 1 : Math.min(1, 3.2 * dt);
     view.d = view.d === undefined || view.snap ? dT : view.d + (dT - view.d) * ks; view.h = view.h === undefined || view.snap ? hT : view.h + (hT - view.h) * ks;
     const d = view.d, h = view.h;
-    const lookAhead = far ? 5 : 4.2;
+    const lookAhead = chase?.lookAhead ?? (far ? 5 : 4.2);
     const gy = car.y - 0.5 * (car.h || 0);                                         // a hop lifts the car out of the frame a little instead of dragging the camera up with it
-    const tx = c.x + Math.sin(car.yaw) * lookAhead, tz = c.z + Math.cos(car.yaw) * lookAhead, ty = gy + (far ? 0.9 : 1.15);
+    const tx = c.x + Math.sin(car.yaw) * lookAhead, tz = c.z + Math.cos(car.yaw) * lookAhead, ty = gy + (chase?.lookY ?? (far ? 0.9 : 1.15));
     let cx = c.x - Math.sin(a) * d * Math.cos(view.orbitP * 0.6), cz = c.z - Math.cos(a) * d * Math.cos(view.orbitP * 0.6);
     const hy = gy + h + d * Math.sin(Math.max(-0.3, view.orbitP * 0.8)) * 0.7;
     // keep the camera out of walls: march from the car to the wanted spot and stop before the first solid / building
@@ -413,7 +421,7 @@ export async function build(ctx) {
   if (ctx.interact) {
     for (const v of vehicles) ctx.interact.add({
       id: v.kind === 'boat' && v.id !== 'boat' ? 'drive-boat-' + v.id : v.id === 'coupe' ? 'drive-car' : 'drive-' + v.id, radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
-      at: () => ({ x: v.parked.x + Math.sin(v.parked.yaw) * v.spec.centerZ, y: v.parked.y + 0.8, z: v.parked.z + Math.cos(v.parked.yaw) * v.spec.centerZ }),
+      at: () => { const b = v.def.boarding || { x: 0, z: v.spec.centerZ }, s = Math.sin(v.parked.yaw), c = Math.cos(v.parked.yaw); return { x: v.parked.x + s * b.z + c * b.x, y: v.parked.y + 0.8, z: v.parked.z + c * b.z - s * b.x }; },
       enabled: () => !v.retired && !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
       onUse: () => enter(v),
     });

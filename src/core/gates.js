@@ -433,7 +433,7 @@ export function createGates(deps) {
     const pose = dest ? { x: dest.x, y: null, z: dest.z, yaw: dest.yaw, pitch: dest.pitch ?? 0 } : here;
     const incoming = ctx.handoff && ctx.handoff.ho ? ctx.handoff.ho.n : 0;
     const ho = makeHo({ from: A.ID, to: g.to, via, gate: g.id, n: incoming + 1, mute: !!audio.muted, noui: doc.body.classList.contains('noui'), ret: { x: here.x, z: here.z, yaw: here.yaw, pitch: here.pitch },
-      car: m === 'car' ? { id: d.vehicle.id, kind: d.vehicle.kind, dock: d.vehicle.def?.dock, view: d.view.mode, d: [d.damage.state.front, d.damage.state.rear, d.damage.state.left, d.damage.state.right] } : null });
+      car: m === 'car' ? { id: d.vehicle.id, kind: d.vehicle.kind, vessel: d.vehicle.def?.vessel, dock: d.vehicle.def?.dock, view: d.view.mode, d: [d.damage.state.front, d.damage.state.rear, d.damage.state.left, d.damage.state.right] } : null });
     const url = arrivalUrl({ page: REGISTRY[g.to].page, pose, fly: m === 'fly', tod: tod.k, look: tod.variant, ho, search: win.location.search });
     let snap = null; try { snap = deps.captureFrame ? await deps.captureFrame() : null; } catch (e) { snap = null; }      // the frozen frame (null: the plain dark veil)
     seam.show(snap); if (snap && snap.img && seam.lead) seam.lead(SEAM_LEAD);      // the bar rises to SEAM_LEAD: the destination continues from there (entry.p)

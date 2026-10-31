@@ -45,6 +45,10 @@ jobs:
         run: node tools/each-area.mjs tools/landmarks-groups-check.mjs
       - name: Areas, registry, gate geometry
         run: node tools/areas-test.mjs
+      - name: Coastal area geography and open water
+        run: |
+          node tools/area.mjs morskie-vorota tools/coastal-area-test.mjs
+          node tools/area.mjs okrug65 tools/coastal-area-test.mjs
       # M6 (docs/AREAS.md section 9). The tests below import no three.js; tools/north-height-test.mjs, the engine part of tools/north-keepout-test.mjs and the --scene part of
       # tools/north-people-hooks-test.mjs build the engine (three.js, 'npm ci'): they run locally with `npm run hooks:all` and in the 'engine' job below (this job has no 'npm ci' on purpose)
       - name: Layout golden of both areas (the hook set moves neither)
@@ -130,6 +134,10 @@ jobs:
         run: node tools/each-area.mjs tools/cross-places-test.mjs
       - name: The knockable furniture of the North landmarks (M7)
         run: node tools/area.mjs north tools/north-knock-test.mjs
+      - name: Coastal ship and physical bridge decks
+        run: |
+          node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine
+          node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs
 
   deploy:
     needs: [verify, engine]

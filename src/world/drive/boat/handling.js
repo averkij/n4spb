@@ -7,7 +7,7 @@
 //   * it collides like a car through drive/collision.js (the same solids, the knock system included): the quay walls, the piers, the abutments, a fallen bench. The collision height `hgt` is only the hull
 //     (0.7 m over the water: the gunwale is 0.55-0.62 m amidships): a bridge whose deck is 0.7 m + 0.5 m of slab over the water (docs/water-transport-bridges.md) passes over it. Hits make a thump and a scrape, never damage.
 // Frame: the same as the car: yaw = rotY (0 faces +Z, positive turns toward +X = the boat's LEFT), forward = (sin yaw, cos yaw), left = (cos yaw, -sin yaw). Units m, s. steer > 0 = left.
-import { createCarCollisions } from '../collision.js';
+import { carContact, createCarCollisions } from '../collision.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -43,11 +43,48 @@ export function createBoatHandling(ctx, tuning = null) {
   /** the pose of a walker beside the boat may be on the water bed or on a bank, so for him only buildings, holes and the map edge count */
   const walkerBlocked = (x, z) => !L.inPlay(x, z) || solidBlocked(x, z);
   const softEdge = typeof L.clampToPlay === 'function';
-  const EDGE_M = Math.hypot(Math.max(T.hf, T.hr), T.hw) + 0.15;
+  // A large hull can extend into the neighbouring area's scenery while its
+  // helm approaches an edge gate. Its full shoreline is still checked below.
+  const EDGE_M = Math.min(T.edgeMargin ?? Infinity, Math.hypot(Math.max(T.hf, T.hr), T.hw) + 0.15);
   // the probes of the hull: bow, shoulders, sides amidships, quarters and transom (the bow is pointed, the stern square), each SHORE_M outside the hull: the boat stops that far from the bank, so the quay
   // railings and parapets (which stand a hand's breadth beyond the water edge) are never touched by a boat that merely runs aground
   const SHORE_M = T.shoreMargin ?? 0.4, hf = T.hf + SHORE_M, hr = T.hr + SHORE_M, hw = T.hw + SHORE_M;
   const FOOT = [[hf, 0], [hf * 0.7, hw * 0.45], [hf * 0.7, -hw * 0.45], [hf * 0.2, hw], [hf * 0.2, -hw], [-hr * 0.5, hw], [-hr * 0.5, -hw], [-hr, hw * 0.9], [-hr, -hw * 0.9], [-hr, 0]];
+  const placementFoot = [];
+  // The cargo ship's bow keeps its full beam much farther forward than the
+  // little boat. Follow the very same stations used by its drawn hull. A dry
+  // mole must meet this perimeter before entering the hull from open water;
+  // <=2 m edge spacing also covers the narrow bow and the full square stern.
+  if (T.shoreProfile?.length > 1) {
+    FOOT.length = 0;
+    const edge = (a0, b0, a1, b1) => {
+      const da = a1 - a0, db = b1 - b0, len = Math.hypot(da, db), n = Math.max(1, Math.ceil(len / 2));
+      const oa = len ? -db / len * SHORE_M : 0, ob = len ? da / len * SHORE_M : 0;
+      for (let i = 0; i <= n; i++) FOOT.push([a0 + da * i / n + oa, b0 + db * i / n + ob]);
+    };
+    const profile = T.shoreProfile;
+    for (let i = 0; i + 1 < profile.length; i++) {
+      const [a0, b0] = profile[i], [a1, b1] = profile[i + 1];
+      edge(a0, b0, a1, b1);
+      edge(a1, -b1, a0, -b0);
+      // Arrival has no previous wet pose: an island may already lie wholly
+      // inside the hull. Fill its actual profile only for placement checks,
+      // never for ordinary frame/substep shoreline queries.
+      const rows = Math.max(1, Math.ceil((a1 - a0) / 2));
+      for (let j = 0; j <= rows; j++) {
+        const a = a0 + (a1 - a0) * j / rows, beam = b0 + (b1 - b0) * j / rows, cols = Math.max(1, Math.ceil(beam));
+        for (let k = 0; k <= cols; k++) placementFoot.push([a, -beam + 2 * beam * k / cols]);
+      }
+    }
+    const [rear, rearBeam] = profile[0], [front, frontBeam] = profile[profile.length - 1];
+    edge(rear, -rearBeam, rear, rearBeam);
+    edge(front, frontBeam, front, -frontBeam);
+    // Retain interior checks for a vessel loaded or handed off already aground.
+    for (let a = rear; a <= front; a += 12) FOOT.push([a, 0]);
+  } else if (SPEC.len > 20) for (let a = -hr; a < hf * 0.7; a += 12) {
+    const beam = a > hf * 0.2 ? hw * (1 - (a - hf * 0.2) / (hf * 0.8)) : hw;
+    FOOT.push([a, 0], [a, beam], [a, -beam]);
+  }
   const shoreHit = (x, z, sy, cy) => {
     if (dry(x, z)) return true;
     for (const [a, b] of FOOT) { const px = x + sy * a + cy * b, pz = z + cy * a - sy * b; if (softEdge ? dry(px, pz) : blocked(px, pz)) return true; }
@@ -183,5 +220,21 @@ export function createBoatHandling(ctx, tuning = null) {
   car.blocked = blocked;
   car.walkerBlocked = walkerBlocked;
   car.waterY = waterY;
+  if (placementFoot.length) {
+    const pose = { x: 0, z: 0, y: 0, yaw: 0, floats: true }, contact = {};
+    const radius = Math.hypot(SPEC.W, SPEC.len) / 2 + Math.abs(SPEC.centerZ) + 0.4;
+    car.canPlace = (x, z, yaw) => {
+      if (blocked(x, z)) return false;
+      const sy = Math.sin(yaw), cy = Math.cos(yaw);
+      for (const probes of [FOOT, placementFoot]) for (const [a, b] of probes) if (dry(x + sy * a + cy * b, z + cy * a - sy * b)) return false;
+      pose.x = x; pose.z = z; pose.y = waterY(x, z); pose.yaw = yaw;
+      ph.refreshDynamic();
+      for (const b of ph.querySolids(x, z, radius)) {
+        if (b.source?.record?.wreckBody && b.source !== b.source.record.wreckSource) continue;
+        if (carContact(pose, SPEC, b, contact)) return false;
+      }
+      return true;
+    };
+  }
   return car;
 }
