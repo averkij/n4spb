@@ -9,7 +9,7 @@ export const BAKED_REVISIONS = {
   kronverk: '44fd2a3344c9d4d452d0',
   "morskie-vorota": '462d5b81a23b576d14a1',
   morskoy: 'c8240300ea756c0355a4',
-  okrug65: 'dfec8c9ad8254f4560b7',
+  okrug65: '6404d328ebb4fb1a884c',
   palace: '989178ba0ec91ea7e4b5',
   semyonovsky: 'd5cc49efa8f6914d602d',
   smolny: '1976d87f3bb1fd666f28',

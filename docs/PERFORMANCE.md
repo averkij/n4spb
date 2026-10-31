@@ -1799,3 +1799,57 @@ still detected. Final manifests verify **1,463 complete products / 676.5 MiB
 gzip** across all 15 live areas. The additional legacy Palace boat-craft pinch
 test still reports the same 2.86 m float-block displacement at `-2114,-1038`
 on both clean 8.0.0 and 8.1.0; the normal Palace boat/profile suite passes 28/28.
+
+## 8.2.0 — slow waterfront flags (2026-10-31)
+
+Only the three Park 300 textiles change. Two travelling waves have approximately
+14 s and 9.7 s periods; their fixed hoists, sewn colour boundaries and historical
+emblem use the same local surface. Analytic normals and matching sun/point shadow
+materials read the existing shared clock. There are no additional CPU update
+callbacks, per-frame geometry uploads, triangles, draws or textures. The new
+vertex coordinates total 100,272 bytes. Steel, colliders and knock records are
+unchanged. Full-phase bounds stay finite even after the complete mast falls.
+
+All GPU work ran serially in Edge 156 / RTX 3090 Ti, medium quality. The normal
+shipping bake is used throughout. Baseline is clean 8.1.0 (`ce7879c`); current is
+8.2.0. Twenty-second, full-throttle driving samples, with no profiling or mid-run
+screenshots, give:
+
+| Route | Load s before → after | Frame ms mean / p50 / p95 before → after | Max ms | Frames >40 / >80 ms | Mean draws | Distance m |
+| --- | --- | --- | --- | --- | --- | --- |
+| Okrug WHSD | 16.89 → 15.97 | 16.93 / 16.7 / 16.8 → 17.16 / 16.7 / 16.8 | 33.5 → 250.1 | 0 / 0 → 2 / 2 | 688 → 698 | 857 → 840 |
+| Palace / Nevsky | 27.65 → 27.88 | 24.83 / 16.8 / 33.4 → 26.12 / 33.2 / 33.4 | 266.8 → 300.0 | 14 / 3 → 13 / 4 | 1178 → 1361 | 352 → 380 |
+
+Traffic outcomes differ: Okrug ends at 170 → 142 km/h and loads 66 → 67 regions;
+both centre runs wreck the car at different positions and load 36 → 39 regions.
+Every run has zero module, asset or region failures. End-of-run CDP JS heap /
+backing storage is **464 / 584 → 438 / 588 MiB** for Okrug and
+**560 / 1330 → 473 / 740 MiB** for Palace. These are point-in-time samples with
+different region and GC states, not retained-memory measurements. The unchanged
+Palace source closure and bake contain no flag-animation code. Existing centre
+hitches remain unresolved; sustained comfortable driving is still unfinished.
+
+A separate 60-frame stationary rendering diagnostic faces the nearby USSR flag
+at `-8840,145,-5550,168,0`, 1400 × 900, t = 0. It measures **4.38 → 5.18 ms**,
+with identical **296 calls, 2,965,465 triangles, 375 geometries and 34 textures**.
+Programs increase 86 → 88 for the animated colour/shadow paths. This is a local
+render-cost sample, not driving FPS. Normal scene screenshots at t = 0, 4 and 8
+show slow fold/silhouette changes and the attached emblem. Browser assertions
+confirm all three flags, moving shadow materials, unchanged CPU position buffers
+and zero scene errors. Nearby, distant and beach views were inspected.
+
+The focused regression passes **1,585,551** full-cycle wave samples, **20,493**
+fixed-hoist checks and **5,140,590** transformed vertex checks through all three
+real 75 km/h knockdowns and 181 settling frames. Maximum quarter-second free-edge
+movement is 0.517 m; cloth draw spheres remain 210.99 m. Analytic normals agree
+with independent finite differences. The material patch preserves shared toon
+paint, stays local to these flags and is safe when a builder reuses its cache.
+
+Only Okrug needs a new revision (`6404d328ebb4fb1a884c`); all **130** world
+products are byte-identical to the baseline. All 15 manifests remain fresh.
+Recorded page-load closure coverage, closure tests, the existing 140-sample road
+baseline and 100% strict marking coverage pass. Reproduce with the driving
+commands and starts in the previous section; artifacts are in
+`shots/flags-wave-perf/` and `shots/flags-wave/` (baseline artifacts in the frozen
+`n4spb-coastal` worktree). Run `node tools/area.mjs okrug65
+tools/three-flagpoles-test.mjs` for the focused CPU proof.

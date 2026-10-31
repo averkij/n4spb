@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MAST_HEIGHT, FLAG_WIDTH, FLAG_HEIGHT } from './sites.js';
+import { clothPoint } from './motion.js';
+export { clothPoint } from './motion.js';
 
 const GOLD = new THREE.Color('#ddba50');
 const COLORS = {
@@ -47,20 +49,6 @@ export function collarGeometry() {
   return merge(parts);
 }
 
-// A formed, moderately filled cloth: metres along its hoist and fly remain
-// 40 and 60, while the free edge sags and folds. This immutable pose has no
-// frame callback or special shader, and is baked/cullable like other scenery.
-// All three share a wind direction; their slightly different phase prevents
-// an artificial repeated silhouette. The hoist edge stays fixed to the mast.
-export function clothPoint(u, v, phase = 0) {
-  const q = u / FLAG_WIDTH;
-  return [
-    1.1 + u * (0.965 - 0.025 * Math.sin(v / FLAG_HEIGHT * Math.PI)),
-    MAST_HEIGHT - 1.05 - v - 3.8 * q * q + Math.sin(q * 7.5 + phase) * q * 0.9,
-    Math.sin(q * 9 + phase - v * 0.075) * q * 3.5 + Math.sin(q * 19 + v * 0.11) * q * 0.7,
-  ];
-}
-
 function star(cx, cy, radius, inner) {
   return Array.from({ length: 10 }, (_, i) => {
     const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? inner : radius;
@@ -69,7 +57,7 @@ function star(cx, cy, radius, inner) {
 }
 
 export function flagGeometry(kind, phase = 0) {
-  const pos = [], color = [], indices = [], colors = COLORS[kind];
+  const pos = [], color = [], motion = [], indices = [], colors = COLORS[kind];
   // The horizontal bands use separate vertices at their boundaries, so a
   // tricolour is sharply woven rather than interpolated through pastel bands.
   for (let band = 0; band < 3; band++) {
@@ -77,6 +65,7 @@ export function flagGeometry(kind, phase = 0) {
     for (let j = 0; j <= rows; j++) for (let i = 0; i <= cols; i++) {
       const u = i / cols * FLAG_WIDTH, v = (band + j / rows) / 3 * FLAG_HEIGHT;
       pos.push(...clothPoint(u, v, phase));
+      motion.push(u, v, phase, 0);
       const shade = 1 - (Math.floor(u / (FLAG_WIDTH / 27)) % 2) * 0.018;
       color.push(colors[band].r * shade, colors[band].g * shade, colors[band].b * shade);
     }
@@ -92,7 +81,7 @@ export function flagGeometry(kind, phase = 0) {
       return;
     }
     const base = pos.length / 3;
-    for (const [u, v] of [a, b, c]) { const p = clothPoint(u, v, phase); p[2] += side * 0.08; pos.push(...p); color.push(GOLD.r, GOLD.g, GOLD.b); }
+    for (const [u, v] of [a, b, c]) { const p = clothPoint(u, v, phase); p[2] += side * 0.08; pos.push(...p); color.push(GOLD.r, GOLD.g, GOLD.b); motion.push(u, v, phase, side * 0.08); }
     indices.push(base, base + 1, base + 2);
   };
   const polygon = ring => {
@@ -116,5 +105,6 @@ export function flagGeometry(kind, phase = 0) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(color, 3));
+  g.setAttribute('aFlag', new THREE.Float32BufferAttribute(motion, 4));
   g.setIndex(indices); g.computeVertexNormals(); g.computeBoundingSphere(); g.computeBoundingBox(); return g;
 }

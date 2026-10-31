@@ -311,6 +311,7 @@
   "src/world/landmarksPalaceBridge/frame.js",
   "src/world/landmarksThreeFlags.js",
   "src/world/landmarksThreeFlags/geometry.js",
+  "src/world/landmarksThreeFlags/motion.js",
   "src/world/landmarksThreeFlags/sites.js",
   "src/world/landmarksTroitsky/frame.js",
   "src/world/layout.js",

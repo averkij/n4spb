@@ -5,10 +5,9 @@ import * as THREE from 'three';
 import { knockInstances } from './lib/knock-inst.js';
 import { mastGeometry, collarGeometry, flagGeometry } from './landmarksThreeFlags/geometry.js';
 import { SITES, MAST_HEIGHT, FLAG_WIDTH, FLAG_HEIGHT } from './landmarksThreeFlags/sites.js';
+import { WIND_ROTATION, flagMotionBounds, createFlagMaterials } from './landmarksThreeFlags/motion.js';
 export { GROUPS_LIST } from './landmarksThreeFlags/sites.js';
 export const OWNS_GROUPS = true;
-
-const WIND_ROTATION = 0.32;
 
 function mastFootBounds(geometry) {
   // A fallen 175 m mast rotates about its foot. Tight standing spheres have
@@ -26,7 +25,7 @@ function mastFootBounds(geometry) {
 export function build(ctx) {
   const steel = ctx.mat.toon('#ccd0cf', { paint: 0.012 });
   const collars = ctx.mat.toon('#aab4b7', { paint: 0.015 });
-  const cloth = ctx.mat.toon('#ffffff', { vertexColors: true, side: 'double', paint: 0.015 });
+  const { cloth, depth, distance } = createFlagMaterials(ctx);
   const shaft = mastFootBounds(mastGeometry()), details = mastFootBounds(collarGeometry());
   const service = { monuments: [], masts: [], photoSpots: [], triangles: 0, callbacks: 0 };
   const declared = ctx.L?.GROUPS?.landmarksThreeFlags;
@@ -34,7 +33,7 @@ export function build(ctx) {
   for (let i = 0; i < SITES.length; i++) {
     const s = SITES[i], flag = flagGeometry(s.key, i * 0.33);
     const flagTurn = new THREE.Matrix4().makeRotationY(WIND_ROTATION);
-    flag.applyMatrix4(flagTurn); flag.computeBoundingBox(); mastFootBounds(flag);
+    flag.applyMatrix4(flagTurn); flagMotionBounds(flag);
     // Keep complete real shaft contact at every height, while the cloth is
     // non-solid. The radius follows the taper with short conservative bands.
     const items = [ctx.physics.addCylinder(s.x, s.z, 1.95, s.y, s.y + 90)];
@@ -57,6 +56,10 @@ export function build(ctx) {
     // The finite authored range and conservative per-mast bounds apply also
     // to the no-knock headless representation (normal engine does this later).
     for (const mesh of built.meshes) mesh.userData.skyline = true;
+    const textile = built.meshes.find(mesh => mesh.geometry === flag);
+    textile.customDepthMaterial = depth;
+    textile.customDistanceMaterial = distance;
+    ctx.noBatch(textile);
     const triangles = [shaft, details, flag].reduce((n, g) => n + g.index.count / 3, 0);
     service.triangles += triangles;
     service.masts.push({ ...s, h: MAST_HEIGHT, heightAboveWater: 179.5, cloth: [FLAG_WIDTH, FLAG_HEIGHT], record: built.records[0], colliderCount: items.length, triangles });
