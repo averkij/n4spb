@@ -52,6 +52,11 @@ serially; an isolated preview is not integration or performance evidence.
 * **No flags in the scene for now**: no national / city / company / event flags, no pennants, no flag-bearing flagpoles (do not draw flagpoles at all), no tour-guide flags or flag-on-a-stick (guides carry a plain coloured umbrella or a bare pole-less sign instead), no flags on the obelisk / hotels / government buildings / boats / stations, no flag banners hanging from facades, no rail "flags". Plain street banners and signs are fine only if they are not flag-shaped. (Research docs mention flags; ignore those parts.)
 * **No alarm sounds**: no sirens, no ambulance / police / fire-engine sirens or horns, no car alarms, no train horns / crossing bells, no alarm-like or harsh warning beeps (ordinary short **car horns are allowed**: the user confirmed they stay as in the engine) (`core/audio.js` modules: only calm ambience: footsteps, soft traffic bed, birds, water, a quiet metro hum, soft announcement chimes are fine). Emergency vehicles may stand or drive silently, **without flashing beacons** too (keep their plain livery).
 
+**Targeted exception, user request 2026-10-31:** the three monumental
+flagpoles beside Park 300th Anniversary and their reference historical flags
+are requested landmarks. Author those three at their surveyed positions and
+dimensions. The general flag prohibition continues to apply elsewhere.
+
 ## Knockable street furniture (user request 2026-10-17)
 
 * The driven car knocks over and throws benches, litter bins, pots, lamp posts, traffic-signal and sign poles, bollards and similar furniture (`src/core/knock.js`, `ctx.knock`; masses, break speeds and rules:
