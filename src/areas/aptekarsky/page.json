@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "title": "Аптекарский–Посадский · Saint Petersburg",
+  "appTitle": "Аптекарский",
+  "canvasLabel": "Apothecary–Posadsky, Saint Petersburg: walkable 3D scene",
+  "intro": {
+    "kicker": "Прогулка по городу: Аптекарский–Посадский",
+    "title": "Аптекарский–Посадский"
+  },
+  "heavy": {
+    "ramGB": 1,
+    "ru": "Тяжёлая сцена: ~{mb} МБ и ~{ram} ГБ памяти, лучше на новом телефоне или планшете, горизонтально",
+    "en": "Heavy scene: ~{mb} MB and ~{ram} GB RAM, best on a recent phone or tablet in landscape"
+  },
+  "places": {
+    "title": "Список мест отключён: до нужных мест можно дойти самому · The places list is off for now: walk to the places yourself"
+  },
+  "help": {
+    "walk": "<kbd>WASD</kbd> Walk · <kbd>Shift</kbd> Run · <kbd>Space</kbd> Jump · <kbd>F</kbd> Fly · <kbd>E</kbd> Use / car · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI · <kbd>M</kbd> Mute",
+    "air": "<kbd>W</kbd> Fly where you look · <kbd>A</kbd><kbd>D</kbd> Strafe · <kbd>Space</kbd>/<kbd>E</kbd> Up · <kbd>Q</kbd>/<kbd>C</kbd> Down · <kbd>Shift</kbd> Boost · <kbd>F</kbd> Land · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI · <kbd>M</kbd> Mute"
+  },
+  "sights": [],
+  "facts": [
+    [
+      "Аптекарский–Посадский: Оранжерейный комплекс Ботанического сада Петра Великого"
+    ],
+    [
+      "Аптекарский–Посадский: Площадь Льва Толстого"
+    ],
+    [
+      "Аптекарский–Посадский: Австрийская площадь"
+    ],
+    [
+      "Аптекарский–Посадский: Дома, обрамляющие площадь: ул. Куйбышева, 1 / Троицкая пл., 5 и Каменноостровский пр., 2"
+    ],
+    [
+      "Аптекарский–Посадский: Доходный дом Лидваль (Каменноостровский пр., 1-3)"
+    ],
+    [
+      "Аптекарский–Посадский: Крейсер «Аврора»"
+    ],
+    [
+      "Аптекарский–Посадский: Домик Петра I"
+    ],
+    [
+      "Аптекарский–Посадский: Первый жилой дом Ленсовета"
+    ]
+  ]
+}

@@ -10,7 +10,7 @@ import { DYNAMIC_IMPORTS, isAllowedServed } from './lib/closure-rules.mjs';
 import { createRevisionContext, revisionsOf, liveAreas } from './baked-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65'];
+const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'kronverk', 'aptekarsky', 'islands'];
 /** closure sizes (hashed files) of the design round's scanner at v3.1.0: palace 591, smolny 414, vladimirsky 447, admiralty 614, vasilyevsky 764. The band is wide upwards: the whole-folder rules over-include. */
 const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasilyevsky: 764,
   // gavan / morskoy / dekabristov (docs/AREAS.md 15.g): no design-round scanner existed for them; these are the hashed-file counts of the finished areas at v4.0.0 (the bake log of the first bake of all eight areas).
@@ -18,7 +18,9 @@ const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasi
   // Southern districts: hashed-file counts of the shipping v5.0.1 closures.
   kolomna: 447, semyonovsky: 388,
   // Fresh coastal districts at the 7.0.0 integration checkpoint.
-  'morskie-vorota': 325, okrug65: 324 };
+  'morskie-vorota': 325, okrug65: 324,
+  // Petrograd districts: hashed-file counts recorded in the incoming 70b1d80 bake inputs.
+  kronverk: 520, aptekarsky: 552, islands: 547 };
 const SCOUT_UP = {};
 /** areas whose bake does not exist yet, so no headless page load could be recorded (node tools/closure-groundtruth.mjs <id> --record needs a published bake): none since the bake of v4.0.0 (the three fixtures are recorded). */
 const NO_FIXTURE_YET = [];
@@ -39,7 +41,7 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
   const closuresOf = () => closures || (closures = Object.fromEntries(LIVE.map((id) => [id, scanner.closureOf(root, id, base)])));
   const exclusive = (id) => { const cl = closuresOf(); const only = cl[id].hashed.filter((f) => /\.js$/.test(f) && LIVE.every((o) => o === id || !cl[o].seen.has(f))); return only.find((f) => f.startsWith('src/world/') && !f.includes('/data/')) || only[0]; };
 
-  check('the live areas of the registry include the southern and coastal districts', () => assert.deepEqual(liveAreas(root, base).map((r) => r.id), LIVE));
+  check('the live areas of the registry include the southern, coastal and Petrograd districts', () => assert.deepEqual(liveAreas(root, base).map((r) => r.id), LIVE));
   check('all revisions are distinct 20-hex strings', () => {
     const r = baseline(); for (const id of LIVE) assert.match(r[id], /^[0-9a-f]{20}$/, id);
     assert.equal(new Set(Object.values(r)).size, LIVE.length);

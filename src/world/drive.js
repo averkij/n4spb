@@ -419,12 +419,17 @@ export async function build(ctx) {
 
   // ---------------------------------------------------------------- the prompts next to the parked cars (the interaction layer offers the NEAREST one in reach: E gets into that car)
   if (ctx.interact) {
-    for (const v of vehicles) ctx.interact.add({
-      id: v.kind === 'boat' && v.id !== 'boat' ? 'drive-boat-' + v.id : v.id === 'coupe' ? 'drive-car' : 'drive-' + v.id, radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
-      at: () => { const b = v.def.boarding || { x: 0, z: v.spec.centerZ }, s = Math.sin(v.parked.yaw), c = Math.cos(v.parked.yaw); return { x: v.parked.x + s * b.z + c * b.x, y: v.parked.y + 0.8, z: v.parked.z + c * b.z - s * b.x }; },
-      enabled: () => !v.retired && !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
-      onUse: () => enter(v),
-    });
+    for (const v of vehicles) {
+      const id = v.kind === 'boat' && v.id !== 'boat' ? 'drive-boat-' + v.id : v.id === 'coupe' ? 'drive-car' : 'drive-' + v.id;
+      const b = v.def.boarding, points = b ? [b, { x: -b.x, z: b.z }] : [{ x: 0, z: v.spec.centerZ }];
+      // Both accepted ship exit sides must offer the same way back aboard.
+      for (const [i, point] of points.entries()) ctx.interact.add({
+        id: id + (i ? '-port' : ''), radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
+        at: () => { const s = Math.sin(v.parked.yaw), c = Math.cos(v.parked.yaw); return { x: v.parked.x + s * point.z + c * point.x, y: v.parked.y + 0.8, z: v.parked.z + c * point.z - s * point.x }; },
+        enabled: () => !v.retired && !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
+        onUse: () => enter(v),
+      });
+    }
   }
 
   /** Arrival of a hand-off (docs/AREAS.md): get into car `spec.id`, put it at (x, z) facing the camera yaw (degrees), restore its view and its four damage scalars. false (and the walker stays) when the car cannot be placed there. */

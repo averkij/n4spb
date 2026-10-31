@@ -32,6 +32,7 @@ The extract was registered to a screenshot of Yandex Maps that is kept **only as
 ## three.js, Rapier and fonts
 
 * **three.js** 0.170.0 (MIT, <https://threejs.org/>) is loaded at run time from the jsDelivr CDN (importmap in `index.html`) and is a development dependency of the tools (`package.json`).
+* **Earcut** 2.2.4 (ISC, Copyright (c) 2016 Mapbox, <https://github.com/mapbox/earcut>) supplies the pure northern-water triangulator in `src/areas/petro/triangulate-ring.js`, adapted from the three.js 0.170.0 port. Its original ISC and Three MIT notices are included in that file.
 * **Rapier** (<https://rapier.rs/>, Apache-2.0, Dimforge): `vendor/rapier/rapier.js` is the unmodified browser ESM bundle `dist/rapier.mjs` of `@dimforge/rapier3d-compat` 0.21.0 with its embedded WebAssembly;
   its licence is `vendor/rapier/LICENSE`. It is vendored so that the static deployment needs no CDN for physics; the npm package is therefore not listed in `package.json`, and the file's provenance is this note.
 * **Fonts**: Rubik, Noto Sans, Noto Serif, Caveat, Golos Text and Oranienbaum (SIL Open Font License, Google Fonts) are loaded from Google Fonts at run time and baked into canvas textures (signs, plates); no font files are included.

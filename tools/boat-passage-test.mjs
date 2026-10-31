@@ -34,7 +34,9 @@ const { carContact } = await import('../src/world/drive/collision.js');
 const { BRIDGE_ZONES } = await import('../src/world/environment/waterways.js');
 const { WATER: WATER_TABLE } = await import('../src/world/lib/area-tables.js');
 const { LOW_CLEARANCE: LOW_CLEARANCE_BRIDGES } = await import('../src/world/bridges/piers.js');
-const DEG = Math.PI / 180, R_FREE = Number(process.env.RFREE || 1.5), HULL = SPEC_BOAT.hgt;
+// The solid raster already includes a 2.2 m hull footprint. Narrow park canals
+// need 0.35 m extra margin, rather than requiring a 5.2 m wide navigation lane.
+const DEG = Math.PI / 180, R_FREE = Number(process.env.RFREE || (['kronverk','aptekarsky','islands'].includes(AREA)?.35:1.5)), HULL = SPEC_BOAT.hgt;
 
 // ---------------------------------------------------------------- the 1 m grid of the play area
 const P = L.WORLD.play, RES = 1, X0 = Math.floor(P.x0), Z0 = Math.floor(P.z0), NX = Math.ceil(P.x1 - X0), NZ = Math.ceil(P.z1 - Z0);
@@ -97,7 +99,7 @@ function components(ok) {
 const FREE = components((k) => D[k] >= R_FREE), WETC = components(isWet), FREEX = components((k) => DX[k] >= R_FREE);
 // UNREACHABLE WATER: a body of water that no boat can reach, listed here with the reason (it is not a transport water: nothing is claimed about it, the checks a / c skip it). Only a body that is NOT joined to the main water by any wet cell counts;
 // a name in this table is the waterway key of EVERY sampled cell of the body, and the body must be small (a lake of the map is no excuse).
-const UNREACHABLE = { moat: AREA === 'okrug65'
+const UNREACHABLE = { ...WATER_TABLE.isolatedKeys, moat: AREA === 'okrug65'
   ? 'the mapped Elagin pond system (OSM r1567031 Third Northern Pond and r8613894 Elagin Ponds): enclosed shallow garden water with no connection to the Gulf'
   : AREA === 'kolomna'
   ? 'an isolated pond in Yekateringof Park, using the shallow moat water profile; the pond has no connection to the river'
@@ -121,7 +123,7 @@ console.log(`grid ${NX} x ${NZ} m: ${nWet} wet cells, ${solid.reduce((a, b) => a
 /** a crossing: c the centre, a the unit vector across the water (the deck axis), l the unit vector along it, w the deck width along the water, len the span across */
 const crossings = [];
 const rowCross = (z) => { const a = z.axis * DEG, ax = Math.sin(a), az = -Math.cos(a); return { id: z.id, key: z.key, c: z.c, ax, az, lx: -az, lz: ax, w: z.w, len: z.len, src: 'zone' }; };
-for (const z of BRIDGE_ZONES) crossings.push(rowCross(z));
+for (const z of BRIDGE_ZONES) if(!z.quayOnly)crossings.push(rowCross(z));
 const wetNear = (x, z, r) => { for (let dz = -r; dz <= r; dz += 2) for (let dx = -r; dx <= r; dx += 2) if (isWet(idx(x + dx, z + dz))) return true; return false; };
 { // a bridge of services.bridges that has no row: its direction from the water round it (the principal axis of the wet cells within 40 m)
   const list = (ctx.services.bridges && ctx.services.bridges.list) || [], seen = new Set();
@@ -129,6 +131,7 @@ const wetNear = (x, z, r) => { for (let dz = -r; dz <= r; dz += 2) for (let dx =
     if (b.part || seen.has(b.id)) continue; seen.add(b.id);
     if (crossings.some((c) => c.id === b.id || Math.hypot(c.c[0] - b.x, c.c[1] - b.z) < Math.max(40, c.len / 2 + 15))) continue;
     if (!wetNear(b.x, b.z, 14)) continue;
+    if(b.crossing){const q=b.crossing;crossings.push({id:b.id,key:L.waterwayAt(b.x,b.z)||'derived',c:[b.x,b.z],ax:q.ax,az:q.az,lx:-q.az,lz:q.ax,w:q.w,len:q.len,src:'bridge list'});continue;}
     let sx = 0, sz = 0, sxx = 0, szz = 0, sxz = 0, n = 0;
     for (let dz = -40; dz <= 40; dz += 2) for (let dx = -40; dx <= 40; dx += 2) if (isWet(idx(b.x + dx, b.z + dz))) { sx += dx; sz += dz; sxx += dx * dx; szz += dz * dz; sxz += dx * dz; n++; }
     if (n < 30) continue;
@@ -473,7 +476,7 @@ check(`b every drawn pillar in open water is covered by a solid that stops a flo
   }
   const total = [...bad.values()].reduce((a, e) => a + e.n, 0);
   check('b no invisible wall in the river: every solid cell of open water has a drawn hull-height surface within 6 m (' + total + ' cells without)', () => {
-    assert.equal(total, 0, total + ' blocked water cells with nothing drawn near them, e.g. ' + [...bad.values()].sort((a, b) => b.n - a.n).slice(0, 6).map((e) => e.n + ' at ' + e.x.toFixed(0) + ', ' + e.z.toFixed(0) + ' [' + [...e.ids].slice(0, 2).join('; ') + ']').join('; '));
+    assert.equal(total, 0, total + ' blocked water cells with nothing drawn near them, e.g. ' + [...bad.values()].sort((a, b) => b.n - a.n).slice(0, 6).map((e) => e.n + ' at ' + e.x.toFixed(1) + ', ' + e.z.toFixed(1) + ' [' + [...e.ids].slice(0, 2).join('; ') + ']').join('; '));
   });
 }
 

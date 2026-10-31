@@ -43,7 +43,7 @@ const executable = args.browser || [
 ].find(file => fs.existsSync(file));
 if (!executable) { await new Promise(resolve => server.close(resolve)); throw new Error('No supported Edge/Chrome executable'); }
 
-const report = { quality, startedAt: new Date().toISOString(), pages: {}, checks: [], errors: [], console: [], screenshots: [] };
+const report = { quality, startedAt: new Date().toISOString(), pages: {}, measurements: {}, checks: [], errors: [], console: [], screenshots: [] };
 let browser, currentPage = null, currentArea = null;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const check = (name, ok, detail = null) => {
@@ -187,11 +187,32 @@ try {
     const id = await page.evaluate(() => window.__drive.boats.find(v => v.def.vessel === 'container-ship')?.id); assert.ok(id, 'container ship missing');
     await besideVehicle(page, id); await screenshot(page, 'marine-ship-boarding');
     const seated = await board(page, id); check('container ship uses its complete boat specification', seated.floats && seated.vessel === 'container-ship');
+    if (args['ship-perf']) await page.evaluate(() => {
+      const sample = window.__coastalShipPerf = { dts: [], calls: [], start: performance.now(), last: null, on: true };
+      const tick = now => {
+        if (!sample.on) return;
+        if (sample.last !== null) { sample.dts.push(now - sample.last); sample.calls.push(window.__stats.calls); }
+        sample.last = now; requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
     await hold(page, ['KeyW'], 3000); const gas = await state(page);
     check('three seconds of real W accelerates the container ship', gas.kmh > .5 && Math.hypot(gas.x - seated.x, gas.z - seated.z) > .15, gas);
     await hold(page, ['KeyW', 'KeyA'], 3000); const turn = await state(page);
     const yawDelta = Math.abs(Math.atan2(Math.sin(turn.yaw - gas.yaw), Math.cos(turn.yaw - gas.yaw))) * 180 / Math.PI;
     check('real A gradually turns the moving ship', yawDelta > .2 && yawDelta < 20, { yawDelta, ...turn });
+    if (args['ship-perf']) {
+      report.measurements.ship = await page.evaluate(() => {
+        const s = window.__coastalShipPerf; s.on = false;
+        const sorted = s.dts.toSorted((a,b) => a-b), mean = a => a.reduce((n,x) => n+x,0) / a.length;
+        return { measuredMs: performance.now() - s.start, frames: s.dts.length,
+          frameMs: { mean: mean(s.dts), p50: sorted[Math.floor(sorted.length*.5)], p95: sorted[Math.floor(sorted.length*.95)], max: sorted.at(-1) },
+          over40: s.dts.filter(t => t>40).length, over80: s.dts.filter(t => t>80).length,
+          meanDraws: mean(s.calls), regions: window.__regions?.stats || null,
+          shipKmh: window.__drive.car.speed };
+      });
+      console.log('SHIP PERFORMANCE', JSON.stringify(report.measurements.ship));
+    }
     await screenshot(page, 'marine-ship-chase');
     await page.keyboard.press('KeyV'); await sleep(400); await page.keyboard.press('KeyV'); await sleep(600);
     const bridge = await state(page); check('V reaches the forward bridge helm camera', bridge.view === 2 && bridge.camera.y > bridge.y + 45, bridge);

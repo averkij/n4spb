@@ -109,7 +109,10 @@ check('1 water cells in the play area: inside the territory, not clamped, not bl
     if (car0.blocked(c.x, c.z)) { bad.blocked++; if (ex.length < 6) ex.push(['blocked', c.x, c.z]); }
     const g = ph.groundHeight(c.x, c.z, c.level - 0.3, false); if (!Number.isFinite(g) || g > c.level + 0.3) { bad.ground++; if (ex.length < 6) ex.push(['ground', c.x, c.z, g]); }      // (the bed, or a landing stage / step on it; never a void)
     if (HOOKS.carKeepOut && HOOKS.carKeepOut(c.x, c.z)) bad.keepOut++;
-    if (ph.waterLevel(c.x, c.z) !== c.level) bad.noLevel++;
+    const actual=ph.waterLevel(c.x,c.z);
+    // A mapped water polygon can extend under an authored beach apron. Sand
+    // above the waterline is dry; it stays passable terrain for walkers/cars.
+    if(actual!==c.level&&!(actual===null&&ph.waterShores.some(b=>{const dx=c.x-b.cx,dz=c.z-b.cz,u=dx*b.c-dz*b.s,v=dx*b.s+dz*b.c;return Math.abs(u)<=b.hw&&Math.abs(v)<=b.hd&&b.yA+(b.yB-b.yA)*(v/(2*b.hd)+.5)>c.level-.15;})))bad.noLevel++;
   }
   assert.deepEqual(bad, { outside: 0, clamped: 0, blocked: 0, ground: 0, keepOut: 0, noLevel: 0 }, JSON.stringify(ex.slice(0, 6)));
 });
@@ -120,24 +123,43 @@ check('1 no wall of colliders cuts a body of water: every connected body of wate
   for (let x = R.x0; x <= R.x1; x += step) for (let z = R.z0; z <= R.z1; z += step) { if (!L.inPlay(x, z)) continue; const k = L.waterwayAt(x, z); if (k) cs.push({ x, z, k }); }
   const idx = new Map(); for (const c of cs) idx.set(Math.round(c.x / step) + ',' + Math.round(c.z / step), c);
   const free = new Set();
-  for (const [k, c] of idx) {
+  const cellFree = c => {
     const bed = L.heightAt(c.x, c.z); let blocked = L.insideBuilding(c.x, c.z);
     if (!blocked) { const p = { x: c.x, z: c.z }; ph.resolve(p, 0.35, bed, 1.7); blocked = hyp(p.x - c.x, p.z - c.z) > 0.02; }
     // under a bridge deck the solids are STRUCTURES (a low slab bridge over a 10 m diagonal canal, Admiralty-Haymarket: its underside is 0.4 m above the water, a wader on the bed does not fit under it): a hole, not a wall of the water
     if (blocked && ctx.services.bridges && ctx.services.bridges.deckY && ctx.services.bridges.deckY(c.x, c.z) !== null) blocked = false;
-    if (!blocked) free.add(k);
-  }
+    return !blocked;
+  };
+  for (const [k,c] of idx) if(cellFree(c))free.add(k);
   const comps = (has) => { const comp = new Map(), sizes = []; for (const s0 of has) { if (comp.has(s0)) continue; const id = sizes.length; let n = 0; const q = [s0]; comp.set(s0, id); while (q.length) { const k = q.pop(); n++; const [i, j] = k.split(',').map(Number); for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const kk = (i + di) + ',' + (j + dj); if (has.has(kk) && !comp.has(kk)) { comp.set(kk, id); q.push(kk); } } } sizes.push(n); } return { comp, sizes }; };
   const all = comps(new Set(idx.keys())), fr = comps(free), bad = [];
   all.sizes.forEach((n, id) => {
     if (n < 40) return;
     const parts = new Map(); for (const [k, cid] of all.comp) if (cid === id && free.has(k)) { const f = fr.comp.get(k); parts.set(f, (parts.get(f) || 0) + 1); }
-    const tot = [...parts.values()].reduce((p, q) => p + q, 0), best = Math.max(0, ...parts.values()), share = best / Math.max(1, tot);
+    const tot = [...parts.values()].reduce((p, q) => p + q, 0), best = Math.max(0, ...parts.values());let share = best / Math.max(1, tot);
     let key = ''; for (const [k, cid] of all.comp) if (cid === id) { key = idx.get(k).k; break; }
     console.log(`  body of ${key}: ${n} cells (${(n * step * step / 1e4).toFixed(1)} ha), ${tot} free, largest free part ${(share * 100).toFixed(1)} %`);
     // the castle moat is a ring (1.2 m deep) crossed by low stone decks that stand on the bed (landmarksCastle/bridge.js: a structure with no clearance for a wader, like a pier): it may fall into one arc per deck, no more
     const decks = ((ctx.services.landmarksCastle && ctx.services.landmarksCastle.bridge && ctx.services.landmarksCastle.bridge.decks) || []).length, two = [...parts.values()].filter((q) => q >= 3).length <= decks + 1 ? 1 : 0;      // (a ring crossed by D decks falls into at most D arcs; the castle has the three decks of the module and the one of the river's bridge zones)
-    if (key === 'moat' ? !two : share < 0.9) bad.push(key + ' ' + n + ' cells ' + (share * 100).toFixed(1) + ' % (' + [...parts.values()].join('/') + ' cells in the parts, ' + decks + ' decks)');
+    // The island park's winding 3–6 m channels are narrower than the quick
+    // grid. Three legitimate shoreline cells can falsely sever a whole lake
+    // at 8 m resolution. Recheck the actual water/colliders locally at 2 m;
+    // an actual wall still divides this finer graph and fails the same rule.
+    if(key!=='moat'&&share<.9&&step>2){
+      const ps=[...all.comp].filter(([,cid])=>cid===id).map(([k])=>idx.get(k)),fine=new Map(),fineFree=new Set(),s=2;
+      const x0=Math.min(...ps.map(p=>p.x))-step,z0=Math.min(...ps.map(p=>p.z))-step,x1=Math.max(...ps.map(p=>p.x))+step,z1=Math.max(...ps.map(p=>p.z))+step;
+      for(let x=x0;x<=x1;x+=s)for(let z=z0;z<=z1;z+=s){if(!L.inPlay(x,z)||!L.waterwayAt(x,z))continue;const k=Math.round(x/s)+','+Math.round(z/s),c={x,z};fine.set(k,c);if(cellFree(c))fineFree.add(k);}
+      const fa=comps(new Set(fine.keys())),ff=comps(fineFree),wanted=new Set(ps.map(p=>fa.comp.get(Math.round(p.x/s)+','+Math.round(p.z/s))).filter(i=>i!==undefined));
+      share=1;
+      for(const fid of wanted){if(fa.sizes[fid]<40*step*step/(s*s))continue;const sizes=new Map();for(const [k,cid] of fa.comp)if(cid===fid&&fineFree.has(k)){const q=ff.comp.get(k);sizes.set(q,(sizes.get(q)||0)+1);}const values=[...sizes.values()];share=Math.min(share,Math.max(0,...values)/Math.max(1,values.reduce((a,b)=>a+b,0)));}
+      console.log(`  refined narrow-channel body at 2 m: largest free part ${(share*100).toFixed(1)} %`);
+    }
+    if (key === 'moat' ? !two : share < 0.9) {
+      const positions=[...all.comp].filter(([,cid])=>cid===id).map(([k])=>idx.get(k));
+      const box=[Math.min(...positions.map(p=>p.x)),Math.min(...positions.map(p=>p.z)),Math.max(...positions.map(p=>p.x)),Math.max(...positions.map(p=>p.z))];
+      const blocked=positions.filter(p=>!free.has(Math.round(p.x/step)+','+Math.round(p.z/step))).slice(0,8).map(p=>({x:p.x,z:p.z,building:L.buildingAt(p.x,p.z)?.id,solids:Array.from(ph._query(p.x,p.z,.5)).filter(it=>it.type!=='hole'&&it.y0<L.heightAt(p.x,p.z)+1.7&&(it.type==='walk'?it.top:it.y1)>L.heightAt(p.x,p.z)).slice(0,4).map(it=>[it.type,Math.round(it.cx),Math.round(it.cz),it.y0,it.y1||it.top])}));
+      bad.push(key + ' ' + n + ' cells ' + (share * 100).toFixed(1) + ' % (' + [...parts.values()].join('/') + ' cells in the parts, ' + decks + ' decks), bounds '+box.join(',')+' blocked '+JSON.stringify(blocked));
+    }
   });
   assert(all.sizes.some((n) => n >= 40) && bad.length === 0, 'cut waters: ' + bad.join(', '));
 });
@@ -361,6 +383,9 @@ check('5 a flight landing over open water is allowed (no refusal on water: playe
 // ---------------------------------------------------------------- 6 the audit
 // What may stay unregistered near water (every entry says why). Anything else that is a thin tall collider within 12 m of water must be a knock record: a fence, a parapet, a railing, a low wall.
 const ALLOW = [
+  {why:'the two solid rear walls of the Japanese garden pavilions (5.2 m and 3 m wide shelters, not waterfront fences)',ok:(m,it,t)=>m==='landmarksBotanicalGarden'&&it.type==='box'&&Math.abs(t.thin-.2)<.01&&((Math.hypot(it.cx+1407,it.cz+4295)<1&&Math.abs(it.y1-3.2)<.01)||(Math.hypot(it.cx+1409,it.cz+4307)<1&&Math.abs(it.y1-2.8)<.01))},
+  { why: 'the river-side masonry wall of the Petrovsky stadium ticket office w119931739 (a closed mapped building, not a fence)', ok: (m,it)=>m==='landmarksPetrovskyStadium'&&it.type==='box'&&it.y0===0&&it.y1===4&&Math.hypot(it.cx+3663,it.cz+2346)<1 },
+  { why: 'the two granite cheek heads of the Oldenburg sphinx stair (Kamenny Island): structural stair walls 1.2 m thick, sloping from 0.55 m to the lower landing, not a fence', ok: (m,it) => m==='landmarksKamennyDachasEast'&&it.type==='box'&&it.y0===-4&&it.y1<=.6&&it.y1>=.5&&[[-2966,-5032],[-2958,-5035]].some(([x,z])=>Math.hypot(it.cx-x,it.cz-z)<1) },
   { why: 'lawn hedges of the environment (kept > 2.4 m off the shore: never a barrier to water)', ok: (m, it, t) => m === 'environment' && it.y1 <= 1.2 && t.thin >= 0.6 && t.thin <= 0.8 },
   { why: 'the clipped lattice hedges of the Summer Garden (living walls inside the garden)', ok: (m, it, t) => m === 'landmarksGarden' && t.thin >= 0.85 && t.thin <= 0.95 && it.y1 >= 3 && it.y1 <= 3.4 },
   { why: 'the railing round the Krylov monument and a shut leaf of the Neva gate (inside the garden, not at the water)', ok: (m, it, t) => m === 'landmarksGarden' && it.y1 <= 1.3 && t.thin <= 0.12 },
@@ -388,7 +413,7 @@ check('6 AUDIT: every thin tall collider within 12 m of water is a knock record 
   });
   for (const [k, e] of left) console.log(`  allowed: ${k} x ${e.n} (${e.len.toFixed(0)} m)`);
   for (const [k, e] of bad) console.log(`  NOT BREAKABLE: ${k} x ${e.n} (${e.len.toFixed(0)} m) ${JSON.stringify(e.ex)}`);
-  assert.equal(bad.size, 0, 'not breakable: ' + [...bad.entries()].map(([k, e]) => k + ' x' + e.n).join(', '));
+  assert.equal(bad.size, 0, 'not breakable: ' + [...bad.entries()].map(([k, e]) => k + ' x' + e.n+' '+JSON.stringify(e.ex)).join(', '));
 });
 
 // ---------------------------------------------------------------- 7b the Anichkov landing stage (owner 2026-10-26): a steppable flight with a gap in the railing, and no hole beside the bridge heads
@@ -609,7 +634,7 @@ if (built.includes('landmarksTauride')) {
   });
   // the owner's report (pose -827.9, -1715.9: "driving a car on a bridge you fall through it"): a car drives over the Prachechny Bridge both ways at 6 .. 12 m/s
   const prach = ROADS.find((r) => r.id === 'w548349392');
-  if (prach) check('9 a car drives over the Prachechny Bridge (the Fontanka at its mouth, x -828 z -1716) both ways without dropping into the trench', () => {
+  if (prach && L.inPlay(-827.9,-1715.9)) check('9 a car drives over the Prachechny Bridge (the Fontanka at its mouth, x -828 z -1716) both ways without dropping into the trench', () => {
     const base = []; for (let i = 0; i < prach.pts.length; i += 2) base.push([prach.pts[i], prach.pts[i + 1]]);
     for (const dir of [1, -1]) for (const vmax of [6, 12]) {
       const pts = dir > 0 ? base.slice() : base.slice().reverse(), e0 = pts[0], e1 = pts[1], f0 = pts[pts.length - 1], f1 = pts[pts.length - 2];

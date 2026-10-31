@@ -99,7 +99,7 @@ export function territoryProblems(rects) {
 /**
  * The arrival of an edge hop: the player lands at the SAME x, z, yaw (no rectangle), so the pose is resolved by handoff.resolveArrival with the DESTINATION layout L at every working point of the lens.
  * A walker / flyer heads the probe direction; a CAR exists only on a drivable lane (the roads are the same data on both sides of an overlap), so a car is tried at the working points that have one,
- * headed along the lane in both senses. Checked with predicates written out independently of makeProbe (25 m inside the play area, not in a building, a car on a lane within 30 degrees of its heading);
+ * headed along the lane in both senses. Checked with predicates written out independently of makeProbe (25 m inside the play area, not in a building, a car on dry ground on a lane within 30 degrees of its heading);
  * water is NOT a failure (CLAUDE.md world rules: a pose in water is fine, a wall of water is the defect). A fall-back to the destination HERO counts as bad.
  * Returns { total, direct, ring, hero, badCount, byMode, wet: { total, bad }, bad: [first 12] }.
  */
@@ -119,7 +119,7 @@ export function edgeArrival(points, L) {
       if (r.how === 'hero') why.push('fell back to the destination HERO');
       if (!L.inPlay(r.x, r.z, 25)) why.push('not 25 m inside the play area');
       if (L.insideBuilding(r.x, r.z, 1.5)) why.push('inside / next to a building');
-      if (mode === 'car') { const l2 = L.roadsNear(r.x, r.z, 0, { drivable: true }).find((q) => q.gap <= 0); if (!l2) why.push('not on a drivable lane'); else if (Math.abs(l2.tx * fx + l2.tz * fz) < Math.cos(30 * Math.PI / 180)) why.push('lane is more than 30 degrees off the heading'); }
+      if (mode === 'car' && !L.inRiver?.(r.x, r.z)) { const l2 = L.roadsNear(r.x, r.z, 0, { drivable: true }).find((q) => q.gap <= 0); if (!l2) why.push('not on a drivable lane'); else if (Math.abs(l2.tx * fx + l2.tz * fz) < Math.cos(30 * Math.PI / 180)) why.push('lane is more than 30 degrees off the heading'); }
       if (why.length) { out.badCount++; out.byMode[mode]++; if (wet) out.wet.bad++; if (out.bad.length < 12) out.bad.push(`${mode}${wet ? ' (in water)' : ''} yaw ${yaw.toFixed(0)} from (${x.toFixed(1)}, ${z.toFixed(1)}) -> (${r.x.toFixed(1)}, ${r.z.toFixed(1)}) ${r.how}: ${why.join(', ')}`); }
     }
   }

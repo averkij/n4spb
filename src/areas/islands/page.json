@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "title": "Крестовский—Каменный—Елагин · Saint Petersburg",
+  "appTitle": "Острова",
+  "canvasLabel": "Krestovsky–Kamenny–Yelagin, Saint Petersburg: walkable 3D scene",
+  "intro": {
+    "kicker": "Прогулка по городу: Крестовский—Каменный—Елагин",
+    "title": "Крестовский—Каменный—Елагин"
+  },
+  "heavy": {
+    "ramGB": 1,
+    "ru": "Тяжёлая сцена: ~{mb} МБ и ~{ram} ГБ памяти, лучше на новом телефоне или планшете, горизонтально",
+    "en": "Heavy scene: ~{mb} MB and ~{ram} GB RAM, best on a recent phone or tablet in landscape"
+  },
+  "places": {
+    "title": "Список мест отключён: до нужных мест можно дойти самому · The places list is off for now: walk to the places yourself"
+  },
+  "help": {
+    "walk": "<kbd>WASD</kbd> Walk · <kbd>Shift</kbd> Run · <kbd>Space</kbd> Jump · <kbd>F</kbd> Fly · <kbd>E</kbd> Use / car · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI · <kbd>M</kbd> Mute",
+    "air": "<kbd>W</kbd> Fly where you look · <kbd>A</kbd><kbd>D</kbd> Strafe · <kbd>Space</kbd>/<kbd>E</kbd> Up · <kbd>Q</kbd>/<kbd>C</kbd> Down · <kbd>Shift</kbd> Boost · <kbd>F</kbd> Land · <kbd>R</kbd> Respawn · <kbd>T</kbd> Time of day · <kbd>H</kbd> Hide UI · <kbd>M</kbd> Mute"
+  },
+  "sights": [],
+  "facts": [
+    [
+      "Крестовский—Каменный—Елагин: Службы Елагина дворца"
+    ],
+    [
+      "Крестовский—Каменный—Елагин: Летний театр эстрады"
+    ],
+    [
+      "Крестовский—Каменный—Елагин: Кухонный корпус и манеж, дом садовника"
+    ],
+    [
+      "Крестовский—Каменный—Елагин: Елагин дворец"
+    ],
+    [
+      "Крестовский—Каменный—Елагин: Стадион на Крестовском острове"
+    ],
+    [
+      "Крестовский—Каменный—Елагин: Метро «Крестовский остров»: павильон"
+    ],
+    [
+      "Крестовский—Каменный—Елагин: Кухонный корпус Елагина дворца"
+    ],
+    [
+      "Крестовский—Каменный—Елагин: Конюшенный корпус Елагина дворца"
+    ]
+  ]
+}

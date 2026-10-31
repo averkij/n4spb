@@ -1,8 +1,9 @@
 # Морские ворота and Округ № 65
 
-The coastal work lives on `feat/coastal-areas`, isolated from the concurrent
-Petrograd port in the original checkout. The first checkpoint is `b0c849e`
-(fresh OSM data and initial territories). The integrated release is 7.0.0.
+The first coastal checkpoint is `b0c849e` (fresh OSM data and initial
+territories), followed by the complete 7.0.0 build at `e2886b7`. Release 8.0.0
+integrates the completed Petrograd port from `70b1d80`, connecting all 15 live
+areas while preserving both branches' water, collision and hand-off changes.
 
 ## Geography and scene content
 
@@ -23,9 +24,10 @@ dossiers record primary references and photo-derived estimates:
 The play territories follow B600, with small documented marine overlap bands
 that give Gavan and Vasilyevsky distinct usable exits. A two-cell accidental
 Okrug–Dekabristov overlap was removed. `tools/connect-coastal-areas.mjs`
-discovers live neighbours and searches actual gate-machine priorities. Rerun it
-after integrating the three Petrograd areas to connect their Okrug 65 border.
-It preserves other gates and imposes the existing geometry and priority tests.
+discovers live neighbours and searches actual gate-machine priorities. The
+combined release adds the paired Okrug 65 / islands seam, with 4.8 / 7.24 km
+of working boundary. It preserves the Petrograd gates and the existing
+geometry and priority tests.
 
 ## Container ship easter egg
 
@@ -40,7 +42,8 @@ steer, **Space** stops, **V** switches between chase views and the bridge,
 **E** exits, and **R** returns the player to the scene start. Its inertia and
 turning rate differ from the motorboat. The complete hull checks shores,
 structures and bridge clearance; the model keeps its identity during hand-offs.
-Blocked boarding-side exits cannot use a fallback inside the hull.
+Both sides have boarding prompts, including when an obstacle forces an exit
+on the opposite side. Blocked exits cannot use a fallback inside the hull.
 
 Shoreline probes follow the same hull stations as the model, including its
 wide forward shoulders and square stern, at no more than 2 m along the
@@ -48,6 +51,11 @@ perimeter. Hand-off placement also checks the hull interior for dry ground or
 terrain holes and uses full-size collision queries for distant piers. These
 additional placement checks run when placing the ship, outside normal frame
 updates; the ordinary motorboat keeps its existing probes and formulas.
+
+Continuous real handling and the actual gate machine also pass ship crossings
+in both directions on the marine/Gavan and marine/Vasilyevsky water seams.
+All four destinations accept the complete hull directly, without moving it,
+and preserve the container-ship identity.
 
 ## World and performance contracts
 
@@ -70,10 +78,16 @@ query run from 1,410 ms to 102 ms. Landmarks add no frame callbacks.
 grades, both physical WHSD floors, and the real ship's controls, collisions,
 boarding, blocked exits, respawn and hand-off identity. These checks also run in
 CI. Normal motorboat, knock, hand-off, car and area regressions remain in place.
-The ship suite has 18 passing checks, including narrow-island contact at two
+The ship suite has 19 passing checks, including narrow-island contact at two
 headings, reverse stern contact, blocked exits, and real hand-off refusal for
 an interior terrain hole or an off-centre pier. The focused Palace motorboat
-regression and pure hand-off suite each pass 28 checks.
+regression passes 28 checks, and the pure hand-off suite passes 31.
+
+Water car arrivals stay in valid open water without a lane requirement. Dry
+arrivals retain their aligned-road search. The marine car suite retains all
+960 arrivals, with no HERO fallback; the Palace regression retains all 948.
+The bounded walking search also finds Piterland's narrow free corner without
+increasing its 60 m search radius or weakening physical-clearance checks.
 
 The saved legacy car sequence includes one camera-occluded stopped frame
 (`shots/coastal-car/drive_7_stopped.png`); its preceding cockpit and following
@@ -87,7 +101,36 @@ markings, rendered views, z-fighting and final shipping bakes are verified at
 integration. Measurements and reproduction commands belong in
 [PERFORMANCE.md](PERFORMANCE.md).
 
-The preceding data-only checkpoint contains 130 pending Petrograd files. They
-are explicitly classified by `tools/classify-pending-area-data.mjs` until those
-areas gain `area.js`; rerun it after merging their completed work. No pending
-source files from that separate checkout were committed by this work.
+The initial data checkpoint contained 130 pending Petrograd files. Those areas
+are now live, and their temporary orphan classifications have been removed.
+The combined build uses the completed port instead of copying unfinished
+files from its working checkout.
+
+### Combined Petrograd verification
+
+The shared Yacht Bridge now has the same geometry and driving surface on both
+the Okrug 65 and Islands pages: a 16 m navigation clearance, 16.4 m deck width
+and a maximum 7.06% approach grade. Each page passes the same 57 physical car
+poses. The Okrug–Islands overlap has reciprocal gates selected against the full
+registry, including the other Petrograd districts.
+The inner concrete dividers retain their trapezoid section as individual
+collidable knock panels, alongside the breakable outer railings; they use
+384 m cells and a finite 260 m detail range.
+
+Integration also repairs two visible Kronverk defects: the printworks lamp is
+on the pavement with its body, glow, pool, knock record and collider moved
+together; the stadium's narrow stand now retains its road-clear seat panels.
+A real knock test confirms the relocated 140 kg lamp still falls on collision.
+
+Pure Petrograd water data now uses a repository-local triangulator rather than
+importing the rendering library. Its output matches the previous triangulator
+exactly for 350 polygons, 34 holes and 11,508 triangles. This keeps the layout
+CI job independent of installed packages without changing the water geometry.
+
+The claims audit inspects final geometry after all builders have completed.
+It keeps creator provenance through reparenting, distinguishes fully covered
+aggregate OSM parents from their parts, and applies a low but nonzero height
+band to the mapped burned guardhouse ruin. Explicit parent/child buildings
+retain separate ownership with a bounded 1.5 m child apron. Failure probes
+still reject missing child geometry, a generic parent drawn outside that apron,
+missing ruin geometry, and foliage substituted for a building.

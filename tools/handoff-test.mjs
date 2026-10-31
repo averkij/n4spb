@@ -65,12 +65,38 @@ check('a valid point inside the rect is taken as it is', () => { const r = H.res
 check('a point outside the rect is clamped into it', () => { const r = H.resolveArrival(fake(), { x: 300, z: -50, yaw: 0 }, 'walk', { x0: 0, x1: 100, z0: 0, z1: 100 }); assert.equal(r.x, 100); assert.equal(r.z, 0); assert.equal(r.how, 'direct'); });
 check('an invalid point falls back to the nearest valid one on a ring', () => { const r = H.resolveArrival(fake({ deadRect: [-20, 20, -20, 20] }), { x: 0, z: 0, yaw: 0 }, 'walk', null); assert.equal(r.how, 'ring'); assert(r.moved >= 20 && r.moved <= 30, String(r.moved)); });
 check('nothing valid within 60 m -> the destination HERO', () => { const r = H.resolveArrival(fake({ deadRect: [-200, 200, -200, 200] }), { x: 0, z: 0, yaw: 0 }, 'walk', null); assert.equal(r.how, 'hero'); assert.equal(r.x, 7); assert.equal(r.yaw, 9); });
+check('walk / fly refine a free corner between the coarse rays without enlarging the search radius or dropping clearance', () => {
+  // The Piterland seam failure has a free wedge at 99..112 degrees, starting
+  // about 58 m away. Neither neighbouring coarse ray (90 / 120) reaches it.
+  const probe = fake();
+  const free = (x, z) => Math.hypot(x, z) >= 58 && Math.atan2(z, x) >= 99 * Math.PI / 180 && Math.atan2(z, x) <= 112 * Math.PI / 180;
+  probe.blocked = (x, z) => !free(x, z);
+  for (const mode of ['walk', 'fly']) {
+    const r = H.resolveArrival(probe, { x: 0, z: 0, yaw: 135 }, mode, null);
+    assert.equal(r.how, 'ring'); assert.equal(r.yaw, 135);
+    assert(r.moved <= 60 + 1e-9 && free(r.x, r.z));
+    assert.equal(H.resolveArrival(probe, { x: 0, z: 0, yaw: 135 }, mode, null, { ringMax: 57 }).how, 'hero');
+    assert.equal(H.resolveArrival({ ...probe, inside: () => false }, { x: 0, z: 0, yaw: 135 }, mode, null).how, 'hero');
+    assert.equal(H.resolveArrival(probe, { x: 0, z: 0, yaw: 135 }, mode, { x0: -50, x1: 50, z0: -50, z1: 50 }).how, 'hero');
+  }
+});
 check('a car needs a lane within 30 degrees of its heading (either direction)', () => {
   const lane = () => ({ tx: 1, tz: 0 });                                    // an east-west road
   assert.equal(H.resolveArrival(fake({ lane }), { x: 0, z: 0, yaw: 90 }, 'car', null).how, 'direct');      // heading west on an east-west road
   assert.equal(H.resolveArrival(fake({ lane }), { x: 0, z: 0, yaw: -90 }, 'car', null).how, 'direct');     // heading east
   assert.notEqual(H.resolveArrival(fake({ lane }), { x: 0, z: 0, yaw: 0 }, 'car', null).how, 'direct');    // heading north across the road: not a valid arrival
   assert.notEqual(H.resolveArrival(fake({ lane: () => null }), { x: 0, z: 0, yaw: 90 }, 'car', null).how, 'direct');
+});
+check('a car in water retains its pose without a lane; dry land, buildings and the play inset keep their checks', () => {
+  const probe = { ...fake({ lane: () => null }), water: () => true };
+  for (const yaw of [0, 37, 90, 135]) {
+    const r = H.resolveArrival(probe, { x: 10, z: 20, yaw }, 'car', null);
+    assert.equal(r.how, 'direct'); assert.equal(r.moved, 0); assert.equal(r.yaw, yaw);
+  }
+  assert.equal(H.resolveArrival({ ...probe, water: () => false }, { x: 10, z: 20, yaw: 37 }, 'car', null).how, 'hero');
+  assert.equal(H.resolveArrival({ ...probe, water: undefined }, { x: 10, z: 20, yaw: 37 }, 'car', null).how, 'hero');
+  assert.equal(H.resolveArrival({ ...probe, blocked: () => true }, { x: 10, z: 20, yaw: 37 }, 'car', null).how, 'hero');
+  assert.equal(H.resolveArrival({ ...probe, inside: () => false }, { x: 10, z: 20, yaw: 37 }, 'car', null).how, 'hero');
 });
 
 console.log('an EDGE-gate arrival (the seamless hand-off: no arrival rectangle, the same x,z,yaw):');
@@ -86,6 +112,14 @@ check('a car needs a lane: the same spot is kept when a lane runs along its head
 });
 
 console.log('resolveArrival (the real strip layout):');
+check('road projection finds a narrow lane missed by the radial rays and still validates it', () => {
+  const probe=fake({lane:(x,z)=>Math.abs(x-17.13)<.1&&Math.abs(z-24.71)<.1?{tx:1,tz:0}:null});
+  probe.candidates=()=>[{x:17.13,z:24.71,tx:1,tz:0}];
+  const r=H.resolveArrival(probe,{x:0,z:0,yaw:90},'car',null);
+  assert.equal(r.how,'ring');assert.equal(r.x,17.13);assert.equal(r.z,24.71);
+  probe.blocked=()=>true;
+  assert.equal(H.resolveArrival(probe,{x:0,z:0,yaw:90},'car',null).how,'hero');
+});
 {
   const L = await import(pathToFileURL(path.join(root, 'src/world/layout.js')).href);
   const probe = H.makeProbe(L);
@@ -97,12 +131,12 @@ console.log('resolveArrival (the real strip layout):');
       // independent of makeProbe: the layout is asked directly, with the literal numbers of the contract (25 m inset, 1.5 m building clearance, a vehicle road, 30 degrees)
       if (r.how !== 'hero') {
         if (!L.inPlay(r.x, r.z, 25) || L.insideBuilding(r.x, r.z, 1.5)) bad++;      // (water is reachable, CLAUDE.md "World rules": an arrival in the river is fine, only a building blocks)
-        if (mode === 'car') { const h = L.roadsNear(r.x, r.z, 0, { drivable: true }).find((q) => q.gap <= 0); const [fx, fz] = H.forwardOf(37); if (!h || Math.abs(h.tx * fx + h.tz * fz) < Math.cos(30 * Math.PI / 180)) bad++; }
+        if (mode === 'car' && !L.inRiver(r.x, r.z)) { const h = L.roadsNear(r.x, r.z, 0, { drivable: true }).find((q) => q.gap <= 0); const [fx, fz] = H.forwardOf(37); if (!h || Math.abs(h.tx * fx + h.tz * fz) < Math.cos(30 * Math.PI / 180)) bad++; }
       }
     }
   }
   console.log(`       ${n} probes over the strip lattice: ${direct} direct, ${ring} ring, ${hero} hero`);
-  check('every non-hero arrival is inside the play area (25 m inset), not in a building (water is walkable: a player in the river arrives in the river), and a car sits on a lane within 30 degrees of its heading', () => assert.equal(bad, 0));
+  check('every non-hero arrival is inside the play area (25 m inset), not in a building, and a car on dry ground sits on a lane within 30 degrees of its heading (water is reachable)', () => assert.equal(bad, 0));
   check('the lattice really exercises all three outcomes (a test that only ever sends the player to the HERO proves nothing)', () => { assert(direct >= 20, 'direct ' + direct); assert(ring >= 20, 'ring ' + ring); assert(hero >= 1, 'hero ' + hero); });
   check('the HERO fallback is itself a valid walking spot', () => assert(probe.inside(L.HERO.x, L.HERO.z) && !probe.blocked(L.HERO.x, L.HERO.z)));
 }

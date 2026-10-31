@@ -68,8 +68,11 @@ export const WATER = {
   dataWater: arr(W.dataWater),
   /** [{ id, key, source } | { id, key, ring }]: a scenery ring of environment/waterways.js (FAR_SOURCES name, e.g. 'neva-malaya') that this area holds as DATA water inside its data region (a real polygon: banks, queries, the ground cut); the scenery goes on beyond (Vasilyevsky-Okrug 7: the Malaya Neva) */
   dataRings: arr(W.dataRings),
+  channels: arr(W.channels),
+  riverRings: obj(W.riverRings), // pre-triangulated rings preserving park islands in northern source water
   /** { 'osm-id#polygon-index': { cx, cz, ax, az, len, wid } }: replaces the oriented bounding rectangle of a generated pier / landing stage (environment/boats.js pierRects) where the polygon is a long thin mole with bumps (Vasilyevsky-Okrug 7: w74745049, 255 m x 9 m, whose bounding rectangle is 40 m wide) */
   pierFit: obj(W.pierFit),
+  precisePiers: arr(W.precisePiers),
   slopeReaches: arr(W.slopeReaches),
   /** { RIVER record name: waterway key } for the RIVER records whose data `key` is null (Admiralty-Haymarket: the Kryukov, Admiralty, Novo-Admiralty and New Holland canals) */
   keyByName: obj(W.keyByName),
@@ -80,6 +83,10 @@ export const WATER = {
   /** [{ id, key?, ring: [[x, z], ...] | [x, z, ...] }]: ground that a landmark module of the area turns into its OWN descent / stair pit (Admiralty-Haymarket: the Academy sphinx pier, landmarksAcademy/groups.js WATER_RINGS): the ring counts
    *  as water of `key` (default 'neva': a hole in the ground, the water surface under it, layout.inRiver), NONE of its edges is a bank and the quay opens at it (environment/waterways.js ownerWaterAt); the owner draws the walls, steps and colliders. */
   ownerRings: arr(W.ownerRings),
+  bankRings: [...arr(W.bankRings),...arr(W.quayOpenings)], // owned shores and explicit mapped channel mouths
+  isolatedKeys: obj(W.isolatedKeys),
+  skipRiverNames: arr(W.skipRiverNames),
+  skipRiverKeys: arr(W.skipRiverKeys),
   /** [{ id, c: [x, z], r } | { id, c, ax: [ux, uz], hl, hw }]: no generated descent, landing stage or boat here (a sight's own pier / berth; environment/waterways.js keepOut) */
   keepOut: arr(W.keepOut),
 };

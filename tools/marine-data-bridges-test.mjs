@@ -1,7 +1,7 @@
 // CPU regression: physical continuity across OSM way/layer changes, traversable
 // bridge approaches, source-area overlap and documented navigation clearances.
 import assert from 'node:assert/strict';
-import { coastalSites, marineWhsdHeight, deckAtSegments } from '../src/world/coastalBridges/sites.js';
+import { coastalSites, marineWhsdHeight, deckAtSegments, YACHTNY_GROUP } from '../src/world/coastalBridges/sites.js';
 import { whsdY } from '../src/world/bridges/sites-vo2.js';
 import { clipHeightBand } from './lib/vertical-band.mjs';
 
@@ -33,6 +33,7 @@ for(const br of fixtures)for(let i=1;i<br.heights.length;i++){
 let shared=0,segments=0;
 for(const id of['morskie-vorota','okrug65']){
   const data=await import(`../src/areas/${id}/data/city.js`),sites=coastalSites(data.ROADS),nodes=new Map();
+  assert(!sites.some(s => YACHTNY_GROUP.osm.includes(s.road.id)), 'shared Yacht Bridge has no second generic coastal deck');
   for(const br of sites){
     assert(br.heights.every(Number.isFinite),`${id}/${br.id} finite elevations`);
     for(let i=0;i<br.heights.length;i++){
@@ -64,6 +65,108 @@ for(const id of['morskie-vorota','okrug65']){
     }
   }
   console.log(id,sites.length,'mapped bridges; physical joints continuous');
+}
+
+// Both pages must load the same authored Yacht curve, physical ramps and car
+// floor. Run once under each area loader after changing either shore:
+// node tools/area.mjs okrug65 tools/marine-data-bridges-test.mjs --yacht
+// node tools/area.mjs islands tools/marine-data-bridges-test.mjs --yacht
+if (process.argv.includes('--yacht')) {
+  const A = await import('../src/world/area.js');
+  assert(['okrug65', 'islands'].includes(A.ID), '--yacht needs either shore');
+  const { buildWorld } = await import('./lib/headless-world.mjs');
+  const names = ['environment', 'streets', 'bridges', 'bridgesPetro'];
+  if (A.ID === 'okrug65') names.push('coastalBridges');
+  const { ctx, L, THREE, errors } = await buildWorld({ modules: names, log: null });
+  assert.deepEqual(errors, []);
+  const { STATIONS, pointAt, deckProfile } = await import('../src/world/bridges/krestAptek2/yachtny.js');
+  const yacht = ctx.services.bridgesPetro.list.filter(b => b.id === 'yachtny');
+  assert.equal(yacht.length, 1, 'exactly one authored Yacht Bridge');
+  assert(A.GROUPS.bridges.some(g => g.key === 'yachtny' && g.osm.includes('w419266626')), 'the shared builder owns the mapped road');
+  // Geometry is sampled at 2.5 m stations: the analytic profile and a ramp's
+  // interpolation agree within centimetres, not floating-point bit identity.
+  const yachtNear = (a, b, msg) => assert(a !== null && Math.abs(a - b) <= .02, `${msg}: ${a} vs ${b}`);
+  let maxGrade = 0;
+  for (let s = 1; s <= STATIONS.L; s++) maxGrade = Math.max(maxGrade, Math.abs(deckProfile(s) - deckProfile(s - 1)));
+  assert(maxGrade <= .09, 'Yacht approaches stay within 9% grade');
+  const { createHandling } = await import('../src/world/drive/handling.js');
+  const car = createHandling(ctx), idle = { thr: 0, brk: 0, steer: 0, hand: true, nitro: false, jump: false, flip: false };
+  let samples = 0, peak = 0, worst = 0;
+  for (let s = 10; s < STATIONS.L - 10; s += 10) {
+    const p = pointAt(s, 0), expected = deckProfile(s), yaw = Math.atan2(p.tx, p.tz);
+    yachtNear(yacht[0].B.deckAt(p.x, p.z), expected, 'authored Yacht deck profile');
+    yachtNear(ctx.services.bridges.deckY(p.x, p.z, expected + .03), expected, 'public bridge service preserves Yacht floor');
+    if (ctx.services.coastalBridges) yachtNear(ctx.services.coastalBridges.deckY(p.x, p.z, expected + .03), expected, 'coastal hook preserves shared Yacht floor');
+    car.reset(p.x, p.z, yaw); car.y = expected + .03;
+    yachtNear(car.groundAt(p.x, p.z, car.y), expected + .03, 'car resolves the shared Yacht floor');
+    for (let i = 0; i < 12; i++) car.step(1 / 60, idle);
+    worst = Math.max(worst, Math.abs(car.y - (expected + .03)));
+    assert(worst < .08 && !car.air && !car.fall, 'Yacht car stays on its physical ramps');
+    peak = Math.max(peak, expected); samples++;
+  }
+  yachtNear(peak, 14.1, 'same water-datum-adjusted deck peak on either shore');
+  // Probe actual drawn soffits from the water. A full clear span on the short
+  // plateau must provide 16 m; piers deliberately occupy their own positions.
+  ctx.staticRoot.updateMatrixWorld(true);
+  const meshes = [];
+  ctx.staticRoot.traverse(o => { if (o.isMesh && !o.isInstancedMesh && /^brg-yachtny-/.test(o.name)) meshes.push(o); });
+  assert(meshes.length, 'actual Yacht soffit meshes are present');
+  const ray = new THREE.Raycaster(), up = new THREE.Vector3(0, 1, 0);
+  let clearance = -Infinity, navigationPose = null;
+  for (let s = STATIONS.L * .44; s <= STATIONS.L * .54; s += 1) {
+    const p = pointAt(s, 0), water = ctx.physics.waterLevel(p.x, p.z);
+    if (water === null) continue;
+    ray.set(new THREE.Vector3(p.x, water + .05, p.z), up); ray.far = 25;
+    const hit = ray.intersectObjects(meshes, false)[0];
+    const h = hit ? hit.point.y - water : -Infinity;
+    if (h > clearance) { clearance = h; navigationPose = { ...p, water }; }
+  }
+  yachtNear(clearance, 16, 'actual central soffit gives official 16 m navigation clearance');
+  assert(!ctx.physics.columnBlocked(navigationPose.x, navigationPose.z, .5, navigationPose.water + .05, navigationPose.water + .7), 'ordinary boat has a clear physical passage below Yacht midspan');
+  const dividers = yacht[0].B.dividers;
+  assert.equal(dividers.records.length, 2 * STATIONS.n, 'both full divider runs have one physical panel per curve segment');
+  assert(dividers.records.every(r => r && r.parts.length === 1 && r.item?.source?.knock === r), 'every divider owns its drawn instance and collision source');
+  assert(dividers.meshes.length <= 8, 'divider draws stay spatially bounded');
+  for (const mesh of dividers.meshes) {
+    assert.equal(mesh.instanceMatrix.usage, THREE.DynamicDrawUsage);
+    assert.equal(mesh.userData.lodFar, 260); assert(Number.isFinite(mesh.boundingSphere.radius));
+    const p = mesh.geometry.attributes.position, base = [], top = [];
+    for (let i = 0; i < p.count; i++) {
+      if (Math.abs(p.getY(i)) < 1e-6) base.push(p.getZ(i));
+      if (Math.abs(p.getY(i) - .85) < 1e-6) top.push(p.getZ(i));
+    }
+    assert(Math.abs(Math.max(...base) - Math.min(...base) - .5) < 1e-6, 'original trapezoid base width');
+    assert(Math.abs(Math.max(...top) - Math.min(...top) - .22) < 1e-6, 'original trapezoid top width');
+  }
+  // Use actual handling and the normal collision-source impulse path, rather
+  // than the knock.hit test shortcut. Both divider sides hold a slow bump,
+  // then a faster car knocks the exact contacted panel and opens its gap.
+  ctx.drive = { active: true, car };
+  const driveInput = { ...idle, hand: false };
+  for (const side of [-1, 1]) {
+    const index = 2 * Math.floor(STATIONS.n * .49) + (side === 1 ? 1 : 0), rec = dividers.records[index], item = rec.item;
+    const fr = dividers.frames[index], dx = -fr.tz * side, dz = fr.tx * side, yaw = Math.atan2(dx, dz);
+    const part = rec.parts[0], before = new THREE.Matrix4(); part.mesh.getMatrixAt(part.index, before);
+    const start = speed => { car.reset(rec.x - dx * 4, rec.z - dz * 4, yaw); car.y = rec.y + .03; car.vx = dx * speed; car.vz = dz * speed; };
+    const events = [];
+    start(3);
+    for (let i = 0; i < 90; i++) { car.step(1 / 60, driveInput); events.push(...car.events); }
+    assert(events.some(e => e.obstacle === item), 'slow car physically contacts the divider');
+    assert.equal(rec.state, 'stand'); assert(ctx.physics.items.includes(item), 'slow bump retains the physical barrier');
+    start(18); events.length = 0;
+    for (let i = 0; i < 90 && rec.state === 'stand'; i++) { car.step(1 / 60, driveInput); events.push(...car.events); }
+    assert(events.some(e => e.obstacle === item && e.type === 'hit'), 'fast car hits the matching divider collider');
+    assert.equal(rec.state, 'fly', 'collision impulse knocks the contacted concrete panel');
+    assert(!ctx.physics.items.includes(item) && ![...ctx.physics.querySolids(rec.x, rec.z, 2)].includes(item), 'old blocking collider leaves both physics indexes');
+    ctx.knock.update(1 / 30);
+    const after = new THREE.Matrix4(); part.mesh.getMatrixAt(part.index, after);
+    assert(!after.equals(before), 'matching drawn instance moves with the knocked panel');
+    assert(!ctx.physics.columnBlocked(rec.x, rec.z, .1, rec.y + .55, rec.y + .8), 'the knocked panel leaves a real physical gap');
+    ray.set(new THREE.Vector3(rec.x - dx * .6, rec.y + .5, rec.z - dz * .6), new THREE.Vector3(dx, 0, dz)); ray.far = 1.2;
+    assert.equal(ray.intersectObjects(meshes, false).length, 0, 'no static divider copy remains in the opened gap');
+  }
+  console.log('PASS Yacht dividers ' + JSON.stringify({ area: A.ID, panels: dividers.records.length, meshes: dividers.meshes.length, testedSides: 2, lowSpeedHeld: true, collisionKnocked: true, physicalGap: true }));
+  console.log('PASS Yacht parity ' + JSON.stringify({ area: A.ID, samples, peak, maxGrade, actualSoffitClearance: clearance, worstCarHeightError: worst, bank: yacht[0].B.info.bank, piers: yacht[0].B.info.piers, triangles: yacht[0].B.info.tris }));
 }
 for(const z of[1080,1126,1275,1594,1745,1900,2200,2400,2600]){
   near(marineWhsdHeight(z),whsdY(z),'Gavan source overlap');

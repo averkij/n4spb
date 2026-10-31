@@ -1,5 +1,5 @@
 // CPU draw audit of the landmark claims of an area (docs/AREAS.md section 5; closes the gap of 8.7 "the completeness of the claims is proven by id, not by geometry").
-//   node tools/claims-draw-audit.mjs [--mutant unclaim:<id>[,<id>] | undraw:<id> | citydraw:<id>] [--loose-rule1] [--modules a,b] [--inset 1] [--deep 1.5] [--above 1.5] [--min-unclaimed 50] [--where <id>[,<id>]] [--verbose]   (the strip)
+//   node tools/claims-draw-audit.mjs [--mutant unclaim:<id>[,<id>] | undraw:<id> | citydraw:<id> | parentdraw:<id>] [--loose-rule1] [--modules a,b] [--inset 1] [--deep 1.5] [--above 1.5] [--min-unclaimed 50] [--where <id>[,<id>]] [--verbose]   (the strip)
 //   node tools/area.mjs north tools/claims-draw-audit.mjs ...                                                                                                                  (another area: the loader remap of section 2)
 // Builds the static modules of the page's MODULES list on the CPU exactly as tools/check.mjs does (DOM stubs, no GPU; ctx.buildList is the FULL page list, so lib/claims.js owns what the
 // browser owns; the dynamic modules of tools/modules-list.mjs DYNAMIC are left out), takes the centroid of every triangle each module adds to the scene (an InstancedMesh: every instance,
@@ -20,6 +20,7 @@
 //      Mutants of this rule: `--mutant undraw:<id>` removes the owner's OWN centroids (rule 1 (a)-(c)) of the claimed building from the audit's view while its foliage, slivers and the neighbour's
 //      overhang stay (the building drawn by nobody, or by the neighbour next to it): the audit must go red, and with --loose-rule1 it does not (the proof that the old rule was fooled);
 //      `--mutant citydraw:<id>` moves those centroids to `city` (the claimed building drawn by the generic module instead of its owner): red by rule 1 and rule 2.
+//      Mapped building=ruins uses a 1 cm minimum own-geometry height: a low surviving base or authored ground patch counts, while zero-height ground, foliage and an undraw mutant do not.
 //   2. GENERIC DRAWS NOTHING of a claimed BUILDING: `city`, `streets` and `props` have no triangle centroid higher than --above m inside the polygon shrunk by --inset m that is not also inside
 //      an UNCLAIMED building (inset 0: the data has overlapping outlines, OVERLAPS). The inset is what makes the test honest: a neighbour's cornice, balcony or name plate overhangs the shared
 //      outline by up to a metre, a blockout of the claimed building has walls and a roof deep inside it. Claimed polygons that are not buildings (a park, a paving area, a pond) and claimed ways
@@ -30,6 +31,15 @@
 //      claimed by nobody while its old owner still draws it) turns red; --mutant unclaim:<id> removes the id from the claim tables of the audit (the modules build as they are), so the red path
 //      of the audit itself can be proved:   node tools/area.mjs north tools/claims-draw-audit.mjs --mutant unclaim:r5802451   -> RED: landmarksNorthFull draws the cathedral though nothing claims it.
 //      KNOWN_UNCLAIMED lists the unclaimed records a landmark module is known to cover (with the reason); they are printed, not red.
+//      A hidden aggregate outline with complete mapped part coverage is not a separately drawn building. Only unclaimed aggregates with a verified complete child list are excluded from rule 3;
+//      every child remains independently audited. Claimed aggregates still have to pass rule 1 and the generic-module checks.
+//      Explicit ancestors cannot steal a child's own geometry. For rule 3, only centroids inside a module's claimed descendant footprint or its bounded DEEP apron (up to 1.5 m for facade ornaments)
+//      are delegated away from an unclaimed ancestor; its remaining area and all siblings stay audited. Suppressed dupOf records follow the city's canonical-building / raised-base rule, and cannot
+//      act as a second competing building. `--mutant parentdraw:<unclaimed-parent>` inserts a visible mesh in a parent's residual area outside every claimed child apron: rule 3 must turn red.
+// All selected modules build before geometry is scanned. Object identity retains
+// creator-module provenance through later cleanup/reparenting; final geometry,
+// instance matrices and world matrices are inspected, and detached objects are
+// absent. Both authored LOD representations remain audited as before.
 // `environment` (the ground plane covers every footprint), `rail`, `metro` and `bridges` are reported, never graded. --where <id> prints sample centroids (x, y, z, distance to the outline,
 // mesh name) per module inside that footprint. Prints one block per module and a RESULT: OK / FAIL line; exit 1 on FAIL.
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -79,8 +89,8 @@ const opt = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 && argv[
 const INSET = Number(opt('inset', 1.0)), DEEP = Number(opt('deep', 1.5)), ABOVE = Number(opt('above', 1.5)), MIN_UNCLAIMED = Number(opt('min-unclaimed', 50)), MIN_GENERIC = Number(opt('min-generic', 5)), VERBOSE = argv.includes('--verbose');
 const WHERE = new Set(String(opt('where', '')).split(',').filter(Boolean));
 const STRICT = argv.includes('--strict');      // review fix: a warning (a claimed point / way / lawn that its owner draws nothing in) fails; the North has 0 warnings today, the strip's 10 are the castle's footways, so the strip does not run it
-const mutantIds = new Set(), undrawIds = new Set(), citydrawIds = new Set(), LOOSE_RULE1 = argv.includes('--loose-rule1');
-for (const m of String(opt('mutant', '')).split(',').filter(Boolean)) { const [kind, id] = m.split(':'); if (!['unclaim', 'undraw', 'citydraw'].includes(kind) || !id) { console.log(`unknown --mutant "${m}" (unclaim:<id> | undraw:<id> | citydraw:<id>)`); process.exit(2); } (kind === 'unclaim' ? mutantIds : kind === 'undraw' ? undrawIds : citydrawIds).add(id); }
+const mutantIds = new Set(), undrawIds = new Set(), citydrawIds = new Set(), parentdrawIds = new Set(), LOOSE_RULE1 = argv.includes('--loose-rule1');
+for (const m of String(opt('mutant', '')).split(',').filter(Boolean)) { const [kind, id] = m.split(':'); if (!['unclaim', 'undraw', 'citydraw', 'parentdraw'].includes(kind) || !id) { console.log(`unknown --mutant "${m}" (unclaim:<id> | undraw:<id> | citydraw:<id> | parentdraw:<id>)`); process.exit(2); } (kind === 'unclaim' ? mutantIds : kind === 'undraw' ? undrawIds : kind === 'citydraw' ? citydrawIds : parentdrawIds).add(id); }
 /** a mesh whose name (or an ancestor's) says it is a plant: its centroids are never "the claimed building" (rule 1) */
 const FOLIAGE_RE = /tree|trunk|foliage|crown|canopy|leaf|leaves|bush|shrub|hedge|lilac|birch|linden|larch|spruce|reed|grass|tuft|flower|petal|plant|vine|ivy|moss/i;
 const AREA = process.env.AREA || 'strip';
@@ -231,6 +241,20 @@ const byId = new Map();
 const arrays = Object.entries(D).filter(([k, v]) => /^[A-Z_]+$/.test(k) && Array.isArray(v)).sort(([a], [b]) => (a === 'BUILDINGS' ? -1 : 0) - (b === 'BUILDINGS' ? -1 : 0));
 for (const [, v] of arrays) for (const r of v) if (r && typeof r.id === 'string' && !byId.has(r.id)) byId.set(r.id, r);
 const buildingIds = new Set(D.BUILDINGS.map((b) => b.id));
+const ancestorIds = new Map();
+for (const b of D.BUILDINGS) {
+  const ancestors = new Set();
+  let p = b.parent;
+  while (p && p !== b.id && !ancestors.has(p)) { ancestors.add(p); p = byId.get(p)?.parent; }
+  ancestorIds.set(b.id, ancestors);
+}
+const isAncestor = (ancestor, child) => ancestorIds.get(child)?.has(ancestor) || false;
+// city/prep.js preserves a ground-level duplicate when it supplies the missing
+// base below a raised canonical part. Other verified dupOf records are omitted.
+const suppressedDuplicate = b => {
+  const canonical = b.dupOf && byId.get(b.dupOf);
+  return !!canonical && buildingIds.has(canonical.id) && !((b.minH || 0) < .5 && (canonical.minH || 0) > 2.5);
+};
 
 // ---------------------------------------------------------------- footprints
 /** { kind: 'poly' | 'line' | 'point', polys: [{ o, h: [] }] | pts, hw | x, z, r;  bbox } */
@@ -267,8 +291,18 @@ function depthIn(fp, x, z) {
 
 const targets = [];      // { id, fp, claim: { module, key } | null, building, rec }
 const missing = [];
-for (const [id, claim] of claimedBy) { const r = byId.get(id); const fp = footprintOf(r); if (!r || !fp) { missing.push(id); continue; } targets.push({ id, fp, claim, building: buildingIds.has(id), rec: r }); }
-for (const b of D.BUILDINGS) { if (claimedBy.has(b.id)) continue; const fp = footprintOf(b); if (fp) targets.push({ id: b.id, fp, claim: null, building: true, rec: b }); }
+for (const [id, claim] of claimedBy) { const r = byId.get(id); const fp = footprintOf(r); if (!r || !fp) { missing.push(id); continue; } targets.push({ id, fp, claim, building: buildingIds.has(id), rec: r, suppressedDuplicate: suppressedDuplicate(r) }); }
+const aggregateParts = new Map();
+for (const b of D.BUILDINGS) if (b.parent) {
+  if (!aggregateParts.has(b.parent)) aggregateParts.set(b.parent, []);
+  aggregateParts.get(b.parent).push(b);
+}
+const hiddenAggregate = b => {
+  const children = aggregateParts.get(b.id) || [], count = Number(b.parts);
+  return !!b.skip && Number(b.coverage) >= 1 && count > 0 && children.length === count &&
+    children.every(p => p.part && p.polys?.length && p.polys.every(q => q.o?.length >= 6));
+};
+for (const b of D.BUILDINGS) { if (claimedBy.has(b.id)) continue; const fp = footprintOf(b); if (fp) targets.push({ id: b.id, fp, claim: null, building: true, rec: b, hiddenAggregate: hiddenAggregate(b), suppressedDuplicate: suppressedDuplicate(b) }); }
 for (const id of [...undrawIds, ...citydrawIds]) { const t = targets.find((q) => q.id === id); if (!t || !t.claim || !t.building) { console.log(`--mutant undraw / citydraw:${id}: not a claimed building of area ${AREA}`); process.exit(2); } }
 for (const id of WHERE) if (!targets.some((t) => t.id === id)) { console.log(`--where ${id}: no footprint (not claimed and not a building of area ${AREA})`); process.exit(2); }
 // a grid over the footprint bboxes (10 m cells) so a centroid tests only the footprints whose bbox covers its cell
@@ -276,9 +310,21 @@ const CELL = 10, grid = new Map();
 const ck = (cx, cz) => cx * 1e5 + cz;
 targets.forEach((t, i) => { const b = t.fp.bbox; for (let cx = Math.floor(b[0] / CELL); cx <= Math.floor(b[2] / CELL); cx++) for (let cz = Math.floor(b[1] / CELL); cz <= Math.floor(b[3] / CELL); cz++) { const k = ck(cx, cz); let l = grid.get(k); if (!l) grid.set(k, (l = [])); l.push(i); } });
 const targetIdx = new Map(targets.map((t, i) => [t.id, i]));
+const CHILD_APRON = Math.max(0, Math.min(DEEP, 1.5));
+function withinChildApron(fp, x, z) {
+  if (x < fp.bbox[0] - CHILD_APRON || z < fp.bbox[1] - CHILD_APRON || x > fp.bbox[2] + CHILD_APRON || z > fp.bbox[3] + CHILD_APRON) return false;
+  if (depthIn(fp, x, z) >= 0) return true;
+  return fp.kind === 'poly' && fp.polys.some(p => distRing(p.o, x, z) <= CHILD_APRON || p.h.some(h => distRing(h, x, z) <= CHILD_APRON));
+}
+for (const child of targets) if (child.building && child.claim && ownsKey(child.claim.module, child.claim.key)) {
+  for (const id of ancestorIds.get(child.id) || []) {
+    const parent = targets[targetIdx.get(id)];
+    if (parent && !parent.claim) (parent.claimedDescendants ||= []).push(child);
+  }
+}
 /** the deepest point of a footprint (a 12 x 12 sampling of its bbox): decides how much of the band of rule 2 / 3 a small building can bear */
 function maxDepthOf(fp) { let best = 0; const [x0, z0, x1, z1] = fp.bbox; for (let a = 0; a <= 12; a++) for (let b = 0; b <= 12; b++) { const d = depthIn(fp, x0 + (x1 - x0) * a / 12, z0 + (z1 - z0) * b / 12); if (d > best) best = d; } return best; }
-for (const t of targets) { t.inset = INSET; t.above = ABOVE; if (t.building && t.claim) { t.maxDepth = maxDepthOf(t.fp); t.inset = Math.min(INSET, 0.3 * t.maxDepth); const h = Number(t.rec.hEst || t.rec.h); if (h > 0 && h < ABOVE / 0.4) t.above = 0.4 * h; } }
+for (const t of targets) { t.inset = INSET; t.above = ABOVE; if (t.building && t.claim) { t.maxDepth = maxDepthOf(t.fp); t.inset = Math.min(INSET, 0.3 * t.maxDepth); const h = Number(t.rec.hEst || t.rec.h); if (h > 0 && h < ABOVE / 0.4) t.above = 0.4 * h; if (t.rec.kind === 'ruins') t.above = Math.min(t.above, .01); } }
 const unclaimedBuildings = targets.filter((t) => !t.claim).length;
 console.log(`claims-draw-audit area ${AREA}: ${claimedBy.size} claimed ids (${targets.length - unclaimedBuildings} with a record and a footprint, ${missing.length} without a record: ${missing.join(', ') || '-'}), ${unclaimedBuildings} unclaimed buildings; modules ${names.join(', ')}${mutantIds.size ? `; MUTANT unclaimed by the audit: ${[...mutantIds].join(', ')}` : ''}${undrawIds.size ? `; MUTANT undraw (the owner's own geometry of the building left out): ${[...undrawIds].join(', ')}` : ''}${citydrawIds.size ? `; MUTANT citydraw (the owner's own geometry moved to city): ${[...citydrawIds].join(', ')}` : ''}${LOOSE_RULE1 ? '; rule 1 graded LOOSE (the pre-M7-polish rule)' : ''}`);
 
@@ -301,15 +347,67 @@ const centroidsOf = (o, out, meshIdx, owners) => {
   push(o.matrixWorld); return nTri;
 };
 const perModule = {}, samples = {};
+const moduleMeshes = new Map(), meshCreators = new WeakMap();
+function describeMesh(o) {
+  let name = o.name, chain = o.name || '', p = o.parent;
+  while (p && p !== scene) { if (!name) name=p.name; chain+=' '+(p.name||''); p=p.parent; }
+  return { name: name || (o.isInstancedMesh ? 'instanced' : 'mesh'), chain };
+}
+const attachedToScene = o => { for (let p=o;p;p=p.parent) if (p===scene) return true; return false; };
 let failed = false; const problems = [], warnings = [], notes = [];
+// Exercise rule 3 through the real mesh/centroid path: a visible intrusion in
+// the parent's residual area must not disappear under child delegation.
+const parentdraw = [];
+for (const id of parentdrawIds) {
+  const parent = targets[targetIdx.get(id)], children = parent?.claimedDescendants || [];
+  const owner = children.find(c => names.includes(c.claim.module))?.claim.module;
+  if (!parent || parent.claim || parent.hiddenAggregate || parent.suppressedDuplicate || !owner) { console.log(`--mutant parentdraw:${id}: needs an unclaimed visible parent with a claimed descendant module in --modules`); process.exit(2); }
+  const [x0,z0,x1,z1] = parent.fp.bbox; let pose = null;
+  for (let a=1;a<64&&!pose;a++) for (let b=1;b<64;b++) {
+    const x=x0+(x1-x0)*a/64,z=z0+(z1-z0)*b/64;
+    if (depthIn(parent.fp,x,z)>DEEP+.2 && children.every(c=>!withinChildApron(c.fp,x,z))) { pose={x,z}; break; }
+  }
+  if (!pose) { console.log(`--mutant parentdraw:${id}: no residual area safely beyond the claimed child aprons`); process.exit(2); }
+  parentdraw.push({id,owner,...pose});
+}
 for (const name of names) {
   const before = new Set(); scene.traverse((o) => before.add(o));
   const t0 = Date.now(); let err = null;
   try { const mod = await import(pathToFileURL(path.join(root, `src/world/${name}.js`)).href); if (typeof mod.build !== 'function') throw new Error('no exported build(ctx)'); await mod.build(ctx); } catch (e) { err = e; }
   if (err) { failed = true; problems.push(`${name}: failed to build: ${String(err && err.message).split('\n')[0]}`); perModule[name] = { error: true }; continue; }
-  scene.updateMatrixWorld(true);
+  for (const m of parentdraw) if (m.owner === name) {
+    const pos = [], n = Math.max(1, Math.ceil(MIN_UNCLAIMED));
+    for (let i=0;i<n;i++) pos.push(m.x-.02,ABOVE+2,m.z-.02,m.x+.02,ABOVE+2,m.z-.02,m.x,ABOVE+2,m.z+.04);
+    const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    const mesh = new THREE.Mesh(geometry,new THREE.MeshBasicMaterial()); mesh.name='audit-parentdraw-'+m.id; scene.add(mesh);
+    console.log(`MUTANT parentdraw:${m.id}: ${name} draws ${n} triangles in the parent residual at (${m.x.toFixed(2)}, ${m.z.toFixed(2)}) outside every child apron`);
+  }
+  const added = [];
+  scene.traverse(o => {
+    if (before.has(o) || !(o.isMesh || o.isInstancedMesh) || meshCreators.has(o)) return;
+    const provenance = { mesh:o, ...describeMesh(o) };
+    meshCreators.set(o,name); added.push(provenance);
+  });
+  moduleMeshes.set(name,added);
+  perModule[name] = { ms:Date.now()-t0 };
+}
+// Later owners may move/trim a generic fixture without changing its creator.
+// Capture references during construction, then read the actual composed scene.
+scene.updateMatrixWorld(true);
+for (const name of names) {
+  if (perModule[name].error) continue;
+  const t0 = Date.now();
   const pts = [], owners = [], meshNames = [], meshFoliage = []; let tris = 0, meshes = 0;
-  scene.traverse((o) => { if (before.has(o) || !(o.isMesh || o.isInstancedMesh)) return; meshes++; let nm = o.name, p = o.parent, chain = o.name || ''; while (p && p !== scene) { if (!nm) nm = p.name; chain += ' ' + (p.name || ''); p = p.parent; } meshNames.push(nm || (o.isInstancedMesh ? 'instanced' : 'mesh')); meshFoliage.push(FOLIAGE_RE.test(chain)); tris += centroidsOf(o, pts, meshNames.length - 1, owners); });
+  let detached = 0;
+  for (const provenance of moduleMeshes.get(name)) {
+    const o = provenance.mesh;
+    if (!attachedToScene(o)) { detached++; continue; }
+    const final = describeMesh(o); meshes++;
+    meshNames.push(final.name);
+    // Reparenting must not let original foliage masquerade as architecture.
+    meshFoliage.push(FOLIAGE_RE.test(provenance.chain+' '+final.chain));
+    tris += centroidsOf(o,pts,meshNames.length-1,owners);
+  }
   let tested = 0;
   for (let p = 0, q = 0; p < pts.length; p += 3, q++) {
     const x = pts[p], y = pts[p + 1], z = pts[p + 2], l = grid.get(ck(Math.floor(x / CELL), Math.floor(z / CELL))); if (!l) continue;
@@ -322,15 +420,22 @@ for (const name of names) {
       let own = false, why = null;
       if (t.claim && t.building) {
         if (meshFoliage[owners[q]]) why = 'fol'; else if (y <= t.above) why = 'low'; else if (d < t.inset) why = 'shallow';
-        else { own = true; for (let h2 = 0; h2 < hits.length; h2 += 2) { const j = hits[h2]; if (j !== i && targets[j].building && hits[h2 + 1] > d && groupOf(targets[j]) !== groupOf(t)) { own = false; why = 'stolen'; break; } } }
+        else { own = true; for (let h2 = 0; h2 < hits.length; h2 += 2) { const j = hits[h2]; if (j !== i && targets[j].building && !targets[j].suppressedDuplicate && !isAncestor(targets[j].id, t.id) && hits[h2 + 1] > d && groupOf(targets[j]) !== groupOf(t)) { own = false; why = 'stolen'; break; } } }
       }
       if (own && t.claim && name === t.claim.module && undrawIds.has(t.id)) continue;                       // --mutant undraw: the owner's own geometry of this building is left out of the audit's view
       if (own && t.claim && name === t.claim.module && citydrawIds.has(t.id) && names.includes('city')) { bump('city', i, { y, hi, deep: y > ABOVE && d >= DEEP, overlap: false, own, why }); continue; }          // --mutant citydraw: ... and counted as city's
-      bump(name, i, { y, hi, deep: y > ABOVE && d >= DEEP, overlap: hi && t.claim && inUnclaimed, own, why });
+      // A child facade/cornice can extend slightly beyond its mapped outline
+      // while lying deep inside its larger parent. Its bounded apron follows
+      // the existing ornament band; the rest of the parent is never delegated.
+      let delegated = false;
+      if (!t.claim && !meshFoliage[owners[q]]) for (const child of t.claimedDescendants || []) {
+        if (child.claim.module === name && y > child.above && withinChildApron(child.fp,x,z)) { delegated = true; break; }
+      }
+      bump(name, i, { y, hi, deep: !delegated && y > ABOVE && d >= DEEP, overlap: hi && t.claim && inUnclaimed, own, why });
       if (WHERE.size && WHERE.has(t.id) && (!argv.includes('--where-high') || hi)) { const k = t.id + '|' + name; const s = samples[k] || (samples[k] = []); if (s.length < 10) s.push(`(${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)}) d ${d.toFixed(2)} ${meshNames[owners[q]]}`); }
     }
   }
-  perModule[name] = { meshes, tris, centroids: pts.length / 3, inFootprints: tested, ms: Date.now() - t0 };
+  perModule[name] = { meshes, tris, centroids: pts.length / 3, inFootprints: tested, detached, ms: perModule[name].ms + Date.now() - t0 };
 }
 
 // ---------------------------------------------------------------- grade
@@ -371,7 +476,7 @@ for (let i = 0; i < targets.length; i++) {
 const landmarkMods = names.filter((m) => !GENERIC.includes(m) && !REPORTED.includes(m));
 const unclaimedHits = [];
 for (let i = 0; i < targets.length; i++) {
-  const t = targets[i]; if (t.claim) continue;
+  const t = targets[i]; if (t.claim || t.hiddenAggregate || t.suppressedDuplicate) continue;
   for (const m of landmarkMods) {
     const c = get(m, i); if (!c.n) continue;
     const label = `${t.id}${t.rec.name ? ' (' + t.rec.name + ')' : ''}${t.rec.addr ? ' ' + JSON.stringify(t.rec.addr) : ''}`;
@@ -392,6 +497,7 @@ for (const name of names) {
   const inUnclaimed = unclaimedHits.filter((h) => h.m === name);
   const role = GENERIC.includes(name) ? 'generic' : REPORTED.includes(name) ? 'reported only' : 'landmark';
   console.log(`== ${name} (${role}): ${pm.meshes} meshes, ${pm.tris} triangles (${pm.centroids} centroids, ${pm.inFootprints} inside some footprint), build ${pm.ms} ms`);
+  if (pm.detached) console.log(`   ${pm.detached} creator-owned meshes were detached by later module cleanup; surviving meshes retain their original owner`);
   if (mine.length) console.log(`   owns ${mine.length} claimed ids: ${drawn} drawn${notDrawn.length ? `, NOT drawn: ${notDrawn.map((r) => r.t.id + (skips[r.t.id] ? ' (skip: ' + skips[r.t.id] + ')' : !r.owned ? ' (not owned here)' : r.t.fp.kind === 'point' ? ' (point: warning)' : '')).join(', ')}` : ''}`);
   if (role !== 'reported only') console.log(`   inside claimed footprints of others: ${inClaimed.length ? inClaimed.map((r) => { const c = get(name, r.i); return `${r.t.id} ${c.n}${r.t.building ? ` (${c.hi} graded${c.overlap ? ', ' + c.overlap + ' overlap' : ''})` : r.t.fp.kind === 'point' ? ' (point: reported)' : ' (' + r.t.fp.kind + ': reported)'}${!r.owned ? ' (unowned: a blockout)' : ''}`; }).join(', ') : 'none'}`);
   if (role === 'landmark') console.log(`   inside unclaimed buildings (above ${ABOVE} m, deeper than ${DEEP} m): ${inUnclaimed.length ? inUnclaimed.map((h) => `${h.id} ${h.n}${h.known ? ' (known)' : ''}${h.minor ? ' (minor' + (h.edge ? ', ' + h.edge + ' between ' + INSET + ' and ' + DEEP + ' m' : '') + (h.low ? ', ' + h.low + ' on the outline or at floor level' : '') + ')' : ''}`).join(', ') : 'none'}`);
@@ -401,6 +507,8 @@ for (const [k, s] of Object.entries(samples)) { const [id, m] = k.split('|'); co
 const unowned = rows.filter((r) => !r.owned).map((r) => r.t.id);
 if (unowned.length) console.log(`claimed but not owned on this page (the generic modules draw the blockout, as designed): ${unowned.join(', ')}`);
 console.log(`claimed ids: ${rows.length} (${rows.filter((r) => r.t.building).length} buildings graded for the generic modules, ${rows.filter((r) => r.t.fp.kind === 'point').length} points: owner warning only); generic modules graded: ${GENERIC.filter((m) => names.includes(m)).join(', ')}; inset ${INSET} m, deep ${DEEP} m, above ${ABOVE} m, unclaimed-building threshold ${MIN_UNCLAIMED} triangles`);
+const hiddenAggregates = targets.filter(t => t.hiddenAggregate);
+if (hiddenAggregates.length) console.log(`NOTE: ${hiddenAggregates.length} unclaimed hidden aggregate outlines have complete verified part coverage; every child footprint remains independently audited${VERBOSE ? ': ' + hiddenAggregates.map(t => t.id).join(', ') : ''}`);
 if (covered.length) console.log(`NOTE: ${covered.length} claimed PARTS have no centroid of their own (the owner draws the wall on the shared outline, or the part is a step / a base below the band) and are covered by their drawn parent${VERBOSE ? ': ' + covered.join(', ') : ' (--verbose lists them)'}`);
 for (const n of notes) console.log('NOTE:', n);
 for (const w of VERBOSE ? warnings : warnings.slice(0, 12)) console.log('WARNING:', w);

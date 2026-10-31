@@ -27,7 +27,7 @@ export function buildWhsdPetrovsky(env) {
   const B = { id: sp.id, info: { rails: 0, colliders: 0 }, masts: [], anchors: [] };
   const mats = { conc: M.whsdBarrier, fas: M.whsdConcrete, soff: M.whsdSoffit, pave: M.whsdConcrete, skirt: M.whsdConcrete };
   const D = buildDeck(env, R, {
-    y: yOf, hwR: () => sp.hw, hwL: () => sp.hw, med: sp.med, road: sp.road, lanes: 4, bar: 0.5, barH: 0.95, mats, girder: { depth: 3.4, flat: 10.0, lip: 1.0 }, low: -1, endCaps: true, noWalk: true,
+    y: yOf, hwR: () => sp.hw, hwL: () => sp.hw, med: sp.med, road: sp.road, lanes: 4, bar: 0.5, barH: 0.95, mats, girder: { depth: 3.4, flat: 10.0, lip: 1.0 }, low: -1, endCaps: true, noWalk: !env.walkable,
     rail: { kind: 'hpipes', hex: '#e9ecee' }, lamps: { every: 55, h: 12, from: 30, to: R.len - 20, skip: (s) => sp.pylonS.some((p) => Math.abs(s - p) < 14) },
   }, B);
   // ---- piers under the deck: twin round columns at the ends and under the pylons (the 60 m end spans stand on pairs of columns on a pile cap in the water)

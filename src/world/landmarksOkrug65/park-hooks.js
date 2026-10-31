@@ -56,4 +56,3 @@ export function treeReject(x, z) {
   return 'park300-open-lawn';
 }
 export const pavedRings = BEACHES.flatMap(b => b.polys.map(p => Array.from({ length: p.o.length / 2 }, (_, i) => [p.o[i * 2], p.o[i * 2 + 1]])));
-

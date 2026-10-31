@@ -148,9 +148,16 @@ export function build(ctx) {
   const grid = new Map(), cell = 128;
   for (const s of segments) for (let ix = Math.floor((Math.min(s.ax, s.bx) - s.w) / cell); ix <= Math.floor((Math.max(s.ax, s.bx) + s.w) / cell); ix++) for (let iz = Math.floor((Math.min(s.az, s.bz) - s.w) / cell); iz <= Math.floor((Math.max(s.az, s.bz) + s.w) / cell); iz++) { const key = ix + ',' + iz; if (!grid.has(key)) grid.set(key, []); grid.get(key).push(s); }
   const empty=[];
-  const deckY = (x,z,ref=Infinity) => deckAtSegments(grid.get(Math.floor(x/cell)+','+Math.floor(z/cell))||empty,x,z,ref);
-  ctx.services.coastalBridges = { list: COASTAL_BRIDGES, segments, deckY };
   const prior = ctx.services.bridges;
-  ctx.services.bridges = { ...(prior || {}), list: [...(prior?.list || []), ...COASTAL_BRIDGES.map(b => ({ id: b.id, x: b.cx, z: b.cz }))], deckY: (x,z,ref=Infinity) => deckY(x,z,ref) ?? prior?.deckY?.(x,z,ref) ?? null };
+  const deckY = (x,z,ref=Infinity) => {
+    const own = deckAtSegments(grid.get(Math.floor(x/cell)+','+Math.floor(z/cell))||empty,x,z,ref);
+    const shared = prior?.deckY?.(x,z,ref) ?? null;
+    // Yacht's high authored deck can cross a low mapped coastal approach.
+    // Both the hook and public service must select the highest reachable
+    // floor, rather than allowing the first low deck to hide the shared one.
+    return shared !== null && shared <= ref + 1.2 ? (own === null ? shared : Math.max(own, shared)) : own;
+  };
+  ctx.services.coastalBridges = { list: COASTAL_BRIDGES, segments, deckY };
+  ctx.services.bridges = { ...(prior || {}), list: [...(prior?.list || []), ...COASTAL_BRIDGES.map(b => ({ id: b.id, x: b.cx, z: b.cz }))], deckY };
   return { bridges: COASTAL_BRIDGES.length, rails: railSpots.length, meshes: meshes.length,pylons,supportsSkipped,railsSkipped };
 }

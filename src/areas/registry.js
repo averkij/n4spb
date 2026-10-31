@@ -1641,6 +1641,8 @@ export const GATES = [
   { id: 'coast-morskie-vorota-gavan', kind: 'edge', from: 'morskie-vorota', to: 'gavan', zone: 40, reverse: 'coast-gavan-morskie-vorota' },
   { id: 'coast-kolomna-morskie-vorota', kind: 'edge', from: 'kolomna', to: 'morskie-vorota', zone: 40, reverse: 'coast-morskie-vorota-kolomna' },
   { id: 'coast-morskie-vorota-kolomna', kind: 'edge', from: 'morskie-vorota', to: 'kolomna', zone: 40, reverse: 'coast-kolomna-morskie-vorota' },
+  { id: 'coast-islands-okrug65', kind: 'edge', from: 'islands', to: 'okrug65', zone: 40, reverse: 'coast-okrug65-islands' },
+  { id: 'coast-okrug65-islands', kind: 'edge', from: 'okrug65', to: 'islands', zone: 40, reverse: 'coast-islands-okrug65' },
   // COASTAL-GATES-END
   // g0 - the dev loop (?devgates=1): a gate across the Nevsky approach to Vosstaniya Square (a vertical segment at x = 470, the strip east of it is the "own area") that leads back to the SAME page at
   // the same pose. It exercises the whole hand-off (prompt, preflight, veil, navigation, arrival, memory) before a second area exists, and stays as a test fixture afterwards.
@@ -1659,6 +1661,1186 @@ export const GATES = [
     } },
 ];
 
+// Northern planning-map territory; generated cut: tools/prepare-petro-port.mjs.
+REGISTRY.kronverk = {
+  "id": "kronverk",
+  "page": "kronverk.html",
+  "bake": "baked/kronverk/",
+  "requireBake": true,
+  "title": "Кронверкское–Введенский–Петровский",
+  "titleEn": "Kronverkskoye–Vvedensky–Petrovsky",
+  "sights": [
+    "Здания крепости: Монетный двор, Комендантский и Инженерный дома, гауптвахта, цейхгауз, тюрьма Трубецкого бастиона",
+    "Кронверк: Артиллерийский музей (Арсенал)",
+    "Петропавловская крепость: бастионы, куртины, равелины, ворота",
+    "Доходные дома Каменноостровского и Большого проспектов",
+    "Судебный квартал (стройплощадка)",
+    "Народный дом: Балтийский дом, Планетарий, Мюзик-холл, Великан Парк",
+    "Петропавловский собор, Великокняжеская усыпальница, Ботный дом",
+    "Стадион «Петровский»"
+  ],
+  "approxMB": 60,
+  "dev": false,
+  "mapId": 86,
+  "remap": {
+    "src/world/data/city.js": "src/areas/kronverk/data/city.js",
+    "src/world/area.js": "src/areas/kronverk/area.js",
+    "src/world/city/known-data.js": "src/areas/kronverk/known-data.js"
+  },
+  "play": [
+    {
+      "name": "R01",
+      "x0": -2960,
+      "x1": -2400,
+      "z0": -5280,
+      "z1": -5200
+    },
+    {
+      "name": "R02",
+      "x0": -2960,
+      "x1": -2320,
+      "z0": -5200,
+      "z1": -5120
+    },
+    {
+      "name": "R03",
+      "x0": -3120,
+      "x1": -2320,
+      "z0": -5120,
+      "z1": -5040
+    },
+    {
+      "name": "R04",
+      "x0": -3280,
+      "x1": -2320,
+      "z0": -5040,
+      "z1": -4960
+    },
+    {
+      "name": "R05",
+      "x0": -3280,
+      "x1": -2240,
+      "z0": -4960,
+      "z1": -4880
+    },
+    {
+      "name": "R06",
+      "x0": -3440,
+      "x1": -2240,
+      "z0": -4880,
+      "z1": -4800
+    },
+    {
+      "name": "R07",
+      "x0": -3600,
+      "x1": -2240,
+      "z0": -4800,
+      "z1": -4720
+    },
+    {
+      "name": "R08",
+      "x0": -4000,
+      "x1": -2240,
+      "z0": -4720,
+      "z1": -4640
+    },
+    {
+      "name": "R09",
+      "x0": -4000,
+      "x1": -2160,
+      "z0": -4640,
+      "z1": -4400
+    },
+    {
+      "name": "R10",
+      "x0": -4000,
+      "x1": -2000,
+      "z0": -4400,
+      "z1": -4160
+    },
+    {
+      "name": "R11",
+      "x0": -4080,
+      "x1": -2000,
+      "z0": -4160,
+      "z1": -4080
+    },
+    {
+      "name": "R12",
+      "x0": -6880,
+      "x1": -6400,
+      "z0": -4080,
+      "z1": -4000
+    },
+    {
+      "name": "R13",
+      "x0": -4160,
+      "x1": -2000,
+      "z0": -4080,
+      "z1": -3840
+    },
+    {
+      "name": "R14",
+      "x0": -6960,
+      "x1": -6080,
+      "z0": -4000,
+      "z1": -3920
+    },
+    {
+      "name": "R15",
+      "x0": -6960,
+      "x1": -5280,
+      "z0": -3920,
+      "z1": -3840
+    },
+    {
+      "name": "R16",
+      "x0": -7040,
+      "x1": -4960,
+      "z0": -3840,
+      "z1": -3760
+    },
+    {
+      "name": "R17",
+      "x0": -4480,
+      "x1": -2000,
+      "z0": -3840,
+      "z1": -3760
+    },
+    {
+      "name": "R18",
+      "x0": -7040,
+      "x1": -1680,
+      "z0": -3760,
+      "z1": -3680
+    },
+    {
+      "name": "R19",
+      "x0": -7040,
+      "x1": -1600,
+      "z0": -3680,
+      "z1": -3520
+    },
+    {
+      "name": "R20",
+      "x0": -7040,
+      "x1": -1520,
+      "z0": -3520,
+      "z1": -3360
+    },
+    {
+      "name": "R21",
+      "x0": -6960,
+      "x1": -1520,
+      "z0": -3360,
+      "z1": -3280
+    },
+    {
+      "name": "R22",
+      "x0": -6960,
+      "x1": -1600,
+      "z0": -3280,
+      "z1": -3200
+    },
+    {
+      "name": "R23",
+      "x0": -6720,
+      "x1": -1520,
+      "z0": -3200,
+      "z1": -3120
+    },
+    {
+      "name": "R24",
+      "x0": -6640,
+      "x1": -1520,
+      "z0": -3120,
+      "z1": -3040
+    },
+    {
+      "name": "R25",
+      "x0": -6560,
+      "x1": -1520,
+      "z0": -3040,
+      "z1": -2880
+    },
+    {
+      "name": "R26",
+      "x0": -6480,
+      "x1": -1520,
+      "z0": -2880,
+      "z1": -2800
+    },
+    {
+      "name": "R27",
+      "x0": -5520,
+      "x1": -1520,
+      "z0": -2800,
+      "z1": -2720
+    },
+    {
+      "name": "R28",
+      "x0": -5120,
+      "x1": -1360,
+      "z0": -2720,
+      "z1": -2640
+    },
+    {
+      "name": "R29",
+      "x0": -5040,
+      "x1": -1360,
+      "z0": -2640,
+      "z1": -2560
+    },
+    {
+      "name": "R30",
+      "x0": -4880,
+      "x1": -1360,
+      "z0": -2560,
+      "z1": -2480
+    },
+    {
+      "name": "R31",
+      "x0": -4800,
+      "x1": -1360,
+      "z0": -2480,
+      "z1": -2320
+    },
+    {
+      "name": "R32",
+      "x0": -4800,
+      "x1": -880,
+      "z0": -2320,
+      "z1": -2240
+    },
+    {
+      "name": "R33",
+      "x0": -4480,
+      "x1": -880,
+      "z0": -2240,
+      "z1": -2160
+    },
+    {
+      "name": "R34",
+      "x0": -4400,
+      "x1": -880,
+      "z0": -2160,
+      "z1": -1920
+    },
+    {
+      "name": "R35",
+      "x0": -4000,
+      "x1": -960,
+      "z0": -1920,
+      "z1": -1840
+    },
+    {
+      "name": "R36",
+      "x0": -3840,
+      "x1": -960,
+      "z0": -1840,
+      "z1": -1760
+    },
+    {
+      "name": "R37",
+      "x0": -3760,
+      "x1": -1040,
+      "z0": -1760,
+      "z1": -1680
+    },
+    {
+      "name": "R38",
+      "x0": -3600,
+      "x1": -1120,
+      "z0": -1680,
+      "z1": -1600
+    },
+    {
+      "name": "R39",
+      "x0": -3440,
+      "x1": -1200,
+      "z0": -1600,
+      "z1": -1520
+    },
+    {
+      "name": "R40",
+      "x0": -3280,
+      "x1": -1440,
+      "z0": -1520,
+      "z1": -1440
+    },
+    {
+      "name": "R41",
+      "x0": -2720,
+      "x1": -2000,
+      "z0": -1440,
+      "z1": -1360
+    },
+    {
+      "name": "R42",
+      "x0": -1840,
+      "x1": -1600,
+      "z0": -1440,
+      "z1": -1360
+    },
+    {
+      "name": "R43",
+      "x0": -2480,
+      "x1": -2400,
+      "z0": -1360,
+      "z1": -1280
+    }
+  ]
+};
+
+// Northern planning-map territory; generated cut: tools/prepare-petro-port.mjs.
+REGISTRY.aptekarsky = {
+  "id": "aptekarsky",
+  "page": "aptekarsky.html",
+  "bake": "baked/aptekarsky/",
+  "requireBake": true,
+  "title": "Аптекарский–Посадский",
+  "titleEn": "Apothecary–Posadsky",
+  "sights": [
+    "Оранжерейный комплекс Ботанического сада Петра Великого",
+    "Площадь Льва Толстого",
+    "Австрийская площадь",
+    "Дома, обрамляющие площадь: ул. Куйбышева, 1 / Троицкая пл., 5 и Каменноостровский пр., 2",
+    "Доходный дом Лидваль (Каменноостровский пр., 1-3)",
+    "Крейсер «Аврора»",
+    "Домик Петра I",
+    "Первый жилой дом Ленсовета"
+  ],
+  "approxMB": 60,
+  "dev": false,
+  "mapId": 84,
+  "remap": {
+    "src/world/data/city.js": "src/areas/aptekarsky/data/city.js",
+    "src/world/area.js": "src/areas/aptekarsky/area.js",
+    "src/world/city/known-data.js": "src/areas/aptekarsky/known-data.js"
+  },
+  "play": [
+    {
+      "name": "A01",
+      "x0": -2640,
+      "x1": -2160,
+      "z0": -5520,
+      "z1": -5440
+    },
+    {
+      "name": "A02",
+      "x0": -2640,
+      "x1": -1920,
+      "z0": -5440,
+      "z1": -5360
+    },
+    {
+      "name": "A03",
+      "x0": -2640,
+      "x1": -1680,
+      "z0": -5360,
+      "z1": -5280
+    },
+    {
+      "name": "A04",
+      "x0": -2640,
+      "x1": -1520,
+      "z0": -5280,
+      "z1": -5200
+    },
+    {
+      "name": "A05",
+      "x0": -2880,
+      "x1": -1520,
+      "z0": -5200,
+      "z1": -5120
+    },
+    {
+      "name": "A06",
+      "x0": -2880,
+      "x1": -1440,
+      "z0": -5120,
+      "z1": -5040
+    },
+    {
+      "name": "A07",
+      "x0": -3040,
+      "x1": -1360,
+      "z0": -5040,
+      "z1": -4960
+    },
+    {
+      "name": "A08",
+      "x0": -3120,
+      "x1": -1280,
+      "z0": -4960,
+      "z1": -4880
+    },
+    {
+      "name": "A09",
+      "x0": -3120,
+      "x1": -1200,
+      "z0": -4880,
+      "z1": -4800
+    },
+    {
+      "name": "A10",
+      "x0": -3120,
+      "x1": -3040,
+      "z0": -4800,
+      "z1": -4720
+    },
+    {
+      "name": "A11",
+      "x0": -2880,
+      "x1": -1200,
+      "z0": -4800,
+      "z1": -4720
+    },
+    {
+      "name": "A12",
+      "x0": -2880,
+      "x1": -1120,
+      "z0": -4720,
+      "z1": -4640
+    },
+    {
+      "name": "A13",
+      "x0": -2800,
+      "x1": -1040,
+      "z0": -4640,
+      "z1": -4560
+    },
+    {
+      "name": "A14",
+      "x0": -2800,
+      "x1": -960,
+      "z0": -4560,
+      "z1": -4480
+    },
+    {
+      "name": "A15",
+      "x0": -2720,
+      "x1": -960,
+      "z0": -4480,
+      "z1": -4400
+    },
+    {
+      "name": "A16",
+      "x0": -2720,
+      "x1": -880,
+      "z0": -4400,
+      "z1": -4320
+    },
+    {
+      "name": "A17",
+      "x0": -3120,
+      "x1": -880,
+      "z0": -4320,
+      "z1": -4240
+    },
+    {
+      "name": "A18",
+      "x0": -3200,
+      "x1": -880,
+      "z0": -4240,
+      "z1": -4160
+    },
+    {
+      "name": "A19",
+      "x0": -3840,
+      "x1": -880,
+      "z0": -4160,
+      "z1": -4080
+    },
+    {
+      "name": "A20",
+      "x0": -4000,
+      "x1": -800,
+      "z0": -4080,
+      "z1": -4000
+    },
+    {
+      "name": "A21",
+      "x0": -4000,
+      "x1": -2960,
+      "z0": -4000,
+      "z1": -3920
+    },
+    {
+      "name": "A22",
+      "x0": -2560,
+      "x1": -800,
+      "z0": -4000,
+      "z1": -3920
+    },
+    {
+      "name": "A23",
+      "x0": -4000,
+      "x1": -3600,
+      "z0": -3920,
+      "z1": -3840
+    },
+    {
+      "name": "A24",
+      "x0": -2480,
+      "x1": -800,
+      "z0": -3920,
+      "z1": -3680
+    },
+    {
+      "name": "A25",
+      "x0": -2240,
+      "x1": -800,
+      "z0": -3680,
+      "z1": -3360
+    },
+    {
+      "name": "A26",
+      "x0": -2320,
+      "x1": -800,
+      "z0": -3360,
+      "z1": -3280
+    },
+    {
+      "name": "A27",
+      "x0": -2240,
+      "x1": -720,
+      "z0": -3280,
+      "z1": -3200
+    },
+    {
+      "name": "A28",
+      "x0": -2160,
+      "x1": -720,
+      "z0": -3200,
+      "z1": -2960
+    },
+    {
+      "name": "A29",
+      "x0": -2160,
+      "x1": -640,
+      "z0": -2960,
+      "z1": -2880
+    },
+    {
+      "name": "A30",
+      "x0": -2080,
+      "x1": -640,
+      "z0": -2880,
+      "z1": -2800
+    },
+    {
+      "name": "A31",
+      "x0": -2000,
+      "x1": -640,
+      "z0": -2800,
+      "z1": -2640
+    },
+    {
+      "name": "A32",
+      "x0": -1840,
+      "x1": -560,
+      "z0": -2640,
+      "z1": -2560
+    },
+    {
+      "name": "A33",
+      "x0": -1840,
+      "x1": -480,
+      "z0": -2560,
+      "z1": -2480
+    },
+    {
+      "name": "A34",
+      "x0": -1760,
+      "x1": -400,
+      "z0": -2480,
+      "z1": -2240
+    },
+    {
+      "name": "A35",
+      "x0": -1920,
+      "x1": -400,
+      "z0": -2240,
+      "z1": -2080
+    },
+    {
+      "name": "A36",
+      "x0": -1840,
+      "x1": -400,
+      "z0": -2080,
+      "z1": -2000
+    },
+    {
+      "name": "A37",
+      "x0": -1760,
+      "x1": -560,
+      "z0": -2000,
+      "z1": -1920
+    },
+    {
+      "name": "A38",
+      "x0": -1760,
+      "x1": -720,
+      "z0": -1920,
+      "z1": -1840
+    },
+    {
+      "name": "A39",
+      "x0": -1760,
+      "x1": -800,
+      "z0": -1840,
+      "z1": -1760
+    },
+    {
+      "name": "A40",
+      "x0": -1760,
+      "x1": -1120,
+      "z0": -1760,
+      "z1": -1680
+    },
+    {
+      "name": "A41",
+      "x0": -1760,
+      "x1": -1520,
+      "z0": -1680,
+      "z1": -1600
+    },
+    {
+      "name": "A42",
+      "x0": -1360,
+      "x1": -1120,
+      "z0": -1680,
+      "z1": -1600
+    },
+    {
+      "name": "A43",
+      "x0": -1280,
+      "x1": -1200,
+      "z0": -1600,
+      "z1": -1520
+    }
+  ]
+};
+
+// Northern planning-map territory; generated cut: tools/prepare-petro-port.mjs.
+REGISTRY.islands = {
+  "id": "islands",
+  "page": "islands.html",
+  "bake": "baked/islands/",
+  "requireBake": true,
+  "title": "Крестовский—Каменный—Елагин",
+  "titleEn": "Krestovsky–Kamenny–Yelagin",
+  "sights": [
+    "Службы Елагина дворца",
+    "Летний театр эстрады",
+    "Кухонный корпус и манеж, дом садовника",
+    "Елагин дворец",
+    "Стадион на Крестовском острове",
+    "Метро «Крестовский остров»: павильон",
+    "Кухонный корпус Елагина дворца",
+    "Конюшенный корпус Елагина дворца"
+  ],
+  "approxMB": 60,
+  "dev": false,
+  "mapId": 85,
+  "remap": {
+    "src/world/data/city.js": "src/areas/islands/data/city.js",
+    "src/world/area.js": "src/areas/islands/area.js",
+    "src/world/city/known-data.js": "src/areas/islands/known-data.js"
+  },
+  "play": [
+    {
+      "name": "E01",
+      "x0": -5760,
+      "x1": -4880,
+      "z0": -5840,
+      "z1": -5760
+    },
+    {
+      "name": "E02",
+      "x0": -4480,
+      "x1": -4240,
+      "z0": -5840,
+      "z1": -5760
+    },
+    {
+      "name": "E03",
+      "x0": -5760,
+      "x1": -4240,
+      "z0": -5760,
+      "z1": -5680
+    },
+    {
+      "name": "E04",
+      "x0": -3920,
+      "x1": -3120,
+      "z0": -5760,
+      "z1": -5680
+    },
+    {
+      "name": "E05",
+      "x0": -2880,
+      "x1": -2800,
+      "z0": -5760,
+      "z1": -5680
+    },
+    {
+      "name": "E06",
+      "x0": -6000,
+      "x1": -2720,
+      "z0": -5680,
+      "z1": -5600
+    },
+    {
+      "name": "E07",
+      "x0": -6480,
+      "x1": -2480,
+      "z0": -5600,
+      "z1": -5520
+    },
+    {
+      "name": "E08",
+      "x0": -7920,
+      "x1": -6880,
+      "z0": -5520,
+      "z1": -5440
+    },
+    {
+      "name": "E09",
+      "x0": -6800,
+      "x1": -2160,
+      "z0": -5520,
+      "z1": -5440
+    },
+    {
+      "name": "E10",
+      "x0": -7920,
+      "x1": -2160,
+      "z0": -5440,
+      "z1": -5360
+    },
+    {
+      "name": "E11",
+      "x0": -8080,
+      "x1": -2080,
+      "z0": -5360,
+      "z1": -5280
+    },
+    {
+      "name": "E12",
+      "x0": -8240,
+      "x1": -2080,
+      "z0": -5280,
+      "z1": -5200
+    },
+    {
+      "name": "E13",
+      "x0": -8320,
+      "x1": -2160,
+      "z0": -5200,
+      "z1": -5120
+    },
+    {
+      "name": "E14",
+      "x0": -8480,
+      "x1": -2400,
+      "z0": -5120,
+      "z1": -4960
+    },
+    {
+      "name": "E15",
+      "x0": -8480,
+      "x1": -2480,
+      "z0": -4960,
+      "z1": -4880
+    },
+    {
+      "name": "E16",
+      "x0": -8560,
+      "x1": -2640,
+      "z0": -4880,
+      "z1": -4800
+    },
+    {
+      "name": "E17",
+      "x0": -8560,
+      "x1": -3040,
+      "z0": -4800,
+      "z1": -4720
+    },
+    {
+      "name": "E18",
+      "x0": -2880,
+      "x1": -2640,
+      "z0": -4800,
+      "z1": -4640
+    },
+    {
+      "name": "E19",
+      "x0": -8640,
+      "x1": -3120,
+      "z0": -4720,
+      "z1": -4640
+    },
+    {
+      "name": "E20",
+      "x0": -8640,
+      "x1": -3280,
+      "z0": -4640,
+      "z1": -4560
+    },
+    {
+      "name": "E21",
+      "x0": -2800,
+      "x1": -2720,
+      "z0": -4640,
+      "z1": -4560
+    },
+    {
+      "name": "E22",
+      "x0": -8640,
+      "x1": -3360,
+      "z0": -4560,
+      "z1": -4400
+    },
+    {
+      "name": "E23",
+      "x0": -8640,
+      "x1": -3520,
+      "z0": -4400,
+      "z1": -4320
+    },
+    {
+      "name": "E24",
+      "x0": -8640,
+      "x1": -3680,
+      "z0": -4320,
+      "z1": -4240
+    },
+    {
+      "name": "E25",
+      "x0": -8560,
+      "x1": -3680,
+      "z0": -4240,
+      "z1": -4080
+    },
+    {
+      "name": "E26",
+      "x0": -8480,
+      "x1": -3680,
+      "z0": -4080,
+      "z1": -3920
+    },
+    {
+      "name": "E27",
+      "x0": -8400,
+      "x1": -3680,
+      "z0": -3920,
+      "z1": -3840
+    },
+    {
+      "name": "E28",
+      "x0": -8320,
+      "x1": -3760,
+      "z0": -3840,
+      "z1": -3680
+    },
+    {
+      "name": "E29",
+      "x0": -8320,
+      "x1": -3920,
+      "z0": -3680,
+      "z1": -3600
+    },
+    {
+      "name": "E30",
+      "x0": -7680,
+      "x1": -6240,
+      "z0": -3600,
+      "z1": -3520
+    },
+    {
+      "name": "E31",
+      "x0": -6080,
+      "x1": -4000,
+      "z0": -3600,
+      "z1": -3520
+    },
+    {
+      "name": "E32",
+      "x0": -7680,
+      "x1": -7360,
+      "z0": -3520,
+      "z1": -3440
+    },
+    {
+      "name": "E33",
+      "x0": -7280,
+      "x1": -6240,
+      "z0": -3520,
+      "z1": -3440
+    },
+    {
+      "name": "E34",
+      "x0": -5840,
+      "x1": -4560,
+      "z0": -3520,
+      "z1": -3440
+    },
+    {
+      "name": "E35",
+      "x0": -4480,
+      "x1": -4160,
+      "z0": -3520,
+      "z1": -3440
+    },
+    {
+      "name": "E36",
+      "x0": -7600,
+      "x1": -7360,
+      "z0": -3440,
+      "z1": -3360
+    },
+    {
+      "name": "E37",
+      "x0": -6960,
+      "x1": -6400,
+      "z0": -3440,
+      "z1": -3360
+    },
+    {
+      "name": "E38",
+      "x0": -5600,
+      "x1": -4720,
+      "z0": -3440,
+      "z1": -3360
+    },
+    {
+      "name": "E39",
+      "x0": -4960,
+      "x1": -4720,
+      "z0": -3360,
+      "z1": -3280
+    }
+  ]
+};
+
+// Northern districts: crossings work on land, in a car and in open water.
+GATES.push(...[
+  {
+    "id": "e37",
+    "kind": "edge",
+    "from": "palace",
+    "to": "kronverk",
+    "zone": 40,
+    "reverse": "e38"
+  },
+  {
+    "id": "e38",
+    "kind": "edge",
+    "from": "kronverk",
+    "to": "palace",
+    "zone": 40,
+    "reverse": "e37"
+  },
+  {
+    "id": "e39",
+    "kind": "edge",
+    "from": "palace",
+    "to": "aptekarsky",
+    "zone": 40,
+    "reverse": "e40"
+  },
+  {
+    "id": "e40",
+    "kind": "edge",
+    "from": "aptekarsky",
+    "to": "palace",
+    "zone": 40,
+    "reverse": "e39"
+  },
+  {
+    "id": "e41",
+    "kind": "edge",
+    "from": "vasilyevsky",
+    "to": "kronverk",
+    "zone": 40,
+    "reverse": "e42"
+  },
+  {
+    "id": "e42",
+    "kind": "edge",
+    "from": "kronverk",
+    "to": "vasilyevsky",
+    "zone": 40,
+    "reverse": "e41"
+  },
+  {
+    "id": "e43",
+    "kind": "edge",
+    "from": "dekabristov",
+    "to": "kronverk",
+    "zone": 40,
+    "reverse": "e44"
+  },
+  {
+    "id": "e44",
+    "kind": "edge",
+    "from": "kronverk",
+    "to": "dekabristov",
+    "zone": 40,
+    "reverse": "e43"
+  },
+  {
+    "id": "e45",
+    "kind": "edge",
+    "from": "dekabristov",
+    "to": "islands",
+    "zone": 40,
+    "reverse": "e46"
+  },
+  {
+    "id": "e46",
+    "kind": "edge",
+    "from": "islands",
+    "to": "dekabristov",
+    "zone": 40,
+    "reverse": "e45"
+  },
+  {
+    "id": "e47",
+    "kind": "edge",
+    "from": "kronverk",
+    "to": "aptekarsky",
+    "zone": 40,
+    "reverse": "e48"
+  },
+  {
+    "id": "e48",
+    "kind": "edge",
+    "from": "aptekarsky",
+    "to": "kronverk",
+    "zone": 40,
+    "reverse": "e47"
+  },
+  {
+    "id": "e49",
+    "kind": "edge",
+    "from": "kronverk",
+    "to": "islands",
+    "zone": 40,
+    "reverse": "e50"
+  },
+  {
+    "id": "e50",
+    "kind": "edge",
+    "from": "islands",
+    "to": "kronverk",
+    "zone": 40,
+    "reverse": "e49"
+  },
+  {
+    "id": "e51",
+    "kind": "edge",
+    "from": "aptekarsky",
+    "to": "islands",
+    "zone": 40,
+    "reverse": "e52"
+  },
+  {
+    "id": "e52",
+    "kind": "edge",
+    "from": "islands",
+    "to": "aptekarsky",
+    "zone": 40,
+    "reverse": "e51"
+  }
+]);
+// Measured northern gate order (tools/order-petro-gates.mjs, gates-test run-ups).
+const EDGE_ORDER = {
+  "palace": [
+    "e1",
+    "e3",
+    "e5",
+    "e39",
+    "e37",
+    "e11"
+  ],
+  "smolny": [
+    "e2",
+    "e7"
+  ],
+  "admiralty": [
+    "e4",
+    "e9",
+    "e13",
+    "e27",
+    "e33"
+  ],
+  "vladimirsky": [
+    "e6",
+    "e8",
+    "e10",
+    "e35"
+  ],
+  "vasilyevsky": [
+    "e12",
+    "e14",
+    "e17",
+    "e21",
+    "e23",
+    "e29",
+    "e41"
+  ],
+  "gavan": [
+    "e15",
+    "e19",
+    "e22"
+  ],
+  "dekabristov": [
+    "e16",
+    "e24",
+    "e26",
+    "e43",
+    "e45"
+  ],
+  "morskoy": [
+    "e18",
+    "e20",
+    "e25"
+  ],
+  "kolomna": [
+    "e28",
+    "e30",
+    "e31"
+  ],
+  "semyonovsky": [
+    "e32",
+    "e34",
+    "e36"
+  ],
+  "kronverk": [
+    "e38",
+    "e42",
+    "e44",
+    "e47",
+    "e49"
+  ],
+  "aptekarsky": [
+    "e40",
+    "e51",
+    "e48"
+  ],
+  "islands": [
+    "e46",
+    "e52",
+    "e50"
+  ]
+};
+const FROM_ORDER = Object.keys(EDGE_ORDER);
+GATES.sort((a,b)=>FROM_ORDER.indexOf(a.from)-FROM_ORDER.indexOf(b.from)||(EDGE_ORDER[a.from]||[]).indexOf(a.id)-(EDGE_ORDER[b.from]||[]).indexOf(b.id));
+
 // COASTAL-GATE-ORDER-BEGIN
 // Exact priority search uses createGateMachine and the same working run-ups as
 // gates-test. Keep the source rows stable; apply only their per-area priority.
@@ -1668,6 +2850,12 @@ const COASTAL_GATE_ORDER = {
     "e19",
     "e22",
     "coast-gavan-morskie-vorota"
+  ],
+  "islands": [
+    "e46",
+    "e52",
+    "e50",
+    "coast-islands-okrug65"
   ],
   "kolomna": [
     "e28",
@@ -1680,6 +2868,9 @@ const COASTAL_GATE_ORDER = {
     "coast-morskie-vorota-gavan",
     "coast-morskie-vorota-kolomna"
   ],
+  "okrug65": [
+    "coast-okrug65-islands"
+  ],
   "vasilyevsky": [
     "e12",
     "e14",
@@ -1687,6 +2878,7 @@ const COASTAL_GATE_ORDER = {
     "e21",
     "e23",
     "e29",
+    "e41",
     "coast-vasilyevsky-morskie-vorota"
   ]
 };

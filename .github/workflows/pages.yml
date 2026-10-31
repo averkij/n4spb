@@ -137,6 +137,8 @@ jobs:
       - name: Coastal ship and physical bridge decks
         run: |
           node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine
+          node tools/area.mjs okrug65 tools/marine-data-bridges-test.mjs --yacht
+          node tools/area.mjs islands tools/marine-data-bridges-test.mjs --yacht
           node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs
 
   deploy:

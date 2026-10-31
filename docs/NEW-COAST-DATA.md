@@ -22,6 +22,12 @@ removes an accidental 80 × 160 m water-only overlap with Dekabristov. Registry
 gates and the existing seam contracts were checked on these final territories;
 the contract limits were retained.
 
+The combined 8.0.0 release includes the three completed Petrograd areas from
+`70b1d80`. Okrug 65 overlaps the islands territory by 2.0032 km² and now has a
+paired seam with it: 4.8 km of working boundary from islands and 7.24 km from
+Okrug, with 2.9% / 1.7% short return distances. All existing Petrograd gates
+remain. The planning map shows 15 live areas at stable indices.
+
 Final water connectivity adds two 80 m marine cells, eleven northern Okrug 65
 cells along the real Kamenka and ten cells around Krestovsky's western shore.
 The latter corridor clears the existing Dekabristov territory. It joins the
@@ -182,15 +188,20 @@ were added for it.
 
 `tools/marine-data-bridges-test.mjs` independently probes every original mapped
 bridge centreline at intervals of at most 2 m, including its endpoints, and
-checks 69 shared joints across 2,035 densified deck segments. OSM layer changes
+checks 69 shared joints across 1,943 densified coastal deck segments. OSM layer changes
 do not create elevation steps. Connected road and footbridge approaches retain
 continuous grades. The marine WHSD matches the existing Gavan profile through
 z 2600, then rises to a lower girder soffit 52 m above the sea, following the
 [official Sea Canal clearance](https://www.gov.spb.ru/press/governor/96074/).
-Its opposing carriageway is 8 m higher, an authoring estimate. The Yacht Bridge
-uses a constant 16.5 m width within the official 16.3–17.1 m range, asphalt
-surfacing and 16 m water clearance from
-[Mostotrest](https://mostotrest-spb.ru/bridges/yahtennyj-most-416).
+Its opposing carriageway is 8 m higher, an authoring estimate. Both Okrug 65
+and islands use the same authored Yacht Bridge, with V-shaped piers, asphalt,
+coloured cycle track and a 16.4 m deck within the official 16.3–17.1 m range.
+Its shared profile was corrected from the source's old photographic estimate:
+14.1 m peak deck minus the 1.5 m midspan girder over water at −3.4 m gives
+the 16 m navigation clearance stated by
+[Mostotrest](https://mostotrest-spb.ru/bridges/yahtennyj-most-416). Real drawn
+soffit probes confirm 16.00 m; maximum ramp grade is 7.06%. The two pages'
+57-pose driving checks match the same deck within 2 cm, including under WHSD.
 
 The optional `--engine` test builds the real marine modules and real
 `createHandling`. At the mapped double-deck crossing it checks the lower deck,

@@ -154,3 +154,22 @@ Useful visual review poses (x, y, z, yaw, pitch):
 Serial GPU screenshots, z-fighting review, integrated road/water/boat checks,
 shipping bake and old-centre/new-area performance evidence are handled by the
 integration owner before the checkpoint is committed.
+
+### Yacht Bridge integration across the northern shore
+
+The Округ №65 and Islands pages share the same authored Yacht Bridge and
+mapped four-way claim. The coastal bridge generator excludes those IDs, so
+it cannot add a second, flatter deck. Both the public bridge query and the
+coastal car-floor hook resolve the shared profile before choosing a reachable
+surface at the WHSD crossing.
+
+[Mostotrest's official bridge record](https://mostotrest-spb.ru/bridges/yahtennyj-most-416)
+gives a 672 m total length, 16.3–17.1 m width and 16 m navigation clearance.
+The authored OSM centreline is approximately 585 m and includes the mapped
+approaches; it does not represent the complete official length. The profile,
+pier spacing and girder shape remain visual estimates. With the scene's
+−3.4 m water datum, a central world deck height of 14.1 m and a 1.5 m midspan
+girder produce the official 16 m clearance. A short central plateau preserves
+one complete clear span, and the continuous approach grades stay below 9%.
+CPU regression probes inspect the actual drawn soffit and real car handling
+on both area loaders, including the crossing under the higher WHSD.

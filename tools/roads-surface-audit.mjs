@@ -16,7 +16,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
 import { mainModules } from './modules-list.mjs';
-import { partnerWidth, pairedStreet, projectsToSegment } from './lib/surface-median.mjs';
+import { partnerWidth, pairedStreet, projectsToSegment, mappedMedian } from './lib/surface-median.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -247,11 +247,14 @@ const MEDIAN_MAX = 7.5;                                // same threshold as net.
 const near = (x, z) => (!NEAR || Math.hypot(x - NEAR[0], z - NEAR[1]) <= NEAR[2]) && (ALL || L.inPlay(x, z));
 const offenders = [];                              // one record per offending sample
 const okMat = {};                                  // top material histogram of ALL samples (asphalt ones included)
-let nSamples = 0, nDeck = 0, nBuilding = 0;
+let nSamples = 0, nDeck = 0, nBuilding = 0, nOutsideFootprint=0;
 const deckMat = {};
 function sample(x, z, ctxInfo) {
   if (!near(x, z)) return;
   if (L.insideBuilding(x, z, 0)) { nBuilding++; return; }
+  // Averaged tangents at a clipped/curved endpoint can put the outer offset
+  // beyond the actual road footprint. Ground there is beside the carriageway.
+  if(ctxInfo.kind==='carriageway'&&net.cover(x,z,{})<-.15){nOutsideFootprint++;return;}
   const stack = stackAt(x, z), top = topOf(stack);
   const key = top ? `${top.m.mod}/${top.m.name}/${top.m.mat}` : 'none';
   if (deckAt(x, z, 0.3)) { nDeck++; deckMat[key] = (deckMat[key] || 0) + 1; return; }
@@ -309,7 +312,7 @@ for (const f of net.fillets) {
   for (const k of new Set([0, Math.floor((a.length - 2) / 2), a.length - 2])) if (k >= 0 && k + 1 < a.length) pts.push([(f.P[0] + a[k][0] + a[k + 1][0]) / 3, (f.P[1] + a[k][1] + a[k + 1][1]) / 3]);
   for (const [x, z] of pts) sample(x, z, { kind: 'fillet', way: f.ways[0], tx: 0, tz: 1 });
 }
-log(`${nSamples} samples audited (${nDeck} on bridge decks of the bridges module skipped, ${nBuilding} inside buildings skipped); ${offenders.length} offending samples`);
+log(`${nSamples} samples audited (${nDeck} on bridge decks of the bridges module skipped, ${nBuilding} inside buildings skipped, ${nOutsideFootprint} outside clipped road footprints); ${offenders.length} offending samples`);
 log('top surface of ALL audited samples:'); for (const [k, v] of Object.entries(okMat).sort((a, b) => b[1] - a[1])) log(`  ${String(v).padStart(8)}  ${k}`);
 log('bridge-deck samples (exception, drawn by the bridges module):'); for (const [k, v] of Object.entries(deckMat).sort((a, b) => b[1] - a[1])) log(`  ${String(v).padStart(8)}  ${k}`);
 
@@ -317,6 +320,7 @@ log('bridge-deck samples (exception, drawn by the bridges module):'); for (const
 // (a) the polygon of a landmark-owned square where the landmark module draws its own paving ON TOP of a real road (Palace Square stone field, Kazan Square): cars do not drive there / the
 //     asphalt is documented as drawn beneath (docs/streets-api.md "Claims"); (b) nothing else. The policy is: a drivable carriageway is asphalt.
 const EXCEPTIONS = [
+  {id:'mapped-median-square',test:o=>mappedMedian(o,AREAS,(x,z,r)=>{let yes=false;for(let i=0,j=r.length-2;i<r.length;j=i,i+=2)if((r[i+1]>z)!==(r[j+1]>z)&&x<(r[j]-r[i])*(z-r[i+1])/(r[j+1]-r[i+1])+r[i])yes=!yes;return yes;}),why:'mapped pedestrian square or traffic island between carriageways; actual lane surfaces are audited separately'},
   { id: 'palace-square-stone-field', test: (o) => /lmG-(pave|flagMat|flagstone|stone-field)/.test(o.mesh), why: 'Palace Square stone field / arch flagstones (landmarksG): pedestrian square, the mapped living-street trace is drawn under it' },
   { id: 'kazan-square-garden', test: (o) => /lmF-slabs/.test(o.mesh) && /^Казанская площадь$/.test(o.name || ''), why: 'Kazan Square slabs (landmarksF) over the mapped Kazanskaya ploshchad way: pedestrian square' },
   { id: 'object-tops', test: (o) => o.mesh === 'city/city-fine/city-fine' && o.y >= 0.15, why: 'tops of 0.17 m stone corner guards / plinths in arch mouths (city module), not a surface' },

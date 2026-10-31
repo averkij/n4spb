@@ -1,5 +1,8 @@
 # Areas: one page per scene
 
+The 6.0.0 northern port is documented in [PETRO-AREAS.md](PETRO-AREAS.md):
+Kronverk–Vvedensky–Petrovsky, Aptekarsky–Posadsky and Krestovsky–Kamenny–Yelagin.
+
 n4spb used to be ONE scene (the Nevsky strip). A scene that grows keeps growing in memory and frame time (the whole source city needed 84-90 s to load, ~5 GB and 17-33 fps), so the world is
 now split into **areas**: each area is its own page, with its own data, module list and bake. The player walks in one area; near the border toward another area the game asks whether to load it,
 and the answer is a page navigation (`location.replace`). The old page dies with its memory; the new one loads from its own bake. The plan and the decisions behind it: the approved plan of
@@ -1729,7 +1732,7 @@ The owner's report (pose -1226.7, -0.7, -1602, yaw 459.6, standing in the gap of
 
 Not changed: the leaf's soffit and girders (several parallel dark / light slabs under the raised leaf) are the drawn steel girders and stay; the soft darker band to the side of the hinge span is the shade of the part of the leaf that still stands over the water. Known, not part of this fix: with `?troitsky=open` / `?palacebridge=open` forced there is no wait for a clear span, so NPC pedestrians that were on the deck can stand in the air over the gap at t = 200 s of a shot (the normal AUTO schedule waits for a clear span).
 
-## 16. Морские ворота and Округ № 65 (7.0.0)
+## 16. Морские ворота and Округ № 65 (7.0.0; combined release 8.0.0)
 
 The two coastal areas are live as `morskie-vorota.html` (planning map 71,
 badge H) and `okrug65.html` (map 100, badge O). The implementation overview,
@@ -1755,19 +1758,19 @@ photo-derived estimates: [port and ship](research/sea-gates-landmarks.md),
 The territories follow the existing B600 policy: 80 m cells rasterized from
 the draft's land footprint and nearby navigable water. Marine approach bands
 provide usable transitions to **Vasilyevsky, Gavan and Kolomna**, with one
-reciprocal edge-gate pair for each neighbour. Okrug 65 has no live neighbour
-in this checkout; its accidental water-only overlap with Dekabristov was
-removed. `node tools/connect-coastal-areas.mjs` discovers current live overlaps
-and checks gate priority against the real gate machine. Rerun it after the
-three separately developed Petrograd areas are integrated to connect Okrug's
-southern border; those areas are a parallel dependency, not implemented by
-this coastal branch. Their planning map indices remain stable.
+reciprocal edge-gate pair for each neighbour. The combined release connects
+Okrug 65 to **Krestovsky–Kamenny–Yelagin** through a reciprocal pair; its
+accidental water-only overlap with Dekabristov was removed.
+`node tools/connect-coastal-areas.mjs` discovers current live overlaps and
+checks gate priority against the real gate machine. The three separately
+developed Petrograd areas from `70b1d80` are integrated with their stable
+planning map indices and existing transitions preserved.
 
-The coastal work is isolated in `feat/coastal-areas` from that concurrent
-Petrograd checkout. Its data-only predecessor contains 130 pending Petrograd
-files, explicitly classified by `tools/classify-pending-area-data.mjs`; rerun
-the classifier when their area modules land. The registry remains the source
-of truth for the live graph. Refresh the draft's live catalogue with
+The coastal work was authored in `feat/coastal-areas` while that port was in
+progress. Its data-only predecessor's 130 pending Petrograd files now belong
+to completed live areas; their temporary orphan classifications are removed.
+The registry remains the source of truth for the live graph. Refresh the
+draft's live catalogue with
 `node maps/intro-draft-src/refresh-live.mjs` after registry changes; full planning
 rebuild instructions are in [the map README](../maps/intro-draft-src/README.md).
 

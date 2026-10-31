@@ -118,6 +118,24 @@ check('exit places the walker outside the parked hull and the E prompt boards ag
   const exit = { x: player.pos.x, z: player.pos.z };
   assert.equal(lookAtPrompt(prompt, exit)?.id, prompt.id); assert.ok(ctx.interact.use()); assert.equal(d.vehicle, ship);
 });
+check('a blocked primary exit uses the mirrored ship boarding interaction and can reboard there', () => {
+  resetShip();
+  const boarding = ship.def.boarding, primary = localPoint(ship.car, boarding.x, boarding.z), mirrored = localPoint(ship.car, -boarding.x, boarding.z);
+  const obstruction = ph.addBox(primary.x, primary.z, 4, 4, ship.car.yaw, ship.car.y - .2, ship.car.y + 3);
+  try {
+    assert.ok(d.exit(), 'the unobstructed opposite side should allow an ordinary exit');
+    assert.equal(player.inputLock, 0); assert.ok(ship.box);
+    const exit = { x: player.pos.x, z: player.pos.z };
+    assert.ok(Math.hypot(exit.x - mirrored.x, exit.z - mirrored.z) < .2, 'exit did not choose the mirrored side');
+    const prompt = ctx.interact.list().find(i => i.id === 'drive-boat-' + ship.id + '-port');
+    assert.ok(prompt, 'no boarding interaction at the accepted exit');
+    assert.ok(Math.hypot(prompt.at().x - mirrored.x, prompt.at().z - mirrored.z) < .01);
+    assert.equal(lookAtPrompt(prompt, exit)?.id, prompt.id, 'the actual E interaction is not visible from the mirrored exit');
+    assert.ok(ctx.interact.use()); assert.ok(d.active && d.vehicle === ship && ship.box === null);
+    assert.equal(player.inputLock, 1);
+    assert.equal(ctx.interact.list().filter(i => i.id === 'drive-boat-' + small.id || i.id === 'drive-boat-' + small.id + '-port').length, 1, 'ordinary motor boat gained a second interaction');
+  } finally { ph.remove(obstruction); }
+});
 check('blocked boarding exits never fall back inside the large hull; forced exit stays outside its beam', () => {
   resetShip();
   const original = ship.car.walkerBlocked, boarding = ship.def.boarding;

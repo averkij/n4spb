@@ -95,9 +95,10 @@ export function bridgeZones() {
   for (const z of moatBridgeZones()) out.push(z);
   for (const z of nhBridgeZones()) out.push(z);
   // the southern Fontanka decks (bridges/sites-south.js, site.south): the opening is the owner's deck frame (|u| <= 30 along the water, 60 m of quay), as in the source project
-  for (const site of SITES.filter((s) => s.south)) {
+  for (const site of SITES.filter((s) => s.south || s.ww==='karpovka')) {
     const foot = site.kind === 'foot';
     out.push({ id: site.id, name: site.name, key: site.ww, c: [site.cx, site.cz], axis: site.b, w: site.v1 - site.v0, len: 60, own: true, foot, site, test: (x, z, grow = 0) => siteInDeck(site, x, z, 30, grow + (foot ? 0.4 : 0)) });
+    if(site.ww==='karpovka')out.push({...out.at(-1),key:'neva'});
   }
   return (_zones = out);
 }

@@ -123,37 +123,56 @@ export const forwardOf = (yawDeg) => [-Math.sin(yawDeg * DEG), -Math.cos(yawDeg 
 export function makeProbe(L, { inset = 25 } = {}) {
   return {
     inside: (x, z) => L.inPlay(x, z, inset),
-    blocked: (x, z) => L.insideBuilding(x, z, 1.5),      // (water is reachable, docs/AREAS.md 13.7: a player in the river arrives in the river; a car still needs a lane, so it is put on the nearest road)
+    blocked: (x, z) => L.insideBuilding(x, z, 1.5),      // water is reachable, docs/AREAS.md 13.7: even a car in the river arrives in the river
+    water: (x, z) => !!L.inRiver?.(x, z),
     /** the carriageway under (x,z): { tx, tz } unit tangent, or null when it is not on a vehicle road */
     lane: (x, z) => { const r = L.roadsNear(x, z, 0, { drivable: true }); const h = r.find((q) => q.gap <= 0); return h ? { tx: h.tx, tz: h.tz } : null; },
+    candidates: (x,z,r) => L.roadsNear(x,z,r,{drivable:true}).map(q=>({x:q.x,z:q.z,tx:q.tx,tz:q.tz})),
     hero: L.HERO,
   };
 }
 
 /**
  * Where does the player really arrive? `desired` {x, z, yaw} is the pose the origin page asked for; `mode` is 'walk' | 'fly' | 'car'; `rect` {x0,x1,z0,z1} the part of the destination
- * where an arrival is meant to be (null: anywhere). 1. clamp into the rect; 2. valid there (probe.inside, not blocked, a car also on a lane within 30 degrees of its heading, either
- * direction)? take it; 3. else the nearest valid point of a ring search (3..60 m, 12 angles); 4. else the destination HERO with how = 'hero'. Never throws; pure.
+ * where an arrival is meant to be (null: anywhere). 1. clamp into the rect; 2. valid there (probe.inside, not blocked, a car on dry ground also on a lane within 30 degrees of its heading, either
+ * direction)? take it; 3. else a valid point of a ring search (3..60 m, 12 angles), with road projection for cars and finer angular sampling for walkers / flyers if the coarse rays miss;
+ * 4. else the destination HERO with how = 'hero'. Never throws; pure.
  */
-export function resolveArrival(probe, desired, mode, rect, { ringMax = 60, ringStep = 3, angles = 12, laneDeg = 30 } = {}) {
+export function resolveArrival(probe, desired, mode, rect, { ringMax = mode === 'car' ? 120 : 60, ringStep = 3, angles = 12, laneDeg = 30 } = {}) {
   const clampRect = (x, z) => (rect ? [Math.min(rect.x1, Math.max(rect.x0, x)), Math.min(rect.z1, Math.max(rect.z0, z))] : [x, z]);
   const [fx, fz] = forwardOf(desired.yaw), cosMax = Math.cos(laneDeg * DEG);
   const valid = (x, z) => {
     if (!probe.inside(x, z) || probe.blocked(x, z)) return false;
-    if (mode === 'car') { const l = probe.lane(x, z); if (!l) return false; if (Math.abs(l.tx * fx + l.tz * fz) < cosMax) return false; }
+    if (mode === 'car' && !probe.water?.(x, z)) { const l = probe.lane(x, z); if (!l) return false; if (Math.abs(l.tx * fx + l.tz * fz) < cosMax) return false; }
     return true;
   };
   const [cx, cz] = clampRect(desired.x, desired.z);
   const res = (x, z, how) => ({ x, z, yaw: desired.yaw, how, moved: Math.hypot(x - desired.x, z - desired.z) });
   if (valid(cx, cz)) return res(cx, cz, 'direct');
-  for (let r = ringStep; r <= ringMax; r += ringStep) {
-    let best = null;
-    for (let a = 0; a < angles; a++) {
-      const th = a / angles * 2 * Math.PI; const [x, z] = clampRect(cx + Math.cos(th) * r, cz + Math.sin(th) * r);
-      if (!valid(x, z)) continue;
-      const d = Math.hypot(x - cx, z - cz); if (!best || d < best.d) best = { x, z, d };
+  const searchRings = (refine = false) => {
+    for (let r = ringStep; r <= ringMax; r += ringStep) {
+      // At 60 m the twelve original rays are 31 m apart. A free corner of a
+      // large footprint (Piterland at the islands seam) can fit between them.
+      // Refine only a failed search, with arc spacing bounded by ringStep.
+      const n = refine ? Math.max(angles, Math.ceil(2 * Math.PI * r / ringStep)) : angles;
+      let best = null;
+      for (let a = 0; a < n; a++) {
+        const th = a / n * 2 * Math.PI; const [x, z] = clampRect(cx + Math.cos(th) * r, cz + Math.sin(th) * r);
+        if (!valid(x, z)) continue;
+        const d = Math.hypot(x - cx, z - cz); if (!best || d < best.d) best = { x, z, d };
+      }
+      if (best) return res(best.x, best.z, 'ring');
     }
-    if (best) return res(best.x, best.z, 'ring');
+    return null;
+  };
+  const coarse = searchRings(); if (coarse) return coarse;
+  // Twelve radial rays can miss a narrow marina lane even when it is close.
+  // Project onto nearby road segments before considering the distant HERO.
+  if(mode==='car'&&probe.candidates){
+    const candidates=probe.candidates(cx,cz,ringMax).flatMap(q=>[-3,0,3].map(d=>({x:q.x+q.tx*d,z:q.z+q.tz*d})))
+      .map(p=>({...p,d:Math.hypot(p.x-cx,p.z-cz)})).filter(p=>p.d<=ringMax).sort((a,b)=>a.d-b.d);
+    for(const p of candidates){const [x,z]=clampRect(p.x,p.z);if(valid(x,z))return res(x,z,'ring');}
   }
+  if (mode !== 'car') { const refined = searchRings(true); if (refined) return refined; }
   const h = probe.hero; return { x: h.x, z: h.z, yaw: h.yaw, how: 'hero', moved: Math.hypot(h.x - desired.x, h.z - desired.z) };
 }

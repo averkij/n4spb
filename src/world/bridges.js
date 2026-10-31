@@ -13,6 +13,8 @@
 export const OWNS_GROUPS = true;
 
 import * as THREE from 'three';
+import { ID as AREA_ID } from './area.js';
+import { adaptPortedSolids } from './lib/adapt-ported-solids.js';
 import { Parts } from './bridges/kit.js';
 import { makeMats } from './bridges/mats.js';
 import { addVoMats } from './bridges/mats-vo.js';
@@ -41,6 +43,7 @@ import { BRIDGE_ZONES } from './environment/waterways.js';
 import { bridgeZones } from './environment/river.js';
 
 export async function build(ctx) {
+  const portedNorth=['kronverk','aptekarsky','islands'].includes(AREA_ID),before=portedNorth?new Set(ctx.physics.items):null;
   const M = makeMats(ctx), rails = makeRailBatch(ctx);
   addVoMats(ctx, M);
   const root = new THREE.Group(); root.name = 'bridges';
@@ -104,7 +107,7 @@ export async function build(ctx) {
   // the bridges of the Petrovsky side that Dekabristov Island holds (bridges/petrovsky.js: the Betancourt Bridge, the Serny Bridge, the WHSD fairway bridge pylons), where the area claims the id
   for (const it of PETROVSKY) {
     if (!BRIDGE_GROUP_KEYS.has(it.id)) continue;
-    try { const P = new Parts(), info = it.build({ ctx, P, M, rails, waterY: waterY('neva'), zones: QZONES }); info.colliders(); flush(P, it.id, null, info.extraTris); stats.colliders += info.info.colliders; list.push({ id: it.id, name: it.name, nameEn: it.nameEn, x: info.x, z: info.z, at: info.at, B: info }); }
+    try { const P = new Parts(), info = it.build({ ctx, P, M, rails, waterY: waterY('neva'), zones: QZONES, walkable:portedNorth }); info.colliders(); flush(P, it.id, null, info.extraTris); stats.colliders += info.info.colliders; list.push({ id: it.id, name: it.name, nameEn: it.nameEn, x: info.x, z: info.z, at: info.at, B: info }); }
     catch (err) { console.error(`[bridges] ${it.id} failed:`, err); failed.push(`${it.id}: ${err && err.stack || err}`); }
   }
   // the lawn hedges of the environment (thin 1.1 m boxes, up to 180 m long) may cross a foot path that leads onto the Nalichny / Novo-Andreevsky approaches: cut a gap into every hedge box that crosses an approach corridor (colliders only, bridges/gaps.js)
@@ -142,6 +145,7 @@ export async function build(ctx) {
     stats.quayCollidersOpened = removed;
   } catch (err) { console.warn('[bridges] quay collider opening failed:', err); }
   rails.flush(root); stats.rails = rails.count();
+  if(portedNorth)adaptPortedSolids(ctx,[root],ctx.physics.items.filter(it=>!before.has(it)),'bridges');
   ctx.addStatic(root);
 
   // ---------------------------------------------------------------- services

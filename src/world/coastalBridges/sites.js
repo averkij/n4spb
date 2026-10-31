@@ -1,7 +1,13 @@
 // Current mapped axes are shared by geometry, walking, driving and shore gaps.
 // OSM layer orders crossings; it is not an elevation or a physical deck ID.
-import { ROADS, RIVER } from '../data/city.js';
+import { ROADS, RIVER, EXTENT_RECTS } from '../data/city.js';
 import { whsdY } from '../bridges/sites-vo2.js';
+import { GROUPS as PETRO_BRIDGE_GROUPS } from '../../areas/petro/bridge-groups.js';
+
+// Both shores load the same authored curve, water-datum profile, V piers and physical
+// ramps through bridgesPetro. Never draw a second generic deck above it.
+export const YACHTNY_GROUP = PETRO_BRIDGE_GROUPS.find(g => g.key === 'yachtny');
+const SHARED_BRIDGE_IDS = new Set(YACHTNY_GROUP.osm);
 
 const pedestrian = r => /^(footway|path|cycleway|pedestrian|steps)$/.test(r.hw);
 const whsd = r => r.name === 'ЗСД' || r.ref === 'ЗСД';
@@ -49,7 +55,7 @@ function sampleLine(p) {
 
 /** Pure constructor also used by the bridge continuity regression fixtures. */
 export function coastalSites(roads) {
-  const bridges=roads.filter(r=>r.bridge&&!r.tunnel&&r.pts?.length>=4).map(r=>{
+  const bridges=roads.filter(r=>r.bridge&&!r.tunnel&&r.pts?.length>=4&&!SHARED_BRIDGE_IDS.has(r.id)).map(r=>{
     const p=sampleLine(r.pts),isWhsd=whsd(r),northbound=direction(r)<0;
     let len=0;for(let i=2;i<p.length;i+=2)len+=Math.hypot(p[i]-p[i-2],p[i+1]-p[i-1]);
     const yacht=/Яхтен/.test(r.name||''),marine=isWhsd&&p.some((z,i)=>i%2&&z>0);
@@ -79,7 +85,29 @@ export function coastalSites(roads) {
   return bridges;
 }
 export const COASTAL_BRIDGES=coastalSites(ROADS);
-export const COASTAL_BRIDGE_GROUPS=COASTAL_BRIDGES.map(b=>({key:b.id,name:b.road.name||'Мост',nameEn:'Mapped bridge',ids:[],osm:[b.road.id],at:[b.cx,b.cz]}));
+const inExtent = (x,z) => EXTENT_RECTS.some(r => x>=r.x0 && x<=r.x1 && z>=r.z0 && z<=r.z1);
+function groupAnchor(b) {
+  if (inExtent(b.cx,b.cz)) return [b.cx,b.cz];
+  // A long curved road's bounding-box centre can lie outside a concave cut.
+  // Keep its label on the nearest actual mapped vertex within the data union.
+  let at = null, nearest = Infinity;
+  for (let i=0;i<b.road.pts.length;i+=2) {
+    const x=b.road.pts[i],z=b.road.pts[i+1],d=(x-b.cx)**2+(z-b.cz)**2;
+    if (inExtent(x,z) && d<nearest) { nearest=d; at=[x,z]; }
+  }
+  return at;
+}
+export const COASTAL_BRIDGE_GROUPS=COASTAL_BRIDGES.map(b=>({key:b.id,name:b.road.name||'Мост',nameEn:'Mapped bridge',ids:[],osm:[b.road.id],at:groupAnchor(b)}));
+// Match the northern area's openings along the mapped approach curve. These
+// only open the quay; the shared authored builder supplies every raised floor.
+export const YACHTNY_BRIDGE_ZONES = ROADS.filter(r => SHARED_BRIDGE_IDS.has(r.id) && r.bridge && r.pts).flatMap(r => {
+  const out = [];
+  for (let i = 0; i + 3 < r.pts.length; i += 2) {
+    const [ax, az, bx, bz] = r.pts.slice(i, i + 4);
+    out.push({ id: 'yachtny-' + r.id + '-' + i, key: '*', c: [(ax + bx) / 2, (az + bz) / 2], axis: Math.atan2(bx - ax, az - bz) * 180 / Math.PI, w: (r.w || 7) + 4, len: Math.hypot(bx - ax, bz - az), own: true, quayOnly: true });
+  }
+  return out;
+});
 const inRing=(x,z,p)=>{let on=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2)if((p[i+1]>z)!==(p[j+1]>z)&&x<(p[j]-p[i])*(z-p[i+1])/(p[j+1]-p[i+1])+p[i])on=!on;return on;};
 const inPond=(x,z)=>RIVER.some(r=>r.key==='moat'&&(r.polys||[]).some(p=>inRing(x,z,p.o)&&!(p.h||[]).some(h=>inRing(x,z,h))));
 export const COASTAL_BRIDGE_ZONES=COASTAL_BRIDGES.filter(b=>!b.whsd&&b.len<800).map(b=>({id:b.id,key:inPond(b.cx,b.cz)?'moat':'neva',c:[b.cx,b.cz],axis:Math.atan2(b.pts.at(-2)-b.pts[0],b.pts[1]-b.pts.at(-1))*180/Math.PI,w:b.w+1,len:b.len+8,own:true}));

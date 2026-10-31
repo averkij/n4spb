@@ -73,7 +73,7 @@ export function gateProblems(g, { fromRects, toRects, reverse }) {
 
 /**
  * The arrival grid (25 m steps over g.arrive) x walk / fly / car x the two headings along the crossing axis, resolved by handoff.resolveArrival with the DESTINATION layout L and checked
- * with predicates written out independently of makeProbe (25 m inset, not in a building (1.5 m) or the river, a car on a drivable lane within 30 degrees of its heading).
+ * with predicates written out independently of makeProbe (25 m inset, not in a building (1.5 m), a car on dry ground on a drivable lane within 30 degrees of its heading; water remains reachable).
  * Returns { total, direct, ring, hero, badCount, bad: [first 12 messages] }; a result that fell back to the destination HERO counts as bad (an arrival grid that needs the fallback is a gate in the wrong place).
  */
 export function arrivalGrid(g, L, { step = 25 } = {}) {
@@ -92,7 +92,7 @@ export function arrivalGrid(g, L, { step = 25 } = {}) {
       if (!L.inPlay(r.x, r.z, 25)) why.push('not 25 m inside the play area');
       if (L.insideBuilding(r.x, r.z, 1.5)) why.push('inside / next to a building');
       // (no river predicate: water is reachable, a pose in water is not a failure - CLAUDE.md world rules; a wall of water shows as 'not 25 m inside' or as the HERO fall-back)
-      if (mode === 'car') {
+      if (mode === 'car' && !L.inRiver?.(r.x, r.z)) {
         const lane = L.roadsNear(r.x, r.z, 0, { drivable: true }).find((q) => q.gap <= 0);
         if (!lane) why.push('not on a drivable lane'); else if (Math.abs(lane.tx * fx + lane.tz * fz) < Math.cos(30 * DEG)) why.push('lane is more than 30 degrees off the heading');
       }

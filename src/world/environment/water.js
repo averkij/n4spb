@@ -43,7 +43,7 @@ const LOOK = {
 
 export function waterMaterial(ctx, field, opts = {}) {
   const C = (c) => new THREE.Color(c);
-  const f = field, look = LOOK[opts.key || 'fontanka'], zones = (opts.zones || []).slice(0, 24);
+  const f = field, look = LOOK[opts.key || 'fontanka'] || LOOK.neva, zones = (opts.zones || []).slice(0, 24);
   const br = Array.from({ length: 24 }, (_, i) => { const z = zones[i]; if (!z) return new THREE.Vector4(0, 0, 1, 0); const a = z.axis * Math.PI / 180; return new THREE.Vector4(z.c[0], z.c[1], Math.sin(a), -Math.cos(a)); });
   const brS = Array.from({ length: 24 }, (_, i) => { const z = zones[i]; return z ? new THREE.Vector2(z.w / 2 + 1.0, z.len / 2 + 6) : new THREE.Vector2(-1, -1); });
   const cut = opts.cut === false ? [[1e7, 1e7], [1e7, 1e7], [1e7, 1e7], [1e7, 1e7]] : foamPoints(ctx);

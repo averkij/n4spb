@@ -16,3 +16,8 @@ export function pairedStreet(w, v, dot, gap, x, z, layout) {
   if (v.name !== w.name && v.name && w.name && !(w.rank >= 3 && v.rank >= 3) && !(gap < 3 && w.rank >= 2 && v.rank >= 2)) return false;
   return !(layout.inRiver?.(x, z) || layout.insideBuilding?.(x, z, 0));
 }
+// A pedestrian square or mapped traffic island is not a carriageway merely
+// because two opposing roads pass beside it. Actual lane samples stay audited.
+export function mappedMedian(o,areas,inside){
+ return o.kind==='median'&&/^area-(square-flush|island)$/.test(o.cause)&&areas.some(a=>['square','traffic_island'].includes(a.hw)&&a.polys.some(p=>inside(o.x,o.z,p.o)));
+}

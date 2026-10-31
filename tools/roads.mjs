@@ -18,7 +18,9 @@ let code = 0;
 for (const [script, ...args] of runs) {
   // Node's registered import-map loader belongs to this process. A child must
   // install it again or an area audit silently checks the parked strip data.
-  const entry = process.env.AREA ? [path.join(dir, 'area.mjs'), process.env.AREA, path.join(dir, script)] : [path.join(dir, script)];
+  const entry = process.env.AREA && process.env.AREA !== 'strip'
+    ? [path.join(dir, 'area.mjs'), process.env.AREA, path.join(dir, script)]
+    : [path.join(dir, script)];
   const r = spawnSync(process.execPath, ['--max-old-space-size=12288', ...entry, ...args], { stdio: 'inherit' });
   const c = r.status ?? 1;
   console.log(`[roads] ${script} exit ${c}`);

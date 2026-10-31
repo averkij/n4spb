@@ -35,7 +35,7 @@ import * as L from '../layout.js';
 import { MeshBuilder } from '../lib/massing.js';
 import { PIERS, STEPS } from '../data/city.js';
 import { deckPoly, bridgeZones, floorZones, waterBanks } from './river.js';
-import { WATERWAYS, waterGeo, farBanks, slopeRuns, keepOut, ownerWaterAt, ownerWaterBoxes } from './waterways.js';
+import { WATERWAYS, waterGeo, farBanks, slopeRuns, keepOut, ownerQuayAt as ownerWaterAt, ownerWaterBoxes } from './waterways.js';
 import { pointInRing, distToRing, hash2 } from './util.js';
 import { pierRects } from './boats.js';
 import { BANK_INDEX } from './bank-index.js';
@@ -93,7 +93,7 @@ function bermTexture(ctx) {
   }, { key: 'env-quay-berm-1', repeat: [1, 1], anisotropy: 4 });
 }
 function wallTexture(ctx, key, base = key) {
-  const W = WALLS[key], H = tileH(base), wlFrac = 1 - FOOT / H;
+  const W = WALLS[key] || WALLS.neva, H = tileH(base), wlFrac = 1 - FOOT / H;
   return ctx.tex.draw(1024, 512, (g, w, h) => {
     const r = ctx.rng('quay-wall-tex-' + key);
     g.fillStyle = W.tones[0]; g.fillRect(0, 0, w, h);
@@ -698,7 +698,7 @@ export function buildQuay(ctx, root) {
     let bx0 = 1e9, bx1 = -1e9, bz0 = 1e9, bz1 = -1e9; for (const p of bank.pts) { if (p[0] < bx0) bx0 = p[0]; if (p[0] > bx1) bx1 = p[0]; if (p[1] < bz0) bz0 = p[1]; if (p[1] > bz1) bz1 = p[1]; }
     const boxFar = (cx, cz, R) => Math.max(bx0 - cx, cx - bx1, 0) >= R || Math.max(bz0 - cz, cz - bz1, 0) >= R;
     for (const zn of zones) {
-      if (zn.key !== key || zn.id === 'anichkov' || zn.auto) continue;
+      if ((zn.key !== key && zn.key !== '*') || zn.id === 'anichkov' || zn.auto) continue;
       if (boxFar(zn.c[0], zn.c[1], zn.w / 2 + zn.len / 2 + 60)) continue;
       let near = false; for (const p of bank.pts) if (Math.hypot(p[0] - zn.c[0], p[1] - zn.c[1]) < zn.w / 2 + zn.len / 2 + 60) { near = true; break; }
       if (!near) continue;

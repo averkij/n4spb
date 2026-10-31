@@ -1,3 +1,4 @@
+import { PETRO_SITES } from './sites-petro.js';
 // bridges/sites.js - PURE DATA (no imports): where every bridge of the west stands, its local frame, deck width and deck surface zones.  Other modules (environment quay / water, streets,
 // traffic) may import it to open the quay railing / colliders where a deck crosses the water: `import { SITES, deckOf, inDeck } from '../bridges/sites.js'`.
 //
@@ -16,7 +17,7 @@ import { BRIDGE_GROUP_KEYS, BRIDGE_SITES_OFF } from '../lib/area-tables.js';    
 import { EXTENT_RECTS } from '../data/city.js';
 export const EXT = 0.8;                                   // the deck runs this far over the land beyond the bank line (no sliver of water at the corners; the street asphalt ends at the bank, a small overlap)
 /** water surface level per waterway key (dossier section 2.5; environment may publish its own: see bridges.js) */
-export const WATER_Y = { griboedov: -2.9, moika: -3.0, 'winter-canal': -3.1, neva: -3.4, fontanka: -3.2, 'swan-canal': -2.8, kryukov: -2.9, admiralty: -2.8, smolenka: -3.4, gavan: -3.4, moat: -1.2 };
+export const WATER_Y = { karpovka: -3.4, zhdanovka: -3.4, griboedov: -2.9, moika: -3.0, 'winter-canal': -3.1, neva: -3.4, fontanka: -3.2, 'swan-canal': -2.8, kryukov: -2.9, admiralty: -2.8, smolenka: -3.4, gavan: -3.4, moat: -1.2 };
 
 const BASE_SITES = [
   { id: 'belinsky', name: 'Мост Белинского', nameEn: 'Belinsky Bridge', kind: 'road', style: 'belinsky', water: 'r1201709', ww: 'fontanka',
@@ -106,7 +107,7 @@ const BASE_SITES = [
 ];
 
 /** every bridge site there is: the west + the Mars Field reach (this file) + the three south-west bridges (sites-sw.js: Kamenny, Pochtamtsky, Fonarny); in the strip every centre lies in the data extent (tools/bridges-sites-check.mjs) */
-export const ALL_SITES = [...BASE_SITES, ...SW_SITES, ...SOUTH_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), ...PAL_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), ...VO_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), ...VO2_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), BLAG_ZONE];      // (the south sites only where the area claims them by id: the facades of the other areas hold such decks in their margin, or decks that a BASE site already draws)
+export const ALL_SITES = [...PETRO_SITES.filter(s => BRIDGE_GROUP_KEYS.has(s.id)), ...BASE_SITES, ...SW_SITES, ...SOUTH_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), ...PAL_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), ...VO_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), ...VO2_SITES.filter((s) => BRIDGE_GROUP_KEYS.has(s.id)), BLAG_ZONE];      // (the south sites only where the area claims them by id: the facades of the other areas hold such decks in their margin, or decks that a BASE site already draws)
 /** THE predicate of the area: a site belongs to the area when its id is a sub-group of the area's GROUPS.bridges (the area claims its OSM ways) or its centre lies in the data extent of the area. The strip lists every site
  *  in GROUPS.bridges, so all of them stay; a smaller area (Palace-Liteyny) keeps the ones in its data and does not build, open the quay for or walk over the rest. An id in the area's BRIDGE_SITES_OFF (lib/area-tables.js) is never in the area. */
 export const siteInArea = (s) => !BRIDGE_SITES_OFF.has(s.id) && (BRIDGE_GROUP_KEYS.has(s.id) || EXTENT_RECTS.some((r) => s.cx >= r.x0 && s.cx <= r.x1 && s.cz >= r.z0 && s.cz <= r.z1));

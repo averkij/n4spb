@@ -9,6 +9,7 @@
 // plus (only where the area does not keep that car) the carried one. A pose in water is never a failure.
 import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
+import { edgeLens } from './lib/edge-geometry.mjs';
 
 const AREA = process.env.AREA || 'palace';
 let checks = 0, fails = 0;
@@ -19,7 +20,7 @@ const { Player } = await import('../src/core/player.js');
 const { createInteract } = await import('../src/core/ui.js');
 const A = await import('../src/world/area.js');
 const { REGISTRY, GATES } = await import('../src/areas/registry.js');
-const { createGateMachine, planArrival, inUnion } = await import('../src/core/gates.js');
+const { createGateMachine, planArrival, inUnion, EDGE_DIRS } = await import('../src/core/gates.js');
 const { makeHo, arrivalUrl } = await import('../src/core/handoff.js');
 
 // ---------------------------------------------------------------- the page around the drive module (what main.js does)
@@ -66,20 +67,28 @@ console.log(`area ${AREA}: fleet [${fleetIds.join(', ')}], ${ph.items.length} co
 const rectsOf = (id) => REGISTRY[id].play;
 const bbox = (rs) => ({ x0: Math.min(...rs.map((r) => r.x0)), x1: Math.max(...rs.map((r) => r.x1)), z0: Math.min(...rs.map((r) => r.z0)), z1: Math.max(...rs.map((r) => r.z1)) });
 const DIRS = [[0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1]].map(([x, z]) => { const n = Math.hypot(x, z); return [x / n, z / n]; });
+// Match the original sampler's seven-second grace and three-second approach.
+// Replaying each endpoint also verifies the first-offer window at every speed.
+function offered(g, x, z, dx, dz, v) {
+  const m = createGateMachine({ gates: [g], rectsOf });
+  m.update({ dt: 7, x: x - dx * v * 3, z: z - dz * v * 3, mode: 'car', blocked: false });
+  let r;
+  for (let t = 0.1; t < 3.0001; t += 0.1) r = m.update({ dt: 0.1, x: x - dx * v * (3 - t), z: z - dz * v * (3 - t), mode: 'car', blocked: false });
+  return !!r.offer;
+}
 /** The poses at which a car triggers gate g: for every point (lattice `step`) of FROM's territory near the overlap that lies on a drivable lane of the destination's layout (the overlap carries the same streets),
  *  both directions along the lane (`anywhere`: any point, a pseudo-random octant), speeds `speeds` m/s: the machine (fed the last 3 s of a steady approach) offers the gate at q but did not one step (0.1 s) before. */
-function triggers(g, step, speeds, anywhere = false) {
+function triggers(g, step, speeds, anywhere = false, window = null) {
   const out = [], tb = bbox(rectsOf(g.to)), fb = bbox(rectsOf(g.from)), R = rectsOf(g.from);
-  const x0 = Math.max(tb.x0, fb.x0) - 300, x1 = Math.min(tb.x1, fb.x1) + 300, z0 = Math.max(tb.z0, fb.z0) - 300, z1 = Math.min(tb.z1, fb.z1) + 300;
-  const offered = (x, z, dx, dz, v) => { const m = createGateMachine({ gates: [g], rectsOf }); m.update({ dt: 7, x: x - dx * v * 3, z: z - dz * v * 3, mode: 'car', blocked: false }); let r; for (let t = 0.1; t < 3.0001; t += 0.1) r = m.update({ dt: 0.1, x: x - dx * v * (3 - t), z: z - dz * v * (3 - t), mode: 'car', blocked: false }); return !!r.offer; };
+  const x0 = window?.x0??Math.max(tb.x0, fb.x0) - 300, x1 = window?.x1??Math.min(tb.x1, fb.x1) + 300, z0 = window?.z0??Math.max(tb.z0, fb.z0) - 300, z1 = window?.z1??Math.min(tb.z1, fb.z1) + 300;
   for (let sx = x0; sx <= x1; sx += step) for (let sz = z0; sz <= z1; sz += step) {
     if (!inUnion(R, sx, sz, 0)) continue;
     const lane = anywhere ? null : L.roadsNear(sx, sz, 0, { drivable: true }).find((q) => q.gap <= 0); if (!anywhere && !lane) continue;
     for (const sgn of [1, -1]) for (const v of speeds) {
-      const k = (Math.round(sx / step) * 3 + Math.round(sz / step) * 5 + (sgn > 0 ? 0 : 4) + 800) % 8;
+      const k = ((Math.round(sx / step) * 3 + Math.round(sz / step) * 5 + (sgn > 0 ? 0 : 4)) % 8 + 8) % 8;
       const dx = anywhere ? DIRS[k][0] : lane.tx * sgn, dz = anywhere ? DIRS[k][1] : lane.tz * sgn;
       if (!inUnion(R, sx - dx * v * 3, sz - dz * v * 3, 0)) continue;      // the approach itself lies in FROM's territory
-      if (offered(sx, sz, dx, dz, v) && !offered(sx - dx * v * 0.1, sz - dz * v * 0.1, dx, dz, v)) out.push({ x: sx, z: sz, v, yaw: Math.atan2(-dx, -dz) / DEG, road: !anywhere });
+      if (offered(g, sx, sz, dx, dz, v) && !offered(g, sx - dx * v * 0.1, sz - dz * v * 0.1, dx, dz, v)) out.push({ x: sx, z: sz, v, yaw: Math.atan2(-dx, -dz) / DEG, road: !anywhere });
     }
   }
   return out;
@@ -103,13 +112,38 @@ const DAMAGE = [[0, 0, 0, 0], [0.3, 0, 0.1, 0]];
 // strip of e11: the Palace Bridge head and the University embankment; 3 poses at step 20, 7 at step 10, 13 at step 5) a coarse lattice misses most triggers that exist. The bar stays MIN_POSES; the lattice is refined (20, 10, 5, 2.5 m) only
 // until it is met, so a gate that has enough poses at step 20 is sampled exactly as before.
 const MIN_POSES = 6, STEPS = [20, 10, 5, 2.5], STEP_OF = new Map();
-function streetPoses(g) { let out = []; for (const step of STEPS) { STEP_OF.set(g, step); out = triggers(g, step, [8, 22, 40]); if (out.length >= MIN_POSES) break; } return out; }
-const SC = new Map(edges.map((g) => [g, [...streetPoses(g), ...triggers(g, 60, [8, 40], true).filter((_, i) => i % 5 === 0).slice(0, 14)]]));
+function streetPoses(g) { let out = []; for (const step of STEPS) { STEP_OF.set(g, step); out = triggers(g, step, [8, 22, 40]); if (out.length >= MIN_POSES) break; }
+  if(out.length&&out.length<MIN_POSES){const found=new Map(out.map(p=>[JSON.stringify(p),p]));for(const step of [.5,.125]){for(const p of out.slice(0,4))for(const q of triggers(g,step,[8,22,40],false,{x0:p.x-6,x1:p.x+6,z0:p.z-6,z1:p.z+6}))found.set(JSON.stringify(q),q);out=[...found.values()];STEP_OF.set(g,step);if(out.length>=MIN_POSES)break;}}return out; }
+// Open-water seams need not contain a street. The 60 m off-road lattice can
+// miss a first-offer window only 0.8..4 m wide, even on a long working edge.
+// Sample the real edge lens toward its working direction, keeping all the
+// original motion, speed, grace and arrival-placement requirements.
+function lensPoses(g) {
+  const out = [], R = rectsOf(g.from), points = edgeLens(R, rectsOf(g.to), { backMax: 0 }).points;
+  const stride = Math.max(1, Math.floor(points.length / 40));
+  for (let i = 0; i < points.length; i += stride) {
+    const p = points[i], [dx, dz] = EDGE_DIRS[p.k];
+    for (const v of [8, 22, 40]) for (let d = 160; d >= 0; d -= v * 0.1) {
+      const x = p.x - d * dx, z = p.z - d * dz;
+      if (!inUnion(R, x, z) || !inUnion(R, x - dx * v * 3, z - dz * v * 3)) continue;
+      if (!offered(g, x, z, dx, dz, v) || offered(g, x - dx * v * 0.1, z - dz * v * 0.1, dx, dz, v)) continue;
+      out.push({ x, z, v, yaw: Math.atan2(-dx, -dz) / DEG, road: false, lens: true, water: ph.waterLevel(x, z) !== null });
+      break;
+    }
+  }
+  return out;
+}
+const SC = new Map(edges.map((g) => {
+  const poses = [...streetPoses(g), ...triggers(g, 60, [8, 40], true).filter((_, i) => i % 5 === 0).slice(0, 14)];
+  if (poses.length < MIN_POSES) poses.push(...lensPoses(g));
+  return [g, poses];
+}));
 let total = 0, bad = 0;
 const rows = [];
 for (const id of CARS) {
   // a page reached by a car hand-off: ctx.handoff exists when the modules are built (main.js), the carried car is in the garage afterwards
-  const g0 = edges[0], sc0 = SC.get(g0)[0];
+  const g0 = edges[0], sc0 = SC.get(g0)?.[0];
+  assert.ok(sc0, `${g0?.id || AREA}: no car trigger pose after street, off-road and real edge-lens sampling`);
   await buildDrive(arrival(g0, sc0, id, [0, 0, 0, 0]));
   const carriedNew = !fleetIds.includes(id);
   check(`${id}: the page built for a car hand-off has ${carriedNew ? 'the fleet of the area plus the carried car, once, without a parked box' : 'the fleet of the area, unchanged'}`, () => {
@@ -134,7 +168,7 @@ for (const id of CARS) {
       const placedOk = !inCar || off <= 40.5;      // (placeVehicle searches up to 40 m for a free spot)
       if (!inCar || !dmgOk || !placedOk) { stat.fail++; bad++; if (!firstFail) firstFail = `${id} at (${sc.x.toFixed(0)}, ${sc.z.toFixed(0)}) yaw ${sc.yaw.toFixed(0)} v ${sc.v}: ok=${ok} active=${d.active} vehicle=${v.id} how=${h.how} dmgOk=${dmgOk} placedOk=${placedOk}`; }
     });
-    rows.push(`  ${id.padEnd(8)} ${g.id} ${g.from} -> ${g.to}: ${stat.n} arrivals (${SC.get(g).filter((q) => q.road).length} street poses, lattice ${STEP_OF.get(g)} m): ${stat.direct} direct, ${stat.ring} ring, ${stat.hero} hero; farthest car placement ${stat.maxPlaced.toFixed(0)} m; ${stat.fail} without the car`);
+    rows.push(`  ${id.padEnd(8)} ${g.id} ${g.from} -> ${g.to}: ${stat.n} arrivals (${SC.get(g).filter((q) => q.road).length} street poses, lattice ${STEP_OF.get(g)} m; ${SC.get(g).filter((q) => q.lens).length} edge-lens poses, ${SC.get(g).filter((q) => q.lens && q.water).length} on water): ${stat.direct} direct, ${stat.ring} ring, ${stat.hero} hero; farthest car placement ${stat.maxPlaced.toFixed(0)} m; ${stat.fail} without the car`);
     check(`${id} ${g.id} ${g.from} -> ${g.to}: the player is IN the ${id} after the arrival (${stat.n} trigger poses, damage carried)`, () => { assert.ok(stat.n >= MIN_POSES, 'only ' + stat.n + ' poses (lattice step ' + STEP_OF.get(g) + ')'); assert.equal(stat.fail, 0, `${stat.fail} arrivals without the car; first: ${firstFail}`); });
   }
 }

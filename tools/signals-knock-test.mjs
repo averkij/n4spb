@@ -69,13 +69,14 @@ const K = await build(true);
 console.log(`built streets with ctx.knock in ${Date.now() - t0} ms`);
 const recs = (kind) => K.ctx.knock.list.filter((r) => r.kind === kind);
 
-check('1 census: 840 signal poles, 268 mast arms, 11 speed cameras, ~686 sign posts + 60 bus-stop poles; every record owns its collider; the merged pole VB lost the knockable poles', () => {
+check('1 census after full-base roadway clearance: 822 signal poles, 264 mast arms, 11 speed cameras; every record owns its collider', () => {
   const by = K.ctx.knock.stats.byKind;
-  assert.equal(by.signal, 840); assert.equal(by.arm, 268); assert.equal(by.camera, 11);
+  console.log('     census',JSON.stringify(by));
+  assert.equal(by.signal, 822); assert.equal(by.arm, 264); assert.equal(by.camera, 11);
   assert(by.sign >= 744 && by.sign <= 750, `sign posts ${by.sign}`);                 // 686 road signs + the 60 bus-stop poles of package G2
   for (const kind of ['signal', 'arm', 'camera', 'sign']) for (const r of recs(kind)) { assert(r.items.length === 1 && r.items[0].source && r.items[0].source.knock === r, `${kind} at ${r.x.toFixed(1)}, ${r.z.toFixed(1)} owns its collider`); assert(r.anchored > 0 && r.state === 'stand'); }
   const kp = K.stats.knockPosts;
-  assert.equal(kp.records, 840 + 268 + 11 + by.sign);
+  assert.equal(kp.records, by.signal + by.arm + by.camera + by.sign);
   console.log('     knockPosts', JSON.stringify(kp));
   console.log('     arms: anchored', recs('arm')[0].anchored, 'kg', recs('arm')[0].mass, '| signals anchored', recs('signal')[0].anchored, '| signs anchored', recs('sign')[0].anchored, '| cameras', recs('camera')[0].anchored);
 });

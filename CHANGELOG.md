@@ -2,8 +2,9 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **8.0.0** (2026-10-31, major): Integrate coastal districts with Petrograd, share Yacht Bridge and board the container ship from either side
 - **7.0.0** (2026-10-31, major): Open Sea Gates and Okrug 65 with coastal landmarks, navigable bridges and a giant drivable container ship
-- **6.0.0** (2026-10-31, major): Map Sea Gates and Okrug 65 from fresh OSM data and prepare coastal territories
+- **6.0.0** (2026-10-31, major): Add the three Petrograd and island districts with navigable waterways, authored crossings and breakable source fixtures; prepare fresh coastal OSM data and territories
 - **5.0.1** (2026-10-30, patch): Repair road surface tapers on Marata Street and Zagorodny Prospekt
 - **5.0.0** (2026-10-30, major): Add Kolomna–Yekateringofsky and Semyonovsky–Izmaylovsky, with connected waterways and boat handoffs
 - **4.0.0** (2026-10-29, major): New live areas Gavan (gavan.html, map 49), Morskoy (morskoy.html, map 47) and Dekabristov Island (dekabristov.html, map 51): Galerny Harbour, Shkipersky canal, Sea Terminal d-2 and torpedo boat, Pribaltiyskaya, Marine Facade, Kirov DK, Sevkabel, WHSD highway, Shipbuilders and Smolenka-mouth bridges, authored Dekabristov cemeteries, garden, Primorskaya and the land fill; 12 edge gates e15..e26; territories trim open water to 600 m; map merges Kolomna-Yekateringofsky and Semyonovsky-Izmaylovsky

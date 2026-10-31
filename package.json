@@ -1,6 +1,6 @@
 {
   "name": "n4spb-nevsky",
-  "version": "7.0.0",
+  "version": "8.0.0",
   "description": "A walkable anime cel-shaded 3D strip of Saint Petersburg: Moscow Railway Station, Nevsky Prospekt, the district around it, Palace Square, the Hermitage and the Admiralty, with seven metro stations, cars, people, trains, boats and a drivable car; plain three.js, static deploy",
   "private": true,
   "type": "module",
@@ -45,8 +45,8 @@
     "areahop": "node tools/areas-hop-test.mjs",
     "garage": "node tools/each-area.mjs tools/area-garage-check.mjs",
     "wildlifeboat": "node tools/area.mjs palace tools/wildlife-boat-test.mjs",
-    "water": "node tools/area.mjs palace tools/water-reachable-test.mjs && node tools/area.mjs smolny tools/water-reachable-test.mjs && node tools/area.mjs admiralty tools/water-reachable-test.mjs && node tools/area.mjs vladimirsky tools/water-reachable-test.mjs && node tools/area.mjs vasilyevsky tools/water-reachable-test.mjs && node tools/area.mjs gavan tools/water-reachable-test.mjs && node tools/area.mjs morskoy tools/water-reachable-test.mjs && node tools/area.mjs dekabristov tools/water-reachable-test.mjs && node tools/area.mjs kolomna tools/water-reachable-test.mjs && node tools/area.mjs semyonovsky tools/water-reachable-test.mjs",
-    "boatpass": "node tools/area.mjs palace tools/boat-passage-test.mjs && node tools/area.mjs smolny tools/boat-passage-test.mjs && node tools/area.mjs admiralty tools/boat-passage-test.mjs && node tools/area.mjs vladimirsky tools/boat-passage-test.mjs && node tools/area.mjs vasilyevsky tools/boat-passage-test.mjs && node tools/area.mjs gavan tools/boat-passage-test.mjs && node tools/area.mjs morskoy tools/boat-passage-test.mjs && node tools/area.mjs dekabristov tools/boat-passage-test.mjs && node tools/area.mjs kolomna tools/boat-passage-test.mjs && node tools/area.mjs semyonovsky tools/boat-passage-test.mjs",
+    "water": "node tools/each-live-area.mjs tools/water-reachable-test.mjs",
+    "boatpass": "node tools/each-live-area.mjs tools/boat-passage-test.mjs",
     "southdocks": "node tools/area.mjs kolomna tools/south-dock-test.mjs && node tools/area.mjs semyonovsky tools/south-dock-test.mjs",
     "crossplaces": "node tools/each-area.mjs tools/cross-places-test.mjs",
     "northknock": "node tools/area.mjs north tools/north-knock-test.mjs",
@@ -57,7 +57,7 @@
     "navequiv:north": "node tools/nav-bake-equiv.mjs --area north",
     "tauride:ci": "node tools/tauride/data-test.mjs --no-regen && node tools/tauride-cams-check.mjs && node tools/area.mjs north tools/tauride/ground-test.mjs && node tools/area.mjs north tools/tauride/pond-test.mjs && node tools/area.mjs north tools/tauride-height-test.mjs",
     "handoff": "node tools/handoff-test.mjs",
-    "handoffcar": "node tools/area.mjs palace tools/handoff-car-test.mjs && node tools/area.mjs smolny tools/handoff-car-test.mjs && node tools/area.mjs admiralty tools/handoff-car-test.mjs && node tools/area.mjs vladimirsky tools/handoff-car-test.mjs && node tools/area.mjs vasilyevsky tools/handoff-car-test.mjs && node tools/area.mjs gavan tools/handoff-car-test.mjs && node tools/area.mjs morskoy tools/handoff-car-test.mjs && node tools/area.mjs dekabristov tools/handoff-car-test.mjs && node tools/area.mjs kolomna tools/handoff-car-test.mjs && node tools/area.mjs semyonovsky tools/handoff-car-test.mjs",
+    "handoffcar": "node tools/each-live-area.mjs tools/handoff-car-test.mjs",
     "gates": "node tools/gates-test.mjs",
     "gatehold": "node tools/gate-hold-test.mjs",
     "areasflow": "node tools/areas-flow-test.mjs",
@@ -101,7 +101,10 @@
     "touch": "node tools/touch-logic-test.mjs",
     "touchbrowser": "node tools/touch-browser-test.mjs",
     "icons": "node tools/make-icons.mjs",
-    "coast": "node tools/area.mjs morskie-vorota tools/coastal-area-test.mjs && node tools/area.mjs okrug65 tools/coastal-area-test.mjs && node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine && node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs"
+    "roads:areas": "node tools/each-live-area.mjs tools/roads.mjs",
+    "markings:areas": "node tools/each-live-area.mjs tools/streets-markings-audit.mjs --geom --strict",
+    "ported-solids": "node tools/ported-solids-test.mjs",
+    "coast": "node tools/area.mjs morskie-vorota tools/coastal-area-test.mjs && node tools/area.mjs okrug65 tools/coastal-area-test.mjs && node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine && node tools/area.mjs okrug65 tools/marine-data-bridges-test.mjs --yacht && node tools/area.mjs islands tools/marine-data-bridges-test.mjs --yacht && node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs"
   },
   "devDependencies": {
     "puppeteer-core": "^23.11.1",
