@@ -107,6 +107,12 @@ const GENERIC_WAIVERS = {
 };
 /** unclaimed buildings a landmark module is known to cover (printed, not red); keyed by area then id: { module, why } */
 const KNOWN_UNCLAIMED = {
+  kolomna: {
+    r2210356: { module: 'landmarksBaltic', why: 'the Baltic Station entrance r3225591 is a claimed part of parent r2210356; landmarksBaltic replaces only that entrance, inside the parent outline, while city draws the remaining mapped wings (landmarksBaltic/groups.js)' },
+  },
+  semyonovsky: {
+    r2210356: { module: 'landmarksBaltic', why: 'the same Baltic Station entrance r3225591 and parent outline as Kolomna: only the entrance is claimed and replaced; city retains the remaining mapped wings (landmarksBaltic/groups.js)' },
+  },
   smolny: {
     w102153010: { module: 'landmarksTauride', why: 'the raised court deck of the Paradny quarter (paradny-courts) covers Kirochnaya 35, drawn by city: the same documented source behaviour as in the North (docs/AREAS.md 8.9)' },
   },
