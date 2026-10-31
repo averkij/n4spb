@@ -10,6 +10,7 @@
 // Everything that happens above the terrain behaves exactly as before.
 import * as THREE from 'three';
 import { NONE, UNIT } from './roofmap.js';
+import { convexContains, convexCircleContact } from './convex-footprint.js';
 const hyp = (a, b) => Math.sqrt(a * a + b * b);      // (round 4, 2026-10-16: Math.hypot allocates in V8 (117 MB per 20 s of driving); every use in this file has two arguments)
 
 const CELL = 8;
@@ -116,6 +117,21 @@ export class Physics {
   /** Walkable ramp: local z from -d/2 (height yA) to +d/2 (height yB). A continuous surface (slopes up to ~40 degrees are walkable at running speed).
    *  thick: the ramp is a solid wedge from its surface down to `thick` m below it (default 50: as before; use ~1-2 for a ramp that a tunnel can cross under). */
   addWalkRamp(cx, cz, w, d, rotY, yA, yB, thick = 50) { return this._insert(this._obb('ramp', cx, cz, w, d, rotY, { yA, yB, thick, y0: Math.min(yA, yB) - thick, sticky: true })); }
+  /** An exact planar triangle [x,y,z]x3. The ordinary ramp stores its plane;
+   * clip retains the drawn footprint, so its enclosing OBB is broad phase only.
+   * No new collider type or serialization format is introduced. */
+  addWalkTriangle(points, thick = 1) {
+    if (points.length !== 3 || points.some(p => p.length !== 3 || !p.every(Number.isFinite))) throw new Error('walk triangle requires three finite [x,y,z] points');
+    const [a,b,c] = points, ux = b[0]-a[0], uz = b[2]-a[2], vx = c[0]-a[0], vz = c[2]-a[2], det = ux*vz-vx*uz;
+    if (Math.abs(det) < 1e-8) return null;
+    const gx = ((b[1]-a[1])*vz-(c[1]-a[1])*uz)/det, gz = (ux*(c[1]-a[1])-vx*(b[1]-a[1]))/det;
+    const grade = hyp(gx,gz), yaw = grade > 1e-10 ? Math.atan2(gx,gz) : 0, s = Math.sin(yaw), co = Math.cos(yaw);
+    let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity;
+    for (const p of points) { const x=p[0]*co-p[2]*s,z=p[0]*s+p[2]*co; x0=Math.min(x0,x);x1=Math.max(x1,x);z0=Math.min(z0,z);z1=Math.max(z1,z); }
+    const lx=(x0+x1)/2,lz=(z0+z1)/2,cx=lx*co+lz*s,cz=-lx*s+lz*co;
+    const top=a[1]+gx*(cx-a[0])+gz*(cz-a[2]),hd=Math.max(1e-6,(z1-z0)/2);
+    return this._insert(this._obb('ramp',cx,cz,Math.max(1e-6,x1-x0),2*hd,yaw,{yA:top-grade*hd,yB:top+grade*hd,thick,y0:Math.min(...points.map(p=>p[1]))-thick,sticky:true,clip:points.flatMap(p=>[p[0],p[2]]),clipTop:Math.max(...points.map(p=>p[1]))}));
+  }
   /** Stairs helper: n steps rising along local +z from y0 to y1 inside footprint (w × d). y1 < y0 = stairs going down. The steps are flagged
    *  `sticky`: a walker that goes down them keeps its feet on the treads (no airborne flicker at running speed). */
   addStairs(cx, cz, w, d, rotY, y0, y1, n) {
@@ -228,7 +244,9 @@ export class Physics {
       const t = it.type;
       if (t !== 'walk' && t !== 'ramp' && t !== 'hole') continue;
       const [lx, lz] = this._local(it, x, z);
-      if (Math.abs(lx) > it.hw || Math.abs(lz) > it.hd) continue;
+      const tolerance=it.clip?1e-7:0;
+      if (Math.abs(lx) > it.hw+tolerance || Math.abs(lz) > it.hd+tolerance) continue;
+      if (it.clip && !convexContains(it.clip,x,z)) continue;
       if (t === 'hole') { if (!ignoreHoles) terrain = false; continue; }
       const top = t === 'walk' ? it.top : it.yA + (it.yB - it.yA) * (lz / (2 * it.hd) + 0.5);
       if (top <= lim && top > y) { y = top; kind = t; item = it; }
@@ -262,7 +280,9 @@ export class Physics {
       let hi = it.y1;
       if (it.type === 'walk') hi = it.top;
       else if (it.type === 'ramp') { const [, lz] = this._local(it, x, z); hi = it.yA + (it.yB - it.yA) * (Math.max(-it.hd, Math.min(it.hd, lz)) / (2 * it.hd) + 0.5); }
-      if (hi <= y0 || it.y0 >= y1) continue;
+      const bottom=it.clip&&it.type==='ramp'?hi-it.thick:it.y0;
+      if (hi <= y0 || bottom >= y1) continue;
+      if (it.clip) { if (convexCircleContact(it.clip,x,z,r,this._clipContact||(this._clipContact={}))) return true; continue; }
       if (it.type === 'cyl') { if (hyp(x - it.cx, z - it.cz) < r + it.r) return true; continue; }
       const [lx, lz] = this._local(it, x, z);
       if (Math.abs(lx) < it.hw + r && Math.abs(lz) < it.hd + r) return true;
@@ -290,6 +310,11 @@ export class Physics {
         if (it.type === 'cyl') {
           const dx = p.x - it.cx, dz = p.z - it.cz, d = hyp(dx, dz), m = r + it.r;
           if (d < m) { const k = d > 1e-6 ? (m - d) / d : 0; p.x += dx * k; p.z += dz * k; if (d <= 1e-6) p.x += m; moved = true; }
+          continue;
+        }
+        if (it.clip) {
+          const contact=this._clipContact||(this._clipContact={});
+          if(convexCircleContact(it.clip,p.x,p.z,r,contact)){p.x+=contact.nx*contact.depth;p.z+=contact.nz*contact.depth;moved=true;}
           continue;
         }
         const [lx, lz] = this._local(it, p.x, p.z);

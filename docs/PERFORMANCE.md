@@ -1711,3 +1711,91 @@ samples (0.0269%)**, locked as its explicit baseline; all other areas retain
 the 120-sample cap. No material/geometry exemption was added. Bespoke bridge
 and landmark surface intrusions are cleared. The historical strip residual
 rate is 91 / 221,118 (0.0412%). Marine retains 28 samples within its 120 cap.
+
+## 8.1.0: Lakhta, three flagpoles, waterfront and quay boarding
+
+The comparison uses the shipping 8.0.0 snapshot at `7d86b8d` and the final
+8.1.0 source with matching bakes. All runs use Edge 156.0.4314.50, ANGLE
+D3D11 on the RTX 3090 Ti, 1280 × 720, medium quality, normal baked loading,
+normal traffic/crowds/shadows and 20 seconds of real driving input. GPU jobs
+were serial; build and CPU audit jobs finished before the timed intervals.
+No profiling, mid-run screenshot, reduced scene or forced stale bake was used.
+The 8.0.0 runs were recorded earlier the same day on this machine; these are
+single samples, not a controlled claim that this release improves FPS.
+
+| Area / release | Load s | Mean / p50 / p95 / max ms | Frames >40 / >80 ms | Mean draws | Distance m | Heap / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Palace 8.0 | 26.32 | 24.5 / 17.9 / 36.0 / 287.6 | 19 / 2 | 1359 | 379 | 417 / 729 |
+| Palace 8.1 | 26.09 | 24.1 / 16.7 / 33.4 / 266.6 | 9 / 4 | 1243 | 354 | 539 / 1327 |
+| Admiralty 8.0 | 27.45 | 27.1 / 18.6 / 36.7 / 266.7 | 26 / 4 | 1420 | 117 | 488 / 1206 |
+| Admiralty 8.1 | 27.74 | 23.4 / 16.7 / 33.4 / 233.2 | 11 / 3 | 1136 | 111 | 481 / 1261 |
+| Sea Gates 8.0 | 11.44 | 18.8 / 17.5 / 30.2 / 62.4 | 14 / 0 | 562 | 855 | 249 / 427 |
+| Sea Gates 8.1 | 13.30 | 16.7 / 16.7 / 16.8 / 66.7 | 1 / 0 | 559 | 856 | 258 / 432 |
+| Okrug 65 8.0 | 14.22 | 19.8 / 17.6 / 32.7 / 396.7 | 17 / 2 | 720 | 763 | 436 / 564 |
+| Okrug 65 8.1 | 15.40 | 16.7 / 16.7 / 16.8 / 16.9 | 0 / 0 | 695 | 857 | 441 / 587 |
+
+All four final runs have zero failed regions. Both coastal cars finish on
+their WHSD decks at 170 km/h and 100% body condition; their end screenshots
+were inspected. The Okrug baseline stopped near the road curve, so its shorter
+distance and hitch count are not directly comparable to the completed run.
+Both centre attempts end wrecked after collisions, with different endpoints,
+visible work and resident regions: Palace 39 → 37, Admiralty 38 → 40. Their
+lower draw/frame samples do not establish a performance improvement.
+Comfortable driving at a consistent 30 FPS is still not achieved in the busy
+old centre: the final p95 is 33.4 ms and several frames exceed 80 ms.
+
+Every one of the **84 Palace and 89 Admiralty** bake products has identical
+SHA-256 content before and after this change. Ordinary rectangular collision
+paths retain their existing arithmetic; 5,004 exact physics comparisons pass.
+The heap columns are CDP `Runtime.getHeapUsage` samples after timing, with
+`usedSize` and `backingStorageSize` reported separately. They are not retained
+heap measurements. A separate matched-working-set GC diagnostic resolves the
+larger Palace backing sample: at the same walking pose after 20 s settling,
+baseline/current both retain 28 regions, 7,112 scene objects, 3,932 geometries,
+the same loaded products and 393.94 MiB of scene-referenced buffers. Explicit
+GC changes baseline heap/backing **510.00/1302.54 → 369.49/693.65 MiB** and
+current **504.92/1276.48 → 369.85/693.64 MiB**. The retained delta is +0.36 MiB
+JS and −0.009 MiB backing; the large removed allocations are collectible while
+scene counts stay unchanged. This controlled sample finds no meaningful
+retained growth and does not revise the timed FPS figures. Evidence:
+`shots/lakhta-palace-memory-pair.json`, its log and baseline/current screenshots.
+
+Reproduce with `node tools/drive-bench.mjs --area <id> --q medium --seconds 20
+--start "x,z,yaw" --json --diagnostics --out <prefix>`. Starts:
+Palace `498.2286,135.1625,76.0322`, Admiralty
+`-2493.919,-687.663,-52.605`, Sea Gates
+`-7731.233,3210.042,-125.796095`, Okrug 65
+`-6683.636,-7225.692,-5.965367`. Raw before/after artifacts are under
+`shots/coastal8-perf/` and `shots/lakhta-perf/`.
+
+The normal-bake browser playtest passes **42 checks**, including visible stern
+E boarding from dry quay pavement, a 45-second departure into open water,
+steering, both chase cameras and the bridge helm, braking, exit/respawn, both
+ordinary boats, the purple car and walking in the fountain. Its separate
+48-second ship sample measures mean/p50/p95 **16.68 / 16.7 / 16.8 ms**, max
+33.4 ms, 380 mean draws, zero frames above 40 ms and zero failed regions.
+The berth and route changed, so this is not an FPS comparison with the old
+offshore sample. Okrug 65 ↔ Islands normal walking hand-offs pass both ways,
+including the loading veil and monotone progress checks.
+
+Final normal-bake views cover the whole Lakhta complex, all three masts,
+the reported waterfront camera and the reported WHSD joint. The tower has
+61,981 triangles and no frame callbacks; the three masts have 12,238 triangles,
+nine bounded dynamic meshes and no new callbacks or textures. A real knock
+test checks 2.86 million transformed vertices through all three mast falls;
+the foot-centred spheres stay finite at 205–211 m and contain every part.
+The waterfront regression tests 28,409 surface triangles against actual road
+coverage, 128 rendered-slope raycasts, 23 shore walks and six actual boat
+courses beneath the island bridges. The coastal bridge proof covers 38,199
+full-width corner poses and 16,312 face poses, plus real walking/car crossings
+and the two physical Sea Canal decks. Railings remain independently knockable.
+
+All 17 final ownership audits pass. Marine/Okrug water checks pass 17/17 each,
+boat passage passes 105/105 and 54/54, both road wrappers pass with the unchanged
+Okrug **140 / 520,977** residual baseline, and strict marking coverage is 100%.
+Both legacy layout goldens are identical. Recorded normal page loads fetch
+no dependencies outside their closures; all nine broken-scanner mutants are
+still detected. Final manifests verify **1,463 complete products / 676.5 MiB
+gzip** across all 15 live areas. The additional legacy Palace boat-craft pinch
+test still reports the same 2.86 m float-block displacement at `-2114,-1038`
+on both clean 8.0.0 and 8.1.0; the normal Palace boat/profile suite passes 28/28.

@@ -27,12 +27,27 @@ export const OBELISK = { x: 592.2, z: 164.9, h: 36 };
 export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, tower: { x: 602.1, z: 246.4 } };
 export const GROUPS = { landmarksSeaGates: GROUPS_LIST, landmarksPortChurch: PORT_CHURCH, coastalBridges: COASTAL_BRIDGE_GROUPS };
 export function makeAreas() { return [{ name: 'Богоявленская церковь · Epiphany Church', c: [-5259.55, 2633.01], r: 90 }, { name: 'Канонерский остров · Kanonersky Island', c: [-7200, 2800], r: 500 }, { name: 'Морские ворота · Sea Gates', x0: -20000, x1: 20000, z0: -20000, z1: 20000 }]; }
-export function makeViews({ yawToward }) { const HERO = { x: -7590, z: 2940, yaw: yawToward(-7590, 2940, -8100, 3350), pitch: 3 }, church = { x: -5320, z: 2630, yaw: -93, pitch: 12 }; return { HERO, VIEWS: [{ key: 'Digit1', label: 'Канонерский остров', ...HERO }, { key: 'Digit2', label: 'Богоявленская церковь', ...church }, { key: 'Place.kanonersky', label: 'Канонерский остров', ...HERO }, { key: 'Place.port-church', label: 'Богоявленская церковь', ...church }] }; }
-export const TEST = { claimed: [{ id: 'w34863504', by: 'landmarksPortChurch', group: 'port-epiphany' }], viewKeys: ['Digit1', 'Digit2', 'Place.kanonersky', 'Place.port-church'], mustHaveAreas: [{ x: -5259.55, z: 2633.01, has: 'epiphany' }], farPoint: [-7200, 4500] };
+export function makeViews({ yawToward }) {
+  const HERO = { x: -7590, z: 2940, yaw: yawToward(-7590, 2940, -8100, 3350), pitch: 3 };
+  const church = { x: -5320, z: 2630, yaw: -93, pitch: 12 };
+  const containerShip = { x: -7094.64923, z: 2061.451063, yaw: yawToward(-7094.64923, 2061.451063, -7089.706069, 2060.699291), pitch: 3.2 };
+  return { HERO, VIEWS: [
+    { key: 'Digit1', label: 'Канонерский остров', ...HERO },
+    { key: 'Digit2', label: 'Богоявленская церковь', ...church },
+    { key: 'Place.kanonersky', label: 'Канонерский остров', ...HERO },
+    { key: 'Place.port-church', label: 'Богоявленская церковь', ...church },
+    { key: 'Place.containerShip', label: 'Контейнеровоз', ...containerShip },
+  ] };
+}
+export const TEST = { claimed: [{ id: 'w34863504', by: 'landmarksPortChurch', group: 'port-epiphany' }], viewKeys: ['Digit1', 'Digit2', 'Place.kanonersky', 'Place.port-church', 'Place.containerShip'], mustHaveAreas: [{ x: -5259.55, z: 2633.01, has: 'epiphany' }], farPoint: [-7200, 4500] };
 export const WATER = { farCenter: [-7500, 3000], farRadius: 6500, farSources: [], bridgeZones: COASTAL_BRIDGE_ZONES,
   riverKeys: Object.fromEntries(RIVER.map(r => [r.name, r.key || 'neva'])) };
 export const ZONES = { peopleDensity: { west: { scale: 1, platforms: 1, off: true }, mars: { scale: 1, zones: [], off: true } }, peopleHot: [], crowHaunts: [], farCentres: [{ x: -6500, z: 3000, bias: 500 }] };
-export const GARAGE = { poses: { lada: { x: -7589, z: 2926, yaw: Math.PI } }, spawn: { x: -7589, z: 2926, yaw: Math.PI }, boats: [{ id: 'boat-sea-gates', dock: 'sea-gates', x: -7610, z: 2980, yaw: 2.6 }, { id: 'container-ship', vessel: 'container-ship', dock: 'sea-gates-anchorage', x: -8100, z: 3350, yaw: 150 * Math.PI / 180 }] };
+// Stern-to-quay on Kanonersky Island: the entire 400 m hull points east into
+// the broad harbour. The stern E prompt is 5 m from dry pavement at
+// −7094.65,2061.45, reached from HERO along the island's service-road frontage.
+// The 500 m departure corridor and broad turns clear docks and the WHSD.
+export const GARAGE = { poses: { lada: { x: -7589, z: 2926, yaw: Math.PI } }, spawn: { x: -7589, z: 2926, yaw: Math.PI }, boats: [{ id: 'boat-sea-gates', dock: 'sea-gates', x: -7610, z: 2980, yaw: 2.6 }, { id: 'container-ship', vessel: 'container-ship', dock: 'sea-gates-anchorage', x: -6888.02511, z: 2030.026979, yaw: 1.7217231388856107 }] };
 export const PRUNE_SERVICES = ['city', 'landmarksSeaGates'];
 // The harbour garage frontage is too narrow for the metre-raster mask to
 // contain the widest grass clumps. Keep its actual mapped service lane clear.

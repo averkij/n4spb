@@ -1,6 +1,6 @@
 {
   "name": "n4spb-nevsky",
-  "version": "8.0.0",
+  "version": "8.1.0",
   "description": "A walkable anime cel-shaded 3D strip of Saint Petersburg: Moscow Railway Station, Nevsky Prospekt, the district around it, Palace Square, the Hermitage and the Admiralty, with seven metro stations, cars, people, trains, boats and a drivable car; plain three.js, static deploy",
   "private": true,
   "type": "module",
@@ -104,7 +104,7 @@
     "roads:areas": "node tools/each-live-area.mjs tools/roads.mjs",
     "markings:areas": "node tools/each-live-area.mjs tools/streets-markings-audit.mjs --geom --strict",
     "ported-solids": "node tools/ported-solids-test.mjs",
-    "coast": "node tools/area.mjs morskie-vorota tools/coastal-area-test.mjs && node tools/area.mjs okrug65 tools/coastal-area-test.mjs && node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine && node tools/area.mjs okrug65 tools/marine-data-bridges-test.mjs --yacht && node tools/area.mjs islands tools/marine-data-bridges-test.mjs --yacht && node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs"
+    "coast": "node tools/physics-triangle-test.mjs && node tools/area.mjs okrug65 tools/three-flagpoles-test.mjs && node tools/area.mjs okrug65 tools/okrug65-waterfront-test.mjs && node tools/area.mjs morskie-vorota tools/coastal-area-test.mjs && node tools/area.mjs okrug65 tools/coastal-area-test.mjs && node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine && node tools/area.mjs okrug65 tools/marine-data-bridges-test.mjs --yacht && node tools/area.mjs islands tools/marine-data-bridges-test.mjs --yacht && node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs"
   },
   "devDependencies": {
     "puppeteer-core": "^23.11.1",

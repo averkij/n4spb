@@ -8,6 +8,9 @@ import { GROUPS as PETRO_BRIDGE_GROUPS } from '../../areas/petro/bridge-groups.j
 // ramps through bridgesPetro. Never draw a second generic deck above it.
 export const YACHTNY_GROUP = PETRO_BRIDGE_GROUPS.find(g => g.key === 'yachtny');
 const SHARED_BRIDGE_IDS = new Set(YACHTNY_GROUP.osm);
+// These three mapped access jetties belong to the authored Flag Square. Its
+// exact platforms/approaches replace the old generic bridge slabs completely.
+const FLAG_ACCESS_IDS = new Set(['w1426773313', 'w1426773301', 'w1426773295']);
 
 const pedestrian = r => /^(footway|path|cycleway|pedestrian|steps)$/.test(r.hw);
 const whsd = r => r.name === 'ЗСД' || r.ref === 'ЗСД';
@@ -55,7 +58,7 @@ function sampleLine(p) {
 
 /** Pure constructor also used by the bridge continuity regression fixtures. */
 export function coastalSites(roads) {
-  const bridges=roads.filter(r=>r.bridge&&!r.tunnel&&r.pts?.length>=4&&!SHARED_BRIDGE_IDS.has(r.id)).map(r=>{
+  const bridges=roads.filter(r=>r.bridge&&!r.tunnel&&r.pts?.length>=4&&!SHARED_BRIDGE_IDS.has(r.id)&&!FLAG_ACCESS_IDS.has(r.id)).map(r=>{
     const p=sampleLine(r.pts),isWhsd=whsd(r),northbound=direction(r)<0;
     let len=0;for(let i=2;i<p.length;i+=2)len+=Math.hypot(p[i]-p[i-2],p[i+1]-p[i-1]);
     const yacht=/Яхтен/.test(r.name||''),marine=isWhsd&&p.some((z,i)=>i%2&&z>0);

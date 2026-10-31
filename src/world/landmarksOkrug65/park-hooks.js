@@ -1,6 +1,7 @@
 // Pure area hooks for Park 300: mapped groves, all?es and sand.
 // No Three.js, renderer, layout, area or runtime imports.
 import { PARK, GROVES, TREES, ROWS, BEACHES } from "./park-data.js";
+import { inWaterfrontPaving, WATERFRONT_PAVED_RINGS } from './waterfront-plan.js';
 
 function inRing(x, z, a) {
   let inside = false;
@@ -47,6 +48,7 @@ const groveCells = index(GROVES.flatMap(g => g.polys), p => {
 /** Pass as HOOKS.treeReject: () => treeReject. Mapped trees and allées stay;
  *  only unrecorded procedural trees on the park's designed lawns are rejected. */
 export function treeReject(x, z) {
+  if (inWaterfrontPaving(x, z)) return 'park300-waterfront-paving';
   if (inBeach(x, z)) return 'park300-beach';
   if (!inPark(x, z)) return null;
   const key = Math.floor(x / CELL) + ',' + Math.floor(z / CELL);
@@ -55,4 +57,5 @@ export function treeReject(x, z) {
   if (groveCells.get(key)?.some(p => inPoly(x, z, p))) return null;
   return 'park300-open-lawn';
 }
-export const pavedRings = BEACHES.flatMap(b => b.polys.map(p => Array.from({ length: p.o.length / 2 }, (_, i) => [p.o[i * 2], p.o[i * 2 + 1]])));
+export const tuftReject = (x, z) => inBeach(x, z) || inWaterfrontPaving(x, z);
+export const pavedRings = [...WATERFRONT_PAVED_RINGS, ...BEACHES.flatMap(b => b.polys.map(p => Array.from({ length: p.o.length / 2 }, (_, i) => [p.o[i * 2], p.o[i * 2 + 1]])))];

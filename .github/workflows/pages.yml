@@ -136,6 +136,9 @@ jobs:
         run: node tools/area.mjs north tools/north-knock-test.mjs
       - name: Coastal ship and physical bridge decks
         run: |
+          node tools/physics-triangle-test.mjs
+          node tools/area.mjs okrug65 tools/three-flagpoles-test.mjs
+          node tools/area.mjs okrug65 tools/okrug65-waterfront-test.mjs
           node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine
           node tools/area.mjs okrug65 tools/marine-data-bridges-test.mjs --yacht
           node tools/area.mjs islands tools/marine-data-bridges-test.mjs --yacht

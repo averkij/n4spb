@@ -58,10 +58,15 @@ export function loadBoats(ctx, { carry = null, docks: suppliedDocks = null } = {
     if (ph.waterLevel && ph.waterLevel(d.x, d.z) == null) continue;        // no water at the dock (a data change): no boat rather than a boat on the pavement
     const ship = d.vessel === 'container-ship';
     const spec = { ...(ship ? CONTAINER_SHIP_SPEC : SPEC_BOAT) };
+    const boardingPoints = ship ? [
+      { x: spec.W / 2 + 3, y: 5.2, z: 76 },
+      { key: 'port', x: -spec.W / 2 - 3, y: 5.2, z: 76 },
+      { key: 'stern', x: 0, y: 5.2, z: spec.rear - 4.05 },
+    ] : null;
     out.push({
       id: d.id || 'boat', kind: 'boat', vessel: ship ? 'container-ship' : undefined, dock: d.dock || null, carried: !!d.carried, carriedFrom: d.carriedFrom || null, ...PRESENTATION,
       ...(ship ? { name: 'Контейнеровоз', nameEn: 'Container ship', label: 'Управлять контейнеровозом', labelEn: 'Take the container ship helm', toast: 'Контейнеровоз · W S тяга / реверс · A D руль · V мостик', reach: 9,
-        boarding: { x: spec.W / 2 + 3, z: 76 }, chase: { near: 295, far: 430, height: 110, lookY: 24, lookAhead: 65 } } : {}),
+        boarding: boardingPoints[0], boardingPoints, chase: { near: 295, far: 430, height: 110, lookY: 24, lookAhead: 65 } } : {}),
       spec, tuning: ship ? { ...CONTAINER_SHIP_TUNING, edgeMargin: 6 } : boatTuning(spec), parked: { x: d.x, z: d.z, yaw: Number.isFinite(d.yaw) ? d.yaw : 0 },
       sound: BOAT_SOUND, hud: { boat: true, gearD: true, noBoost: true, noCondition: true, keys: HUD_KEYS }, exhaust: [], makeModel: (c) => ship ? createContainerShipModel(c) : createBoatModel(c),
     });

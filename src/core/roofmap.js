@@ -82,8 +82,9 @@ export function captureRoofMap(renderer, scene, root, footprints, physics, { res
   // ---- cells that already have their own elevated floor (walk boxes / ramps: podium plaza, platform, bridge decks) are not roofs
   const excl = new Uint8Array(w * h);
   for (const it of physics.items) {
-    const top = it.type === 'walk' ? it.top : it.type === 'ramp' ? Math.max(it.yA, it.yB) : NaN;
+    const top = it.type === 'walk' ? it.top : it.type === 'ramp' ? (it.clipTop ?? Math.max(it.yA, it.yB)) : NaN;
     if (!(top >= minTop)) continue;
+    if (it.clip) { fillRings([it.clip],m,(j,i0,i1)=>excl.fill(1,j*w+i0,j*w+i1+1)); continue; }
     const hw = it.hw + 0.3, hd = it.hd + 0.3, ring = [];
     for (const [lx, lz] of [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]]) ring.push(it.cx + lx * it.c + lz * it.s, it.cz - lx * it.s + lz * it.c);
     fillRings([ring], m, (j, i0, i1) => excl.fill(1, j * w + i0, j * w + i1 + 1));

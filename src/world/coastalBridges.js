@@ -3,7 +3,8 @@
 // St Petersburg administration 2016/96074 (Sea Canal 52 m clearance).
 // Static cell batching, bounded knockable rails, no per-frame work.
 import * as THREE from 'three';
-import { COASTAL_BRIDGES, deckAtSegments } from './coastalBridges/sites.js';
+import { COASTAL_BRIDGES } from './coastalBridges/sites.js';
+import { planCoastalDecks, deckAtTriangles } from './coastalBridges/deck-plan.js';
 import { WHSD, whsdY } from './bridges/sites-vo2.js';
 import { Parts } from './bridges/kit.js';
 import { knockInstances } from './lib/knock-inst.js';
@@ -36,17 +37,12 @@ function groundRoadBlocker(net){
 export function build(ctx) {
   const concrete = ctx.mat.toon('#a2a5a0',{name:'coastal-concrete'}), asphalt = ctx.mat.toon('#5a5e61',{name:'coastal-asphalt'}), steel = ctx.mat.toon('#526468',{name:'coastal-steel'}), stripe = ctx.mat.toon('#dad5bb',{name:'coastal-marking'});
   const P = new Parts(), root = new THREE.Group(); root.name = 'coastalBridges';
-  const segments = [], railSpots = [], railItems = [];
+  const plan=planCoastalDecks(COASTAL_BRIDGES),segments=plan.segments,railSpots = [], railItems = [];
   const ph = ctx.physics;
   const groundBlocked=groundRoadBlocker(ctx.services.streets?.net);
   let supportsSkipped=0,railsSkipped=0;
   for (const b of COASTAL_BRIDGES) {
-    const p = b.pts, spans = [];
-    for (let i = 0; i + 3 < p.length; i += 2) {
-      const ax = p[i], az = p[i + 1], bx = p[i + 2], bz = p[i + 3], len = Math.hypot(bx - ax, bz - az);
-      if (len < 0.1) continue;
-      spans.push({ ax, az, bx, bz, len, ya: b.heights[i / 2], yb: b.heights[i / 2 + 1], yaw: Math.atan2(bx - ax, bz - az) });
-    }
+    const spans=segments.filter(s=>s.bridge===b);
     let at = 0;
     for (const s of spans) {
       // Small crossings stay near the street. Tall viaduct access slopes are
@@ -56,22 +52,22 @@ export function build(ctx) {
       // Its landing uses asphalt there (notably the Krestovsky Yacht Bridge
       // approach). Retain its shared ramp elevations to keep joints continuous.
       const groundLanding=b.foot&&Math.max(s.ya,s.yb)<=2.5&&[-.45,-.25,0,.25,.45].some(t=>groundBlocked(x+(s.bx-s.ax)*t,z+(s.bz-s.az)*t,half));
-      P.push(x, 0, z, s.yaw);
-      const quad = (mat, x0, x1, off) => P.quad(mat, [x0,s.ya+off,-s.len/2], [x1,s.ya+off,-s.len/2], [x1,s.yb+off,s.len/2], [x0,s.yb+off,s.len/2], [0,1,0]);
-      quad(b.foot&&!b.yacht&&!groundLanding ? concrete : asphalt, -half, half, .025);
+      s.groundLanding=groundLanding;
+      const raised=(p,y)=>[p[0],p[1]+y,p[2]],between=(cap,u)=>cap.left.map((v,i)=>v+(cap.right[i]-v)*u);
       // The web and soffit are geometry, so navigation clearances use the same
       // depth as the walking ramp. WHSD retains its characteristic box girder.
       for (const side of [-1,1]) {
-        const a=side*(half+.25),inner=side*Math.max(1,half-2.5);
-        P.quad(concrete,[a,s.ya-.5,-s.len/2],[a,s.yb-.5,s.len/2],[a,s.yb+.02,s.len/2],[a,s.ya+.02,-s.len/2],[side,0,0]);
-        P.quad(concrete,[a,s.ya-.5,-s.len/2],[inner,s.ya-b.depth,-s.len/2],[inner,s.yb-b.depth,s.len/2],[a,s.yb-.5,s.len/2],[side,-1,0]);
+        const key=side===1?'right':'left',a=s.a[key],c=s.b[key],inner=side*Math.max(.1,half-2.5),u=(inner+half)/b.w;
+        const ia=between(s.a,u),ic=between(s.b,u),nx=Math.cos(s.yaw)*side,nz=-Math.sin(s.yaw)*side;
+        P.quad(concrete,raised(a,-.5),raised(c,-.5),raised(c,.025),raised(a,.025),[nx,0,nz]);
+        P.quad(concrete,raised(a,-.5),raised(ia,-b.depth),raised(ic,-b.depth),raised(c,-.5),[nx,-1,nz]);
       }
-      const bottom=Math.max(1,half-2.5);
-      P.quad(concrete,[-bottom,s.ya-b.depth,-s.len/2],[bottom,s.ya-b.depth,-s.len/2],[bottom,s.yb-b.depth,s.len/2],[-bottom,s.yb-b.depth,s.len/2],[0,-1,0]);
-      if (!b.foot) for (const side of [-1,1]) quad(stripe,side*(half-.3)-.05,side*(half-.3)+.05,.055);
-      P.pop();
-      ph.addWalkRamp(x, z, b.w, s.len, s.yaw, s.ya + .025, s.yb + .025, b.depth);
-      const seg = { ...s, x, z, w: b.w, y: b.y, id: b.id }; segments.push(seg);
+      const bottom=Math.max(.1,half-2.5),ul=(half-bottom)/b.w,ur=(half+bottom)/b.w;
+      P.quad(concrete,raised(between(s.a,ul),-b.depth),raised(between(s.a,ur),-b.depth),raised(between(s.b,ur),-b.depth),raised(between(s.b,ul),-b.depth),[0,-1,0]);
+      if (!b.foot) for (const side of [-1,1]) {
+        const u0=(side*(half-.3)-.05+half)/b.w,u1=(side*(half-.3)+.05+half)/b.w;
+        P.quad(stripe,raised(between(s.a,u0),.055),raised(between(s.a,u1),.055),raised(between(s.b,u1),.055),raised(between(s.b,u0),.055),[0,1,0]);
+      }
       // Discrete piers leave the navigation opening clear. A 150m support
       // spacing on the high harbour viaduct keeps the fairway open to boats.
       const spacing = b.whsd ? 150 : 80;
@@ -88,17 +84,17 @@ export function build(ctx) {
       }
       // Equal subdivisions cover the whole edge with <=6.4m breakable panels.
       // Collider length, pitched visual and knock dimensions use the same span.
-      const panels=Math.max(1,Math.ceil(s.len/6.4)),panelLen=s.len/panels;
-      for (const side of [-1, 1]) for (let j=0;j<panels;j++) {
-        const d=(j+.5)*panelLen;
-        const sx = Math.cos(s.yaw) * side * (half + .18), sz = -Math.sin(s.yaw) * side * (half + .18);
-        const px = s.ax + (s.bx - s.ax) * d / s.len + sx, pz = s.az + (s.bz - s.az) * d / s.len + sz;
-        const ry = s.ya + (s.yb - s.ya) * d / s.len;
-        const grade=(s.yb-s.ya)/s.len,dy=Math.abs(grade)*panelLen/2;
+      for (const side of [-1, 1]) {
+        const key=side===1?'right':'left',a=s.a[key],c=s.b[key],edgeLen=Math.hypot(c[0]-a[0],c[2]-a[2]),yaw=Math.atan2(c[0]-a[0],c[2]-a[2]);
+        const panels=Math.max(1,Math.ceil(edgeLen/6.4)),panelLen=edgeLen/panels;
+        for(let j=0;j<panels;j++){
+        const t=(j+.5)/panels,px=a[0]+(c[0]-a[0])*t,pz=a[2]+(c[2]-a[2])*t,ry=a[1]+(c[1]-a[1])*t;
+        const grade=(c[1]-a[1])/edgeLen,dy=Math.abs(grade)*panelLen/2;
         // Low bridge approaches leave an opening at crossing ground streets.
         if(ry-dy<=2.5&&(groundBlocked(px,pz,Math.hypot(.06,panelLen/2))||ctx.L?.insideBuilding(px,pz,Math.hypot(.06,panelLen/2)))){railsSkipped++;continue;}
-        railSpots.push({ x: px, y: ry + .04, z: pz, rotY: s.yaw, len:panelLen,grade });
-        railItems.push(ph.addBox(px, pz, .12, panelLen, s.yaw, ry + .03-dy, ry + 1.17+dy));
+        railSpots.push({ x: px, y: ry + .04, z: pz, rotY: yaw, len:panelLen,grade });
+        railItems.push(ph.addBox(px, pz, .12, panelLen, yaw, ry + .03-dy, ry + 1.17+dy));
+        }
       }
       // Pale steel two-storey truss, built only from the lower carriageway.
       // Upper-deck geometry remains the mapped opposing lane, not a duplicate.
@@ -112,6 +108,26 @@ export function build(ctx) {
         }
       }
       at += s.len;
+    }
+  }
+  // A single source of truth for render, walking and the car's deck service.
+  // Planar clipped ramps do not fill their enclosing boxes above open water.
+  for(const f of plan.triangles){
+    const mat=f.b.foot&&!f.b.yacht&&!f.segment?.groundLanding?concrete:asphalt;
+    P.fan(mat,f.points,[0,1,0]);ph.addWalkTriangle(f.points,f.depth);
+    if(f.joint){
+      // A bounded bevel wedge has the same real slab volume as its collider.
+      // Close its soffit and ONLY exposed boundary edges; internal triangle
+      // diagonals and edges adjoining another deck do not get duplicate webs.
+      P.fan(concrete,f.points.map(p=>[p[0],p[1]-f.depth,p[2]]),[0,-1,0]);
+      const[a,b,c]=f.points,sign=Math.sign((b[0]-a[0])*(c[2]-a[2])-(b[2]-a[2])*(c[0]-a[0]));
+      for(let i=0;i<3;i++){
+        const u=f.points[i],v=f.points[(i+1)%3],dx=v[0]-u[0],dz=v[2]-u[2],len=Math.hypot(dx,dz);if(len<1e-5)continue;
+        const nx=sign*dz/len,nz=-sign*dx/len,x=(u[0]+v[0])/2+nx*.015,z=(u[2]+v[2])/2+nz*.015,y=(u[1]+v[1])/2;
+        const adjacent=deckAtTriangles(plan.triangles,x,z,y);
+        if(adjacent!==null&&Math.abs(adjacent-y)<.03)continue;
+        P.quad(concrete,[u[0],u[1]-f.depth,u[2]],[v[0],v[1]-f.depth,v[2]],v,u,[nx,0,nz]);
+      }
     }
   }
   // Korabelny's inward-leaning portal pylons and fan stays reproduce the source
@@ -146,18 +162,21 @@ export function build(ctx) {
   knockInstances(ctx, { name: 'coastal-rail', spots: railSpots, items: railItems, parts: geos.map(m => ({ geo: m.geometry, mat: steel,place:railMatrix })), rec: s=>({ kind: 'fence', mass: 45*s.len/6.4, h: 1.15, w: .12, d:s.len, anchored: true, metal: true }), far: 260 });
   // Spatial cells avoid querying every coastal bridge for each traffic agent.
   const grid = new Map(), cell = 128;
-  for (const s of segments) for (let ix = Math.floor((Math.min(s.ax, s.bx) - s.w) / cell); ix <= Math.floor((Math.max(s.ax, s.bx) + s.w) / cell); ix++) for (let iz = Math.floor((Math.min(s.az, s.bz) - s.w) / cell); iz <= Math.floor((Math.max(s.az, s.bz) + s.w) / cell); iz++) { const key = ix + ',' + iz; if (!grid.has(key)) grid.set(key, []); grid.get(key).push(s); }
+  for (const f of plan.triangles) {
+    const xs=f.points.map(p=>p[0]),zs=f.points.map(p=>p[2]);
+    for(let ix=Math.floor(Math.min(...xs)/cell);ix<=Math.floor(Math.max(...xs)/cell);ix++)for(let iz=Math.floor(Math.min(...zs)/cell);iz<=Math.floor(Math.max(...zs)/cell);iz++){const key=ix+','+iz;if(!grid.has(key))grid.set(key,[]);grid.get(key).push(f);}
+  }
   const empty=[];
   const prior = ctx.services.bridges;
   const deckY = (x,z,ref=Infinity) => {
-    const own = deckAtSegments(grid.get(Math.floor(x/cell)+','+Math.floor(z/cell))||empty,x,z,ref);
+    const own = deckAtTriangles(grid.get(Math.floor(x/cell)+','+Math.floor(z/cell))||empty,x,z,ref);
     const shared = prior?.deckY?.(x,z,ref) ?? null;
     // Yacht's high authored deck can cross a low mapped coastal approach.
     // Both the hook and public service must select the highest reachable
     // floor, rather than allowing the first low deck to hide the shared one.
     return shared !== null && shared <= ref + 1.2 ? (own === null ? shared : Math.max(own, shared)) : own;
   };
-  ctx.services.coastalBridges = { list: COASTAL_BRIDGES, segments, deckY };
+  ctx.services.coastalBridges = { list: COASTAL_BRIDGES, segments, triangles:plan.triangles, mitered:plan.mitered, beveled:plan.beveled, deckY };
   ctx.services.bridges = { ...(prior || {}), list: [...(prior?.list || []), ...COASTAL_BRIDGES.map(b => ({ id: b.id, x: b.cx, z: b.cz }))], deckY };
   return { bridges: COASTAL_BRIDGES.length, rails: railSpots.length, meshes: meshes.length,pylons,supportsSkipped,railsSkipped };
 }

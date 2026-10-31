@@ -4,6 +4,8 @@ The first coastal checkpoint is `b0c849e` (fresh OSM data and initial
 territories), followed by the complete 7.0.0 build at `e2886b7`. Release 8.0.0
 integrates the completed Petrograd port from `70b1d80`, connecting all 15 live
 areas while preserving both branches' water, collision and hand-off changes.
+Release 8.1.0 adds the researched Lakhta complex, three monumental flagpoles,
+rebuilt park shore surfaces and quay access to the container ship.
 
 ## Geography and scene content
 
@@ -20,6 +22,9 @@ dossiers record primary references and photo-derived estimates:
 [port and ship](research/sea-gates-landmarks.md),
 [park and Piterland](research/okrug65-landmarks.md), and
 [Epiphany Church](research/port-church-landmark.md).
+The 8.1.0 follow-up has separate dossiers for [Lakhta Center](research/lakhta-center.md),
+[the three flagpoles](research/three-flagpoles.md) and
+[the waterfront](research/okrug65-waterfront.md).
 
 The play territories follow B600, with small documented marine overlap bands
 that give Gavan and Vasilyevsky distinct usable exits. A two-cell accidental
@@ -31,18 +36,22 @@ geometry and priority tests.
 
 ## Container ship easter egg
 
-A neutral vessel inspired by the Hamburg Express class waits west of the
-Kanonersky harbour, at **−8100, 3350**, heading 150 degrees. It is 399.9 m long,
+A neutral vessel inspired by the Hamburg Express class waits stern-to-quay
+on Kanonersky Island, at **−6888.03, 2030.03**, facing the inner harbour.
+It is 399.9 m long,
 61 m wide, with 4,862 individually instanced deck containers, a forward bridge,
 separate aft funnel, hull and lashing details. There are no flags or company logos.
 
-Walk or take the nearby motorboat to its starboard boarding point, approximately
-**−8091, 3267**, then press **E**. **W/S** control thrust and reverse, **A/D**
+Walk to the dry quay at **−7094.65, 2061.45**, look at the gold **E** panel
+on the stern and press **E**. A tested dry walking route from the area start
+passes **−7346,2456 → −7318,2410 → −7248,2254**. The interaction sits above
+water at the panel's height. Both side boarding points remain usable too.
+**W/S** control thrust and reverse, **A/D**
 steer, **Space** stops, **V** switches between chase views and the bridge,
 **E** exits, and **R** returns the player to the scene start. Its inertia and
 turning rate differ from the motorboat. The complete hull checks shores,
 structures and bridge clearance; the model keeps its identity during hand-offs.
-Both sides have boarding prompts, including when an obstacle forces an exit
+Both sides and the stern have boarding prompts, including when an obstacle forces an exit
 on the opposite side. Blocked exits cannot use a fallback inside the hull.
 
 Shoreline probes follow the same hull stations as the model, including its
@@ -78,7 +87,9 @@ query run from 1,410 ms to 102 ms. Landmarks add no frame callbacks.
 grades, both physical WHSD floors, and the real ship's controls, collisions,
 boarding, blocked exits, respawn and hand-off identity. These checks also run in
 CI. Normal motorboat, knock, hand-off, car and area regressions remain in place.
-The ship suite has 19 passing checks, including narrow-island contact at two
+The ship suite has 23 passing checks, including the dry walking and boarding
+route, a 281 m clear departure followed by broad turns in both directions,
+narrow-island contact at two
 headings, reverse stern contact, blocked exits, and real hand-off refusal for
 an interior terrain hole or an off-centre pier. The focused Palace motorboat
 regression passes 28 checks, and the pure hand-off suite passes 31.

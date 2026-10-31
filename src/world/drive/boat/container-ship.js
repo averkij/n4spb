@@ -178,13 +178,28 @@ export function createContainerShipModel(ctx) {
   const driver = mk(DR, 'container-ship-helmsman'); root.add(driver); driver.visible = false;
   WH.torus(.35, .035, '#293637', [0, 0, 0], null, 5, 12); WH.box(.04, .66, .04, '#293637', [0, 0, 0]);
   const steerWheel = new THREE.Group(); steerWheel.position.set(0, 47.1, 76.1); steerWheel.add(mk(WH, 'container-ship-wheel')); root.add(steerWheel);
+  // High-contrast boarding panels are at quay eye height, directly above both
+  // real E interactions. They disappear while the ship is under command.
+  // Simple vertex-coloured geometry keeps the marker in the shared toon path.
+  const boardVB = new VB(0);
+  for (const side of [-1, 1]) {
+    boardVB.box(.16, 3.4, 2.5, '#d3b24f', [side * 31.6, 5.2, 76]);
+    boardVB.box(.18, 2.65, .23, '#f0eee1', [side * 31.72, 5.2, 76 + side * .72]);
+    for (const y of [4, 5.2, 6.4]) boardVB.box(.18, .23, 1.45, '#f0eee1', [side * 31.72, y, 76]);
+  }
+  // Stern-to-quay boarding lets this enormous hull leave directly into the
+  // open bay. The third interaction is just outside the transom, not mid-hull.
+  boardVB.box(2.5, 3.4, .16, '#d3b24f', [0, 5.2, -200.1]);
+  boardVB.box(.23, 2.65, .18, '#f0eee1', [.72, 5.2, -200.22]);
+  for (const y of [4, 5.2, 6.4]) boardVB.box(1.45, .23, .18, '#f0eee1', [0, y, -200.22]);
+  const boardingMarkers = mk(boardVB, 'container-ship-boarding-E'); root.add(boardingMarkers);
   const lamps = new THREE.MeshBasicMaterial({ color: '#ffffff' });
   let driven = false, inside = false;
-  const showDriver = () => { driver.visible = driven && !inside; roof.visible = !inside; };
+  const showDriver = () => { driver.visible = driven && !inside; roof.visible = !inside; boardingMarkers.visible = !driven; };
   root.userData.containerCount = places.length;
   root.userData.shipDimensions = { length: 399.9, beam: 61 };
   return {
-    root, body, glass, wheels: [], steerWheel, driver, flames: [], glow: null,
+    root, body, glass, wheels: [], steerWheel, driver, boardingMarkers, flames: [], glow: null,
     headMat: lamps, tailMat: lamps, spec: CONTAINER_SHIP_SPEC, boat: true,
     set(p) {
       root.position.set(p.x, p.y, p.z);

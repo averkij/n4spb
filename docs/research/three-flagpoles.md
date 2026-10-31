@@ -32,6 +32,10 @@ The shaft uses the engineer's cylindrical/tapered profile, narrow section collar
 
 Each 60 × 40 m cloth is a static, gently filled textile with folds, a fixed hoist, free-edge sag and slight alternating sewn-panel tones. The three share one wind direction with small phase differences. The USSR cloth has a gold outlined star, hammer and curved sickle on both sides. Emblem triangles follow the formed cloth surface. The colour bands have independent boundary vertices, so the tricolours have sharp woven edges. This is a formed pose, not a cloth simulation or wind animation.
 
+The culling sphere of each geometry is centred on the mast foot and includes its farthest actual vertex, including the cloth's free edge. The shared knock helper adds its normal 30 m throw allowance. Thus a mast falling flat stays inside the finite per-mast bounds; its standing geometry box stays exact. Actual 75 km/h knock-and-settle verification checks every transformed shaft, collar and cloth vertex against the resulting mesh spheres.
+
+The permanent CPU check is `node tools/area.mjs okrug65 tools/three-flagpoles-test.mjs`, also included in the Coastal CI step. It verifies the real shaft diameters and height, dry island datum, source rotation envelopes, standing draw bounds, and every vertex of all three mast assemblies through 181 real knock-and-settle frames. The resulting finite mesh radii are 204–211 m.
+
 All materials come from the shared toon factory. No photographs, logos, canvas textures, custom shaders, new frame callbacks or sound sources are added. The complete mast, collars and cloth are one shared knock record. Its eight height-banded physical cylinders remain attached to that record; the textile itself has no collider and creates no water barrier. A high-speed impact can release the anchored structure through the existing knock system.
 
 Focused headless build: **12,238 triangles, 9 instanced mesh draws, 3 shared materials, 24 colliders, 3 knock records, 0 module update callbacks, 0 texture pixels**. Integrated normal-render review and shipping-bake verification belong to the lead's checkpoint.

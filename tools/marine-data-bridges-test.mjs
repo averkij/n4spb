@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { coastalSites, marineWhsdHeight, deckAtSegments, YACHTNY_GROUP } from '../src/world/coastalBridges/sites.js';
 import { whsdY } from '../src/world/bridges/sites-vo2.js';
 import { clipHeightBand } from './lib/vertical-band.mjs';
+import { planCoastalDecks, deckAtTriangles } from '../src/world/coastalBridges/deck-plan.js';
+import { Physics } from '../src/core/physics.js';
 
 const road=(id,pts,extra={})=>({id,pts,hw:'service',w:4,bridge:1,layer:1,...extra});
 const near=(a,b,msg)=>assert(Math.abs(a-b)<1e-7,`${msg}: ${a} vs ${b}`);
@@ -30,10 +32,36 @@ for(const br of fixtures)for(let i=1;i<br.heights.length;i++){
   assert(Math.abs(br.heights[i]-br.heights[i-1])<=.060001*d,'ordinary-road approach grade');
 }
 
-let shared=0,segments=0;
+let shared=0,segments=0,widthProbes=0,faceProbes=0,oldCornerHoles=0;
 for(const id of['morskie-vorota','okrug65']){
   const data=await import(`../src/areas/${id}/data/city.js`),sites=coastalSites(data.ROADS),nodes=new Map();
   assert(!sites.some(s => YACHTNY_GROUP.osm.includes(s.road.id)), 'shared Yacht Bridge has no second generic coastal deck');
+  assert(!sites.some(s=>['w1426773313','w1426773301','w1426773295'].includes(s.road.id)),'authored flag approaches have no generic duplicate slab');
+  const plan=planCoastalDecks(sites),physical=new Physics(()=>-50),floorGrid=new Map(),gridSize=32;
+  for(const s of plan.segments){
+    const[a,b,c,d]=[s.a.left,s.a.right,s.b.right,s.b.left],turn=(u,v,w)=>(v[0]-u[0])*(w[2]-u[2])-(v[2]-u[2])*(w[0]-u[0]);
+    assert(turn(a,b,c)*turn(a,c,d)>=-1e-6,`${id}/${s.id} short span never becomes a crossed miter quad`);
+  }
+  for(const f of plan.triangles){
+    assert(physical.addWalkTriangle(f.points,f.depth),'every drawn face has a nondegenerate physical triangle');
+    const xs=f.points.map(p=>p[0]),zs=f.points.map(p=>p[2]);
+    for(let x=Math.floor(Math.min(...xs)/gridSize);x<=Math.floor(Math.max(...xs)/gridSize);x++)for(let z=Math.floor(Math.min(...zs)/gridSize);z<=Math.floor(Math.max(...zs)/gridSize);z++){const k=x+','+z;if(!floorGrid.has(k))floorGrid.set(k,[]);floorGrid.get(k).push(f);}
+  }
+  const exact=(x,z,ref)=>deckAtTriangles(floorGrid.get(Math.floor(x/gridSize)+','+Math.floor(z/gridSize))||[],x,z,ref);
+  for(const f of plan.triangles)for(const weights of[[1/3,1/3,1/3],[.5,.5,0],[.5,0,.5],[0,.5,.5]]){
+    const p=[0,0,0];for(let k=0;k<3;k++)for(let j=0;j<3;j++)p[j]+=f.points[k][j]*weights[k];
+    near(physical.groundHeight(p[0],p[2],p[1]+.01,false),exact(p[0],p[2],p[1]-.74),id+' exact rendered/physical triangle floor');faceProbes++;
+  }
+  for(const node of plan.nodes.values())if(node.edges.length===2){
+    const e=node.edges[0],s=e.s,cap=s[e.end];
+    for(let i=0;i<=20;i++){
+      const t=i/20,x=cap.left[0]+(cap.right[0]-cap.left[0])*t,z=cap.left[2]+(cap.right[2]-cap.left[2])*t,y=node.y+.025;
+      assert(physical.groundHeight(x,z,y+.01,false)>=y-1e-6,`${id} full width corner floor ${node.key} fraction${t}`);
+      assert(exact(x,z,y)!==null,`${id} full width car deck ${node.key}`);widthProbes++;
+      if(id==='okrug65'&&Math.hypot(node.x+7552.5,node.z+5039.3)<.1&&deckAtSegments(plan.segments,x,z,y)===null)oldCornerHoles++;
+    }
+  }
+  if(id==='okrug65')assert(oldCornerHoles>0,'user WHSD corner includes outer-width poses that the old rectangle-only floor missed');
   for(const br of sites){
     assert(br.heights.every(Number.isFinite),`${id}/${br.id} finite elevations`);
     for(let i=0;i<br.heights.length;i++){
@@ -175,7 +203,29 @@ for(const z of[1080,1126,1275,1594,1745,1900,2200,2400,2600]){
 near(marineWhsdHeight(3500)-2.6+3.4,52,'official Sea Canal clearance');
 near(marineWhsdHeight(3500,true)-marineWhsdHeight(3500),8,'distinct lower/upper decks');
 assert(marineWhsdHeight(2600+.001)-marineWhsdHeight(2600)<.001,'continuous coastal profile');
-console.log(`PASS: ${shared} shared nodes, ${segments} physical deck segments; source overlap, ramps and navigation clearance`);
+console.log(`PASS: ${shared} shared nodes, ${segments} physical deck segments, ${widthProbes} full-width corner probes, ${faceProbes} drawn/physical face probes, ${oldCornerHoles} reproduced old user-corner holes; source overlap, ramps and navigation clearance`);
+
+if(process.argv.includes('--corner-engine')){
+  const A=await import('../src/world/area.js');assert.equal(A.ID,'okrug65');
+  const {buildWorld}=await import('./lib/headless-world.mjs'),{ctx,errors}=await buildWorld({modules:['coastalBridges']});assert.deepEqual(errors,[]);
+  const {createHandling}=await import('../src/world/drive/handling.js'),{Player}=await import('../src/core/player.js'),THREE=await import('three');
+  const plan=planCoastalDecks(ctx.services.coastalBridges.list),node=[...plan.nodes.values()].find(n=>Math.hypot(n.x+7552.5,n.z+5039.3)<.1);
+  assert(node&&node.edges.length===2);const cap=node.edges[0].s[node.edges[0].end],idle={thr:0,brk:0,steer:0,hand:true,nitro:false,jump:false,flip:false};
+  let cars=0,walkers=0;
+  for(const t of[.15,.35,.5,.65,.85]){
+    const x=cap.left[0]+(cap.right[0]-cap.left[0])*t,z=cap.left[2]+(cap.right[2]-cap.left[2])*t,y=node.y+.025;
+    const car=createHandling(ctx);car.reset(x,z,node.edges[0].s.yaw);car.y=y+.03;
+    for(let i=0;i<180;i++)car.step(1/60,idle);
+    assert(Math.abs(car.y-y-.03)<.08&&!car.air&&!car.fall,'actual car remains grounded across WHSD full-width corner');cars++;
+    const e=node.edges[0],target=node.edges[1],start={x:x+e.ux*3,z:z+e.uz*3},end={x:x+target.ux*3,z:z+target.uz*3};
+    const player=new Player(new THREE.PerspectiveCamera(),{addEventListener(){},requestPointerLock(){}},ctx.physics,{x0:-20000,x1:20000,z0:-20000,z1:20000});
+    player.enabled=true;player.smoothing=0;player.setPose(start.x,start.z,0,0,y,{stand:true});player.keys=new Set(['KeyW']);
+    let airborne=0;
+    for(let i=0;i<240;i++){const dx=end.x-player.pos.x,dz=end.z-player.pos.z;if(Math.hypot(dx,dz)<.15)break;player.yaw=Math.atan2(-dx,-dz);player.update(1/60);if(!player.onGround)airborne++;}
+    assert(airborne===0&&Math.abs(player.pos.y-y)<.04&&Math.hypot(player.pos.x-end.x,player.pos.z-end.z)<.2,'actual walker crosses WHSD miter without dropping through');walkers++;
+  }
+  console.log('PASS actual WHSD corner handling/player:',JSON.stringify({cars,walkers,node:[node.x,node.z,node.y]}));
+}
 
 // Optional real handling regression (CPU only):
 // node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine

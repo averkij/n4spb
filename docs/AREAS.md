@@ -1782,3 +1782,22 @@ WHSD floors, while the motorboat and container ship retain distinct dimensions,
 clearance and controls. `npm run coast` covers new geography, water, bridges
 and ship behaviour; final render/bake and performance evidence belongs in
 [PERFORMANCE.md](PERFORMANCE.md).
+
+### Coastal landmark and access follow-up (8.1.0)
+
+Okrug 65 now authors the continuous 462 m, 87-floor Lakhta tower and its
+entrance arch and lower wings. Three 175 m flagpoles stand on their surveyed
+hydraulic islands, with the 60 × 40 m historical flags requested by the owner.
+Maintained lawns, granite paving and a beach slope replace the generic yard
+surface around the park shore. Local shoreline corrections remove obsolete
+construction causeways while preserving exact dry islands and mapped beaches;
+ordinary boats can pass beneath all three narrow access bridges.
+
+Coastal road decks share mitered cross-sections and exact planar physical
+triangles, closing the reported WHSD gaps across the whole width. Water below
+the slabs stays open and each railing panel remains breakable. The Sea Gates
+container ship has an above-water stern boarding point beside dry Kanonersky
+quay pavement and a clear departure into the harbour. See the updated
+[coastal guide](COASTAL-AREAS.md) for access coordinates and the three new
+research dossiers. The planning territories and area transition graph are
+unchanged; the draft map's live catalogue now names Lakhta and the flagpoles.

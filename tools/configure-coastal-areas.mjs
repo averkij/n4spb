@@ -5,7 +5,7 @@ import { km2 } from './area-shape.mjs';
 import { coastalRects } from './marine-data-territory.mjs';
 const configs = [
   { id: 'morskie-vorota', k: 71, title: 'Морские ворота', en: 'Sea Gates', prefix: 'M', module: 'landmarksSeaGates', sights: ['Канонерский остров', 'Санкт-Петербургский морской порт', 'Портовые краны', 'Контейнеровоз'], center: [-7330, 2980] },
-  { id: 'okrug65', k: 100, title: 'Округ № 65', en: 'Okrug 65', prefix: 'O', module: 'landmarksOkrug65', sights: ['Парк 300-летия Санкт-Петербурга', 'Питерлэнд', 'Приморский проспект', 'Берег Финского залива'], center: [-8375, -5465] },
+  { id: 'okrug65', k: 100, title: 'Округ № 65', en: 'Okrug 65', prefix: 'O', module: 'landmarksOkrug65', sights: ['Лахта Центр', 'Три флагштока', 'Парк 300-летия Санкт-Петербурга', 'Питерлэнд', 'Приморский проспект', 'Берег Финского залива'], center: [-8375, -5465] },
 ];
 let registry = fs.readFileSync('src/areas/registry.js', 'utf8').replace(/\/\/ COASTAL-AREAS-BEGIN[\s\S]*?\/\/ COASTAL-AREAS-END\n?/, '');
 let rows = '// COASTAL-AREAS-BEGIN\n';

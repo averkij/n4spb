@@ -75,7 +75,65 @@ check('ordinary motor boat also starts fully wet and clear of the new harbour fi
   const contacts = [...ph.querySolids(pose.x, pose.z, 8)].filter(b => b !== small.box && carContact(pose, small.spec, b));
   assert.equal(contacts.length, 0, 'motor boat obstructed at its dock');
 });
+check('the actual walker reaches the ship boarding pavement from the garage on dry land', () => {
+  player.setPose(L.HERO.x, L.HERO.z, 0, 0); player.keys.add('KeyW'); player.keys.add('ShiftLeft');
+  const land = localPoint(anchor, 0, -209);
+  try {
+    for (const target of [{ x: -7346, z: 2456 }, { x: -7318, z: 2410 }, { x: -7248, z: 2254 }, land]) {
+      let steps = 0;
+      while (Math.hypot(target.x - player.pos.x, target.z - player.pos.z) > .5 && steps++ < 90 * 60) {
+        player.yaw = Math.atan2(-(target.x - player.pos.x), -(target.z - player.pos.z)); player.update(1 / 60);
+        if (steps % 60 === 0) {
+          assert.equal(ph.waterLevel(player.pos.x, player.pos.z), null, 'boarding route requires wading');
+          assert.equal(L.insideBuilding(player.pos.x, player.pos.z, .3), false, 'boarding route crosses a building footprint');
+        }
+      }
+      assert.ok(Math.hypot(target.x - player.pos.x, target.z - player.pos.z) <= .5, `walker stuck at ${player.pos.x},${player.pos.z}`);
+    }
+    assert.ok(player.onGround && player.pos.y >= 0);
+  } finally { player.keys.delete('KeyW'); player.keys.delete('ShiftLeft'); }
+});
+check('the giant ship can be boarded with actual E from dry quay pavement', () => {
+  const land = localPoint(anchor, 0, -209);
+  assert.equal(ph.waterLevel(land.x, land.z), null, 'boarding requires wading');
+  assert.ok(L.inPlay(land.x, land.z) && !L.insideBuilding(land.x, land.z));
+  assert.equal(ph.columnBlocked(land.x, land.z, .35, 0, 1.8), false, 'quay boarding pavement is obstructed');
+  assert.ok(ph.groundHeight(land.x, land.z, .1, false) >= 0, 'no dry ground below the walker');
+  const prompt = ctx.interact.list().find(i => i.id === 'drive-boat-' + ship.id + '-stern');
+  assert.ok(prompt); assert.equal(ship.model.boardingMarkers.visible, true);
+  assert.equal(lookAtPrompt(prompt, land)?.id, prompt.id);
+  assert.ok(ctx.interact.use()); assert.ok(d.active && d.vehicle === ship);
+  assert.equal(ship.model.boardingMarkers.visible, false);
+  assert.ok(d.exit(true));
+  assert.equal(ship.model.boardingMarkers.visible, true);
+});
+check('the moored ship sails over 280 m into open bay and turns freely in both directions', () => {
+  resetShip(); const start = { x: d.car.x, z: d.car.z }, events = [];
+  d.sim(45, { thr: 1 }, (i, p) => { events.push(...p.events); if (i % 60 === 0) hullWet(p); });
+  const distance = Math.hypot(d.car.x - start.x, d.car.z - start.z);
+  assert.ok(distance > 280, `quay departure only ${distance} m`);
+  assert.equal(events.filter(e => e.type === 'hit' || e.type === 'scrape').length, 0, 'departure struck a quay fixture or viaduct');
+  const end = { x: d.car.x, z: d.car.z, yaw: d.car.yaw, vx: d.car.vx, vz: d.car.vz };
+  for (const steer of [-1, 1]) {
+    d.teleport(end.x, end.z, end.yaw); d.car.vx = end.vx; d.car.vz = end.vz; const turns = [];
+    d.sim(6, { thr: 1, steer }, (i, p) => { turns.push(...p.events); if (i % 60 === 0) hullWet(p); });
+    const degrees = Math.abs(d.car.yaw - end.yaw) / DEG;
+    assert.ok(degrees > 5 && degrees < 9, `open-bay turn clamped to ${degrees} degrees`);
+    assert.equal(turns.filter(e => e.type === 'hit' || e.type === 'scrape').length, 0, 'turning departure hit a dock or viaduct');
+  }
+  console.log(`  actual departure ${distance.toFixed(2)} m / 45 s; both 6 s turns clear; no hits or scrapes`);
+  assert.ok(d.exit(true));
+});
+check('the boarding viewpoint aims at the visible stern marker and offers E above water', () => {
+  resetShip(); assert.ok(d.exit(true));
+  const view = L.VIEWS.find(v => v.key === 'Place.containerShip'); assert.ok(view);
+  player.setPose(view.x, view.z, view.yaw, view.pitch); player.inputLock = 0;
+  const prompt = ctx.interact.list().find(i => i.id === 'drive-boat-' + ship.id + '-stern');
+  assert.ok(prompt.at().y > ph.waterLevel(anchor.x, anchor.z) + 4, 'prompt remains underwater');
+  assert.equal(ctx.interact.update()?.id, prompt.id, 'natural view toward the visible E panel does not offer boarding');
+});
 check('the actual E interaction is beside the hull at local +33.5,+76 and boards the ship', () => {
+  resetShip(); assert.ok(d.exit(true));
   const prompt = ctx.interact.list().find(i => i.id === 'drive-boat-' + ship.id); assert.ok(prompt);
   const expected = localPoint(anchor, 33.5, 76), at = prompt.at();
   assert.ok(Math.hypot(expected.x - at.x, expected.z - at.z) < .01);
@@ -85,7 +143,11 @@ check('the actual E interaction is beside the hull at local +33.5,+76 and boards
   assert.equal(player.inputLock, 1); assert.equal(ship.model.driver.visible, true);
 });
 check('real integrated ship accelerates slowly, stays on water and turns gradually', () => {
-  resetShip(); d.sim(8, { thr: 1 }, (i, p) => { if (i % 60 === 0) hullWet(p); });
+  resetShip();
+  // Free-turn handling belongs in open water: the parked 400 m ship cannot
+  // rotate its stern through the real quay alongside it.
+  d.teleport(-8100, 3350, 150 * DEG);
+  d.sim(8, { thr: 1 }, (i, p) => { if (i % 60 === 0) hullWet(p); });
   const speed = d.car.speed, yaw = d.car.yaw;
   assert.ok(speed > 8 && speed < 27, `ship speed ${speed}`);
   d.sim(4, { thr: 1, steer: 1 }, (i, p) => { if (i % 60 === 0) hullWet(p); });
@@ -138,9 +200,9 @@ check('a blocked primary exit uses the mirrored ship boarding interaction and ca
 });
 check('blocked boarding exits never fall back inside the large hull; forced exit stays outside its beam', () => {
   resetShip();
-  const original = ship.car.walkerBlocked, boarding = ship.def.boarding;
-  const candidates = [localPoint(ship.car, boarding.x, boarding.z), localPoint(ship.car, -boarding.x, boarding.z)];
-  // These are the two actual exit locations beside the real moored ship. A
+  const original = ship.car.walkerBlocked;
+  const candidates = ship.def.boardingPoints.map(p => localPoint(ship.car, p.x, p.z));
+  // These are the actual exit locations beside the real moored ship. A
   // nearby quay/obstruction can reject both while the water at its centre is
   // clear; the old 3–9 m motorboat search then wrongly accepted that centre.
   ship.car.walkerBlocked = (x, z) => original(x, z) || candidates.some(p => Math.hypot(p.x - x, p.z - z) < 2);

@@ -84,6 +84,8 @@ only one) and `OVERLAPS` lists footprint overlaps (z-fighting hazards, `docs/ref
 | `ctx.quality` | `{name:'high'|'medium'|'low', petals}`: scale particle counts |
 | `ctx.services` | cross-module data (section 7) |
 
+For a planar bridge or shore face, `ctx.physics.addWalkTriangle([[x,y,z], [x,y,z], [x,y,z]], thickness)` uses the exact visible triangle. It stores an ordinary ramp with an optional convex footprint: walking, driving, head clearance and roof exclusions respect that footprint, including the empty corners of its bounding box. Use the drawn slab thickness so boats can pass underneath. The existing collider codec preserves these optional fields; ordinary rectangular ramps keep their existing behaviour.
+
 Shared building helpers (import from `./lib/massing.js`): `MeshBuilder`, `addPrism`, `addWalls`, `addCap`, `addPolyColliders`, `roofProfile` (flat / skillion), `ringFromFlat`, `polyBounds`, `polyCentroid`, `polyArea`,
 `hash01`. Claims: `./lib/claims.js`. Road / building queries without a module: `L.roadsNear(x,z,r,{drivable})`, `L.nearestRoad(x,z,{drivable,named,maxDist})`, `L.isOnRoad(x,z,margin)`, `L.insideBuilding(x,z,r)`,
 `L.buildingAt(x,z)`, `L.heightOf(b)`, `L.areaAt(x,z)`. Procedural trees, people rigs, cars, props, facade work: copy from `../101_3d_yakutsk/src/world/**` / `../100_3d_moscow_city/src/world/**` into your own module folder and retune.

@@ -147,7 +147,7 @@ export async function build(ctx) {
   /** the spot beside the car where the walker can stand: tries the left / right side, then behind */
   function exitSpot() {
     const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw), lx = cy, lz = -sy, c = car.carCenter, y = car.y;
-    const spots = V.def.boarding ? [[V.def.boarding.x, V.def.boarding.z], [-V.def.boarding.x, V.def.boarding.z]] : [[2.0, 0], [-2.0, 0], [2.7, 0.6], [-2.7, 0.6], [2.0, -1.5], [-2.0, -1.5], [3.4, 0], [-3.4, 0], [0, -3.9], [0, 3.9], [4.2, 1], [-4.2, 1]];
+    const spots = V.def.boardingPoints ? V.def.boardingPoints.map(p => [p.x, p.z]) : V.def.boarding ? [[V.def.boarding.x, V.def.boarding.z], [-V.def.boarding.x, V.def.boarding.z]] : [[2.0, 0], [-2.0, 0], [2.7, 0.6], [-2.7, 0.6], [2.0, -1.5], [-2.0, -1.5], [3.4, 0], [-3.4, 0], [0, -3.9], [0, 3.9], [4.2, 1], [-4.2, 1]];
     for (let r = 3; r <= 9; r += 1.5) for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; spots.push([Math.cos(a) * r, Math.sin(a) * r]); }      // a ring search when the car is jammed against a wall / bollards
     const boat = V.kind === 'boat', bad = boat ? car.walkerBlocked : car.blocked;      // a boat: the walker may stand on the water bed (wading) or on a bank, the water is no wall for him
     for (const [side, back] of spots) {
@@ -421,11 +421,11 @@ export async function build(ctx) {
   if (ctx.interact) {
     for (const v of vehicles) {
       const id = v.kind === 'boat' && v.id !== 'boat' ? 'drive-boat-' + v.id : v.id === 'coupe' ? 'drive-car' : 'drive-' + v.id;
-      const b = v.def.boarding, points = b ? [b, { x: -b.x, z: b.z }] : [{ x: 0, z: v.spec.centerZ }];
+      const b = v.def.boarding, points = v.def.boardingPoints || (b ? [b, { key: 'port', x: -b.x, y: b.y, z: b.z }] : [{ x: 0, z: v.spec.centerZ }]);
       // Both accepted ship exit sides must offer the same way back aboard.
       for (const [i, point] of points.entries()) ctx.interact.add({
-        id: id + (i ? '-port' : ''), radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
-        at: () => { const s = Math.sin(v.parked.yaw), c = Math.cos(v.parked.yaw); return { x: v.parked.x + s * point.z + c * point.x, y: v.parked.y + 0.8, z: v.parked.z + c * point.z - s * point.x }; },
+        id: id + (point.key ? '-' + point.key : i ? '-port' : ''), radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
+        at: () => { const s = Math.sin(v.parked.yaw), c = Math.cos(v.parked.yaw); return { x: v.parked.x + s * point.z + c * point.x, y: v.parked.y + (point.y ?? 0.8), z: v.parked.z + c * point.z - s * point.x }; },
         enabled: () => !v.retired && !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
         onUse: () => enter(v),
       });

@@ -37,6 +37,25 @@ export function carContact(car, spec, b, out = {}) {
     } else { ax = 0; az = -(Math.sign(z) || 1); depth = hd - Math.abs(z) + b.r; qz = -az * hd; }
     nx = ax * c + az * s; nz = -ax * s + az * c;
     px = cx + qx * c + qz * s; pz = cz - qx * s + qz * c;
+  } else if (b.clip) {
+    depth=Infinity;
+    // Car axes plus every polygon edge: the ramp's OBB is never a solid in
+    // the unused corners of an angled/mitered bridge triangle.
+    for(let i=0;i<2+b.clip.length/2;i++){
+      let ax,az;
+      if(i<2){ax=i===0?c:s;az=i===0?-s:c;}
+      else{const j=(i-2)*2,k=(j+2)%b.clip.length,ex=b.clip[k]-b.clip[j],ez=b.clip[k+1]-b.clip[j+1],len=Math.hypot(ex,ez);if(len<1e-9)continue;ax=ez/len;az=-ex/len;}
+      const ra=hw*Math.abs(ax*c-az*s)+hd*Math.abs(ax*s+az*c);
+      let min=Infinity,max=-Infinity;
+      for(let j=0;j<b.clip.length;j+=2){const t=(b.clip[j]-cx)*ax+(b.clip[j+1]-cz)*az;min=Math.min(min,t);max=Math.max(max,t);}
+      if(min>=ra||max<=-ra)return null;
+      const positive=max+ra,negative=ra-min,pen=Math.min(positive,negative);
+      if(pen<depth){depth=pen;const sign=positive<negative?1:-1;nx=ax*sign;nz=az*sign;}
+    }
+    const ln=nx*c-nz*s,fn=nx*s+nz*c;
+    const qx=Math.abs(ln)<1e-6?clamp(-dx*c+dz*s,-hw,hw):-Math.sign(ln)*hw;
+    const qz=Math.abs(fn)<1e-6?clamp(-dx*s-dz*c,-hd,hd):-Math.sign(fn)*hd;
+    px=cx+qx*c+qz*s;pz=cz-qx*s+qz*c;
   } else {
     depth = Infinity;
     // Four separating axes, evaluated without per-contact arrays.

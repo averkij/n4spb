@@ -149,6 +149,24 @@ async function board(page, id) {
   await page.waitForFunction(id => window.__drive.active && window.__drive.vehicle.id === id, { timeout: 6000, polling: 100 }, id);
   const s = await state(page); check('first E boards ' + id, s.active && s.id === id && s.player.lock === 1, s); return s;
 }
+async function shipFromQuay(page, id) {
+  const pose = await page.evaluate(async id => {
+    const ctx = window.__ctx, view = ctx.L.VIEWS.find(v => v.key === 'Place.containerShip');
+    if (!view) throw new Error('Missing dry-quay ship approach');
+    await ctx.regions?.ensureAt(view.x, view.z);
+    window.__setCam(view.x, null, view.z, view.yaw, view.pitch); ctx.gates?.teleported();
+    const p = ctx.playerObj;
+    return { promptId: 'drive-boat-' + id + '-stern', x: p.pos.x, y: p.pos.y, z: p.pos.z,
+      water: ctx.physics.waterLevel(p.pos.x, p.pos.z), fly: p.fly,
+      blocked: ctx.physics.columnBlocked(p.pos.x, p.pos.z, .35, p.pos.y + .1, p.pos.y + 1.8) };
+  }, id);
+  check('ship boarding approach stands on unobstructed dry quay pavement', pose.water === null && !pose.fly && !pose.blocked && pose.y >= 0, pose);
+  await page.waitForFunction(promptId => {
+    const el = document.getElementById('interact');
+    return window.__ctx.interact.target?.id === promptId && el?.classList.contains('show') && /\[E\]/.test(el.textContent);
+  }, { timeout: 8000, polling: 100 }, pose.promptId);
+  check('looking at the hull boarding marker offers E from dry land', true, { ...pose, prompt: await page.$eval('#interact', el => el.textContent) });
+}
 async function stopAndExit(page, hull = false) {
   await page.keyboard.down('Space');
   try { await page.waitForFunction(() => window.__drive.car.speed < .7, { timeout: 10000, polling: 100 }); }
@@ -185,7 +203,7 @@ try {
   {
     const { page, close } = await boot('morskie-vorota');
     const id = await page.evaluate(() => window.__drive.boats.find(v => v.def.vessel === 'container-ship')?.id); assert.ok(id, 'container ship missing');
-    await besideVehicle(page, id); await screenshot(page, 'marine-ship-boarding');
+    await shipFromQuay(page, id); await screenshot(page, 'marine-ship-boarding');
     const seated = await board(page, id); check('container ship uses its complete boat specification', seated.floats && seated.vessel === 'container-ship');
     if (args['ship-perf']) await page.evaluate(() => {
       const sample = window.__coastalShipPerf = { dts: [], calls: [], start: performance.now(), last: null, on: true };
@@ -196,8 +214,8 @@ try {
       };
       requestAnimationFrame(tick);
     });
-    await hold(page, ['KeyW'], 3000); const gas = await state(page);
-    check('three seconds of real W accelerates the container ship', gas.kmh > .5 && Math.hypot(gas.x - seated.x, gas.z - seated.z) > .15, gas);
+    await hold(page, ['KeyW'], 45000); const gas = await state(page);
+    check('real W departs the quay into open water', gas.kmh > 20 && Math.hypot(gas.x - seated.x, gas.z - seated.z) > 250, gas);
     await hold(page, ['KeyW', 'KeyA'], 3000); const turn = await state(page);
     const yawDelta = Math.abs(Math.atan2(Math.sin(turn.yaw - gas.yaw), Math.cos(turn.yaw - gas.yaw))) * 180 / Math.PI;
     check('real A gradually turns the moving ship', yawDelta > .2 && yawDelta < 20, { yawDelta, ...turn });

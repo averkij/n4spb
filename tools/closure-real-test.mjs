@@ -18,7 +18,11 @@ const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasi
   // Southern districts: hashed-file counts of the shipping v5.0.1 closures.
   kolomna: 447, semyonovsky: 388,
   // Fresh coastal districts at the 7.0.0 integration checkpoint.
-  'morskie-vorota': 325, okrug65: 324,
+  'morskie-vorota': 325,
+  // O65 at 8.1.0: the integrated Petrograd bridge helpers plus the authored
+  // Lakhta, three flags and waterfront modules. Keep the same tolerance band;
+  // the independent recorded page load checks every fetched dependency too.
+  okrug65: 413,
   // Petrograd districts: hashed-file counts recorded in the incoming 70b1d80 bake inputs.
   kronverk: 520, aptekarsky: 552, islands: 547 };
 const SCOUT_UP = {};
