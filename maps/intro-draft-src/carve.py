@@ -90,6 +90,16 @@ def op_carve(req):
     west = Polygon(req['west'])
     if not west.is_valid:
         west = shapely.make_valid(west)
+    # A street block uses the inside carriageway of a divided road. Absorb
+    # only tiny enclosed strips between it and the old municipal centreline,
+    # so moving the block cannot leave a road-shaped enclave behind.
+    if req.get('absorbEnclavesM2') and req.get('target') is not None:
+        target = to_shape(req['target'])
+        combined = unary_union([target, west])
+        additions = solid([list(h.coords) for p in polys_of(combined) for h in p.interiors]).difference(target)
+        if km2(additions) * 1e6 > req['absorbEnclavesM2']:
+            raise SystemExit('carve: enclosed strips exceed the configured area limit')
+        west = unary_union([west, additions])
     res = {'parts': []}
     wests, rests, srcs = [], [], []
     for part in req['parts']:
@@ -122,7 +132,7 @@ def op_carve(req):
     # the results must tile exactly what the sources covered
     # the cut edge: the line (the ring of the half-plane) where it runs inside the sources
     su0 = unary_union(srcs)
-    cutg = west.exterior.intersection(su0)
+    cutg = west.boundary.intersection(su0)
     segs = []
     for x in getattr(cutg, 'geoms', [cutg]):
         if x.geom_type == 'LineString' and not x.is_empty:
@@ -166,6 +176,17 @@ def main():
         out = op_audit(req)
     elif op == 'version':
         out = {'shapely': shapely.__version__}
+    elif op == 'streetBlock':
+        from shapely.geometry import Point
+        from shapely.ops import polygonize
+        streets = [unary_union([LineString(line) for line in s['lines']]) for s in req['streets']]
+        faces = [p for p in polygonize(unary_union(streets)) if p.contains(Point(req['seed']))]
+        if len(faces) != 1:
+            raise SystemExit('streetBlock: expected one enclosed face at seed, got ' + str(len(faces)))
+        face = faces[0]
+        if len(face.interiors) or any(face.boundary.intersection(s).length < 1e-6 for s in streets):
+            raise SystemExit('streetBlock: face must have no holes and touch all named streets')
+        out = {'ring': from_shape(face)['outer'][0], 'km2': km2(face)}
     else:
         raise SystemExit('carve.py: unknown op ' + str(op))
     sys.stdout.write(json.dumps(out, ensure_ascii=True))

@@ -59,12 +59,13 @@ for (const a of D.areas) if (a.ru === 'Округ № 7' || a.ru === 'Васил
 
 // 3. carves
 const geomOf = (a) => ({ outer: a.outer, inner: a.inner });
-[...(EDITS.carve || []), ...(EDITS.riverCarve || [])].forEach((cv, i) => {
+[...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS.blockCarve || [])].forEach((cv, i) => {
   const rep = D.edits && D.edits.carve && D.edits.carve[i];
   if (!rep) { fails.push(`carve ${cv.street}: no report in the data (rebuild with build-intro.mjs)`); return; }
   const into = D.areas.find((a) => a.ru === cv.into);
   if (!into) { fails.push(`carve ${cv.street}: the target area ${cv.into} is missing`); return; }
   const rems = cv.from.map((n) => D.areas.find((a) => plain(a.ru) === ((EDITS.rename || []).find((r) => r.name === n)?.ru || n)));
+  if (cv.seed && (!inRings(cv.seed, into.outer) || inRings(cv.seed, into.inner) || rems.some((a) => a && inRings(cv.seed, a.outer) && !inRings(cv.seed, a.inner)))) fails.push(`block carve: seed ${cv.seed} must belong only to ${cv.into}`);
   cv.from.forEach((n, j) => { if (!rems[j]) fails.push(`carve ${cv.street}: the remainder of ${n} is missing`); });
   if (fails.length && rems.some((r) => !r)) return;
   let gain = 0;

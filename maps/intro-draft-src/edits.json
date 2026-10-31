@@ -17,6 +17,11 @@
     { "from": ["Чкаловское"], "into": "Кронверкское–Введенский–Петровский", "river": "Малая Невка", "side": "south", "expectOuter": 1,
       "note": "The Petrogradsky Island side joins the merged southern area; Krestovsky, Kamenny and Yelagin islands stay together north of the river." }
   ],
+  "blockCarve": [
+    { "from": ["Аптекарский–Посадский"], "into": "Кронверкское–Введенский–Петровский", "streets": ["улица Ленина", "Чкаловский проспект", "набережная реки Карповки", "Каменноостровский проспект", "Большой проспект П.С."], "seed": [30.306, 59.9645], "bbox": [30.285, 59.955, 30.32, 59.975], "expectOuter": 1,
+      "absorbEnclavesM2": 5000,
+      "note": "Block inside the four requested streets, using the short Karpovka embankment connection from the end of Chkalovsky to Kamennoostrovsky. Include enclosed strips between divided carriageways and the former municipal boundary." }
+  ],
   "rename": [
     { "name": "Чкаловское", "ru": "Крестовский—Каменный—Елагин", "en": "Krestovsky–Kamenny–Yelagin" }
   ],
