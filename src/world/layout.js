@@ -172,10 +172,14 @@ const boxOf = (p) => { let b = _fpBox.get(p); if (!b) { let x0 = 1e9, x1 = -1e9,
 // QA fix: the baked duplicate filter sometimes keeps the RAISED part and marks the ground body that carries it `dupOf` (Nevsky 22-24 w535381121, w1331069739, r3300412): city/prep.js draws that body, so it is a ground building here too
 const isBaseOfRaised = (b) => (b.minH || 0) < 0.5 && ((_byId.get(b.dupOf) || {}).minH || 0) > 2.5;
 let footprints = null;
+// An area's authored open pavilion can retain its surveyed building record
+// without treating the entire roof outline as a solid ground-level building.
+// The owner supplies the real walls, piers, stairs and their physical bounds.
+const openGroundBuildings = new Set(Array.isArray(A.OPEN_GROUND_BUILDING_IDS) ? A.OPEN_GROUND_BUILDING_IDS : []);
 /** Footprint polygons { o: [x,z,...], h: [[...], ...] } of every building that stands on the ground. The skipped records are outlines
  *  whose parts are listed separately; parts raised above the ground (minH > 3) and underground parts are not ground buildings. */
 export function groundFootprints() {
-  if (!footprints) footprints = BUILDINGS.filter((b) => !b.skip && (b.minH || 0) <= 3 && !(b.layer < 0) && !b.underground && (!b.dupOf || isBaseOfRaised(b))).flatMap((b) => b.polys);
+  if (!footprints) footprints = BUILDINGS.filter((b) => !b.skip && !openGroundBuildings.has(b.id) && (b.minH || 0) <= 3 && !(b.layer < 0) && !b.underground && (!b.dupOf || isBaseOfRaised(b))).flatMap((b) => b.polys);
   return footprints;
 }
 /** True when (x,z), grown by r metres, lies inside the footprint of a building that stands on the ground (courtyard holes excluded).
@@ -303,7 +307,7 @@ export const SUN_DIR = [-0.473, 0.707, 0.526];   // day preset from the look wor
 // ---------------------------------------------------------------- ground holes (shafts of the metro that open in the street ground plane)
 /** Rectangles { x, z, w, d, rotY } in which the street ground plane (y = 0) has NO surface because a metro stair / escalator shaft opens there. The metro module
  *  fills it (data/metro is its own business); the environment module's ground mesh skips these cells. Declared in data/metro.js (SHAFTS, owned by the metro module). */
-export const GROUND_HOLES = SHAFTS;
+export const GROUND_HOLES = [...SHAFTS, ...(Array.isArray(A.GROUND_HOLES) ? A.GROUND_HOLES : [])];
 /** Openings through building walls (metro portals): colliders are split around them by lib/massing.js; the facade owner draws an arch / door there. Declared in data/metro.js (metro module). */
 export { DOORWAYS };
 

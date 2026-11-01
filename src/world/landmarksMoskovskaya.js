@@ -8,6 +8,8 @@ import { makeKit } from './landmarksMoskovskaya/common.js';
 import { church, palace } from './landmarksMoskovskaya/chesme.js';
 import { spire, library, council } from './landmarksMoskovskaya/buildings.js';
 import { square } from './landmarksMoskovskaya/square.js';
+import { libraryForecourt } from './landmarksMoskovskaya/library-forecourt.js';
+import { libraryUnderpass } from './landmarksMoskovskaya/library-underpass.js';
 import { tollCanopy } from './landmarksMoskovskaya/bridge-details.js';
 import { removeBridgeFallbacks } from '../areas/moskovskaya/bridge-fallbacks.js';
 export const OWNS_GROUPS = true;
@@ -26,6 +28,8 @@ export function build(ctx) {
     K.begin(); fn(K, records); K.flush(key === 'toll-canopy' ? 'toll-roof' : key);
   }
   K.begin(); square(K); K.flush('strugatsky');
+  K.begin(); libraryForecourt(K); K.flush('library-forecourt');
+  K.begin(); libraryUnderpass(K); K.flush('library-underpass');
   ctx.addStatic(root);
   const all = ctx.services.landmarks ||= {};
   for (const k of ['monuments', 'photoSpots']) (all[k] ||= []).push(...svc[k]);

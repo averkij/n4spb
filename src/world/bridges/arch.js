@@ -134,6 +134,24 @@ export function makeArch(env, site) {
     }
   }
 
+  // Fascias and the water-facing vault do not close the OTHER side of the
+  // abutments. At a skewed bank or a junction of two bridges those landward
+  // faces are visible: omitting them exposes a hollow triangular shell.
+  // Loft along the same bank samples, never across the open arch/fairway.
+  function abutmentEnds() {
+    let prev=null;
+    for(const p of abutmentPieces()){
+      const {q,side,full}=p,bottom=q.map(v=>[v[0],full?waterY-.6:v[1]-.5,v[2]]);
+      P.quad(M.granite,bottom[0],bottom[3],q[3],q[0],[side,0,0]);
+      P.quad(full?M.wet:M.vault,...bottom,[0,-1,0]);
+      if(prev&&prev.side===side&&prev.full!==full){
+        const a=q[0],b=q[1],sg=prev.full?1:-1;
+        P.quad(M.granite,[a[0],waterY-.6,a[2]],[b[0],waterY-.6,b[2]],[b[0],b[1]-.5,b[2]],[a[0],a[1]-.5,a[2]],[0,0,sg]);
+      }
+      prev=p;
+    }
+  }
+
   // ------------------------------------------------------------------ the two faces
   const corniceDrop = stone ? 0.0 : 0.2;
   /** a flat shape WITH holes (u, y) at depth v facing sg */
@@ -260,6 +278,10 @@ export function makeArch(env, site) {
         P.quad(cm, [ua, ya - dy, v + o], [ub, yb2 - dy, v + o], [ub, yb2 + yt, v + o], [ua, ya + yt, v + o], [0, 0, sg], [[ua / 2.2, 0], [ub / 2.2, 0], [ub / 2.2, 0.2], [ua / 2.2, 0.2]]);
         P.quad(cm, [ua, ya + yt, v + o], [ub, yb2 + yt, v + o], [ub, yb2 + yt, v - sg * 0.5], [ua, ya + yt, v - sg * 0.5], [0, 1, 0]);
         P.quad(cm, [ua, ya - dy, v], [ub, yb2 - dy, v], [ub, yb2 - dy, v + o], [ua, ya - dy, v + o], [0, -1, 0]);
+        // The projecting cornice has finite thickness at both global ends.
+        // Intermediate strips share a joint; only terminal faces are exposed.
+        if(i===0&&Math.abs(r0-uA)<1e-7)P.quad(cm,[ua,ya-dy,v+o],[ua,ya-dy,v-sg*.5],[ua,ya+yt,v-sg*.5],[ua,ya+yt,v+o],[-1,0,0]);
+        if(i===nr-1&&Math.abs(r1-uB)<1e-7)P.quad(cm,[ub,yb2-dy,v-sg*.5],[ub,yb2-dy,v+o],[ub,yb2+yt,v+o],[ub,yb2+yt,v-sg*.5],[1,0,0]);
       }
     }
   }
@@ -269,20 +291,57 @@ export function makeArch(env, site) {
   const zoneAt = (v) => site.zones.find((z) => v >= z[0] - 1e-6 && v <= z[1] + 1e-6) || site.zones[0];
   const zoneLift = { asphalt: 0, pave: 0.12, sett: 0.02, plaza: 0.1, slab: 0.0, plank: 0.0, tram: 0.0, barrier: 0.45, verge: 0.0, walk: 0.12 };           // (tram / barrier / verge / walk: the second pass, sites-vo2.js; the pavements of the Smolenka bridges are asphalt)
   const zoneMat = { asphalt: M.asphalt, pave: M.pave, sett: M.sett, plaza: M.pave, slab: M.pave, plank: M.plank, tram: M.tramSlab || M.asphalt, barrier: M.graniteGrey || M.pave, verge: M.footAsphalt, walk: M.footAsphalt };
+  const deckStations=()=>{
+    const raw=[...vs,...site.zones.flatMap(z=>[z[0],z[1]])].sort((a,b)=>a-b);
+    // Surveyed widths are not always millimetre-rounded. Rounding an outer
+    // station makes even the closing face stop short of its own fascia.
+    return raw.filter((v,i)=>i===0||v-raw[i-1]>1e-8);
+  };
+  let abutments=null;
+  function abutmentPieces(){
+    if(abutments)return abutments;
+    const dry=(v,side)=>{const u=bank(v)[side<0?0:1]+side*(EXT+.08),p=B.world(u,v);return ctx.physics.waterLevel(p.x,p.z)===null;};
+    const all=[];
+    for(const side of[-1,1]){
+      const stations=[...deckStations(),v0+.12,v1-.12];
+      // A declared springing can meet ANOTHER waterway at a bridge junction.
+      // Split actual wet/dry transitions, without turning the whole end into
+      // a vertical dam across the adjoining canal. Sampling only locates the
+      // transitions; bisection retains their actual position.
+      const n=Math.max(1,Math.ceil((v1-v0)/.5));let av=v0,ad=dry(av,side);
+      for(let i=1;i<=n;i++){
+        const bv=v0+(v1-v0)*i/n,bd=dry(bv,side);
+        if(ad!==bd){let lo=av,hi=bv;for(let j=0;j<18;j++){const mid=(lo+hi)/2;if(dry(mid,side)===ad)lo=mid;else hi=mid;}stations.push((lo+hi)/2);}
+        av=bv;ad=bd;
+      }
+      stations.sort((a,b)=>a-b);const ss=stations.filter((v,i)=>i===0||v-stations[i-1]>1e-7);
+      for(let k=0;k+1<ss.length;k++){
+        const va=ss[k],vb=ss[k+1],vm=(va+vb)/2,a=bank(va)[side<0?0:1],b=bank(vb)[side<0?0:1];
+        const ua=a+side*EXT,ub=b+side*EXT,ia=a-side*.04,ib=b-side*.04,lift=zoneLift[zoneAt(vm)[2]]??0;
+        // Wet junction ends retain a finite half-metre slab. Only the two
+        // 12cm fascia returns and genuinely land-backed runs descend to bed.
+        const full=dry(vm,side)||vm<v0+.120001||vm>v1-.120001;
+        const q=[[ua,yDeck(ua)+lift,va],[ia,yDeck(ia)+lift,va],[ib,yDeck(ib)+lift,vb],[ub,yDeck(ub)+lift,vb]];
+        all.push({side,full,q});
+      }
+    }
+    return abutments=all;
+  }
   function deck() {
     // v breakpoints: sample stations + zone borders
-    const set = new Set(vs.map((x) => +x.toFixed(3)));
-    for (const z of site.zones) { set.add(+z[0].toFixed(3)); set.add(+z[1].toFixed(3)); }
-    const bv = [...set].sort((a, b) => a - b);
+    const bv=deckStations();
     for (let k = 0; k + 1 < bv.length; k++) {
       const va = bv[k], vb = bv[k + 1]; if (vb - va < 0.02) continue;
       const vm = (va + vb) / 2, zone = zoneAt(vm), kind = zone[2], lift = zoneLift[kind] ?? 0;
       const [a0, b0] = bank(va), [a1, b1] = bank(vb), ua = Math.min(a0, a1) - EXT, ub = Math.max(b0, b1) + EXT;
       const n = Math.max(2, Math.ceil((ub - ua) / 3));
       for (let i = 0; i < n; i++) {
-        const u0 = ua + (ub - ua) * i / n, u1 = ua + (ub - ua) * (i + 1) / n, y0 = yDeck(u0) + lift, y1 = yDeck(u1) + lift;
+        const at=(a,b,t)=>a-EXT+(b-a+2*EXT)*t;
+        const u00=at(a0,b0,i/n),u10=at(a0,b0,(i+1)/n),u01=at(a1,b1,i/n),u11=at(a1,b1,(i+1)/n);
         const mat = zoneMat[kind], s = kind === 'asphalt' ? 4 : kind === 'sett' ? 1.9 : 2.4;
-        P.quad(mat, [u0, y0, va], [u1, y1, va], [u1, y1, vb], [u0, y0, vb], [0, 1, 0], [[u0 / s, va / s], [u1 / s, va / s], [u1 / s, vb / s], [u0 / s, vb / s]]);
+        // Each end follows its OWN bank interval. A rectangle made from the
+        // min/max of both ends projects unsupported triangles beyond a skew.
+        P.quad(mat,[u00,yDeck(u00)+lift,va],[u10,yDeck(u10)+lift,va],[u11,yDeck(u11)+lift,vb],[u01,yDeck(u01)+lift,vb],[0,1,0],[[u00/s,va/s],[u10/s,va/s],[u11/s,vb/s],[u01/s,vb/s]]);
       }
       // kerb faces where the neighbouring zone is lower / higher
       for (const [vk, side] of [[va, -1], [vb, 1]]) {
@@ -290,8 +349,8 @@ export function makeArch(env, site) {
         if (zn === zone || Math.abs(ln - lift) < 0.01 || ln > lift) continue;                 // draw once, from the higher zone
         const [kk0, kk1] = bank(vk);
         for (let i = 0; i < n; i++) {
-          const u0 = ua + (ub - ua) * i / n, u1 = ua + (ub - ua) * (i + 1) / n;
-          if (u1 < kk0 - EXT || u0 > kk1 + EXT) continue;
+          const u0 = Math.max(kk0-EXT,ua+(ub-ua)*i/n),u1 = Math.min(kk1+EXT,ua+(ub-ua)*(i+1)/n);
+          if (u1-u0<.001) continue;
           P.quad(M.kerb, [u0, yDeck(u0) + ln, vk], [u1, yDeck(u1) + ln, vk], [u1, yDeck(u1) + lift, vk], [u0, yDeck(u0) + lift, vk], [0, 0, side], [[0, 0], [1, 0], [1, 0.1], [0, 0.1]]);
         }
       }
@@ -378,6 +437,16 @@ export function makeArch(env, site) {
         ph.addWalkRamp(w.x, w.z, vb - va + 0.04, u1 - u0 + 0.04, rampRot, yDeck(u0), yDeck(u1), 2.5); n++;
       }
     }
+    // Only the solid abutments acquire deeper floors. The existing central
+    // span/boat slab rules and open arch remain unchanged. Triangle clips
+    // retain the exact skew footprint instead of an enclosing water blocker.
+    for(const {q,full}of abutmentPieces()){
+      const thick=full?Math.max(...q.map(p=>p[1]))-(waterY-.6):.5;
+      for(const ids of[[0,1,2],[0,2,3]]){
+        const points=ids.map(i=>{const w=B.world(q[i][0],q[i][2]);return[w.x,q[i][1],w.z];});
+        const it=ph.addWalkTriangle(points,thick);if(it){it.pier=true;n++;}
+      }
+    }
     B.info.colliders += n;
   };
   /** solid box along face sg (rail line / parapet): from uA to uB, 0.5 m thick, y -6 .. 1.4 */
@@ -423,7 +492,7 @@ export function makeArch(env, site) {
   };
   B.draw = () => {
     P.push(f.cx, 0, f.cz, -T);
-    vault(); faces(); deck(); markings();
+    vault(); abutmentEnds(); faces(); deck(); markings();
     P.pop();
   };
   return B;

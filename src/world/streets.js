@@ -185,7 +185,10 @@ export async function build(ctx) {
   // no paving over an open metro stair pit (layout.GROUND_HOLES kind 'stairs' + 0.3 m: streets/holes.js): the WALKING surfaces are cut there (pavement bands, corner patches, ramps,
   // skirts, mapped footways and steps, paving areas, lots); the carriageway (asphalt, kerb, gutter, wear, paint) is never cut
   const walking = [slab, paver, strip, ramp, skirt, foot, steps, footX.slab, footX.paver, footX.gravel, footX.asph, lots, areaB.slab, areaB.paver, areaB.island, areaSkirt];
-  stats.holeCuts = walking.reduce((n, b) => n + cutHoles(b), 0);
+  // The cobble collector now contains only tram-bed infill (carriageways use
+  // asph). Its wide shoulders must not sheet across an open stair mouth beside
+  // a tram median; the actual rails and road asphalt retain their own paths.
+  stats.holeCuts = [...walking, cobb].reduce((n, b) => n + cutHoles(b), 0);
   lapMs('holes');
 
   add(asph, M.asphalt); add(cobb, M.cobble); add(serv, M.service); add(brk, M.brickRoad);

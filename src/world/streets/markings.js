@@ -20,7 +20,7 @@
 //   nothing on      rank-0 ways (courtyards, service), living streets, pedestrian ways, bridge decks drawn by the bridges module (decks.js).
 import { wayAt, nearCrossing } from './net.js';
 import { prepLanes, latAt } from './lanes.js';
-import { deckAt } from './decks.js';
+import { deckAt, longDeckHeight } from './decks.js';
 import { UP, rgb, dpKeep, clamp } from './util.js';
 import { ROAD_Y, LIFT, WEST_X } from './surface.js';
 
@@ -297,12 +297,13 @@ export function planMarkings(net, graph, o = {}) {
     for (const { sl, lane } of g.lanes) { const c = (sl.x - p0[0]) * rx + (sl.z - p0[1]) * rz; a = Math.min(a, c - lane.width / 2 + 0.06); b = Math.max(b, c + lane.width / 2 - 0.06); }
     if (b - a < 1) continue;
     const deck = deckAt(p0[0], p0[1], 1);
-    // The southern flat decks have signalised junctions at their mouths.
-    // Keep the same 1.12 approach rule there and paint at the actual deck datum;
-    // the older arched bridges retain their authored markings.
-    if (deck && !deck.south) continue;
+    // Flat southern decks and raised LONG approaches still need the lane
+    // graph's 1.12 signal bar. LONG bridges author longitudinal markings but
+    // do not know this junction plan; paint its bar on the raised surface.
+    const longY=longDeckHeight(p0[0],p0[1]);
+    if (deck && !deck.south && longY===null) continue;
     const depth = L0.rank >= 4 ? RULES.stopWPrimary : RULES.stopW;
-    bars.push({ x: p0[0], z: p0[1], tx, tz, a, b, depth, y: deck ? 0.05 + LIFT : ROAD_Y + LIFT, signal: !!g.sl.signal, give: !!g.sl.give, rank: L0.rank, junction: g.sl.junction, approach: g.sl.approach, name: L0.name || null });
+    bars.push({ x: p0[0], z: p0[1], tx, tz, a, b, depth, y: longY!==null?longY+.03:deck ? 0.05 + LIFT : ROAD_Y + LIFT, longDeck:longY!==null, signal: !!g.sl.signal, give: !!g.sl.give, rank: L0.rank, junction: g.sl.junction, approach: g.sl.approach, name: L0.name || null });
   }
   const dropped = [], kept = pruneStubs(net, lines, bars, recs, stats, dropped);
   stats.counts = { lines: kept.length, bars: bars.length, arrows: arrows.length };
@@ -327,7 +328,11 @@ export function drawPlan(plan, P) {
   for (const l of plan.lines) strip(P, l.pts, l.width, WHITE, LIFT, l.dash ? RULES.dash : 6);
   let n = 0;
   for (const b of plan.bars) {
-    const rx = -b.tz, rz = b.tx, V = (u, c, tu, tv) => P.vert(b.x + b.tx * u + rx * c, b.y ?? ROAD_Y + LIFT, b.z + b.tz * u + rz * c, tu, tv, UP, WHITE);
+    const rx = -b.tz, rz = b.tx, V = (u, c, tu, tv) => {
+      const x=b.x+b.tx*u+rx*c,z=b.z+b.tz*u+rz*c;
+      const y=b.longDeck?(longDeckHeight(x,z)??ROAD_Y)+.03:b.y??ROAD_Y+LIFT;
+      return P.vert(x,y,z,tu,tv,UP,WHITE);
+    };
     P.quad(V(-b.depth, b.a, 0, 0), V(0, b.a, 1, 0), V(0, b.b, 1, 1), V(-b.depth, b.b, 0, 1)); n++;
   }
   return n;

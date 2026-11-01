@@ -32,6 +32,7 @@ import { PointGrid, pairs } from './util.js';
 import * as L from '../layout.js';
 import * as PALACE_FR from '../landmarksPalaceBridge/frame.js';          // (pure frames of the two bascule bridges: toUV and the pier faces, for the span cut below)
 import * as TROITSKY_FR from '../landmarksTroitsky/frame.js';
+import { longDeckHeight } from './decks.js';
 
 const H0 = 5.8;                                  // contact wire height above the road
 const WIRE = '#1d1f22', SPANC = '#2a2d31';
@@ -83,9 +84,14 @@ export function buildWires(ctx, net, lamps, opts = {}) {
   // CLIPPED at the pier faces (the part over the span goes to service.cut[id], the module draws it as a dynamic object that is visible only while the leaves are down), the cross spans / hangers / masts of the span are not drawn
   // (the masts: no collider either). A page without the module (the strip, the parked area) has no zone: nothing changes.
   const zones = bridgeZones(ctx);
+  // Streets build before bridges, so query their shared pure deck profile.
+  // Lift every connected strand and its published traffic service equally;
+  // moving only the visible mast would leave its anchor and collider below it.
+  const raised = p => [p[0],p[1]+(longDeckHeight(p[0],p[2])??0),p[2]];
   const spanCut = service.cut = {}; for (const z of zones) spanCut[z.id] = [];
   const zoneAt = (x, z) => { for (const q of zones) { const p = q.toUV(x, z); if (p.u > q.u0 + 0.01 && p.u < q.u1 - 0.01 && Math.abs(p.v) < q.hv) return q; } return null; };
   const add = (pts, width, color, kind, grp) => {
+    pts=pts.map(raised);
     if (zones.length) for (const q of zones) {
       const r = clipLine(pts, q); if (!r) continue;
       for (const l of r.keep) ctx.wires.add(l, { width, color, kind, grp });
@@ -462,17 +468,18 @@ export function buildWires(ctx, net, lamps, opts = {}) {
 
   // ------------------------------------------------------------ supports hardware: rosettes and masts (drawn once per place)
   const placed = new Map();
-  const knockMasts = !!(ctx.knock && poles), mastSpots = [];               // with ctx.knock the kerb masts are instances (below), not merged boxes; a bridge-deck mast (deck) stays merged
+  const knockMasts = !!(ctx.knock && poles), mastSpots = [];               // LONG decks supply physical knock floors; preserve older small-deck behavior
   const placeSupport = (P, nx, nz, pole, deck = false) => {
     const key = Math.round(P[0] * 4) + ',' + Math.round(P[1] * 4) + ',' + Math.round(P[2] * 2);
     if (placed.has(key)) return; placed.set(key, 1);
     if (zones.length && zoneAt(P[0], P[1])) return;                          // nothing stands on a moving bascule span (no mast, no collider)
     if (pole) {
       // plain black mast with a short bracket
-      const item = ctx.physics.addCylinder(P[0], P[1], 0.22, 0, 4);
-      if (knockMasts && !deck) mastSpots.push({ x: P[0], y: WALK_Y, z: P[1], rotY: 0, s: P[2] / MAST_H, item });
-      else if (poles) { poles.cyl(0.11, 0.17, P[2], '#25282b', [P[0], 0.12 + P[2] / 2, P[1]], null, 6, null, true); poles.box(0.3, 0.3, 0.3, '#3a3d42', [P[0], 0.12 + P[2], P[1]]); }
-      stats.masts++; service.masts.push({ x: P[0], z: P[1], h: P[2] });
+      const base=longDeckHeight(P[0],P[1])??0;
+      const item = ctx.physics.addCylinder(P[0], P[1], 0.22, base, base+4);
+      if (knockMasts && (!deck || base)) mastSpots.push({ x: P[0], y: base+WALK_Y, z: P[1], rotY: 0, s: P[2] / MAST_H, item });
+      else if (poles) { poles.cyl(0.11, 0.17, P[2], '#25282b', [P[0], base+0.12 + P[2] / 2, P[1]], null, 6, null, true); poles.box(0.3, 0.3, 0.3, '#3a3d42', [P[0], base+0.12 + P[2], P[1]]); }
+      stats.masts++; service.masts.push({ x: P[0], z: P[1], y:base+0.12, h: P[2] });
     } else {
       // rosette: a round plate on the facade (white-grey) + a short eye with an insulator
       if (poles) {
@@ -507,7 +514,7 @@ export function buildWires(ctx, net, lamps, opts = {}) {
     }
     if (sHi - sLo >= 4) {
       const cl = S.map((s) => { const p = pt(wr, s, 0); return [p[0], wr.hAt(s), p[1]]; });
-      service.pairs.push({ id: wr.id, way: w.id, refs: wr.refs, dir: wr.dir, lane: wr.j, pts: cl });
+      service.pairs.push({ id: wr.id, way: w.id, refs: wr.refs, dir: wr.dir, lane: wr.j, pts: cl.map(raised) });
       stats.pairs++; stats.wireKm += (sHi - sLo) / 1000;
     }
     // hangers: from the contact wire up to the span (the span polyline has a vertex right there)
@@ -531,7 +538,7 @@ export function buildWires(ctx, net, lamps, opts = {}) {
     const line = ap.map((p, i) => { const u = i / (ap.length - 1); return [p[0], y0 + (y1 - y0) * u - 0.12 * 4 * u * (1 - u), p[1]]; });
     add(line, 0.028, WIRE, 'arc', a.wx.id + '>' + a.wy.id); stats.arcs++;
     for (let i = 0; i + 1 < line.length; i++) emitted.push([line[i][0], line[i][2], line[i + 1][0], line[i + 1][2], 'A' + a.node + a.wx.id + a.wy.id, a.sub]);
-    if (a.sub > 0) service.arcs.push({ from: a.wx.id, to: a.wy.id, refs: a.refs, pts: line.map((p) => [p[0], H0, p[2]]) });
+    if (a.sub > 0) service.arcs.push({ from: a.wx.id, to: a.wy.id, refs: a.refs, pts: line.map((p) => raised([p[0], H0, p[2]])) });
   }
   for (const h of hangerPts) { add(h, 0.02, WIRE, 'hanger'); stats.hangers++; }
 
@@ -545,7 +552,7 @@ export function buildWires(ctx, net, lamps, opts = {}) {
     for (const u of U) pts.push([sp.A[0] + (sp.B[0] - sp.A[0]) * u, spanY(sp, u), sp.A[1] + (sp.B[1] - sp.A[1]) * u]);
     if (zones.length && (zoneAt(sp.A[0], sp.A[1]) || zoneAt(sp.B[0], sp.B[1]))) { stats.spansCut = (stats.spansCut || 0) + 1; continue; }      // (a cross span of the moving bascule: not drawn, its masts neither)
     add(pts, 0.034, SPANC, 'span', 'S' + sp.id); stats.spans++;
-    service.spans.push({ id: sp.id, a: [sp.A[0], sp.A[2], sp.A[1]], b: [sp.B[0], sp.B[2], sp.B[1]], mid: [sp.mid[0], parab(sp, 0.5), sp.mid[1]], len: sp.len, poles: [sp.poleA, sp.poleB] });
+    service.spans.push({ id: sp.id, a: raised([sp.A[0], sp.A[2], sp.A[1]]), b: raised([sp.B[0], sp.B[2], sp.B[1]]), mid: raised([sp.mid[0], parab(sp, 0.5), sp.mid[1]]), len: sp.len, poles: [sp.poleA, sp.poleB] });
     placeSupport(sp.A, sp.nxA, sp.nzA, sp.poleA, sp.deckA); placeSupport(sp.B, sp.nxB, sp.nzB, sp.poleB, sp.deckB);
   }
   if (mastSpots.length) {
@@ -574,9 +581,9 @@ export function buildWires(ctx, net, lamps, opts = {}) {
       const x = E[0] + ex * X.t, z = E[1] + ez * X.t;
       if (done.some((d) => Math.hypot(d[0] - x, d[1] - z) < 1.6)) continue;
       done.push([x, z]);
-      const ang = Math.atan2(ex, ez);
-      poles.box(0.12, 0.07, 1.1, '#2d3034', [x, H0 + 0.04, z], [0, ang, 0]); poles.box(0.12, 0.07, 1.1, '#2d3034', [x, H0 + 0.04, z], [0, Math.atan2(fx, fz), 0]);
-      poles.cyl(0.05, 0.05, 0.12, '#e8e8e4', [x, H0 + 0.13, z], null, 5, null, true);
+      const ang = Math.atan2(ex, ez),base=longDeckHeight(x,z)??0;
+      poles.box(0.12, 0.07, 1.1, '#2d3034', [x, base+H0 + 0.04, z], [0, ang, 0]); poles.box(0.12, 0.07, 1.1, '#2d3034', [x, base+H0 + 0.04, z], [0, Math.atan2(fx, fz), 0]);
+      poles.cyl(0.05, 0.05, 0.12, '#e8e8e4', [x, base+H0 + 0.13, z], null, 5, null, true);
       stats.frogs++;
     }
   }

@@ -204,3 +204,43 @@ reproduce unchanged at `522d0bb`, as recorded in
 wrappers pass with the documented 180-sample surface budget. These older
 Palace wrapper failures are recorded separately from the passing new-area
 surface and transport checks.
+
+## National Library and crossing revision (9.1.0)
+
+The new building at Moskovsky Prospekt now follows the owner-supplied entrance
+photographs: a raised granite podium with ten broad steps, nine rectangular
+piers, a recessed three-level glazed facade with arched upper windows, ceiling
+coffers, an open circular court and a curved facade inscription. The mapped
+building envelope and ten existing roof courts remain. The entrance can be
+walked through the colonnade and back to the square.
+
+The forecourt now has one connected scalloped shallow basin with two stepped
+principal drums and four flared corner bowls, patterned grey paving, mapped
+lawns, flowers, paired lamps, benches and the current Speransky and Koni
+monuments. Stale two-pool geometry and a duplicate Koni node are claimed by the
+landmark. Six obsolete approach ribbons/steps are also claimed so they cannot
+bleed through the authored paving and entrance. See the
+[reference dossier](research/russian-national-library.md) for the photographic
+estimates and map reconciliation.
+
+The two incorrectly tall generic blocks at `w134205326` and `w134205325` have
+been replaced by low glazed pedestrian-underpass pavilions on their actual
+mapped footprints. Six real stair approaches lead to a 45.6 m crossing beneath
+Moskovsky Prospekt. Ground and walking surfaces open at the stair mouths;
+carriageways and tram rails retain their support above the tunnel. The approach
+aprons reveal this underground crossing before its steps enter view. Read the
+[crossing dossier](research/library-underpass.md) for surveyed records and the
+estimated vertical dimensions.
+
+Focused regressions exercise actual front-sided floor/roof/lettering geometry,
+physical steps, native fountain water, player entry/exit and breakable furniture.
+The authored district is 209,839 static triangles against its 210,000 budget,
+with no per-frame callback. Final shipping-bake screenshots, full transport
+checks and driving measurements are recorded in [PERFORMANCE.md](PERFORMANCE.md).
+
+The same revision repairs finite generic bridge closures at skewed abutments
+while preserving joined waterway fairways; adds only the exposed lower masonry
+between unequal water levels at quay junctions; and reserves raised long-bridge
+decks against generic paving and below-deck trolley hardware. The
+[quay junction note](research/quay-junctions.md) records the exact reported
+Fontanka rays and why an ordinary downward bank extension was insufficient.

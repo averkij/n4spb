@@ -6,6 +6,8 @@ import { profMax } from './style.js';
 import * as THREE from 'three';
 import { addCap } from '../lib/massing.js';
 import { SLAB_TILE, PAVER_TILE, ASPHALT_TILE, BRICK_TILE } from './tex.js';
+import { deckAt, deckRings } from './decks.js';
+import { triangulateRing, subtractConvex } from '../environment/clip.js';
 
 const FOOT_W = { footway: 2.4, path: 1.8, pedestrian: 5, steps: 2.2, cycleway: 2.2 };
 export const PATH_Y = 0.04;
@@ -96,7 +98,7 @@ export function buildPaths(Bfoot, Bsteps, net, X = {}, owned = () => false) {
         const steps = r.hw === 'steps';
         if (!owned(r.id)) {
           let visible = [];
-          for (const p of run) { if (!steps && inSquare(p)) { drawRun(visible, steps); visible = []; } else visible.push(p); }
+          for (const p of run) { if (deckAt(p[0],p[1],w/2) || (!steps && inSquare(p))) { drawRun(visible, steps); visible = []; } else visible.push(p); }
           drawRun(visible, steps);
         }
         if (!steps) lines.push({ id: r.id, pts: run, w, hw: r.hw });
@@ -133,13 +135,20 @@ const ringArea = (o) => { let a = 0; for (let i = 0, j = o.length - 2; i < o.len
 export function buildAreas(B, AREAS, skip, skirt, net, inOwned = null) {
   let n = 0;
   const clear = net ? clearCells(net) : null;
-  const cap = (MB, p, y, uvScale, fine = 2) => { if (net) capCarved(MB, p, y, uvScale, (x, z) => net.cover(x, z), clear, fine); else addCap(MB, p, y, { uvScale }); };
+  const decks=deckRings({longOnly:true}).map(d=>({ring:d.ring,box:ringBox(d.ring),tris:null}));
+  const offDeck = p => {
+    const box=ringBox(p.o), cuts=decks.filter(d=>!(d.box[1]<box[0]||d.box[0]>box[1]||d.box[3]<box[2]||d.box[2]>box[3]));
+    if(!cuts.length)return[p];
+    let pieces=triangulateRing(p.o,p.h||[]);
+    for(const d of cuts)for(const t of(d.tris??=triangulateRing(d.ring)))pieces=subtractConvex(pieces,t);
+    return pieces.map(o=>({o:o.flat(),h:[]}));
+  };
+  const cap = (MB, p, y, uvScale, fine = 2, carveRoad=true) => { for(const q of offDeck(p)) { if (net&&carveRoad) capCarved(MB, q, y, uvScale, (x, z) => net.cover(x, z), clear, fine); else addCap(MB, q, y, { uvScale }); } };
   // The wall under the edge of a raised polygon is drawn only where it stands beside bare ground: the parts of an outline edge that lie on a carriageway or inside the kerb band (the asphalt
   // edge + WALL_CLEAR) are cut away exactly (bisection on net.cover), because the road's own kerb is the face there. The old rule asked only the MIDDLE of a whole edge: a 10 m chord of the
   // Vosstaniya Square island ran over the asphalt, across the kerb and on through the paving as a pale 0.4 m "ribbon" (2026-10-07), long footway-polygon edges crossed whole streets.
   const wallRuns = (ax, az, bx, bz, l) => {
-    if (!net) return [[0, 1]];
-    const free = (t) => net.cover(ax + (bx - ax) * t, az + (bz - az) * t) <= -WALL_CLEAR;
+    const free = (t) => {const x=ax+(bx-ax)*t,z=az+(bz-az)*t;return !deckAt(x,z,.4)&&(!net||net.cover(x,z)<=-WALL_CLEAR);};
     const m = Math.max(1, Math.ceil(l / 0.5)), runs = [];
     const cut = (ta, tb, fa) => { let lo = ta, hi = tb; for (let it = 0; it < 9; it++) { const mid = (lo + hi) / 2; if (free(mid) === fa) lo = mid; else hi = mid; } return (lo + hi) / 2; };
     let prev = free(0), start = prev ? 0 : -1;
@@ -187,9 +196,9 @@ export function buildAreas(B, AREAS, skip, skirt, net, inOwned = null) {
   });
   for (const e of list) {
     const { a, p } = e;
-    if (e.isRoad) { addCap(B.road, p, 0.02, { uvScale: 8 }); }
+    if (e.isRoad) { cap(B.road,p,0.02,8,2,false); }
     else if (e.isIsland) { cap(B.island, p, 0.15, 1.6, 2); wall(p.o, 0.15, [0.62, 0.61, 0.6], ringArea(p.o) > 0); }
-    else if (e.isSquare) { addCap(B.slab, p, 0.012, { uvScale: 2.8 }); }
+    else if (e.isSquare) { cap(B.slab,p,0.012,2.8,2,false); }
     else {
       const slab = a.surface === 'sett', y = 0.10 + 0.004 * e.level;
       cap(slab ? B.slab : B.paver, p, y, slab ? 2.8 : 1.6);

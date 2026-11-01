@@ -37,6 +37,7 @@ import { PIERS, STEPS } from '../data/city.js';
 import { deckPoly, bridgeZones, floorZones, waterBanks } from './river.js';
 import { WATERWAYS, waterGeo, farBanks, slopeRuns, slopeSurfaces, slopeTopAt, keepOut, ownerQuayAt as ownerWaterAt, ownerWaterBoxes } from './waterways.js';
 import { wallFixture } from './quay-fixtures.js';
+import { waterLevelSeams } from './quay-foundations.js';
 import { pointInRing, distToRing, hash2 } from './util.js';
 import { pierRects } from './boats.js';
 import { BANK_INDEX } from './bank-index.js';
@@ -514,11 +515,11 @@ export function buildQuay(ctx, root) {
   const inAnichkov = (x, z) => !!deck && (pointInRing(x, z, deck) || distToRing(x, z, deck) < 1.2);
   const zones = bridgeZones();
   const info = { segments: [], stairs: [], allStairs: [], rings: 0, signs: 0, posts: 0, panels: 0, colliders: 0, deckPieces: 0, culverts: 0, tubes: 0, fallbackDecks: 0 };
-  const face = {}, faceDeck = {}, coping = {}, parapet = new MeshBuilder(), granite = new MeshBuilder(), graniteA = new MeshBuilder(), graniteB = new MeshBuilder(), graniteR = new MeshBuilder(), graniteP = new MeshBuilder(), descents = [], lionSpots = [];
+  const face = {}, faceDeck = {}, foundation = {}, coping = {}, parapet = new MeshBuilder(), granite = new MeshBuilder(), graniteA = new MeshBuilder(), graniteB = new MeshBuilder(), graniteR = new MeshBuilder(), graniteP = new MeshBuilder(), descents = [], lionSpots = [];
   const keys = Object.keys(WATERWAYS);
   const grass = new MeshBuilder(), capB = new MeshBuilder(), bedB = new MeshBuilder(), slopeInfo = [];
   const shoreByBank=new Map();for(const s of slopeSurfaces()){let a=shoreByBank.get(s.bank);if(!a)shoreByBank.set(s.bank,a=[]);a.push(s);}
-  for (const k of keys) { face[k] = new MeshBuilder(); faceDeck[k] = new MeshBuilder(); coping[k] = new MeshBuilder(); }
+  for (const k of keys) { face[k] = new MeshBuilder(); faceDeck[k] = new MeshBuilder(); foundation[k] = new MeshBuilder(); coping[k] = new MeshBuilder(); }
   face.mouth = new MeshBuilder(); const bermB = new MeshBuilder();      // n4spb (cluster B): the pale grey wall and the paved lower berm of the Smolenka mouth arms (x < -7490); empty (and drawn nowhere) in every other area
   const rings = [], signs = [], culverts = [], corbels = [];
   // THE BREAKABLE FENCE (docs/AREAS.md 13.7, the world rule "water is reachable"): every post, panel and tube of a railing, every section of the Neva parapet and every cheek wall of a descent is a BAY of lib/fence-bays.js: its own
@@ -685,6 +686,11 @@ export function buildQuay(ctx, root) {
     }
   }
   const banks = [...waterBanks(), ...farBanks()];
+  for(const s of waterLevelSeams(waterGeo().rings,lvl,FOOT)){
+    const B=foundation[s.key], [nx,nz]=s.n, uv=p=>(p[0]*nz-p[1]*nx)/TILE_U;
+    const ids=[[s.a,s.bottom],[s.b,s.bottom],[s.b,s.top],[s.a,s.top]].map(([p,y])=>B.vert(p[0],y,p[1],nx,0,nz,uv(p),(y-yBot(s.key))/tileH(s.key)));
+    quadN(B,...ids,nx,0,nz);
+  }
   banks.forEach((bank, bi) => {
     const key = bank.key, W = WATERWAYS[key], YB = yBot(key), TH = tileH(key);
     // the order number of the chain: frozen for the chains of the older areas (bank-index.js), a position hash for every other chain: never the running index (it shifts with every new water polygon)
@@ -1059,6 +1065,7 @@ export function buildQuay(ctx, root) {
   const mk = (B, mat, name, shadow = true, rec = true) => { if (B.empty) return null; const m = new T.Mesh(B.build(), mat); m.name = name; m.castShadow = shadow; m.receiveShadow = rec; root.add(m); return m; };
   // (n4spb: WATERWAYS lists the Smolenka and Gavan keys in every area; where one has no wall at all it costs no 1024 x 512 canvas, so the other areas build as before)
   for (const k of keys) { const skip = (k === 'smolenka' || k === 'gavan') && face[k].empty && faceDeck[k].empty; if (!skip) { mk(face[k], matFor(k, false), 'env-quay-wall-' + k); mk(faceDeck[k], matFor(k, true), 'env-quay-wall-deck-' + k, false); } mk(coping[k], copingMat(k), 'env-quay-coping-' + k); }
+  for(const k of keys)if(!foundation[k].empty){const m=mk(foundation[k],matFor(k,false),'env-quay-foundation-'+k,false);ctx.noOutline(m);}
   mk(parapet, ctx.mat.toon('#ffffff', { map: parapetTexture(ctx), paint: 0.04, name: 'env-quay-parapet' }), 'env-quay-parapet');
   // n4spb (cluster B): the mouth arms of the Smolenka (texture and material only where there is a piece: no canvas, no mesh in the other areas)
   if (!face.mouth.empty) mk(face.mouth, ctx.mat.toon('#ffffff', { map: wallTexture(ctx, 'mouth', 'smolenka'), paint: 0.05, name: 'env-quay-wall-mouth' }), 'env-quay-wall-mouth');

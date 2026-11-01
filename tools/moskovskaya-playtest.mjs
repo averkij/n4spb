@@ -49,6 +49,19 @@ async function beside(id){
   check('E boards '+id,(await state()).active);
 }
 async function exit(){await hold(['Space'],4000);check('braking reaches exit speed',(await state()).kmh<.8);await page.keyboard.press('KeyE');await page.waitForFunction(()=>!__drive.active,{timeout:8000});check('E exits to walking',!(await state()).player.fly);await page.keyboard.press('KeyR');await sleep(700);}
+async function walkTo(x,z){
+  const deadline=Date.now()+20000;let current;
+  try{
+    while(Date.now()<deadline){
+      current=(await state()).player;const dx=x-current.x,dz=z-current.z;
+      if(Math.hypot(dx,dz)<.35)break;
+      await page.evaluate(yaw=>{__ctx.playerObj.yaw=yaw;__ctx.playerObj.pitch=0;},Math.atan2(-dx,-dz));
+      await page.keyboard.down('KeyW');await sleep(60);
+    }
+  }finally{await page.keyboard.up('KeyW');}
+  current=(await state()).player;check('real walking waypoint '+x+','+z,!current.fly&&Math.hypot(x-current.x,z-current.z)<.45&&current.y>-5,current);
+  return current;
+}
 async function hop(from,to){
   const ps=edgeLens(REGISTRY[from].play,REGISTRY[to].play,{backMax:0}).points;
   const stride=Math.max(1,Math.floor(ps.length/180)),candidates=ps.filter((_,i)=>i%stride===0).map(p=>({...p,d:EDGE_DIRS[p.k]}));
@@ -86,6 +99,16 @@ try{
   check('station-less area has one purple Zhiguli',ids.filter(v=>v.kind!=='boat').length===1&&ids.some(v=>v.id==='lada'),ids);
   await beside('lada');const car=await state();await hold(['KeyW'],2200);const driven=await state();check('Zhiguli accelerates and moves',Math.hypot(driven.x-car.x,driven.z-car.z)>3&&driven.kmh>3,driven);await page.keyboard.press('KeyV');await sleep(200);await exit();
   const boat=ids.find(v=>v.kind==='boat').id;await beside(boat);const start=await state();await hold(['KeyW'],6500);const sailed=await state();check('motorboat sails on real park water',Math.hypot(sailed.x-start.x,sailed.z-start.z)>8&&sailed.water!==null,sailed);await hold(['KeyW','KeyA'],1200);check('boat steering changes heading',Math.abs((await state()).yaw-sailed.yaw)>.02);await page.keyboard.press('KeyV');await exit();
+  await page.evaluate(async()=>{await __regions.ensureAt(-1795,7452);__setCam(-1795,null,7452,90,0);__ctx.gates.teleported();});
+  const entrance=await walkTo(-1815,7452);check('library steps reach raised colonnade',entrance.y>1.3&&entrance.y<1.65,entrance);
+  await walkTo(-1795,7452);
+  await page.evaluate(async()=>{await __regions.ensureAt(-1736.3,7401);__setCam(-1736.3,null,7401,0,0);__ctx.gates.teleported();});
+  await walkTo(-1736.3,7398.3);const down=await walkTo(-1736.8,7382.9);
+  check('underpass stairs descend to actual tunnel floor',down.y<-3.5&&down.y>-4.1,down);
+  for(const [x,z] of [[-1725,7382.6],[-1713,7382.3],[-1701,7382.0],[-1691.2,7381.8]])await walkTo(x,z);
+  await page.screenshot({path:path.join(out,'library-underpass-inside.png')});report.screenshots.push('library-underpass-inside.png');
+  await walkTo(-1690.8,7397.3);const up=await walkTo(-1690.8,7400);
+  check('underpass east exit returns to street height',Math.abs(up.y)<.25,up);
   for(const key of ['Place.victory-park','Place.rnb-moskovsky','Place.house-with-spire','Place.strugatsky','Place.chesme']){
     await page.evaluate(async key=>{const v=__ctx.L.VIEWS.find(v=>v.key===key);await __regions.ensureAt(v.x,v.z);__setCam(v.x,null,v.z,v.yaw,v.pitch);__ctx.gates?.teleported();},key);await sleep(400);
     const file=key.replace('Place.','')+'.png';await page.screenshot({path:path.join(out,file)});report.screenshots.push(file);

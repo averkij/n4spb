@@ -2047,3 +2047,139 @@ node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-
 node tools/park-shore-playtest.mjs
 node tools/drive-test.mjs --area palace --q medium --nofuzz --out shots/park-repair/controls
 ```
+
+## 2026-11-01 — National Library and bridge closures (9.1.0)
+
+The National Library now has a raised entrance, a walkable open colonnade,
+recessed arched glazing and the current fountain forecourt. Two incorrectly tall
+generic blocks become mapped low underpass pavilions with six working stair
+approaches. Shared repairs close exposed skew-bridge/unequal-water-level faces
+and remove generic ground paving and wire supports from beneath raised long
+bridges. Raised wire hardware remains breakable, and a signal stop bar follows
+the actual humped Birzhevoy deck. Reference and implementation details are in
+[MOSKOVSKAYA-AREA.md](MOSKOVSKAYA-AREA.md) and its linked research notes.
+
+The library building uses 27,965 static triangles, ten material/range meshes and
+zero frame callbacks. The forecourt uses 13,016 triangles; the complete authored
+district stays within its existing budget at 209,839 / 210,000 triangles. Its
+paving uses one world-anchored material, and 144 jet curves use uncapped low-sided
+tubes. Neither lights nor frame callbacks were added. Underground visibility
+reveals only the crossing from its approaches, preserving unrelated underground
+culling. The source-mode screenshot set was opened and reviewed from the supplied
+poses, under the colonnade, over the square and inside both pavilions/corridor.
+
+Focused source checks pass actual geometry and physical support, not only plan
+coordinates: 2,397 forecourt floor probes, 144 independent tapered-pedestal rays
+and lateral collision probes, 88 facade-letter attachment probes, 646 open-roof
+rays, sixteen underpass walking routes and four red-car crossings. Hidden-stair,
+solid-deck, absent bridge-cap, skew-overhang and wet-junction
+dam mutations fail. The actual Birzhevoy underside audit passes 96 rays, 42
+raised mast mesh/collider checks, 598 elevated contact points and eighteen
+paint/asphalt ray pairs; normal height is 3cm above the real bridge asphalt.
+
+All sixteen unequal-datum seam mesh audits pass (75 quads / 150 triangles), with
+unchanged water rings/datums. The corrected full water matrix passes all 282
+checks: its first run found two fountain stems classified as posts; replacing
+approximate cylinders with exact tapered physical faces resolved the mismatch
+without an audit exemption. The Palace boat suite passes 108 checks and bridge
+jumping passes 136. All 572 area-registry checks, both existing layout goldens,
+generated pages, source ownership and closure/import/runtime/syntax checks pass.
+
+Moskovskaya roads and strict markings pass, with the documented 180 residual
+surface samples. Vasilyevsky strict markings pass after the raised stop-bar
+correction; road surfaces pass with the existing 120-sample budget and ribbons
+pass. Its furniture audit retains exactly the baseline 53 objects on roads,
+37 edge intrusions and 29 median intrusions, including identical printed
+locations/amounts. Palace's older furniture/stop-bar audit failures described
+above are unchanged; these are not counted as passing road wrappers.
+
+The final fresh boat matrix runs every live area serially: **1,177 passed /
+3 failed out of 1,180 checks**. Four additional passing checks were exercised
+compared with the older mixed historical logs. Only the documented Smolny
+pillar pair and Kronverk fortress-ram check fail, at the same coordinates and
+with the same hit/inside outcomes as their pre-change baseline. No new boat
+failure appears. All ten tracked transport/test dependency hashes remain
+identical before and after every run and still match the final source.
+Per-area full logs and hashes are under `shots/library/boat-matrix/`.
+
+Driving samples use Edge 156 / ANGLE D3D11 / RTX 3090 Ti, 1280×720,
+medium, the full scene with normal matching bakes, twenty seconds of W input and
+CDP diagnostics. GPU jobs are serial; no other audit, profiling or mid-run
+screenshot overlaps the measured intervals. The initial old-centre samples
+were repeated because frame/load times varied strongly; both are reported.
+
+| Route | Version / sample | Load s | Frame ms mean / p50 / p95 | Max ms | Frames >40 / >80 ms | Mean draws | Travel m | CDP used / backing MiB |
+| --- | --- | ---: | --- | ---: | --- | ---: | ---: | --- |
+| Station / Nevsky | 9.0.1 | 23.26 | 18.76 / 16.7 / 33.3 | 250.0 | 4 / 2 | 1163 | 352 | 586 / 1350 |
+| Station / Nevsky | 9.1.0 initial | 30.10 | 26.04 / 33.2 / 33.4 | 333.3 | 16 / 3 | 1169 | 352 | 562 / 1327 |
+| Station / Nevsky | 9.1.0 repeat | 26.83 | 18.95 / 16.7 / 33.3 | 283.3 | 8 / 4 | 1167 | 352 | 461 / 715 |
+| Admiralty | 9.0.1 | 23.81 | 26.51 / 33.3 / 33.4 | 150.0 | 24 / 3 | 1447 | 47 | 580 / 1316 |
+| Admiralty | 9.1.0 initial | 29.83 | 34.67 / 33.3 / 50.1 | 166.7 | 82 / 4 | 1765 | 131 | 535 / 1317 |
+| Admiralty | 9.1.0 repeat | 25.25 | 30.06 / 33.3 / 50.0 | 150.1 | 47 / 3 | 1347 | 114 | 567 / 1314 |
+| Moskovsky Prospekt | 9.0.1 | 15.65 | 17.36 / 16.7 / 16.8 | 116.7 | 8 / 3 | 1045 | 195 | 450 / 601 |
+| Moskovsky Prospekt | 9.1.0 initial | 17.73 | 20.28 / 16.7 / 33.4 | 166.6 | 7 / 3 | 1019 | 184 | 424 / 581 |
+| Library approach | 9.0.1 | 19.81 | 22.30 / 16.7 / 33.4 | 200.1 | 11 / 4 | 1002 | 51 | 519 / 629 |
+| Library approach | 9.1.0 initial | 17.82 | 21.68 / 16.7 / 33.4 | 199.9 | 10 / 4 | 1173 | 167 | 416 / 570 |
+
+The station reaches exactly the same stopped pose/distance in all three runs.
+Its repeat is 18.95ms versus 18.76ms before, while the initial final-source run
+was 26.04ms with nearly unchanged draws. This variation does not establish a
+source-caused gain or regression; loading also varies broadly across unchanged
+modules. Admiralty travels 131m / 114m after versus 47m before, so its larger
+frame times and different draw counts describe different traffic/view/region
+states. Moskovsky and library drives also end at different stopped poses after
+collisions (184m versus 195m; 167m versus 51m). None of these samples proves a
+performance improvement. The library sample averages about 46 FPS, but the older
+centre remains inconsistent with comfortable 30 FPS: Admiralty p95 is 50 ms and
+hitches reach 333 ms. Draw submission and region/GC hitches remain the next
+measured investigation; this content revision does not finish that goal.
+
+CDP used heap and backing storage are distinct end-of-run samples, not retained
+memory measurements. Final loaded regions are 36 / 51 / 50 / 48 for the initial
+four routes and 36 / 50 for the repeats, all with zero failed regions. All eight
+normal-load reports have zero module/browser/asset failures. Artifacts and
+inspected end views are in `shots/library/perf/`.
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/library/perf/after-station
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/library/perf/after-centre
+node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-1712,7050,1.62" --json --diagnostics --out shots/library/perf/after-moskovsky
+node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-1700,7540,1.62" --json --diagnostics --out shots/library/perf/after-library
+node tools/moskovskaya-playtest.mjs
+```
+
+The last close review replaced a narrow placeholder strip behind each side
+portal with recessed three-storey glazing and matching solid backing. This adds
+36 triangles (included in the final 27,965 / 209,839 counts above), verified by
+eighteen independent front-sided pane/backing probes. Only Moskovskaya was
+rebaked and its two routes measured again. The earlier Moskovskaya samples
+remain in the table as initial samples, rather than being silently replaced.
+
+| Final route | Load s | Frame ms mean / p50 / p95 | Max ms | Frames >40 / >80 ms | Mean draws | Travel m | CDP used / backing MiB |
+| --- | ---: | --- | ---: | --- | ---: | ---: | --- |
+| Moskovsky Prospekt | 17.86 | 19.56 / 16.7 / 33.4 | 250.1 | 7 / 2 | 1056 | 141 | 422 / 606 |
+| Library approach | 17.48 | 18.86 / 16.7 / 33.3 | 166.7 | 11 / 4 | 1040 | 185 | 429 / 590 |
+
+These final local samples average approximately 51 / 53 FPS. Their distances are
+141 m / 185 m, again ending after collisions rather than following the earlier
+traffic outcomes, so they also do not establish a speedup. Both end with 48
+loaded regions, zero failed regions and no browser/module/asset errors. Used
+heap and backing storage remain separate end samples.
+
+All sixteen shipping manifests match the final source and generated revision
+map: **1,612 complete products / 730.8 MiB gzip**, with no unreferenced binary
+products in any live bake directory. Moskovskaya retains 149 products and revision
+`e69659259cc8faa76812`; Palace is `a365a0fc19ff0ad0fbef`, and Vasilyevsky is
+`fd1c9baec9d20f7de239`. No forced stale bake is used in final browser tests.
+
+The final normal-page regression passes all **31 checks** after the last
+Moskovskaya bake: water hydration, car and boat controls, the raised library
+entrance, the complete west-to-east underpass walk and destination streaming.
+There are no browser/module errors or failed regions. The real walker reaches
+library floor 1.44 m, tunnel floor −3.8 m and street height again without flying.
+The separate unchanged-shore regression passes all six checks, including two
+pond exits and a return entry with no fall rescue. Library/monument/underpass
+views and the three reported bridge/quay views were opened and inspected under
+normal loading. Artifacts are `shots/library/shipping-final_*`,
+`shipping-playtest-final.txt`, `shots/bridge-seams/shipping_*` and
+`shots/bridge-underdeck/shipping_*`.

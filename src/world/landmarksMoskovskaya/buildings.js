@@ -2,8 +2,7 @@
 // reference views: NLR's own history and Visit Petersburg's tower photograph.
 // The tower's 76 m mapped tip is retained; the library's lower portico is open.
 import * as THREE from 'three';
-import { ringEdges, onEdge, band } from '../landmarksD/kit.js';
-import { MeshBuilder, addCap } from '../lib/massing.js';
+import { onEdge, band } from '../landmarksD/kit.js';
 
 function facades(K, edges, h, { floor = 3.6, bay = 3.7, bottom = 1.4, w = 1.5 } = {}) {
   K.use(true);
@@ -67,54 +66,7 @@ export function spire(K, records) {
   svc.photoSpots.push({name:'Дом со шпилем · Московский, 190',x:-1726,z:7593,yaw:-126,pitch:24});
 }
 
-export function library(K, records) {
-  const { body: P, detail: D, mats: M, ctx, svc } = K;
-  K.use(true);
-  for (const r of records.filter(b => !b.skip && !b.part)) {
-    const main = r.id === 'r1806688', h = main ? 23.2 : 28.5;
-    const edges = r.polys.flatMap(p => ringEdges(p));
-    for (const p of r.polys) { const roof = new MeshBuilder(); addCap(roof,p,h); P.geo(M.roof,roof.build()); }
-    for (const e of edges) {
-      const mx = (e.a[0]+e.b[0])/2, mz = (e.a[1]+e.b[1])/2;
-      const portico = main && !e.hole && mx > -1831 && mz > 7430 && mz < 7484;
-      const entryGlass = main && e.hole && mx > -1844 && mz > 7430 && mz < 7484;
-      onEdge(P,e,len => {
-        // The curved upper drum bridges the tall open columns, as photographed.
-        P.box(M.stone,0,len,portico || entryGlass ? 16.5 : 0,h,-.5,0);
-        if(entryGlass) {
-          P.box(M.dark,0,len,.3,16.5,-.35,-.05);
-          // The hole's normal points INTO the courtyard. Both faces of the
-          // recessed glazing need mullions: the colonnade sees its back face.
-          for(const u of [0,len/2,len]) P.box(M.trim,u-.06,u+.06,.3,16.5,-.48,.06);
-          for(const y of [.4,4.4,8.4,12.4,16.4]) P.box(M.trim,0,len,y,y+.12,-.48,.06);
-          for(let y=.6;y<16;y+=4) P.quad(M.window,[.12,y,-.37],[len-.12,y,-.37],[len-.12,y+3.6,-.37],[.12,y+3.6,-.37],[0,0,-1]);
-        }
-        P.box(M.trim,0,len,h-.38,h+.12,-.52,.12);
-        if (portico) P.box(M.shade,0,len,20.6,21.4,-.54,.025);
-      });
-      const dx=e.b[0]-e.a[0],dz=e.b[1]-e.a[1];
-      ctx.physics.addBox(mx,mz,e.len,.75,Math.atan2(-dz,dx),portico?16.5:0,h);
-      if (!portico) {
-        if(!entryGlass)onEdge(D,e,len=>{ const n=len>2.3?Math.max(1,Math.floor(len/4.0)):0; for(let i=0;i<n;i++) for(let y=1.0;y+2.8<h-1;y+=4.2) K.window((i+.5)*len/n,y,1.7,2.8); });
-      }
-    }
-    if (main) {
-      const cx=-1842.1, cz=7456.3, rad=29.6;
-      for(let i=0;i<9;i++) {
-        const a=(-65+i*130/8)*Math.PI/180, x=cx+rad*Math.cos(a), z=cz+rad*Math.sin(a);
-        P.col(M.trim,x,z,.3,16.5,.48,.48,4);
-        ctx.physics.addCylinder(x,z,.68,0,16.5);
-      }
-      for (const [i,word] of ['РОССИЙСКАЯ','НАЦИОНАЛЬНАЯ','БИБЛИОТЕКА'].entries()) {
-        const a=(34-i*34)*Math.PI/180;
-        K.label('mz-library-name-'+i,word,cx+31.3*Math.cos(a),17.9,cz+31.3*Math.sin(a),15,1.05,Math.PI/2-a,{bg:'transparent',fg:'#363b40'});
-      }
-      svc.entrances.push({id:'mz-library',x:-1820,z:7456.3,rotY:Math.PI/2,name:'Российская национальная библиотека'});
-    }
-    svc.houses.push({id:r.id,name:'Российская национальная библиотека',x:r.cx,z:r.cz,h});
-  }
-  svc.photoSpots.push({name:'Российская национальная библиотека',x:-1760,z:7456,yaw:90,pitch:12});
-}
+export { library } from './library.js';
 
 export function council(K, records) {
   const { mats:M, body:P, svc } = K;

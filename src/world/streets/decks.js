@@ -6,6 +6,8 @@
 // a deck is entered 0.4 m inside its edge (SH) so the street asphalt overlaps the deck edge by 0.4 m and no seam opens between them (the deck lies above the street: 0.05 m and up).
 import { SITES, EXT, frameOf } from '../bridges/sites.js';
 import { WATER } from '../data/city.js';
+import { LONG, hump } from '../bridges/long-sites.js';
+import { BRIDGE_GROUP_KEYS } from '../lib/area-tables.js';
 
 const SH = 0.4;
 let DECKS = null, ENABLED = true;
@@ -49,6 +51,14 @@ function build() {
     const cw = { x: f.cx + uc * f.c, z: f.cz + uc * f.s };
     DECKS.push({ s, f, iv, n, v0: s.v0, v1: s.v1, R, cw, toUV });
   }
+  // Long bridges draw their own complete raised road and pavements too. Some
+  // mapped sidewalk polygons omit bridge=yes, so ownership alone cannot clear
+  // the flat paving below them. Use the builder's actual bank-to-bank frame.
+  for (const s of LONG) if (BRIDGE_GROUP_KEYS.has(s.id)) {
+    const f = frameOf(s), toUV = (x, z) => { const dx = x-f.cx, dz = z-f.cz; return [dx*f.c+dz*f.s,-dx*f.s+dz*f.c]; };
+    const cw = { x:f.cx+s.len/2*f.c, z:f.cz+s.len/2*f.s }, R=Math.hypot(s.len/2+4,s.hw+4);
+    DECKS.push({s,f,toUV,cw,R,long:true,y:hump(s.len,s.crown),n:1,iv:[[-.4,s.len+.4],[-.4,s.len+.4]],v0:-s.hw-.3,v1:s.hw+.3});
+  }
   // the decks by 64 m cell of their quick-reject square (in DECKS order: the first deck under a point wins as before); deckAt is asked for every kerb sample, lamp, pocket and pole
   GRID = new Map();
   for (const d of DECKS) for (let cx = Math.floor((d.cw.x - d.R) / DG); cx <= Math.floor((d.cw.x + d.R) / DG); cx++) for (let cz = Math.floor((d.cw.z - d.R) / DG); cz <= Math.floor((d.cw.z + d.R) / DG); cz++) { const k = cx * 4096 + cz; let l = GRID.get(k); if (!l) GRID.set(k, (l = [])); l.push(d); }
@@ -72,13 +82,27 @@ export function deckAt(x, z, margin = 0) {
 }
 
 /** the decks as { id, ring: [x, z, ...] } rectangles (bank to bank) for debug drawings */
-export function deckRings() {
+export function deckRings({longOnly=false}={}) {
+  if (!ENABLED) return [];
   if (!DECKS) build();
-  return DECKS.map((d) => {
+  return DECKS.filter(d=>!longOnly||d.long).map((d) => {
     const pts = [], f = d.f;
     const at = (u, v) => [f.cx + u * f.c - v * f.s, f.cz + u * f.s + v * f.c];
     for (let k = 0; k <= d.n; k++) pts.push(at(d.iv[k][0] - EXT, d.v0 + (d.v1 - d.v0) * k / d.n));
     for (let k = d.n; k >= 0; k--) pts.push(at(d.iv[k][1] + EXT, d.v0 + (d.v1 - d.v0) * k / d.n));
     return { id: d.s.id, ring: pts.flat() };
   });
+}
+
+/** Physical raised LONG deck height, for hardware which belongs above it.
+ * Unlike the drawing reservation this includes the complete deck edge. */
+export function longDeckHeight(x,z) {
+  if (!ENABLED) return null;
+  if (!DECKS) build();
+  for (const d of GRID.get(Math.floor(x/DG)*4096+Math.floor(z/DG)) || NONE) {
+    if (!d.long) continue;
+    const [u,v]=d.toUV(x,z);
+    if (u>=-1.2 && u<=d.s.len+1.2 && Math.abs(v)<=d.s.hw+.3) return d.y(u);
+  }
+  return null;
 }
