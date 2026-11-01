@@ -6,6 +6,7 @@ import path from 'node:path';
 import { REGISTRY } from '../src/areas/registry.js';
 import { mapData, rectsOfRings } from './area-shape.mjs';
 import { cutArea } from './area-data-cut.mjs';
+import { j2 } from './strip-data-clip.mjs';
 
 const drafts = [
   { id: 'kolomna', mapId: 42, prefix: 'K' },
@@ -47,6 +48,16 @@ for (const draft of drafts) {
   REGISTRY[draft.id] = { id: draft.id, play: rects };
   const command = `node tools/prepare-area-port.mjs --orig ${orig}`;
   const result = await cutArea({ area: draft.id, orig, command });
+  // Moscow Gate is a propylon: only its entablature spans the whole outline.
+  // Its landmark module supplies solid columns and the raised walkable slabs;
+  // a ground footprint here otherwise makes every visible bay a wall to cars.
+  result.parts.forEach((part, i) => {
+    const buildings = part.arrays.get('BUILDINGS');
+    const gate = buildings.find((b) => b.id === 'w50224296');
+    if (!gate) return;
+    gate.minH = 16.15;
+    result.partTexts[i] = result.partTexts[i].replace(/^export const BUILDINGS = .*;$/m, `export const BUILDINGS = ${j2(buildings)};`);
+  });
   const dir = path.resolve('src/areas', draft.id, 'data');
   fs.mkdirSync(dir, { recursive: true });
   const keep = new Set(result.parts.map((p) => p.file).concat('city.js'));

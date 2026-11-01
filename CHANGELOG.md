@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **8.2.1** (2026-11-01, patch): Open Moscow Triumphal Gate column bays to cars and retain solid columns and entablature
 - **8.2.0** (2026-10-31, minor): Add slow, gentle waving to the three waterfront flags, with fixed hoists, attached emblems and matching shadows.
 - **8.1.0** (2026-10-31, minor): Rebuild Lakhta Center, add three giant waterfront flagpoles and clean shore surfaces, close coastal bridge gaps, and make the container ship boardable from a quay with a clear departure route
 - **8.0.0** (2026-10-31, major): Integrate coastal districts with Petrograd, share Yacht Bridge and board the container ship from either side

@@ -11,7 +11,7 @@ export const BAKED_REVISIONS = {
   morskoy: 'c8240300ea756c0355a4',
   okrug65: '6404d328ebb4fb1a884c',
   palace: '989178ba0ec91ea7e4b5',
-  semyonovsky: 'd5cc49efa8f6914d602d',
+  semyonovsky: 'd5b9b2d1d9c8c5361ad4',
   smolny: '1976d87f3bb1fd666f28',
   vasilyevsky: 'adb91cb2f41eb9d2e83a',
   vladimirsky: 'c75154115163d88aba7f',

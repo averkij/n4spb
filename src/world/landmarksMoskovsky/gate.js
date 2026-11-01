@@ -28,6 +28,12 @@ export function gate(K, rec) {
   B.box(M.bronze,-18.135,18.135,17.3,20.4,-4.05,4.05);
   B.box(M.bronze,-18.42,18.42,20.4,20.92,-4.265,4.265);
   B.box(M.bronze,-18.0,18.0,20.92,21.68,-3.88,3.88);
+  // The footprint is the raised entablature (data minH = 16.15), not a
+  // ground-standing wall. Keep its real volume and walkable top while cars
+  // pass between the separately registered columns below it. These exact
+  // slabs also retain roof landing after removing the false ground footprint.
+  for(const [w,d,y0,y1] of [[36.27,8.16,16.15,17.3],[36.27,8.1,17.3,20.4],[36.84,8.53,20.4,20.92],[36,7.76,20.92,21.68]])
+    ctx.physics.addWalkBox(x,z,w,d,rot,y1,y0);
   for(const side of [-1,1]){
     D.push(0,0,side*4.10,side<0?Math.PI:0);
     // Thirty high relief figures in total. Shields and paired wings are separate
