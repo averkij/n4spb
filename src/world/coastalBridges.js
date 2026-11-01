@@ -153,10 +153,13 @@ export function build(ctx) {
     pylons++;
   }
   const meshes = P.build(root, { name: 'coastal-bridges' }); ctx.addStatic(root); P.b.clear();
-  // One independently breakable6.4m railing panel. Narrow bases + horizontal
-  // bars share a geometry; no unbreakable continuous collider wall.
-  const rp = new Parts(); rp.box(steel, -.045, .045, 0, 1.12, -.055, .055);
-  for (const h of [.55, 1.05]) rp.box(steel, -.04, .04, h, h + .06, -3.2, 3.2);
+  // Each independently breakable panel terminates into its own end posts.
+  // The old single centre post left two cut horizontal bars projecting into
+  // space whenever a road opening, clipping boundary or removed panel ended a
+  // run. Neighbouring half-posts meet at the seam without overlapping faces.
+  const rp = new Parts();
+  for (const side of [-1, 1]) rp.box(steel, -.045, .045, 0, 1.12, side < 0 ? -3.2 : 3.14, side < 0 ? -3.14 : 3.2);
+  for (const h of [.55, 1.05]) rp.box(steel, -.04, .04, h, h + .06, -3.17, 3.17);
   const local = new THREE.Group(), geos = rp.build(local, { name: 'coastal-rail-template' });
   const railMatrix=s=>new THREE.Matrix4().makeRotationY(s.rotY).multiply(new THREE.Matrix4().makeRotationX(-Math.atan(s.grade))).scale(new THREE.Vector3(1,1,s.len/6.4)).setPosition(s.x,s.y,s.z);
   knockInstances(ctx, { name: 'coastal-rail', spots: railSpots, items: railItems, parts: geos.map(m => ({ geo: m.geometry, mat: steel,place:railMatrix })), rec: s=>({ kind: 'fence', mass: 45*s.len/6.4, h: 1.15, w: .12, d:s.len, anchored: true, metal: true }), far: 260 });

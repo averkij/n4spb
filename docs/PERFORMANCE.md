@@ -1936,3 +1936,114 @@ closure-scanner mutants are detected. All **16** live-area manifests are fresh:
 **1,612 complete products / 730.8 MiB gzip**. Moskovskaya contributes **149
 products / 54.4 MiB gzip**, revision `643d01461ae3592d437f`; the Moscow Gate fix
 uses Semyonovsky revision `d5b9b2d1d9c8c5361ad4`.
+
+## 9.0.1 — solid park banks and supported fixtures (2026-11-01)
+
+The reported Victory Park defects came from shared generators: quay decals
+were placed at bridge gaps without a supporting wall, bridge rails had free
+bar ends, hedges lacked end faces, and shoreline filtering erased real island
+edges. Natural banks were rendered above a separate flat-ground/water-bed
+height query, allowing the player to fall through the visible border.
+Rendering and walking now use the same bank triangles, including a submerged
+return to the bed. Width fitting prevents neighbouring banks from overlapping;
+short corners and closed seams retain complete faces. Exact water-boundary
+splits preserve open joins without discarding surveyed island shores.
+
+All **16** live-area fixture audits pass, and **282** water-reachability checks
+pass. Final source-frozen Palace, Kolomna and Moskovskaya fixture/water/boat
+reruns pass all nine suites: boat counts are 108, 99 and 14 respectively.
+The hedge audit checks 6,309 real runs across all 16 areas, individual closed
+topology and 140,206 front-side rays; the Academy's five bespoke hedges are
+also closed. Missing-face, reversed-cap, unsupported-fixture and missing-post
+mutants fail. The generic knock suite passes all 16 cases.
+
+The actual player completes 44 two-way Moskovskaya bank routes across all
+nine named park ponds and 11 water records, with 793 rendered-surface rays;
+Palace adds two routes and Kolomna 27. A retained Kolomna overlap regression
+adds four walking directions, 4,010 height/physics probes and 390 mesh rays.
+An independent strict park audit checks 125,146 rendered-grass samples,
+35,789 dry-shore probes and 2,554 final convex ground cuts with no missing
+faces, inverted triangles, phantom banks or physics mismatch. These checks
+exercise the complete production module set, including the park bridges.
+The Moskovskaya environment remains within its existing geometry contract:
+**893,242 / 980,000 triangles**, 37 materials, 850 meshes, 84 instance types
+and seven existing update callbacks. Width-detection samples are removed from
+broad unchanged straight banks before drawing; no budget was raised.
+
+The wider audit is **not wholly green**. Smolny has two boat-pillar checks
+failing, and Kronverk has one dynamic ram check failing; each reproduces at
+the unchanged `522d0bb` baseline. Palace's existing furniture violations and
+one missing stop bar also reproduce there, with identical counts; its road
+surface and ribbon checks pass. Moskovskaya's road and strict marking checks
+pass with the documented pre-existing surface-edge residue. No exemptions
+were added. Exact locations and repro commands are in
+[MOSKOVSKAYA-AREA.md](MOSKOVSKAYA-AREA.md).
+
+Source verification passes all 572 area checks, both layout goldens, generated
+page and ownership checks, syntax checks, closure/import/runtime lints and all
+nine closure-scanner mutants. The strip golden's single shore-distance hash
+change is the restored 1.7 cm source bend, documented in the park research;
+the northern golden is unchanged.
+
+All 16 areas were rebuilt after freezing the source. Manifest revision, size,
+SHA and generated-map checks pass for **1,612 complete products / 730.8 MiB
+gzip**. Moskovskaya retains 149 products / 54.4 MiB gzip, revision
+`2f13c5b7fe33dbb728ee`; Palace is `d96f760228ad90a28e98` and Kolomna is
+`2959091cedbab8d81449`. No forced stale bake is used for final validation.
+
+The final normal-bake browser regression passes all six checks. Real keyboard
+W input takes the player from `(-1407.9,7248.1)` out of the pond, back into it
+and out again, remaining grounded with no fall rescue. The submerged starting
+floor is -1.7213 m and both exits reach ordinary y = 0 ground. All five
+reported camera views were opened and inspected after this run: supported rail
+ends, no floating wall sprites, a closed hedge and a complete island bank.
+There are no browser/module errors or failed regions. Evidence is in
+`shots/park-repair/shipping/` and `shipping-final.txt`.
+
+All five final normal-bake depth probes pass: 6, 17, 10, 4 and 79 noisy pixels
+(worst **0.009%**), identical-frame difference zero and no listed offenders.
+Their inspected images show only sparse water-highlight noise, not an open
+hedge or bank. The probe server now uses the shared revision endpoint; its
+earlier diagnostic 404 is eliminated. The final red-car control test passes
+entry, acceleration, nitro, drift, braking and exit (`--nofuzz`).
+
+The following full-scene drives use Edge 156 / ANGLE D3D11 / RTX 3090 Ti,
+1280 × 720, medium, normal matching bakes and twenty seconds of W input.
+GPU jobs ran serially; CPU audits, profiling and intermediate screenshots were
+excluded from the timed intervals. The before samples are the matching 9.0.0
+checkpoint recorded earlier in this session, using identical starts and input.
+Final artifacts and inspected end views are in `shots/park-repair/perf/`;
+before artifacts remain in `shots/moskovskaya-perf/`.
+
+| Route / version | Load s | Frame ms mean / p50 / p95 | Max ms | Frames >40 / >80 ms | Mean draws | Travel m | CDP used / backing MiB |
+| --- | ---: | --- | ---: | --- | ---: | ---: | --- |
+| Station / Nevsky, 9.0.0 | 24.20 | 20.70 / 16.7 / 33.4 | 183.4 | 5 / 3 | 1241 | 354 | 590 / 1337 |
+| Station / Nevsky, 9.0.1 | 23.26 | 18.76 / 16.7 / 33.3 | 250.0 | 4 / 2 | 1163 | 352 | 586 / 1350 |
+| Admiralty, 9.0.0 | 24.22 | 22.00 / 16.7 / 33.4 | 133.4 | 15 / 4 | 1057 | 98 | 427 / 696 |
+| Admiralty, 9.0.1 | 23.81 | 26.51 / 33.3 / 33.4 | 150.0 | 24 / 3 | 1447 | 47 | 580 / 1316 |
+| Moskovsky Prospekt, 9.0.0 | 14.34 | 17.24 / 16.7 / 16.8 | 133.4 | 5 / 3 | 1057 | 190 | 411 / 582 |
+| Moskovsky Prospekt, 9.0.1 | 15.65 | 17.36 / 16.7 / 16.8 | 116.7 | 8 / 3 | 1045 | 195 | 450 / 601 |
+
+Final reciprocal-mean rates are approximately **53 / 38 / 58 FPS**. All drives
+finish stopped after collisions; the station views end within 3 m of each
+other, but Admiralty stops 50 m earlier and Moskovsky is deflected differently.
+The +4.51 ms/frame and larger memory sample at Admiralty therefore describe
+a different traffic/view/region state, not isolated shared-helper overhead.
+The new district's observed load increases about 1.3 s and its mean frame time
+0.12 ms. These samples do not establish a performance gain. CDP JS used and
+backing storage are separate end-of-run samples, not retained-memory results;
+final loaded regions are 36, 50 and 54, with zero failed regions and no
+browser/module errors. Comfortable 30 FPS remains inconsistent in the old
+centre: its p95 remains around the threshold and hitches reach 250 ms.
+The next measured bottlenecks remain draw submission and region/GC hitches;
+the performance goal is not finished by this geometry repair.
+
+Reproduce with the starts in the 9.0.0 section, or:
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/park-repair/perf/station
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/park-repair/perf/centre
+node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-1712,7050,1.62" --json --diagnostics --out shots/park-repair/perf/moskovsky
+node tools/park-shore-playtest.mjs
+node tools/drive-test.mjs --area palace --q medium --nofuzz --out shots/park-repair/controls
+```

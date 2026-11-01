@@ -149,54 +149,141 @@ Services: `ctx.services.landmarksMoskovskayaPark` publishes `monuments`,
 `photoSpots`, `entrances`, `benches`, `lamps`, `trees`, `triangles`, `buildMs`,
 `updates`; monuments/photo spots merge into `ctx.services.landmarks`.
 
-## Verification
+## Verification and budgets
 
-Initial isolated real-renderer views of the propylea, pavilion, memory portico
-and high park overview were inspected under `shots/moskovskaya-park/geometry_*`.
-These intentionally omit terrain and are geometry diagnostics, not integrated
-performance evidence. Headless module check after the chapel and western
-sculptures and flowerbed/dormer details: **224,751 triangles (260,000 budget),
-369 instance buckets, 2,939 instances, 27 used materials, one 1 Mpx atlas,
-638 colliders, zero updates, 230 ms build**.
-Knock registers 46 benches and 40 lanterns in the isolated build. The same
-fixtures share part geometry and bounded cells, without attaching Dynamic
-casters to static shadow sectors.
+The park landmark module's isolated geometry checkpoint measured **224,751
+triangles against its 260,000 budget**, 369 instance buckets, 2,939 instances,
+27 materials, one 1 Mpx text atlas, 638 colliders and no update callbacks.
+It registered 46 benches and 40 lanterns. These are historical isolated-module
+measurements, not whole-area loading or FPS results. The final shared
+environment measures **893,242 triangles against its 980,000 budget**, with
+37 materials, 850 meshes, 84 instance types, 37,493 instances, 19,895 colliders
+and seven existing update callbacks. Width fitting adds no per-frame callback.
+Shipping bake, loading and performance evidence belongs in
+[PERFORMANCE.md](../PERFORMANCE.md).
 
-`node tools/areas-test.mjs --area moskovskaya`: **210 passed, 0 failed** after
-making the claim tables pure. The lead owns the complete road/marking audits,
-integrated walking/driving/boat regressions, normal loading/bake/performance
-measurements and final shipping screenshots; local-only FPS is not evidence
-for those contracts. Further integrated image/z-fighting review follows below.
+The integrated park regression builds real environment, streets, city, park
+and bridges. It checks boat acceleration in all nine named ponds, dry island
+interiors, legal wet car poses, an actual walk through the shallow fountain,
+open propylea/pavilion bays with solid columns, and representative bench/lamp
+impacts removing their upright colliders. Its fountain-cylinder mutation
+detects the former blocked basin. These checks complement the full area's
+**15 water-reachability checks and 14 boat-passage checks**, repeated after
+the final bank changes.
 
-The new `tools/moskovskaya-park-test.mjs --integrated`, run through
-`tools/area.mjs moskovskaya`, builds the real environment, streets, city,
-authored park and coastal bridges. It passes: all eleven original island holes
-have dry physics/terrain; real motorboats accelerate through hull-safe courses
-in all nine named ponds; water poses remain legal for cars; a real walker
-crosses the shallow fountain; the central entrance and pavilion porch remain
-open while real columns stay solid; and representative bench/lamp impacts
-remove their upright colliders, preserving Dynamic mesh/finite-range contracts.
-The negative control `--mutant-fountain` restores the source's filled cylinder
-and correctly fails the water-access assertion.
+The production-world natural-bank test uses the real Player and Physics
+services. Final Moskovskaya results are **44 two-way walking routes through
+11 basins, including all nine named ponds; 22,986 walk triangles; 793 actual
+front-sided mesh rays; maximum render/terrain error 0.000274 m; and 11,240
+walking updates**. One obstructed candidate is excluded because a real
+structure occupies it. Thirty runs include sixteen closed runs. Its
+flat-floor mutation detects the former invisible terrain mismatch.
 
-Five context views (`shots/moskovskaya-park/integrated_*`) were inspected with
-the real environment, streets, city, park and shared coastal bridges. The aerial
-shows the source's true pond/island network and formal avenues. A narrow
-inter-pond bank exposed overlapping broad slope aprons; the area foundation
-reduced its natural shore run from 4 m to 2 m, preserving the dry walking strip.
-Final pavilion-bank, chapel and Memory-portico views
-(`shots/moskovskaya-park/final_*`) were inspected again. A small lawn clearing
-around the chapel and the central pavilion porch keeps generic random trees
-out of the architectural approaches, retaining the surrounding mature forest.
+Native fountain water is registered by the live park builder on each boot;
+the baked loader hydrates environment/city products and still calls landmark
+builders. The normal page therefore retains the native water ring without
+a physics-codec extension. The focused runtime query is
+`__ctx.physics.waterLevel(-1618.5,7071.9) === 0.29`.
 
-The corresponding integrated depth-precision probes pass with **6 pixels /
-0.001%, 1 pixel / 0.000%, and 1 pixel / 0.000%**, with an empty offenders table
-(`shots/moskovskaya-park/zfight_*`). These scene geometry diagnostics include
-terrain/streets/city/bridges but omit traffic and people; they remain separate
-from the lead's final normal-bake performance measurements.
+The original isolated geometry views, integrated pavilion/chapel/portico
+images and depth-precision checks are retained in
+`shots/moskovskaya-park/`. Their worst depth probe was 0.001% with no reported
+offender. They establish architectural context and depth stability, not
+proof of shoreline support. The final normal-page regression
+`tools/park-shore-playtest.mjs` separately reproduces the reported low camera
+views and walks out of, into and out of the bank near `(-1407.9,7248.1)`.
 
-Native fountain water is registered by the park's live builder on every boot.
-The generic baked loader hydrates the environment/city products and still calls
-the landmark builder normally; the basin's water ring therefore does not depend
-on extending a physics serialization format. The final normal-bake browser
-check should query `__ctx.physics.waterLevel(-1618.5,7071.9) === 0.29`.
+## Final shared shoreline implementation
+
+The original Fountain Pond island defect combined an erased source edge
+with inconsistent closed-bank mitres. Its surveyed hole
+(`r11008649`, polygon 0, hole 0) lost a real nearly vertical shore near
+`(-1400.3,7160.6)` because it lay within the old tolerance of an unrelated
+extent's x = -1400 clip line. Nearby triangulation diagonals also fooled the
+old distance-only join rule. The final shared extraction:
+
+- Splits edges at crossings and collinear endpoints of other water boundaries
+  through a temporary 64 m index before testing each uniform piece.
+- Checks hydraulic continuation on both sides, preserving real shores even
+  when they lie exactly on a clipping line.
+- Requires opposing water interiors for seam-gap repair and prevents repaired
+  gaps from overlapping authoritative source island/pier holes.
+- Excludes doubled zero-width connectors over dry land.
+
+This is general water topology, without island coordinates or per-area
+exceptions. Splitting is necessary for the long Neva regional edge at
+x = -430: its short shore portion must not retain a 580.9 m wall across the
+rest of the open join. The full Palace regression now passes **108 checks**
+and retains a 1,774,776 m² main boat-free component.
+
+Drawing and `layout.heightAt` consume the same immutable natural-bank
+surface triangles, including a submerged return to the bed. Closed runs
+wrap identical mitres and omit end caps; true open ends use complete profile
+strips. Each walk triangle faces upward independently, including warped
+quads. Concave offset footprints are triangulated before convex subtraction.
+
+Available dry width is measured at construction time with at most 2 m spacing.
+Positive bank offsets reserve at most 49% of an intervening dry strip for
+each shore, constrain backtracking on short corner edges, and blend widths
+by at most 0.5 m per metre. Inserted collinear samples are removed only where
+all adjacent widths remain unadjusted; source bends and fitted transitions
+remain. Render profiles, terrain queries, ground cuts, clearing rings and rail
+tops share those fitted widths. Submerged returns and water membership remain
+unchanged. This prevents adjacent pond/canal aprons at different levels from
+ending in a ledge, as exposed by the Kolomna regression.
+
+## Independent audit and its limits
+
+Run the final dense audit with the complete production module list:
+
+```text
+node tools/area.mjs moskovskaya tools/park-shore-topology-audit.mjs --geometry --strict --json shots/moskovskaya-park/shore-audit-after.json
+```
+
+The frozen-source result (`7f79bc1d0c42b188`, quay/waterways digest) checks
+**8,457 generated-bank samples, 125,146 actual Float32 grass samples,
+35,789 dry-shore samples, 84,080 terrain/bridge triangles and 2,554 final
+convex cuts**, with no missing/back-facing shore, render/physics mismatch,
+erased source edge, phantom internal bank, closed-join seam or module error.
+Fourteen raw offset footprints are concave; every final subtraction cut is
+independently verified convex.
+
+`tools/water-bank-topology-test.mjs` independently checks all **11 original
+islands, 30,106 dry interior probes and 8,425 source shoreline probes**.
+Its pre-fix checkpoint comparison failed on an erased shore of `r147758`
+near `(-1551.05,6962.6625)`; the normal regression is independent of Git.
+`tools/water-join-topology-test.mjs` supplies a separate synthetic mixed
+shore/open join and a genuine island edge exactly on the same clip line:
+only the internal join disappears, while all 100 island probes stay dry.
+
+The earlier island-centre and interior-boat checks missed shoreline defects:
+neither traversed every waterline. Comparing a queried floor with the same
+query as the expected answer also accepted phantom terrain. Distant pictures
+and depth probes did not close those gaps. The dense audit instead compares
+original WATER rings, generated banks, actual transformed Float32 triangles,
+Physics support and final cuts. It probes triangle interiors and points near
+edges/vertices, plus eight offsets across each source shore.
+
+The full module list matters: `landmarksMoskovskaya` invokes the district's
+scoped removal of obsolete fallback bridge walk rectangles. Omitting it
+created forty discrepancies in a partial test world that do not occur on
+the production page. Agreement between mesh and physics alone still cannot
+detect a ledge shared by both; actual walking and continuity regressions
+supply that evidence. Finite 2 m fitting samples do not establish a
+mathematical guarantee for a narrower unsampled neck. Wet car poses also
+do not prove every possible driven-car ascent route.
+
+Legacy shore-distance probes inside water return zero, so they did not detect
+the temporary Neva wall; full boat connectivity did. The exact checkpoint
+comparison preserves all North and Palace probes. Strip's one corrected
+distance changes by 1.70085 cm at `(-2545.625,471.111111)`, preserving the
+surveyed `r3298111` bend
+`(-2670,586.5) → (-2668.9,586.7) → (-2559.2,615.3)` present in both WATER
+and RIVER. Its reviewed golden hash is `b930d98e9bd9ca6b`.
+The final extraction also changes one Admiralty probe by 1.77625 cm at
+`(-3431,-597)` and one Vladimirsky probe by 7.35345 m at
+`(2791.666667,-440)`, removing an artificial x = 2770 regional edge.
+Their exact artifacts remain under `shots/moskovskaya-park/`; those two
+goldens were not refreshed. Existing unrelated Smolny and Kronverk bridge
+ram defects and the new area's shared road/facade residuals are explicitly
+reported in [MOSKOVSKAYA-AREA.md](../MOSKOVSKAYA-AREA.md).

@@ -21,7 +21,7 @@ import * as CITY from './data/city.js';
 const { ORIGIN, EXTENT, PLAY, BUILDINGS, ROADS, AREAS: AREA_DATA, RIVER } = CITY;
 const PLAY_RECTS = CITY.PLAY_RECTS || [PLAY], EXTENT_RECTS = CITY.EXTENT_RECTS || [EXTENT];   // an old single-rectangle bake has no rectangle lists
 import { SHAFTS, DOORWAYS } from './data/metro.js';
-import { WATERWAYS, waterwayAt as _waterwayAt, shoreDistance as _shoreDistance } from './environment/waterways.js';
+import { WATERWAYS, waterwayAt as _waterwayAt, shoreDistance as _shoreDistance, slopeHeightAt } from './environment/waterways.js';
 import * as A from './area.js';        // the strip's tables (the page of another area remaps this URL to its own area module: docs/AREAS.md)
 import { HEIGHT_PATCHES } from './lib/area-tables.js';        // the area's terrain patches (the strip's list is empty)
 export { ORIGIN, EXTENT, PLAY, PLAY_RECTS, EXTENT_RECTS };
@@ -102,6 +102,7 @@ export function inRiver(x, z) { return _waterwayAt(x, z) !== null; }
 /** Terrain height: 0 (street level) everywhere except the bed of the waterway inside the water polygons; the area's HEIGHT_PATCHES come first (array order, box reject, then at(x, z): the first non-null wins). */
 export function heightAt(x, z) {
   for (let i = 0; i < HEIGHT_PATCHES.length; i++) { const p = HEIGHT_PATCHES[i], b = p.box; if (x < b[0] || x > b[1] || z < b[2] || z > b[3]) continue; const h = p.at(x, z); if (h != null) return h; }
+  const shore=slopeHeightAt(x,z);if(shore!==null)return shore;
   const k = _waterwayAt(x, z); return k ? WATERWAYS[k].bed : GROUND_Y;
 }
 export const groundAt = heightAt;

@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.0.1** (2026-11-01, patch): Fix natural-bank walking, shoreline joins, floating quay fixtures and open hedge and bridge-rail ends
 - **9.0.0** (2026-11-01, major): Add Moskovskaya Zastava with researched Victory Park, Strugatsky Square, Chesme, library and avenue landmarks
 - **8.2.1** (2026-11-01, patch): Open Moscow Triumphal Gate column bays to cars and retain solid columns and entablature
 - **8.2.0** (2026-10-31, minor): Add slow, gentle waving to the three waterfront flags, with fixed hoists, attached emblems and matching shadows.

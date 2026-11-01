@@ -41,14 +41,17 @@ maintained shared planner: a southern coordinate alone must not select the Sea
 Canal's harbour elevation or distant Korabelny Bridge pylons. The area's narrow
 `bridge-fallbacks.js` adapter removes only exact obsolete rectangular quay-floor
 signatures at those owned crossings, preserving the real curved planar decks
-and the water below them. Grass slope run is 2 m so opposing banks cannot overlap
-across the narrow paths between ponds.
+and the water below them. Park slopes use a nominal 2 m run, fitted to the
+available dry strip. The shared fitter reserves at most 49% of a narrow strip
+for each bank, limits corner backtracking and blends fitted widths. Rendered
+profiles, physical terrain, ground cuts and rail tops use the same widths.
 
 The area starts at Victory Park's mapped main entrance. It provides one purple
 Zhiguli at `-1698,7096`, facing south along the clear frontage, and a motor boat
 in Admiralteysky Pond at `-1180,7333`, near the mapped rental location. The
 existing water, driving, boat, furniture and collision systems remain active.
-The fountain's shallow water comes from the park owner's water-body hook.
+The park builder registers the fountain's native shallow physics water on every
+boot; the area's water-body hook supplies its surface/vegetation mask.
 Footpaths and drivable roads retain the shared street rules and asphalt checks.
 
 Landmark ownership is divided between `landmarksMoskovsky` (Moscow Gate),
@@ -121,3 +124,83 @@ building-specific exemption or relaxed audit threshold was added. Reproduce:
 node tools/area.mjs moskovskaya tools/city-wall-audit.mjs --near "-754.4,5294.3,15"
 node tools/area.mjs moskovskaya tools/city-wall-audit.mjs --near "-754.4,5294.3,15" --ref d613560
 ```
+
+The pond-bridge fixture correction applies to the shared quay builder. Every
+mooring ring, anchor plate and culvert sprite must fit wholly against a real
+vertical wall face, including the wall's height-dependent batter and mitred
+corners. Bridge-zone ends on natural grass banks no longer create floating
+anchor plates or unsupported black culvert arches. Coastal railing panels now
+terminate into attached end posts; their horizontal bars and terminal caps remain
+closed even where a road opening or a broken panel ends a run. This retains the
+same material, cell meshes, collision widths and independently breakable panels.
+
+`tools/quay-fixture-audit.mjs` verifies the actual built meshes without a GPU:
+nine world-space backing probes per wall sprite, post intersections at both
+rail ends, every post foot supported by a physical deck triangle, closed
+triangle topology and mutations for unsupported mounts,
+missing posts and missing faces. Run under any area loader, or through
+`tools/each-area.mjs` for the complete registry.
+
+Natural pond banks share one immutable surface plan between drawing and
+`layout.heightAt`, including a submerged return from the bed. Closed banks use
+the same join on both sides of their closing vertex; open ends have complete
+profile caps. Each walk triangle faces upward even where a quad is warped.
+Concave ground-cut footprints are triangulated before convex subtraction.
+Width fitting samples long source edges at most 2 m apart, retains all fitted
+transitions and source bends, and removes unadjusted inserted collinear points
+to contain geometry cost. Mixed shore/open regional edges are split at water
+boundary crossings before bank classification. Real shores exactly on clipping
+lines survive; repaired seam gaps cannot flood authoritative source islands.
+The slope-clearing predicate governs vegetation/surface placement. Player and
+vehicle movement remain open, and boats retain the original water polygons.
+
+The reported routes/views are reproduced by `tools/park-shore-playtest.mjs` on
+the normal full page, after baking. It walks the real player out, in and out
+again at `-1407.9,7248.1`, checks support/rescues and saves all five reported
+camera views. `tools/natural-bank-test.mjs` checks actual front-sided bank
+meshes against terrain and performs **44 two-way routes through eleven park
+basins**, including all nine named ponds. Final checks cover 22,986 walk
+triangles and 793 actual front-sided rays, with a maximum render/terrain error
+of 0.000274 m. Its flat-floor mutant reproduces the old physical mismatch.
+The independent strict Float32 audit passes 125,146 rendered-grass probes,
+35,789 dry-shore probes and 2,554 final convex cuts. A separate source-topology
+regression checks all eleven islands with 30,106 dry interior probes and 8,425
+surveyed shoreline probes. The [park research dossier](research/moskovskaya-park.md)
+records reference evidence, final counts, reproduction commands and remaining
+finite-sampling limits. Final shared environment geometry is **893,242 triangles
+against its 980,000 budget**; shipping bake/performance evidence is recorded
+separately in [PERFORMANCE.md](PERFORMANCE.md).
+
+The shared-change boat regression also reproduces an older Smolny defect at
+the `north-bridges` pillar near `(2635, -1137)`: three drawn-footing samples lack
+floating-hull collision coverage, and the corresponding ram check fails. The
+read-only engine baseline at `522d0bb` has the same two failures out of 48
+checks. This is an existing pillar-coverage defect, not a passing boat audit;
+the fixture repair does not change that bridge's collision geometry.
+
+Kronverk also reproduces its older fortress-bridge ram defect at `522d0bb`:
+boats end inside the drawn footings near `(-2340, -1920)` and `(-1600, -2249)`.
+The static pillar-coverage check passes, but the dynamic ram check fails in
+both the current scene and the read-only baseline. These two measured older
+bridge defects remain explicitly reported rather than waived by the audit.
+
+Registry-wide verification passes all sixteen actual-mesh quay-fixture audits
+and all **282 water-reachability checks**. The three areas affected by the final
+shore-profile adjustment were rerun against matching recorded source digests:
+Palace, Kolomna and Moskovskaya pass all nine fixture/water/boat audits. Their
+water suites pass **23 / 17 / 15 checks**, and their boat suites pass
+**108 / 99 / 14 checks**, respectively. The full boat matrix retains Smolny's
+two older pillar checks and Kronverk's one older fortress-ram check described
+above; neither defect is counted as a pass. Evidence includes
+`shots/fit-three-area-status.txt` and the per-area final audit logs.
+
+Palace's road wrapper still fails its strict furniture audit, while its
+96-sample surface residue remains within the 120-sample budget and its ribbon
+checks pass. Its marking suite also retains one missing stop bar at
+`n1562060894`, approach 2, Kuznechny Lane near `(154.9,597.3)`. Both failures
+reproduce unchanged at `522d0bb`, as recorded in
+`shots/park-repair/roads-palace[-head].txt` and
+`shots/park-repair/markings-palace[-head].txt`. Moskovskaya's road and marking
+wrappers pass with the documented 180-sample surface budget. These older
+Palace wrapper failures are recorded separately from the passing new-area
+surface and transport checks.

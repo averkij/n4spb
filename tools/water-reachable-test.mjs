@@ -33,6 +33,7 @@ const { HOOKS } = await import('../src/world/lib/area-tables.js');
 const { isPierBox } = await import('../src/world/bridges/piers.js');
 const hyp = Math.hypot, DEG = 180 / Math.PI;
 const { floorZones: BRIDGE_FLOORS_FN } = await import('../src/world/environment/river.js'), BRIDGE_FLOORS = BRIDGE_FLOORS_FN();
+const { slopeHeightAt } = await import('../src/world/environment/waterways.js');
 const modOf = (it) => { const i = ph.items.indexOf(it); for (const [n, [a, b]] of Object.entries(marks)) if (i >= a && i < b) return n; return '?'; };
 const env = ctx.services.environment;
 
@@ -107,7 +108,10 @@ check('1 water cells in the play area: inside the territory, not clamped, not bl
     if (!L.inPlay(c.x, c.z)) { bad.outside++; ex.push(['outside', c.x, c.z]); }
     const cl = L.clampToPlay(c.x, c.z, 0); if (cl[0] !== c.x || cl[1] !== c.z) bad.clamped++;
     if (car0.blocked(c.x, c.z)) { bad.blocked++; if (ex.length < 6) ex.push(['blocked', c.x, c.z]); }
-    const g = ph.groundHeight(c.x, c.z, c.level - 0.3, false); if (!Number.isFinite(g) || g > c.level + 0.3) { bad.ground++; if (ex.length < 6) ex.push(['ground', c.x, c.z, g]); }      // (the bed, or a landing stage / step on it; never a void)
+    // Natural banks have a real shallow shelf; fixed feet 0.3 m below the
+    // water can already be inside that soil. Query at its actual terrain
+    // surface so a correctly solid shelf is not mistaken for a void.
+    const g = ph.groundHeight(c.x, c.z, L.heightAt(c.x,c.z), false); if (!Number.isFinite(g) || g > c.level + 0.3) { bad.ground++; if (ex.length < 6) ex.push(['ground', c.x, c.z, g]); }
     if (HOOKS.carKeepOut && HOOKS.carKeepOut(c.x, c.z)) bad.keepOut++;
     const actual=ph.waterLevel(c.x,c.z);
     // A mapped water polygon can extend under an authored beach apron. Sand
@@ -331,7 +335,13 @@ function carRun(f, speedKmh, { id = 'coupe' } = {}) {
 /** the invisible walk floors of the undrawn OSM bridges (BRIDGE_ZONES rows with floor: true) catch a car that falls off the bank beside them; this check is about the quay fence, so they are lifted out for the run and put back */
 function withoutFloors(fn) { const tops = floorItems.map((it) => it.top); for (const it of floorItems) it.top = -50; try { return fn(); } finally { floorItems.forEach((it, i) => { it.top = tops[i]; }); } }      // (their surface sinks below the bed for the run: no insertion or removal, the item order of the physics stays)
 /** the bay has the trench behind it: the ground 3 m beyond it (surfaces included) is 1 m or more below the street. A bay at the approach of a bridge leads onto its deck, and the car that breaks it drives on over the canal. */
-const deepBeyond = (r) => { const w = towardWater(r); return !!w && ph.groundHeight(r.x + w.nx * 3, r.z + w.nz * 3, 30, false) < -1; };
+const deepBeyond = (r) => {
+  const w = towardWater(r); if (!w) return false;
+  const x = r.x + w.nx * 3, z = r.z + w.nz * 3;
+  // This fixture proves that a car cannot climb a vertical quay. Natural
+  // banks intentionally permit entry and exit (covered by natural-bank-test).
+  return slopeHeightAt(r.x, r.z) === null && slopeHeightAt(x, z) === null && ph.groundHeight(x, z, 30, false) < -1;
+};
 function pickCarFence() {
   return pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && r.mass <= 300 && !r.__tried && deepBeyond(r), 6000, true, true) || pickFence((r) => FILTER_QUAY(r) && r.anchored <= 24 && !r.__tried && deepBeyond(r), 6000, true, true) || pickFence((r) => r.anchored <= 24 && r.mass <= 900 && !r.__tried && deepBeyond(r), 6000, true, true);      // (a railing panel first: the 900 kg granite parapet holds a car that is slowed by the trees before it)
 }
@@ -363,7 +373,7 @@ check('4 the car drives into a quay fence at 40 km/h: the bay breaks, the car fa
   assert(hyp(car.x - p0.x, car.z - p0.z) > 1.0 || car.speed < 3, 'driving or held by a wall, no NaN');
   assert([car.x, car.z, car.y, car.vx, car.vz].every(Number.isFinite));
   input.thr = 0; input.brk = 1; for (let t = 0; t < 6; t += 1 / 60) car.step(1 / 60, input);
-  const wl2 = waterAt(car.x, car.z); assert(wl2 !== null && car.y < wl2 - 0.8, 'still in the water after braking / reversing against the trench wall');
+  const wl2 = waterAt(car.x, car.z); assert(wl2 !== null && car.y < wl2 - 0.8, `still in the water after braking / reversing against the trench wall: bay ${f.r.x.toFixed(3)},${f.r.z.toFixed(3)}; start ${p0.x.toFixed(3)},${p0.z.toFixed(3)}; end ${car.x.toFixed(3)},${car.y.toFixed(3)},${car.z.toFixed(3)}; water ${wl2}; terrain ${L.heightAt(car.x,car.z)}`);
 });
 } else {
   check('4 a car drives from an open natural pond bank into real water and remains controllable', () => {

@@ -35,7 +35,8 @@ import * as L from '../layout.js';
 import { MeshBuilder } from '../lib/massing.js';
 import { PIERS, STEPS } from '../data/city.js';
 import { deckPoly, bridgeZones, floorZones, waterBanks } from './river.js';
-import { WATERWAYS, waterGeo, farBanks, slopeRuns, keepOut, ownerQuayAt as ownerWaterAt, ownerWaterBoxes } from './waterways.js';
+import { WATERWAYS, waterGeo, farBanks, slopeRuns, slopeSurfaces, slopeTopAt, keepOut, ownerQuayAt as ownerWaterAt, ownerWaterBoxes } from './waterways.js';
+import { wallFixture } from './quay-fixtures.js';
 import { pointInRing, distToRing, hash2 } from './util.js';
 import { pierRects } from './boats.js';
 import { BANK_INDEX } from './bank-index.js';
@@ -320,8 +321,9 @@ function frames(bank, splits, tests) {
     seg.push({ tx, tz, nx: -tz * bank.landSide, nz: tx * bank.landSide, len: l });
   }
   const fr = []; let s = 0;
+  const closed=Math.hypot(P[0][0]-P[n-1][0],P[0][1]-P[n-1][1])<1e-6;
   for (let i = 0; i < n; i++) {
-    const a = seg[Math.max(0, i - 1)], b = seg[Math.min(seg.length - 1, i)];
+    const a = seg[i===0&&closed?seg.length-1:Math.max(0, i - 1)], b = seg[i===n-1&&closed?0:Math.min(seg.length - 1, i)];
     let mx = a.nx + b.nx, mz = a.nz + b.nz; const ml = Math.hypot(mx, mz) || 1; mx /= ml; mz /= ml;
     const k = Math.min(2.2, 1 / Math.max(0.35, mx * b.nx + mz * b.nz));
     fr.push({ x: P[i][0], z: P[i][1], mx, mz, k, s });
@@ -514,7 +516,8 @@ export function buildQuay(ctx, root) {
   const info = { segments: [], stairs: [], allStairs: [], rings: 0, signs: 0, posts: 0, panels: 0, colliders: 0, deckPieces: 0, culverts: 0, tubes: 0, fallbackDecks: 0 };
   const face = {}, faceDeck = {}, coping = {}, parapet = new MeshBuilder(), granite = new MeshBuilder(), graniteA = new MeshBuilder(), graniteB = new MeshBuilder(), graniteR = new MeshBuilder(), graniteP = new MeshBuilder(), descents = [], lionSpots = [];
   const keys = Object.keys(WATERWAYS);
-  const grass = new MeshBuilder(), capB = new MeshBuilder(), slopeInfo = [];
+  const grass = new MeshBuilder(), capB = new MeshBuilder(), bedB = new MeshBuilder(), slopeInfo = [];
+  const shoreByBank=new Map();for(const s of slopeSurfaces()){let a=shoreByBank.get(s.bank);if(!a)shoreByBank.set(s.bank,a=[]);a.push(s);}
   for (const k of keys) { face[k] = new MeshBuilder(); faceDeck[k] = new MeshBuilder(); coping[k] = new MeshBuilder(); }
   face.mouth = new MeshBuilder(); const bermB = new MeshBuilder();      // n4spb (cluster B): the pale grey wall and the paved lower berm of the Smolenka mouth arms (x < -7490); empty (and drawn nowhere) in every other area
   const rings = [], signs = [], culverts = [], corbels = [];
@@ -838,27 +841,17 @@ export function buildQuay(ctx, root) {
       }
     }
     sweep(faceDeck[key], wallProf, (i) => !segDeck[i] || segIn[i] || segOpen[i], u0, vWall);
-    // ---- grass-slope banks: low granite banquette (kerb) at the water, a short lip, the grass slope up to street level, granite end caps where the slope meets a bridge / the wall
-    for (const reach of new Set(sRuns.map((r) => r.reach))) {
-      const KT = lvl(key) + reach.kerb, y0 = KT + reach.lip, run = reach.run, other = (i) => segSlope[i] !== reach, flat0 = () => 0;
-      const prof = [[0.45, y0]]; for (const [t, e] of [[0.18, 0.17], [0.38, 0.37], [0.58, 0.58], [0.78, 0.79], [0.92, 0.94], [1, 1]]) prof.push([0.45 + t * (run - 0.45), y0 * (1 - e)]);
-      prof.push([run + 0.3, -0.01], [run + 0.45, -0.05]);
-      sweep(face[key], [[-0.05, YB], [0, KT]], other, u0, vWall);
-      sweep(coping[key], [[0, KT], [0.45, KT]], other, 0, flat0);
-      sweep(coping[key], [[0.45, KT], [0.45, y0]], other, 0, flat0);
-      sweep(grass, prof, other, 0, (y) => (y - y0) / 5, 5);
-      slopeInfo.push({ key, reach: reach.id, run });
-      for (const r of sRuns) {
-        if (r.reach !== reach) continue;
-        for (const [sEnd, dir] of [[r.s0, -1], [r.s1, 1]]) {
-          const k = fr.findIndex((q) => Math.abs(q.s - sEnd) < 0.08); if (k < 0) continue;
-          const q = fr[k], sg = seg[Math.min(k, seg.length - 1)], nx = dir * sg.tx, nz = dir * sg.tz;
-          const poly = [[0, -0.005], [0, KT], [0.45, KT], ...prof.slice(0, 7), [run + 0.3, -0.005]];                  // the cut face of the earth: from the slope line UP to street level (the ground sliver beyond the end rests on it)
-          const ids = poly.map(([o, y]) => capB.vert(q.x + q.mx * o * q.k, y, q.z + q.mz * o * q.k, nx, 0, nz, o / 2, y / 2));
-          for (let j = 1; j + 1 < ids.length; j++) orientTri(capB, ids[0], ids[j], ids[j + 1], nx, 0, nz);
-        }
-      }
+    // The exact same immutable quads supply layout.heightAt. In particular,
+    // a low camera in the pond must stand on this slope, never on the old
+    // phantom flat terrain above it or a floorless void below it.
+    for(const s of shoreByBank.get(bank)||[]){
+      const B=s.kind==='grass'?grass:s.kind==='cap'?capB:s.kind==='bed'?bedB:s.kind==='coping'?coping[key]:face[key];
+      const n=s.normal,wall=s.kind==='wall',ids=s.points.map(p=>B.vert(...p,...n,wall?(p[0]*n[2]-p[2]*n[0])/TILE_U:p[0]/5,wall?vWall(p[1]):p[2]/5));
+      // Mitred quads need not be planar. Both physical triangles face up;
+      // one triangle's slanted normal must not turn its neighbour backwards.
+      quadN(B,...ids,...(s.walk?[0,1,0]:n));
     }
+    for(const reach of new Set(sRuns.map(r=>r.reach)))slopeInfo.push({key,reach:reach.id,run:reach.run});
     const flat = () => 0;
     if (key === 'fontanka') {
       sweep(coping[key], [[0, COP_BOT], [-COP_OUT, COP_BOT], [-COP_OUT, Y_TOP], [COP_IN, Y_TOP]], (i) => segGap[i] || segRoad[i], 0, flat);
@@ -994,7 +987,7 @@ export function buildQuay(ctx, root) {
       const len = r.s1 - r.s0 - 1.0, bay = kind === 'trellis' ? 2.5 : 2.6, n = Math.max(1, Math.round(len / bay)), step = len / n, off = r.reach.run + 0.3;
       let prev = null;
       for (let j = 0; j <= n; j++) {
-        const p = at(fr, seg, r.s0 + 0.5 + j * step), x = p.x + p.nx * off, z = p.z + p.nz * off;
+        const sv=r.s0+.5+j*step,p=at(fr,seg,sv),{x,z}=slopeTopAt(r,sv);
         if (!isNear(x, z) || gapAt(key, x, z) || onRoad(x, z, 0.3)) { prev = null; continue; }
         const post = { kind, col: postTone(kind, key, hash2(Math.round(x), Math.round(z), 5), x, z), y: 0.0 };
         if (prev) addBay({ x0: prev.x, z0: prev.z, x1: x, z1: z, nx: p.nx, nz: p.nz, key, y: 0, post, panel: kind === 'trellis' ? 'trellis' : null, h: RAIL_H.trellis, pany: 0.02, btubes: kind !== 'trellis', slope: true });
@@ -1003,18 +996,32 @@ export function buildQuay(ctx, root) {
       }
     }
 
+    // Wall sprites are mounted on the final solid face, not on the abstract
+    // shoreline. A bridge-zone boundary can end on grass or a shallow pond.
+    const fixtureFaceAt = (s) => {
+      if (s < 0 || s > total) return null;
+      let lo = 0, hi = fr.length - 2;
+      while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (fr[mid].s <= s) lo = mid; else hi = mid - 1; }
+      const p = at(fr, seg, s), i = lo;
+      return { ...p, solid: !segSlope[i] && !segOwner[i] && !segOpen[i] && !segIn[i] && !segDeck[i] && !segMouth[i] && !inRunS(s) && !gapAt(key, p.x, p.z) && !inGate(p.x, p.z, .6), top: COP_BOT, bottom: YB, batter,
+        a: { x: fr[i].x, z: fr[i].z, mx: fr[i].mx * fr[i].k, mz: fr[i].mz * fr[i].k }, b: { x: fr[i + 1].x, z: fr[i + 1].z, mx: fr[i + 1].mx * fr[i + 1].k, mz: fr[i + 1].mz * fr[i + 1].k } };
+    };
+    const fixture = (list, s, y, width, height, roadPad = 0) => {
+      const p = wallFixture({ s, y, width, height, faceAt: fixtureFaceAt, clearAt: (x, z) => !onRoad(x, z, roadPad) });
+      if (p) list.push(p);
+    };
     // ---- mooring rings (every ~15 m on the Fontanka, 6 m on the canals, 12 m on the Neva), anchor plates, culverts at the bridges
     const ringStep = key === 'fontanka' ? 15 : key === 'neva' ? 12 : 6.5, ringY = key === 'fontanka' ? -0.95 : lvl(key) + 1.25, signY = key === 'fontanka' ? -1.25 : lvl(key) + 1.85;
     for (let s = 6 + (bank.idx < 100 ? bank.idx : bank.idx % 4) * 3.7; s < total && !bank.far && key !== 'moat' && key !== 'nh-inner'; s += ringStep) {
       const p = at(fr, seg, s); if (!isNear(p.x, p.z) || inRunS(s) || gapAt(key, p.x, p.z) || inGate(p.x, p.z, 0.6)) continue;
-      rings.push({ x: p.x - p.nx * 0.045, z: p.z - p.nz * 0.045, nx: -p.nx, nz: -p.nz, y: ringY });
-      if (Math.floor(s / ringStep) % (key === 'fontanka' ? 4 : 5) === 1 && !onRoad(p.x, p.z)) signs.push({ x: p.x - p.nx * 0.03, z: p.z - p.nz * 0.03, nx: -p.nx, nz: -p.nz, y: signY });
+      fixture(rings, s, ringY, .26, .4);
+      if (Math.floor(s / ringStep) % (key === 'fontanka' ? 4 : 5) === 1) fixture(signs, s, signY, .52, .52);
     }
     // the gap ends: plates and drain culverts on the quay walls just beside the deck zone
     for (let i = 1; i + 1 < segDeck.length && !bank.far; i++) if (segDeck[i] !== segDeck[i - 1] && !segOwner[i] && !segOwner[i - 1]) {
-      const a = fr[i], sg = seg[segDeck[i] ? i - 1 : i], off = segDeck[i] ? -1.5 : 1.5, p = { x: a.x + sg.tx * off, z: a.z + sg.tz * off };
-      if (!onRoad(p.x, p.z)) signs.push({ x: p.x - sg.nx * 0.03, z: p.z - sg.nz * 0.03, nx: -sg.nx, nz: -sg.nz, y: key === 'fontanka' ? -1.25 : lvl(key) + 1.85 });
-      if (key !== 'fontanka' && segNear[i]) { const c = { x: a.x + sg.tx * (off * 2.2), z: a.z + sg.tz * (off * 2.2) }; if (!onRoad(c.x, c.z, 0.9)) culverts.push({ x: c.x - sg.nx * 0.03, z: c.z - sg.nz * 0.03, nx: -sg.nx, nz: -sg.nz, y: lvl(key) + 0.3 }); }
+      const off = segDeck[i] ? -1.5 : 1.5;
+      fixture(signs, fr[i].s + off, signY, .52, .52);
+      if (key !== 'fontanka' && segNear[i]) fixture(culverts, fr[i].s + off * 2.2, lvl(key) + .75, .9, .9, .9);
     }
 
     for (const d of mine) buildDescent(d);
@@ -1057,6 +1064,8 @@ export function buildQuay(ctx, root) {
   if (!face.mouth.empty) mk(face.mouth, ctx.mat.toon('#ffffff', { map: wallTexture(ctx, 'mouth', 'smolenka'), paint: 0.05, name: 'env-quay-wall-mouth' }), 'env-quay-wall-mouth');
   if (!bermB.empty) mk(bermB, ctx.mat.toon('#ffffff', { map: bermTexture(ctx), paint: 0.05, name: 'env-quay-berm' }), 'env-quay-berm', false);
   mk(grass, ctx.mat.toon('#ffffff', { map: grassTexture(ctx), paint: 0.06, name: 'env-quay-grass' }), 'env-quay-grass');
+  const submerged=mk(bedB, ctx.mat.toon('#686b4e', { paint: 0.04, name: 'env-quay-submerged-bank' }), 'env-quay-submerged-bank', false);
+  if(submerged)ctx.noOutline(submerged); // no black shelf perimeter showing through the water
   mk(capB, ctx.mat.toon('#a69489', { paint: 0.05, side: 'double', name: 'env-quay-slope-caps' }), 'env-quay-slope-caps');
   mk(granite, ctx.mat.toon('#9a948f', { paint: 0.05, name: 'env-quay-stairs' }), 'env-quay-stairs');
   mk(graniteA, ctx.mat.toon('#b4a399', { paint: 0.05, name: 'env-quay-steps-a' }), 'env-quay-steps-a');
@@ -1128,7 +1137,7 @@ export function buildQuay(ctx, root) {
   };
   info.rings = sprites(rings, ringTexture(ctx), 0.26, 0.4, 'env-quay-rings');
   info.signs = sprites(signs, anchorSignTexture(ctx), 0.52, 0.52, 'env-quay-anchor-signs');
-  info.culverts = sprites(culverts, culvertTexture(ctx), 0.9, 0.9, 'env-quay-culverts', 0.45);
+  info.culverts = sprites(culverts, culvertTexture(ctx), 0.9, 0.9, 'env-quay-culverts');
   return {
     water: WATER_Y, top: Y_TOP, segments: info.segments, gaps: deck ? [Array.from(deck)] : [], bridges: zones.map((z) => ({ id: z.id, name: z.name, key: z.key, c: z.c, axis: z.axis, w: z.w, len: z.len, own: z.own })),
     stairs: info.stairs, allStairs: info.allStairs, rings: info.rings, signs: info.signs, posts: info.posts, panels: info.panels, colliders: info.colliders, culverts: info.culverts, tubes: info.tubes,

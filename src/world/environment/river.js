@@ -35,7 +35,9 @@ export function waterCuts() {
       for (const poly of pieces) { if (poly.length < 3) continue; cuts.push({ key: p.key, y, poly: ccw(poly), box: boxOfPoly(poly), kind: p.kind }); }
     }
   }
-  for (const sq of slopeQuads()) cuts.push({ key: sq.key, y: WATERWAYS[sq.key].water, poly: ccw(sq.q), box: boxOfPoly(sq.q), kind: 'slope' });     // the grass slopes of the Swan Canal / the Moika: the ground is cut away over them, no water there
+  // Tight pond/island corners can make an offset quad concave. Ground clipping
+  // subtracts convex polygons; passing the whole quad cut away unrelated land.
+  for(const sq of slopeQuads())for(const poly of triangulateRing(sq.q.flat()))cuts.push({key:sq.key,y:WATERWAYS[sq.key].water,poly,box:boxOfPoly(poly),kind:'slope'});
   return (_cuts = cuts);
 }
 /** the water as flat convex polygons { id, key, kind, o, h: [] } for the rasterising field: exactly the area that the ground is cut by (the Neva scenery only outside the data) */

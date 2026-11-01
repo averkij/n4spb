@@ -121,8 +121,13 @@ function fences(K) {
   for (const h of HEDGES) for (let i = 0; i + 1 < h.length; i++) {
     const a = h[i], b = h[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz), nx = dz / len, nz = -dx / len, t = 0.4;
     const v = (p, s, y) => [p[0] + nx * t * s, y, p[1] + nz * t * s];
-    P.quad(M.hedge, v(a, 1, 0), v(b, 1, 0), v(b, 1, 1.15), v(a, 1, 1.15), [nx, 0, nz]); P.quad(M.hedge, v(b, -1, 0), v(a, -1, 0), v(a, -1, 1.15), v(b, -1, 1.15), [-nx, 0, -nz]);
+    P.quad(M.hedge, v(a, 1, 0), v(b, 1, 0), v(b, 1, 1.2), v(a, 1, 1.2), [nx, 0, nz]); P.quad(M.hedge, v(b, -1, 0), v(a, -1, 0), v(a, -1, 1.2), v(b, -1, 1.2), [-nx, 0, -nz]);
     P.quad(M.hedge, v(a, 1, 1.2), v(b, 1, 1.2), v(b, -1, 1.2), v(a, -1, 1.2), [0, 1, 0]);
+    // These short source hedge runs are solids too: exposed ends and their
+    // former 5 cm side/top slit must not reveal the interior from the path.
+    P.quad(M.hedge, v(a, -1, 0), v(a, 1, 0), v(a, 1, 1.2), v(a, -1, 1.2), [-dx / len, 0, -dz / len]);
+    P.quad(M.hedge, v(b, 1, 0), v(b, -1, 0), v(b, -1, 1.2), v(b, 1, 1.2), [dx / len, 0, dz / len]);
+    P.quad(M.hedge, v(a, -1, 0), v(b, -1, 0), v(b, 1, 0), v(a, 1, 0), [0, -1, 0]);
     const wa = W(a[0], a[1]), wb = W(b[0], b[1]); hedgeBays.push(...splitBays(wa.x, wa.z, wb.x, wb.z, 3.0, { y: 0, ghost: true }));
   }
   const cut = M.cutouts && M.cutouts.has(M.fence);

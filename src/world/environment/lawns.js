@@ -140,12 +140,17 @@ export function buildSurfaces(ctx, root, field, owned) {
 }
 
 // ---------------------------------------------------------------- hedges
-function hedgeGeometry(runs) {
+// A closed loft, including both exposed ends and the ground-facing underside.
+// A single-sided foliage material must see real faces from every outside view;
+// double-sided side strips cannot repair a missing cap.
+export function hedgeGeometry(runs) {
   const P = [], N = [], C = [], I = [];
-  const prof = [[-0.34, 0.0, -1, 0.1], [-0.25, 0.68, -0.6, 0.8], [0.25, 0.68, 0.6, 0.8], [0.34, 0.0, 1, 0.1]];                 // 4-point trapezoid: 6 triangles per section (the old 6-point round profile cost 10)
+  const prof = [[-0.34, 0.0, -1, 0.1], [-0.25, 0.68, -0.6, 0.8], [0.25, 0.68, 0.6, 0.8], [0.34, 0.0, 1, 0.1]]; // 4-point trapezoid: 6 side/top + 2 underside triangles per section, 2 per end cap
   const c0 = new THREE.Color('#34502a'), c1 = new THREE.Color('#5f8a3a');
   for (const r of runs) {
-    const { ax, az, bx, bz, h, tint } = r, l = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(l / 2.4)), tx = (bx - ax) / l, tz = (bz - az) / l, nx = -tz, nz = tx;
+    const { ax, az, bx, bz, h, tint } = r, l = Math.hypot(bx - ax, bz - az);
+    if (l < 1e-6) continue;
+    const n = Math.max(1, Math.round(l / 2.4)), tx = (bx - ax) / l, tz = (bz - az) / l, nx = -tz, nz = tx;
     const base = P.length / 3, tc = new THREE.Color(tint);
     const put = (i, x, z, end, wob) => {            // one profile ring at section i
       for (const [d, y, pnx, pny] of prof) {
@@ -157,6 +162,26 @@ function hedgeGeometry(runs) {
     };
     for (let i = 0; i <= n; i++) put(i, ax + (bx - ax) * i / n, az + (bz - az) * i / n, i === 0 || i === n ? 0.7 : 1, 0.92 + 0.16 * hash2(i, Math.round(ax), 3));
     for (let i = 0; i < n; i++) for (let j = 0; j < prof.length - 1; j++) { const a = base + i * prof.length + j, b = a + 1, c = a + prof.length, d = c + 1; I.push(a, b, d, a, d, c); }
+    const faceVertex = (source, nx, ny, nz) => {
+      const at = P.length / 3, k = source * 3;
+      P.push(P[k], P[k + 1], P[k + 2]); N.push(nx, ny, nz); C.push(C[k], C[k + 1], C[k + 2]); return at;
+    };
+    // Duplicate vertices give caps their true tangent normal, preserving the
+    // existing side/top shading and copying the endpoint's exact taper/wobble.
+    for (const [section, sign] of [[0, -1], [n, 1]]) {
+      const at = P.length / 3;
+      for (let j = 0; j < prof.length; j++) faceVertex(base + section * prof.length + j, tx * sign, 0, tz * sign);
+      if (sign > 0) I.push(at, at + 1, at + 2, at, at + 2, at + 3);
+      else I.push(at, at + 2, at + 1, at, at + 3, at + 2);
+    }
+    // Continue the real tapered profile underneath, without changing its XZ
+    // footprint. Low/flying/water-level views cannot see inside the hedge.
+    const bottom = P.length / 3;
+    for (let i = 0; i <= n; i++) {
+      faceVertex(base + i * prof.length + 3, 0, -1, 0);
+      faceVertex(base + i * prof.length, 0, -1, 0);
+    }
+    for (let i = 0; i < n; i++) { const a = bottom + i * 2, b = a + 1, c = a + 2, d = a + 3; I.push(a, b, d, a, d, c); }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));

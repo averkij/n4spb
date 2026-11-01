@@ -11,7 +11,7 @@ import { Player } from '../src/core/player.js';
 
 assert.equal(process.env.AREA,'moskovskaya','run through tools/area.mjs moskovskaya');
 const integrated=process.argv.includes('--integrated');
-const modules=integrated?['environment','streets','city','landmarksMoskovskayaPark','coastalBridges']:['landmarksMoskovskayaPark','coastalBridges'];
+const modules=integrated?['environment','streets','city','landmarksMoskovskaya','landmarksMoskovskayaPark','coastalBridges']:['landmarksMoskovskayaPark','coastalBridges'];
 const {ctx,L,THREE,errors}=await buildWorld({modules});
 assert.deepEqual(errors,[],'all park and bridge builders succeed');
 const ph=ctx.physics,svc=ctx.services.landmarksMoskovskayaPark;
@@ -27,7 +27,10 @@ const pondIds=['r77680','r109994','r11008649','r11010469','r147758','r1380826','
 let islands=0,boatCourses=0;
 for(const id of pondIds){
   const water=CITY.WATER.find(w=>w.id===id);assert(water?.polys.length,'mapped pond '+id);
-  for(const p of water.polys)for(const h of p.h){const q=interior(h);assert(!L.waterwayAt(q.x,q.z),`${water.name}: a real island stays dry`);assert.equal(ph.waterLevel(q.x,q.z),null,'no water datum over island');assert(ph.groundHeight(q.x,q.z,1)>=-.01,'island supports a walker');islands++;}
+  // A near-edge island probe can stand on its real sloped bank below street
+  // level. Dry membership and finite support matter; flat y=0 was the phantom
+  // floor that the dedicated render/terrain bank regression now rejects.
+  for(const p of water.polys)for(const h of p.h){const q=interior(h);assert(!L.waterwayAt(q.x,q.z),`${water.name}: a real island stays dry`);assert.equal(ph.waterLevel(q.x,q.z),null,'no water datum over island');const y=ph.groundHeight(q.x,q.z,1);assert(Number.isFinite(y)&&y>-2.4,'dry island slope supports a walker above the pond bed');islands++;}
   // Find a genuine 16 m straight hull corridor inside the surveyed polygon.
   // Neither a pond centre nor an axis-aligned bounding box can substitute for
   // this check: both can lie on one of the actual islands.

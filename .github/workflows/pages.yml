@@ -125,6 +125,19 @@ jobs:
           node tools/area.mjs moskovskaya tools/moskovskaya-landmarks-test.mjs
           node tools/area.mjs moskovskaya tools/strugatsky-square-test.mjs
           node tools/area.mjs moskovskaya tools/moskovskaya-park-test.mjs --integrated
+      - name: Closed vegetation, supported quay fixtures and two-way natural banks
+        run: |
+          node tools/area.mjs moskovskaya tools/hedge-geometry-test.mjs
+          node tools/area.mjs vasilyevsky tools/hedge-geometry-test.mjs --academy
+          node tools/area.mjs moskovskaya tools/water-bank-topology-test.mjs
+          node tools/water-join-topology-test.mjs
+          node tools/area.mjs moskovskaya tools/natural-bank-test.mjs
+          node tools/area.mjs palace tools/natural-bank-test.mjs
+          node tools/area.mjs kolomna tools/natural-bank-test.mjs
+          node tools/area.mjs kolomna tools/natural-bank-overlap-test.mjs
+          node tools/area.mjs moskovskaya tools/quay-fixture-audit.mjs
+          node tools/area.mjs palace tools/quay-fixture-audit.mjs
+          node tools/area.mjs islands tools/quay-fixture-audit.mjs
       - name: Hook set of the North with the engine call sites (npm run hooks:all)
         run: npm run hooks:all
       - name: Tauride remake - the garden floor, the painted ground, the alleys (T3)
