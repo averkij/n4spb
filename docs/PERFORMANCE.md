@@ -1853,3 +1853,86 @@ commands and starts in the previous section; artifacts are in
 `shots/flags-wave-perf/` and `shots/flags-wave/` (baseline artifacts in the frozen
 `n4spb-coastal` worktree). Run `node tools/area.mjs okrug65
 tools/three-flagpoles-test.mjs` for the focused CPU proof.
+
+## 9.0.0 — Moskovskaya Zastava (2026-11-01)
+
+The new separately streamed area covers 14.39 km² of the planning footprint,
+including boundary overlaps. It adds the researched Victory Park, its nine
+surveyed ponds and islands, Strugatsky Square, the National Library, House with
+Spire, Chesme ensemble, district council and SKA Arena. Static landmark content
+uses the existing batching, atlas and spatial registration paths; the park adds
+no frame callbacks. Area-local ownership tables and inland bridge adapters keep
+the other area closures unchanged. The Moscow Gate fix is also baked into
+Semyonovsky: the actual columns remain solid and the openings admit a car under
+the elevated entablature.
+
+All timed GPU work ran serially in Edge 156 / RTX 3090 Ti, medium quality,
+1280 × 720, with normal shipping bakes and the full scene enabled. CPU audits
+and diagnostics ran outside the twenty-second full-throttle intervals. Baseline
+is clean 8.2.0; final source/bake is 9.0.0.
+
+| Route | Load s | Frame ms mean / p50 / p95 | Max ms | Frames >40 / >80 ms | Mean draws | Distance m |
+| --- | ---: | --- | ---: | --- | ---: | ---: |
+| Admiralty, before | 30.21 | 31.21 / 33.3 / 50.0 | 183.5 | 71 / 6 | 1956 | 133 |
+| Admiralty, after | 24.22 | 22.00 / 16.7 / 33.4 | 133.4 | 15 / 4 | 1057 | 98 |
+| Station / Nevsky, after | 24.20 | 20.70 / 16.7 / 33.4 | 183.4 | 5 / 3 | 1241 | 354 |
+| Moskovsky Prospekt, new area | 14.34 | 17.24 / 16.7 / 16.8 | 133.4 | 5 / 3 | 1057 | 190 |
+
+These correspond to approximately 32 → 45 FPS at Admiralty, 48 FPS at the
+station and 58 FPS in the new district, using the reciprocal mean frame time.
+Traffic and crash positions differ: every sample ends with a wrecked car, and
+the new-area car is deflected toward the park. These are collision-truncated
+drives, not uninterrupted straight-road cruises. The identical Palace closure
+and bake (`989178ba0ec91ea7e4b5`) contain none of the new district content, so
+the before/after differences are not evidence of a performance improvement.
+Existing centre hitches remain; sustained comfortable driving is still unfinished.
+Next measured bottlenecks remain old-centre draw volume and streaming/GC hitches.
+
+End-of-run CDP JS heap / backing storage, recorded separately, is **550 / 1315 →
+427 / 696 MiB** at Admiralty, **590 / 1337 MiB** at the station and **411 / 582
+MiB** in Moskovskaya. Loaded regions are 50 → 51, 37 and 53 respectively.
+These are point-in-time values with different region, traffic and GC states,
+not retained-memory comparisons. Every run has zero browser/module errors and
+zero failed regions. An initial new-area diagnostic at `-1707,7050,180` travelled
+only 25 m before collision and is not the main new-district sample.
+
+Reproduce with `node tools/drive-bench.mjs --area <id> --q medium --seconds 20
+--start "x,z,yaw" --json --diagnostics --out <prefix>`. Use area `palace`,
+start `-2493.919,-687.663,-52.605` for Admiralty; area `palace`, start
+`498.2286,135.1625,76.0322` for the station; and area `moskovskaya`, start
+`-1712,7050,1.62` for the surveyed northbound Moskovsky lane. Raw samples and
+end screenshots are in `shots/moskovskaya-perf/`.
+
+Normal-bake browser playtesting passes **22 checks**: walking, the single purple
+Lada, real E boarding, acceleration, camera input, braking, exit and respawn;
+boat boarding, a 60 m departure, steering, braking and exit; destination preloads;
+and actual walking transitions to/from Semyonovsky in both directions. The
+normal page loads in 14.78 s. The five final landmark/park screenshots were
+inspected. Normal-bake pixel probes cover the park, square, library, spire and
+church; worst frame is **0.003%**, with no repeat-frame movement or reported
+offender. Evidence: `shots/moskovskaya-playtest/` and the area z-fight artifacts.
+
+CPU verification includes all **572** area checks, the new area's 210 checks,
+both transition-car grids (40 new-area and 272 Semyonovsky arrivals, none lost),
+223,255 finite landmark vertices, the square's mapped lawns/seats/plaque, all
+11 dry island probes and nine real park boat accelerations. Water reachability
+passes **15/15**, boat passage **14/14**, and the strict furniture/marking checks
+pass. Ownership reports 164 claimed IDs with no problems or warnings; 51,397
+facade items have no collisions or floating signs. Both legacy layout goldens
+are identical. Moscow Gate passes six car crossings in both directions, solid
+column/overhead/roof assertions and the regression mutant.
+
+The new-area road surface audit retains **180 / 504,436 (0.03568%)** shared
+generator edge samples, below the existing contract; detailed causes and the
+measured per-area budget are in [MOSKOVSKAYA-AREA.md](MOSKOVSKAYA-AREA.md).
+The additional wall audit is **not fully clean**: one unexplained low sample on
+`w72573681` reproduces with the pre-area generator over the new data. Roofs,
+floors, winding and ownership are clean; no facade exemption was introduced.
+Its exact location and reproduction commands are recorded in the area guide.
+
+Closure/import/runtime lints, scoped ownership generation and recorded normal
+page-load coverage pass, with zero dependencies outside the closure. All nine
+closure-scanner mutants are detected. All **16** live-area manifests are fresh:
+**1,612 complete products / 730.8 MiB gzip**. Moskovskaya contributes **149
+products / 54.4 MiB gzip**, revision `643d01461ae3592d437f`; the Moscow Gate fix
+uses Semyonovsky revision `d5b9b2d1d9c8c5361ad4`.

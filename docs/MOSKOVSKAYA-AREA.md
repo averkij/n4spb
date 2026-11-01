@@ -108,3 +108,16 @@ area budget, following the existing per-area residue policy. The full individual
 sample report is reproducible with `roads-surface-audit.mjs --json <file>` under
 the `moskovskaya` loader. Changing surveyed road tags or moving their axes would
 hide the shared-generator issue rather than correct its cause.
+
+The additional facade audit samples 5,067,954 wall positions. Roof, floor,
+winding and ownership checks are clean. Six embedded-corner samples are allowed;
+one unexplained low sample remains on `w72573681`, edge 4, at
+`-754.4,0.4,5294.3` (`analyse-hid-no-inner-cover`). The focused audit reproduces
+the same gap with the pre-area city generator at `d613560` over the new data.
+This is a shared occlusion-generator residual, not a passing facade audit; no
+building-specific exemption or relaxed audit threshold was added. Reproduce:
+
+```powershell
+node tools/area.mjs moskovskaya tools/city-wall-audit.mjs --near "-754.4,5294.3,15"
+node tools/area.mjs moskovskaya tools/city-wall-audit.mjs --near "-754.4,5294.3,15" --ref d613560
+```
