@@ -118,6 +118,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Moskovskaya landmarks, open gate bays, park water and mapped gardens
+        run: |
+          node tools/area.mjs semyonovsky tools/moscow-gate-passage-test.mjs
+          node tools/area.mjs moskovskaya tools/moscow-gate-passage-test.mjs
+          node tools/area.mjs moskovskaya tools/moskovskaya-landmarks-test.mjs
+          node tools/area.mjs moskovskaya tools/strugatsky-square-test.mjs
+          node tools/area.mjs moskovskaya tools/moskovskaya-park-test.mjs --integrated
       - name: Hook set of the North with the engine call sites (npm run hooks:all)
         run: npm run hooks:all
       - name: Tauride remake - the garden floor, the painted ground, the alleys (T3)

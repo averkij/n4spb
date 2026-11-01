@@ -1560,6 +1560,550 @@ REGISTRY["okrug65"] = {
 };
 // COASTAL-AREAS-END
 
+
+// MOSKOVSKAYA-AREA-BEGIN
+REGISTRY["moskovskaya"] = {
+  "id": "moskovskaya",
+  "page": "moskovskaya.html",
+  "bake": "baked/moskovskaya/",
+  "requireBake": true,
+  "title": "Московская застава",
+  "titleEn": "Moskovskaya Zastava",
+  "sights": [
+    "Московские триумфальные ворота",
+    "Московский парк Победы",
+    "Площадь Братьев Стругацких",
+    "Дом со шпилем",
+    "Российская национальная библиотека",
+    "Чесменская церковь и дворец",
+    "Московский райсовет"
+  ],
+  "approxMB": 55,
+  "dev": false,
+  "mapId": 6,
+  "remap": {
+    "src/world/data/city.js": "src/areas/moskovskaya/data/city.js",
+    "src/world/area.js": "src/areas/moskovskaya/area.js",
+    "src/world/city/known-data.js": "src/areas/moskovskaya/known-data.js",
+    "src/world/lib/owns-table.js": "src/areas/moskovskaya/owns-table.js",
+    "src/world/coastalBridges/sites.js": "src/areas/moskovskaya/bridge-sites.js"
+  },
+  "play": [
+    {
+      "name": "M01",
+      "x0": -720,
+      "x1": -560,
+      "z0": 3040,
+      "z1": 3120
+    },
+    {
+      "name": "M02",
+      "x0": -720,
+      "x1": -400,
+      "z0": 3120,
+      "z1": 3200
+    },
+    {
+      "name": "M03",
+      "x0": -960,
+      "x1": -320,
+      "z0": 3200,
+      "z1": 3280
+    },
+    {
+      "name": "M04",
+      "x0": -1040,
+      "x1": -240,
+      "z0": 3280,
+      "z1": 3440
+    },
+    {
+      "name": "M05",
+      "x0": -960,
+      "x1": -160,
+      "z0": 3440,
+      "z1": 3600
+    },
+    {
+      "name": "M06",
+      "x0": -1040,
+      "x1": -160,
+      "z0": 3600,
+      "z1": 3680
+    },
+    {
+      "name": "M07",
+      "x0": -1120,
+      "x1": -160,
+      "z0": 3680,
+      "z1": 3840
+    },
+    {
+      "name": "M08",
+      "x0": -1200,
+      "x1": -160,
+      "z0": 3840,
+      "z1": 3920
+    },
+    {
+      "name": "M09",
+      "x0": -1200,
+      "x1": -80,
+      "z0": 3920,
+      "z1": 4000
+    },
+    {
+      "name": "M10",
+      "x0": -1760,
+      "x1": -1680,
+      "z0": 4000,
+      "z1": 4080
+    },
+    {
+      "name": "M11",
+      "x0": -1280,
+      "x1": -80,
+      "z0": 4000,
+      "z1": 4080
+    },
+    {
+      "name": "M12",
+      "x0": -2400,
+      "x1": -2160,
+      "z0": 4080,
+      "z1": 4160
+    },
+    {
+      "name": "M13",
+      "x0": -1760,
+      "x1": -1600,
+      "z0": 4080,
+      "z1": 4160
+    },
+    {
+      "name": "M14",
+      "x0": -1360,
+      "x1": -80,
+      "z0": 4080,
+      "z1": 4160
+    },
+    {
+      "name": "M15",
+      "x0": -2480,
+      "x1": -2080,
+      "z0": 4160,
+      "z1": 4240
+    },
+    {
+      "name": "M16",
+      "x0": -1760,
+      "x1": -80,
+      "z0": 4160,
+      "z1": 4240
+    },
+    {
+      "name": "M17",
+      "x0": -2880,
+      "x1": 0,
+      "z0": 4240,
+      "z1": 4320
+    },
+    {
+      "name": "M18",
+      "x0": -2960,
+      "x1": 0,
+      "z0": 4320,
+      "z1": 4400
+    },
+    {
+      "name": "M19",
+      "x0": -3040,
+      "x1": 0,
+      "z0": 4400,
+      "z1": 4480
+    },
+    {
+      "name": "M20",
+      "x0": -3120,
+      "x1": 0,
+      "z0": 4480,
+      "z1": 4560
+    },
+    {
+      "name": "M21",
+      "x0": -3120,
+      "x1": 80,
+      "z0": 4560,
+      "z1": 4800
+    },
+    {
+      "name": "M22",
+      "x0": -3120,
+      "x1": 0,
+      "z0": 4800,
+      "z1": 5120
+    },
+    {
+      "name": "M23",
+      "x0": -5040,
+      "x1": -4960,
+      "z0": 5120,
+      "z1": 5200
+    },
+    {
+      "name": "M24",
+      "x0": -3200,
+      "x1": 0,
+      "z0": 5120,
+      "z1": 5200
+    },
+    {
+      "name": "M25",
+      "x0": -5040,
+      "x1": -4800,
+      "z0": 5200,
+      "z1": 5280
+    },
+    {
+      "name": "M26",
+      "x0": -3200,
+      "x1": 80,
+      "z0": 5200,
+      "z1": 5520
+    },
+    {
+      "name": "M27",
+      "x0": -4960,
+      "x1": -4720,
+      "z0": 5280,
+      "z1": 5360
+    },
+    {
+      "name": "M28",
+      "x0": -4800,
+      "x1": -4560,
+      "z0": 5360,
+      "z1": 5440
+    },
+    {
+      "name": "M29",
+      "x0": -4640,
+      "x1": -4320,
+      "z0": 5440,
+      "z1": 5520
+    },
+    {
+      "name": "M30",
+      "x0": -4480,
+      "x1": -4080,
+      "z0": 5520,
+      "z1": 5600
+    },
+    {
+      "name": "M31",
+      "x0": -3280,
+      "x1": 160,
+      "z0": 5520,
+      "z1": 5680
+    },
+    {
+      "name": "M32",
+      "x0": -4240,
+      "x1": -3760,
+      "z0": 5600,
+      "z1": 5680
+    },
+    {
+      "name": "M33",
+      "x0": -3920,
+      "x1": -3440,
+      "z0": 5680,
+      "z1": 5760
+    },
+    {
+      "name": "M34",
+      "x0": -3280,
+      "x1": 0,
+      "z0": 5680,
+      "z1": 5760
+    },
+    {
+      "name": "M35",
+      "x0": -3680,
+      "x1": 0,
+      "z0": 5760,
+      "z1": 5840
+    },
+    {
+      "name": "M36",
+      "x0": -3440,
+      "x1": 160,
+      "z0": 5840,
+      "z1": 5920
+    },
+    {
+      "name": "M37",
+      "x0": -3360,
+      "x1": 160,
+      "z0": 5920,
+      "z1": 6000
+    },
+    {
+      "name": "M38",
+      "x0": -3280,
+      "x1": 80,
+      "z0": 6000,
+      "z1": 6160
+    },
+    {
+      "name": "M39",
+      "x0": -3280,
+      "x1": 160,
+      "z0": 6160,
+      "z1": 6240
+    },
+    {
+      "name": "M40",
+      "x0": -3360,
+      "x1": 160,
+      "z0": 6240,
+      "z1": 6320
+    },
+    {
+      "name": "M41",
+      "x0": -3440,
+      "x1": -80,
+      "z0": 6320,
+      "z1": 6480
+    },
+    {
+      "name": "M42",
+      "x0": -3520,
+      "x1": -320,
+      "z0": 6480,
+      "z1": 6560
+    },
+    {
+      "name": "M43",
+      "x0": -3520,
+      "x1": -400,
+      "z0": 6560,
+      "z1": 6720
+    },
+    {
+      "name": "M44",
+      "x0": -3520,
+      "x1": -2640,
+      "z0": 6720,
+      "z1": 6800
+    },
+    {
+      "name": "M45",
+      "x0": -2480,
+      "x1": -400,
+      "z0": 6720,
+      "z1": 7040
+    },
+    {
+      "name": "M46",
+      "x0": -3600,
+      "x1": -2640,
+      "z0": 6800,
+      "z1": 6960
+    },
+    {
+      "name": "M47",
+      "x0": -3600,
+      "x1": -2720,
+      "z0": 6960,
+      "z1": 7040
+    },
+    {
+      "name": "M48",
+      "x0": -3600,
+      "x1": -2880,
+      "z0": 7040,
+      "z1": 7360
+    },
+    {
+      "name": "M49",
+      "x0": -2400,
+      "x1": -400,
+      "z0": 7040,
+      "z1": 7120
+    },
+    {
+      "name": "M50",
+      "x0": -2320,
+      "x1": -400,
+      "z0": 7120,
+      "z1": 7200
+    },
+    {
+      "name": "M51",
+      "x0": -2240,
+      "x1": -400,
+      "z0": 7200,
+      "z1": 7280
+    },
+    {
+      "name": "M52",
+      "x0": -2080,
+      "x1": -400,
+      "z0": 7280,
+      "z1": 7680
+    },
+    {
+      "name": "M53",
+      "x0": -3600,
+      "x1": -2720,
+      "z0": 7360,
+      "z1": 7600
+    },
+    {
+      "name": "M54",
+      "x0": -3680,
+      "x1": -2720,
+      "z0": 7600,
+      "z1": 7760
+    },
+    {
+      "name": "M55",
+      "x0": -2000,
+      "x1": -400,
+      "z0": 7680,
+      "z1": 7920
+    },
+    {
+      "name": "M56",
+      "x0": -3680,
+      "x1": -2800,
+      "z0": 7760,
+      "z1": 7840
+    },
+    {
+      "name": "M57",
+      "x0": -3600,
+      "x1": -2800,
+      "z0": 7840,
+      "z1": 8080
+    },
+    {
+      "name": "M58",
+      "x0": -2320,
+      "x1": -400,
+      "z0": 7920,
+      "z1": 8240
+    },
+    {
+      "name": "M59",
+      "x0": -3680,
+      "x1": -2800,
+      "z0": 8080,
+      "z1": 8160
+    },
+    {
+      "name": "M60",
+      "x0": -3760,
+      "x1": -2800,
+      "z0": 8160,
+      "z1": 8320
+    },
+    {
+      "name": "M61",
+      "x0": -2320,
+      "x1": -320,
+      "z0": 8240,
+      "z1": 8320
+    },
+    {
+      "name": "M62",
+      "x0": -3760,
+      "x1": -2880,
+      "z0": 8320,
+      "z1": 8400
+    },
+    {
+      "name": "M63",
+      "x0": -2000,
+      "x1": -320,
+      "z0": 8320,
+      "z1": 8480
+    },
+    {
+      "name": "M64",
+      "x0": -3680,
+      "x1": -3200,
+      "z0": 8400,
+      "z1": 8480
+    },
+    {
+      "name": "M65",
+      "x0": -3040,
+      "x1": -2960,
+      "z0": 8400,
+      "z1": 8480
+    },
+    {
+      "name": "M66",
+      "x0": -3520,
+      "x1": -3360,
+      "z0": 8480,
+      "z1": 8640
+    },
+    {
+      "name": "M67",
+      "x0": -2000,
+      "x1": -400,
+      "z0": 8480,
+      "z1": 8560
+    },
+    {
+      "name": "M68",
+      "x0": -1920,
+      "x1": -1680,
+      "z0": 8560,
+      "z1": 8640
+    },
+    {
+      "name": "M69",
+      "x0": -720,
+      "x1": -480,
+      "z0": 8560,
+      "z1": 8640
+    },
+    {
+      "name": "M70",
+      "x0": -3440,
+      "x1": -3360,
+      "z0": 8640,
+      "z1": 8720
+    },
+    {
+      "name": "M71",
+      "x0": -1840,
+      "x1": -1680,
+      "z0": 8640,
+      "z1": 8720
+    },
+    {
+      "name": "M72",
+      "x0": -720,
+      "x1": -560,
+      "z0": 8640,
+      "z1": 8720
+    },
+    {
+      "name": "M73",
+      "x0": -1760,
+      "x1": -1680,
+      "z0": 8720,
+      "z1": 8800
+    }
+  ]
+};
+// MOSKOVSKAYA-AREA-END
+
 /**
  * Gates between areas: { id, from, to, seg: [[x,z],[x,z]] (the border segment in the FROM area), inward: [nx,nz] (unit vector pointing from the border into the FROM area), zone (m: depth of the
  * prompt zone, walking), arrive: { x0, x1, z0, z1 } (where the player may land in the TO area), reverse (id of the gate back) }.
@@ -1646,6 +2190,11 @@ export const GATES = [
   { id: 'coast-islands-okrug65', kind: 'edge', from: 'islands', to: 'okrug65', zone: 40, reverse: 'coast-okrug65-islands' },
   { id: 'coast-okrug65-islands', kind: 'edge', from: 'okrug65', to: 'islands', zone: 40, reverse: 'coast-islands-okrug65' },
   // COASTAL-GATES-END
+  // MOSKOVSKAYA-GATES-BEGIN
+  // Generated by tools/connect-moskovskaya-areas.mjs from all live overlaps.
+  { id: 'mz-moskovskaya-semyonovsky', kind: 'edge', from: 'moskovskaya', to: 'semyonovsky', zone: 40, reverse: 'mz-semyonovsky-moskovskaya' },
+  { id: 'mz-semyonovsky-moskovskaya', kind: 'edge', from: 'semyonovsky', to: 'moskovskaya', zone: 40, reverse: 'mz-moskovskaya-semyonovsky' },
+  // MOSKOVSKAYA-GATES-END
   // g0 - the dev loop (?devgates=1): a gate across the Nevsky approach to Vosstaniya Square (a vertical segment at x = 470, the strip east of it is the "own area") that leads back to the SAME page at
   // the same pose. It exercises the whole hand-off (prompt, preflight, veil, navigation, arrival, memory) before a second area exists, and stays as a test fixture afterwards.
   { id: 'g0', dev: true, from: 'strip', to: 'strip', seg: [[470, 100], [470, 240]], inward: [1, 0], zone: 30, arrive: { x0: 440, x1: 700, z0: 80, z1: 260 }, reverse: 'g0' },
@@ -2895,3 +3444,29 @@ for (const [from, ids] of Object.entries(COASTAL_GATE_ORDER)) {
   ordered.forEach((row, i) => { GATES[slots[i]] = row; });
 }
 // COASTAL-GATE-ORDER-END
+
+// MOSKOVSKAYA-GATE-ORDER-BEGIN
+// Exact priority search uses createGateMachine and the same working run-ups as
+// gates-test. Keep the source rows stable; apply only their per-area priority.
+const MOSKOVSKAYA_GATE_ORDER = {
+  "moskovskaya": [
+    "mz-moskovskaya-semyonovsky"
+  ],
+  "semyonovsky": [
+    "e32",
+    "e34",
+    "e36",
+    "mz-semyonovsky-moskovskaya"
+  ]
+};
+for (const [from, ids] of Object.entries(MOSKOVSKAYA_GATE_ORDER)) {
+  const slots = [];
+  for (let i = 0; i < GATES.length; i++) if (GATES[i].kind === 'edge' && GATES[i].from === from) slots.push(i);
+  const rows = new Map(slots.map(i => [GATES[i].id, GATES[i]]));
+  // A later island-area commit may add rows before this generator is rerun.
+  // Preserve every new row exactly once, then rerun the priority search.
+  const ordered = ids.map(id => rows.get(id)).filter(Boolean);
+  for (const i of slots) if (!ids.includes(GATES[i].id)) ordered.push(GATES[i]);
+  ordered.forEach((row, i) => { GATES[slots[i]] = row; });
+}
+// MOSKOVSKAYA-GATE-ORDER-END

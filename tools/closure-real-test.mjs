@@ -10,7 +10,7 @@ import { DYNAMIC_IMPORTS, isAllowedServed } from './lib/closure-rules.mjs';
 import { createRevisionContext, revisionsOf, liveAreas } from './baked-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'kronverk', 'aptekarsky', 'islands'];
+const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'moskovskaya', 'kronverk', 'aptekarsky', 'islands'];
 /** closure sizes (hashed files) of the design round's scanner at v3.1.0: palace 591, smolny 414, vladimirsky 447, admiralty 614, vasilyevsky 764. The band is wide upwards: the whole-folder rules over-include. */
 const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasilyevsky: 764,
   // gavan / morskoy / dekabristov (docs/AREAS.md 15.g): no design-round scanner existed for them; these are the hashed-file counts of the finished areas at v4.0.0 (the bake log of the first bake of all eight areas).
@@ -24,7 +24,7 @@ const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasi
   // the independent recorded page load checks every fetched dependency too.
   okrug65: 413,
   // Petrograd districts: hashed-file counts recorded in the incoming 70b1d80 bake inputs.
-  kronverk: 520, aptekarsky: 552, islands: 547 };
+  kronverk: 520, aptekarsky: 552, islands: 547, moskovskaya: 360 };
 const SCOUT_UP = {};
 /** areas whose bake does not exist yet, so no headless page load could be recorded (node tools/closure-groundtruth.mjs <id> --record needs a published bake): none since the bake of v4.0.0 (the three fixtures are recorded). */
 const NO_FIXTURE_YET = [];
@@ -52,6 +52,10 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
   });
   check('an exclusive source file of each area moves only that area', () => {
     for (const id of LIVE) { const f = exclusive(id); assert(f, `${id} has no exclusive file`); assert.deepEqual(moves(appended(f)), [id], `${f} (exclusive to ${id})`); }
+  });
+  check('the page-specific claims table isolates new district ownership', () => {
+    assert.deepEqual(moves(appended('src/areas/moskovskaya/owns-table.js')), ['moskovskaya']);
+    assert.deepEqual(moves(appended('src/world/lib/owns-table.js')), LIVE.filter(id => id !== 'moskovskaya'));
   });
   check('a comment appended to a vasilyevsky-only file moves only vasilyevsky', () => {
     const f = exclusive('vasilyevsky'); assert.deepEqual(moves(appended(f)), ['vasilyevsky'], f);

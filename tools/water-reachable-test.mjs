@@ -145,7 +145,8 @@ check('1 no wall of colliders cuts a body of water: every connected body of wate
     // grid. Three legitimate shoreline cells can falsely sever a whole lake
     // at 8 m resolution. Recheck the actual water/colliders locally at 2 m;
     // an actual wall still divides this finer graph and fails the same rule.
-    if(key!=='moat'&&share<.9&&step>2){
+    const castleRing = key === 'moat' && decks > 0;
+    if(!castleRing&&share<.9&&step>2){
       const ps=[...all.comp].filter(([,cid])=>cid===id).map(([k])=>idx.get(k)),fine=new Map(),fineFree=new Set(),s=2;
       const x0=Math.min(...ps.map(p=>p.x))-step,z0=Math.min(...ps.map(p=>p.z))-step,x1=Math.max(...ps.map(p=>p.x))+step,z1=Math.max(...ps.map(p=>p.z))+step;
       for(let x=x0;x<=x1;x+=s)for(let z=z0;z<=z1;z+=s){if(!L.inPlay(x,z)||!L.waterwayAt(x,z))continue;const k=Math.round(x/s)+','+Math.round(z/s),c={x,z};fine.set(k,c);if(cellFree(c))fineFree.add(k);}
@@ -154,7 +155,7 @@ check('1 no wall of colliders cuts a body of water: every connected body of wate
       for(const fid of wanted){if(fa.sizes[fid]<40*step*step/(s*s))continue;const sizes=new Map();for(const [k,cid] of fa.comp)if(cid===fid&&fineFree.has(k)){const q=ff.comp.get(k);sizes.set(q,(sizes.get(q)||0)+1);}const values=[...sizes.values()];share=Math.min(share,Math.max(0,...values)/Math.max(1,values.reduce((a,b)=>a+b,0)));}
       console.log(`  refined narrow-channel body at 2 m: largest free part ${(share*100).toFixed(1)} %`);
     }
-    if (key === 'moat' ? !two : share < 0.9) {
+    if (castleRing ? !two : share < 0.9) {
       const positions=[...all.comp].filter(([,cid])=>cid===id).map(([k])=>idx.get(k));
       const box=[Math.min(...positions.map(p=>p.x)),Math.min(...positions.map(p=>p.z)),Math.max(...positions.map(p=>p.x)),Math.max(...positions.map(p=>p.z))];
       const blocked=positions.filter(p=>!free.has(Math.round(p.x/step)+','+Math.round(p.z/step))).slice(0,8).map(p=>({x:p.x,z:p.z,building:L.buildingAt(p.x,p.z)?.id,solids:Array.from(ph._query(p.x,p.z,.5)).filter(it=>it.type!=='hole'&&it.y0<L.heightAt(p.x,p.z)+1.7&&(it.type==='walk'?it.top:it.y1)>L.heightAt(p.x,p.z)).slice(0,4).map(it=>[it.type,Math.round(it.cx),Math.round(it.cz),it.y0,it.y1||it.top])}));
@@ -287,6 +288,13 @@ function pickFence(filter = () => true, tries = 400, loose = false, stable = fal
   return null;
 }
 const FILTER_QUAY = (r) => /^env-quay-fence|^env-quay-parapet/.test((r.parts[0] && r.parts[0].mesh && r.parts[0].mesh.name) || '');
+// Pond-only districts have grassy banks and no deep quay fence to knock down.
+// Exercise their actual car/water behaviour below; do not invent a wall just
+// to satisfy a river-trench fixture. The fence ownership audit still runs.
+const hasDeepQuay = cells.some(c => c.level < -1.5);
+// Also used by the general deck-placement test, including pond-only areas.
+const floorItems = (() => { const zs = (BRIDGE_FLOORS || []); return ph.items.filter((it) => it.type === 'walk' && zs.some((z) => hyp(it.cx - z.c[0], it.cz - z.c[1]) < 1e-6)); })();
+if (hasDeepQuay) {
 check('3 knocking a quay fence bay away opens the way: the walk is stopped before, the collider is gone after, the rest box is no obstacle, the walker goes into the water', () => {
   const f = pickFence(FILTER_QUAY) || pickFence(); assert(f, 'no testable fence bay');
   const { r, w, sx, sz } = f, fenceBox = r.item, before = walker(sx, sz, w.nx, w.nz); walk(before, 3.0);
@@ -321,7 +329,6 @@ function carRun(f, speedKmh, { id = 'coupe' } = {}) {
   return { car, ev, fell, minY, maxDepth, start, yaw };
 }
 /** the invisible walk floors of the undrawn OSM bridges (BRIDGE_ZONES rows with floor: true) catch a car that falls off the bank beside them; this check is about the quay fence, so they are lifted out for the run and put back */
-const floorItems = (() => { const zs = (BRIDGE_FLOORS || []); return ph.items.filter((it) => it.type === 'walk' && zs.some((z) => hyp(it.cx - z.c[0], it.cz - z.c[1]) < 1e-6)); })();
 function withoutFloors(fn) { const tops = floorItems.map((it) => it.top); for (const it of floorItems) it.top = -50; try { return fn(); } finally { floorItems.forEach((it, i) => { it.top = tops[i]; }); } }      // (their surface sinks below the bed for the run: no insertion or removal, the item order of the physics stays)
 /** the bay has the trench behind it: the ground 3 m beyond it (surfaces included) is 1 m or more below the street. A bay at the approach of a bridge leads onto its deck, and the car that breaks it drives on over the canal. */
 const deepBeyond = (r) => { const w = towardWater(r); return !!w && ph.groundHeight(r.x + w.nx * 3, r.z + w.nz * 3, 30, false) < -1; };
@@ -358,6 +365,23 @@ check('4 the car drives into a quay fence at 40 km/h: the bay breaks, the car fa
   input.thr = 0; input.brk = 1; for (let t = 0; t < 6; t += 1 / 60) car.step(1 / 60, input);
   const wl2 = waterAt(car.x, car.z); assert(wl2 !== null && car.y < wl2 - 0.8, 'still in the water after braking / reversing against the trench wall');
 });
+} else {
+  check('4 a car drives from an open natural pond bank into real water and remains controllable', () => {
+    assert(!fences().some(FILTER_QUAY), 'pond-only area unexpectedly has river-quay fences');
+    let entered = null;
+    for (const o of open.slice(0,80)) {
+      const car=createHandling(ctx,null); car.reset(o.sx,o.sz,Math.atan2(o.dx,o.dz));
+      for(let t=0;t<5;t+=1/60) {
+        car.step(1/60,{thr:1,brk:0,steer:0,hand:false,nitro:false});
+        if(car.depth>.3&&waterAt(car.x,car.z)!==null){entered=car;break;}
+      }
+      if(entered)break;
+    }
+    assert(entered,'no actual open bank admitted a car to pond water');
+    for(let i=0;i<120;i++)entered.step(1/60,{thr:.35,brk:0,steer:.2,hand:false,nitro:false});
+    assert([entered.x,entered.z,entered.y,entered.vx,entered.vz].every(Number.isFinite));
+  });
+}
 check('4 the same car on dry ground reaches far more than the water allows (the drag is the water, not the engine)', () => {
   const car = createHandling(ctx, null); const spot = open[0] || { sx: 0, sz: 0, dx: 1, dz: 0 };
   car.reset(spot.sx - spot.dx * 0, spot.sz, 0); const input = { thr: 1, brk: 0, steer: 0, hand: false, nitro: false }; let vmax = 0;
@@ -367,7 +391,7 @@ check('4 the same car on dry ground reaches far more than the water allows (the 
 
 // ---------------------------------------------------------------- 5 landing
 check('5 a flight landing over open water is allowed (no refusal on water: player.landingBlocked)', () => {
-  const mid = cells.filter((c) => c.key !== 'moat' && !L.insideBuilding(c.x, c.z, 4) && ph.groundHeight(c.x, c.z, 30, false) === L.heightAt(c.x, c.z) && !ph.columnBlocked(c.x, c.z, 0.4, L.heightAt(c.x, c.z) + 0.5, 27));
+  const mid = cells.filter((c) => !L.insideBuilding(c.x, c.z, 4) && ph.groundHeight(c.x, c.z, 30, false) === L.heightAt(c.x, c.z) && !ph.columnBlocked(c.x, c.z, 0.4, L.heightAt(c.x, c.z) + 0.5, 27));
   let ok = 0, tried = 0, why = {};
   for (let i = 0; i < mid.length && tried < 60; i += Math.max(1, Math.floor(mid.length / 60))) {
     const c = mid[i]; if (!L.inPlay(c.x, c.z, 20)) continue; tried++;
@@ -630,7 +654,8 @@ if (built.includes('landmarksTauride')) {
       }
       if (fall) bad.push(`${r.id} ${r.name} ${fall} cells, first ${first}`);
     }
-    assert(wet > 0 && bad.length === 0, `${bad.length} bridge ways drop a car into the water: ${bad.join('; ')}`);
+    if(!wet)console.log('  no drivable bridge way crosses mapped water in this area (inland overpasses are dry)');
+    assert(bad.length === 0, `${bad.length} bridge ways drop a car into the water: ${bad.join('; ')}`);
   });
   // the owner's report (pose -827.9, -1715.9: "driving a car on a bridge you fall through it"): a car drives over the Prachechny Bridge both ways at 6 .. 12 m/s
   const prach = ROADS.find((r) => r.id === 'w548349392');

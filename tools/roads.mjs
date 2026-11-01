@@ -8,7 +8,10 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 // Okrug65's final dense network: 140 residual samples / 520977 (0.0269%),
 // below the surface audit's 0.3% contract and the strip baseline's 0.0412%.
 // Measured builder residue only; no extra material/geometry exemptions.
-const surfaceBudget = process.env.AREA === 'okrug65' ? '140' : '120';
+// Moskovskaya: 180 / 504436 (0.03568%). The detailed cause table in
+// docs/MOSKOVSKAYA-AREA.md records 161 taper-median / 15 end-cap / 4 fillet
+// samples from the shared generators; no landmark overlay exemptions.
+const surfaceBudget = process.env.AREA === 'okrug65' ? '140' : process.env.AREA === 'moskovskaya' ? '180' : '120';
 const runs = [
   ['roads-furniture-audit.mjs', '--strict', '--allow', 'GUARD_STONE,PROP,BIN,TREE,FACADE_COLLIDER'],
   ['roads-surface-audit.mjs', '--max-fail', surfaceBudget],                       // strip 2026-10-16: 91/221118; whole-city budget 2170

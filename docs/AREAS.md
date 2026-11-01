@@ -1,5 +1,28 @@
 # Areas: one page per scene
 
+Московская застава is live as **moskovskaya.html**, planning-map district **6**,
+badge **Z** (9.0.0). Its 73 territory rectangles cover 14.3872 km², with reciprocal
+street transitions to Семёновский–Измайловский. See
+[the area guide](MOSKOVSKAYA-AREA.md) for coverage, regeneration, exact pond
+geography and current verification. Its research dossiers cover
+[Victory Park](research/moskovskaya-park.md),
+[Strugatsky Square](research/strugatsky-square.md) and
+[the avenue landmarks](research/moskovskaya-landmarks.md).
+
+The scene retains the whole-city source where it exists and fills its missing
+territory with current mapped geometry. New architecture includes the National
+Library, House with the Spire and district council; source Chesme Church and
+Palace are adapted to the current area. The park retains its actual pond and
+island layout, with authored memorials, pavilions, chapel and shoreline planting.
+All normal walking, driving, boats, breakable furniture and area hand-offs apply.
+One purple Zhiguli and an Admiralteysky Pond motorboat follow the garage rule.
+
+The new page remaps the generated ownership table to its own `owns-table.js`.
+`tools/owns-table.mjs` generates/checks each page's declared table target, so new
+district owners do not invalidate unrelated area bakes. The existing shared
+table remains byte-identical. The dependency-closure regression independently
+checks both isolation directions.
+
 The 6.0.0 northern port is documented in [PETRO-AREAS.md](PETRO-AREAS.md):
 Kronverk–Vvedensky–Petrovsky, Aptekarsky–Posadsky and Krestovsky–Kamenny–Yelagin.
 
