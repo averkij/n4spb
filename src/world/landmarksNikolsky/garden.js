@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import * as L from '../layout.js';
 import { ROADS, GREEN, TREES, FURNITURE, FOUNTAINS } from '../data/city.js';
+import { liveFountain } from '../lib/live-fountain.js';
+import { fountainBasin } from '../lib/fountain-basin.js';
 import { ribbon, pairs, fillPoly, fillPolyFine, inflate, inRing, distToLine, roadTest, coverFn } from './surfaces.js';
 import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
@@ -124,9 +126,20 @@ export function build(K) {
 
   // ---------------------------------------------------------------------------------------- fountains and the Tsushima obelisk
   const fgeo = partsGeos((Q) => fountainParts(Q, M));
-  const fm = fount.map((f) => { ph.addCylinder(f.x, f.z, 3.0, 0, 0.55); return mat4(f.x, 0, f.z, 0, 1); });
+  const fm = fount.map((f) => {
+    fountainBasin(ctx, { id: f.id, x: f.x, z: f.z, r: 2.55, waterY: .36, bedY: 0, rimR: 2.725, rimTop: .52 });
+    return mat4(f.x, 0, f.z, 0, 1);
+  });
   K.extraTris += addInstanced(ctx, K.root, 'lmN-fountains', fgeo, fm, { cast: true }).tris;
   K.svc.fountains = fount.map((f) => ({ x: f.x, z: f.z }));
+  for (const f of fount) {
+    const nozzles = [{ height: 1.14, width: 0.032, target: [0.12, 0, 0] }];
+    for (let i = 0; i < 4; i++) {
+      const a = i * TAU / 4 + 0.4, s = Math.sin(a), c = Math.cos(a);
+      nozzles.push({ x: s * 2.62, y: 0.36, z: c * 2.62, height: 0.2, width: 0.018, target: [s * 1.42, 0.02, c * 1.42] });
+    }
+    liveFountain(ctx, { id: f.id, x: f.x, z: f.z, y: 0.36, r: 2.55, nozzles });
+  }
   P.push(Ob.x, 0, Ob.z, ROT);
   obelisk(P, M);
   P.pop();
@@ -168,9 +181,7 @@ function fountainParts(Q, M) {                                      // low grani
     const a = i * TAU / 4 + 0.4, x = Math.sin(a) * 2.72, z = Math.cos(a) * 2.72;
     Q.box(M.frog, x - 0.17, x + 0.17, YT, YT + 0.04, z - 0.17, z + 0.17, 'b');
     S.sph(Q, M.frog, x, YT + 0.16, z, 0.17, 0.12, 0.2, 6);
-    Q.cyl(M.water, [x - Math.sin(a) * 0.1, YT + 0.2, z - Math.cos(a) * 0.1], [x - Math.sin(a) * 1.3, YW + 0.02, z - Math.cos(a) * 1.3], 0.015, 0.012, 3, false);
   }
-  Q.cyl(M.water, [0, YW, 0], [0, 1.5, 0], 0.035, 0.012, 5, false);
 }
 
 // ---------------------------------------------------------------------------------------------- Tsushima obelisk (frame: origin at the centre of the base, y up)

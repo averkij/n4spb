@@ -23,3 +23,16 @@ export const libraryPortalEdge=e=>!e.hole&&Math.min(e.a[0],e.b[0])>-1826&&(
   Math.min(e.a[1],e.b[1])>=7416&&Math.max(e.a[1],e.b[1])<=7427.1 ||
   Math.min(e.a[1],e.b[1])>=7484.4&&Math.max(e.a[1],e.b[1])<=7495.1);
 export const libraryMainCourt=p=>p.h.reduce((best,h)=>h.length>best.length&&h.some((v,i)=>i%2===0&&v>-1865&&v<-1820)?h:best,[]);
+
+// The curved entrance fronts a deep foyer in the existing western building
+// volume. Its concave east edge follows the surveyed entrance curve; the
+// smaller northern/southern light wells remain outside this indoor room.
+export const LIBRARY_HALL = Object.freeze({
+  floor: LIBRARY_PLAN.floor, mezzanine: 5.64, ceiling: 17.9,
+  ring: Object.freeze([
+    -1902,7434.4,-1840.2,7436.5,-1845.5,7436.7,-1850.4,7438.2,
+    -1854.8,7441,-1858.4,7444.8,-1860.8,7449.5,-1862,7454.6,
+    -1861.7,7459.8,-1860.2,7464.7,-1857.4,7469.2,-1853.6,7472.7,
+    -1849,7475.1,-1843.9,7476.3,-1902,7479.8,
+  ]),
+});

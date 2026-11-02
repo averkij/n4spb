@@ -6,6 +6,7 @@ import { Parts } from './kit.js';
 import { SITES } from './sites.js';
 import { ringFromFlat } from '../lib/massing.js';
 import { knockInstances } from '../lib/knock-inst.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 const X = -8415.3, Z = -5470.7, ROT = -0.252;
 function buckets(P) {
@@ -80,17 +81,18 @@ export function buildMayak(K) {
   // The tower's square, low platform sits on the dry southern end of the pool.
   P.box(M.stone, -2.7, 2.7, 0.08, 0.35, -2.7, 2.7, 'b');
   ctx.physics.addWalkBox(X, Z, 5.4, 5.4, ROT, 0.35, 0.08);
-  // Two long rows of inward-curving jets. Each is a static translucent tube;
-  // no particle emitter, water wall or city-wide animation callback is needed.
+  // Two long rows of inward-curving live jets, transformed with the column frame.
   P.far = 400;
+  const nozzles = [], cs = Math.cos(ROT), sn = Math.sin(ROT), rotate = (x,z) => [x*cs+z*sn,-x*sn+z*cs];
   for (const sign of [-1, 1]) for (let j = 0; j < 11; j++) {
-    const x = sign * 6.6, z = -2 - j * 3.65;
-    for (let k = 0; k < 8; k++) {
-      const point = t => [x - sign * 4.7 * t, 0.19 + Math.sin(t * Math.PI) * (1.5 + (j % 3) * 0.22), z - t * 0.45];
-      P.cyl(M.jets, point(k / 8), point((k + 1) / 8), 0.045, 0.035, 5, false);
-    }
+    // Each long lane has water beside the central dry island. The older
+    // static arcs ended on that island; both live landings stay in water.
+    const x = sign < 0 ? -6.6 : 8.5, targetX = sign < 0 ? -3.55 : 4.85, z = -2 - j * 3.65;
+    const a=rotate(x,z),b=rotate(targetX,z-.45);
+    nozzles.push({x:a[0],y:.113,z:a[1],height:1.5+(j%3)*.22,width:.035,target:[b[0],0,b[1]]});
     P.cyl(M.steel, [x, 0.08, z], [x, 0.22, z], 0.1, 0.08, 6);
   }
+  liveFountain(ctx,{id:'r5255799',x:X,z:Z,y:.077,r:43,nozzles,far:400});
   P.pop(); lighthouse(K); benches(K);
   service.photoSpots.push({ name: 'Маяк и фонтан Парка 300-летия', x: X + 15, z: Z + 35, yaw: 23, pitch: 12 });
   service.parts.mayak = { triangles: P.tris - start, waterOpen: true };

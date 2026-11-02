@@ -13,7 +13,7 @@ const root=new THREE.Group(),svc={houses:[],monuments:[],photoSpots:[],entrances
 const K=makeKit(ctx,root,svc),updates=ctx._updates.length;
 K.begin();library(K,L.groupMembers('mz-library'));K.flush('library');ctx.addStatic(root);
 assert.equal(ctx._updates.length,updates,'the building adds no frame callbacks');
-assert(svc.parts.library.triangles<45000,'authored library geometry stays bounded');
+assert(svc.parts.library.triangles<55000,`authored library geometry stays bounded: ${svc.parts.library.triangles}`);
 ctx.staticRoot.updateMatrixWorld(true);
 const meshes=[];ctx.staticRoot.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.name.startsWith('moskovsky-library'))meshes.push(o);});
 const ray=new THREE.Raycaster();ray.layers.enableAll();
@@ -105,15 +105,52 @@ for(const m of titleMeshes){const pos=m.geometry.attributes.position,norm=m.geom
     assert(backing&&backing.distance>.01&&backing.distance<.065,'curved lettering floats away from its actual mapped stone wall');mountedLetters++;
   }
 }
-// Ray through the actual vestibule must remain open below its transom.
+// The former short blind vestibule must now lead into a substantial hall.
+// These independent room-space rays detect missing ceilings/walls, rather
+// than trusting the authored plan or a facade-window count.
+if(process.argv.includes('--mutant-blind-foyer'))ph.addBox(-1870.15,A.z,.3,5,0,A.floor,5.6);
 assert(!ph.columnBlocked(-1862.8,A.z,.3,A.floor,A.floor+1.7),'recessed main entrance has a phantom door wall');
 ray.set(new THREE.Vector3(-1859.5,A.floor+1.2,A.z),new THREE.Vector3(-1,0,0));
 assert(ray.intersectObjects(meshes,false)[0]?.distance>8,'recessed entry opening has a phantom glazing mesh');
-assert(ph.columnBlocked(-1870.15,A.z,.3,A.floor,A.floor+1.7),'the vestibule back wall is physically present');
+assert(!ph.columnBlocked(-1870.15,A.z,.3,A.floor,A.floor+1.7),'old blind vestibule still blocks the large foyer');
+let hallProbes=0;
+for(const [x,z]of[[-1867,7456.3],[-1883,7448.5],[-1895,7465]]){
+  ray.set(new THREE.Vector3(x,11,z),new THREE.Vector3(0,1,0));
+  const ceiling=ray.intersectObjects(meshes,false)[0];
+  assert(ceiling&&ceiling.point.y>=17.2&&ceiling.point.y<=17.91,'the entrance hall has no front-sided enclosed ceiling');hallProbes++;
+}
+for(const [direction,min,max]of[[[-1,0,0],30,33],[[0,0,-1],19,22],[[0,0,1],20,23]]){
+  ray.set(new THREE.Vector3(-1870,10,A.z),new THREE.Vector3(...direction));
+  const enclosure=ray.intersectObjects(meshes,false)[0];
+  assert(enclosure&&enclosure.distance>min&&enclosure.distance<max,'the deep entrance room lacks a solid enclosing wall');hallProbes++;
+}
+// Transparent panes sit in real facade openings: no opaque stone backing
+// immediately behind the glass can hide the hall's structure and depth.
+ray.set(new THREE.Vector3(-1852,8.5,7445.6),new THREE.Vector3(-1,0,0));
+const windowHits=ray.intersectObjects(meshes,false),clearPane=windowHits[0];
+assert(clearPane?.object.material.transparent,`foyer is hidden behind an opaque painted window: ${clearPane?.object.material.color?.getHexString()} at ${clearPane?.point.toArray()}`);
+const behind=windowHits.find(h=>!h.object.material.transparent&&h.distance>clearPane.distance+.02);
+assert(behind&&behind.distance-clearPane.distance>8,'foyer glass has an opaque backing instead of a visible deep room');hallProbes++;
+// The two formerly floating facade terminations now return into the main
+// source shell. Probe their middle from both sides; a single front sheet
+// or a facade cap narrower than a real return cannot satisfy these rays.
+for(const [point,normal]of[[[-1834.05,8,7432.85],[-.510395,0,-.85994]],[[-1835.2,8,7479.35],[.330945,0,-.94365]]])for(const sign of[-1,1]){
+  const origin=new THREE.Vector3(...point).addScaledVector(new THREE.Vector3(...normal),sign*1.3);
+  ray.set(origin,new THREE.Vector3(...normal).multiplyScalar(-sign));
+  const closure=ray.intersectObjects(meshes,false)[0];
+  assert(closure&&closure.distance>.5&&closure.distance<1.4,'exposed entrance facade end has no substantial two-sided architectural return');hallProbes++;
+}
+// A gallery is a thin elevated slab: it must support the upstairs walker
+// while leaving its lower passage free, rather than filling the room.
+const under=hitAt(-1894,7463.3,3.5),over=hitAt(-1894,7463.3,8);
+assert(under&&Math.abs(under.point.y-1.44)<.025,'lower foyer floor is missing');
+assert(over&&Math.abs(over.point.y-5.64)<.025,'upper gallery has no real walkable drawn slab');
+assert(!ph.columnBlocked(-1894,7463.3,.3,1.46,3.2),'mezzanine blocks the lower hall with a full-height solid');
+assert(Math.abs(ph.groundHeight(-1894,7463.3,6,false)-over.point.y)<.025,'upper gallery physics differs from the mesh');hallProbes+=4;
 let walkingSteps=0;
-function walk(points){
+function walk(points,startY=points[0][0]<A.stairBack?A.floor:0){
   const p=new Player(new THREE.PerspectiveCamera(),{addEventListener(){},requestPointerLock(){}},ph,L.WORLD.play);
-  p.enabled=true;p.clampXZ=L.clampToPlay;p.solidAt=L.insideBuilding;p.smoothing=0;p.setPose(points[0][0],points[0][1],0,0,points[0][0]<A.stairBack?A.floor:0,{stand:true});
+  p.enabled=true;p.clampXZ=L.clampToPlay;p.solidAt=L.insideBuilding;p.smoothing=0;p.setPose(points[0][0],points[0][1],0,0,startY,{stand:true});
   let rescues=0;p.onRescue=()=>rescues++;p.keys.add('KeyW');
   for(const goal of points.slice(1)){
     for(let f=0;f<1600;f++){
@@ -128,4 +165,8 @@ function walk(points){
 const path=[[-1795,A.z+4.3],[-1809,A.z+4.3],[-1817,A.z+4.3],[-1845,A.z+4.3],[-1858,A.z],[-1867,A.z]];
 const up=walk(path);assert(Math.abs(up.pos.y-A.floor)<.05,'entrance floor must support the walker');
 const down=walk(path.slice().reverse());assert(Math.abs(down.pos.y)<.05,'the broad descent must return to street level');
-console.log(`Library architecture PASS: ${svc.parts.library.triangles} triangles,${meshes.length} material/range meshes,${bays} open bays,${piers} rectangular corner probes,${drawProbes} floor/tread rays,${holes} open source courts/${holeProbes} independent sky probes,${mountedLetters} attached title triangles,${portalWindows} recessed portal panes,${walkingSteps} real player steps; zero frame callbacks.`);
+const hallPath=[[-1857,A.z],[-1865,A.z],[-1874,A.z],[-1891,A.z],[-1897,A.z]];
+const upstairs=walk(hallPath);assert(Math.abs(upstairs.pos.y-5.64)<.05,'broad interior stairs do not reach the real gallery');
+const downstairs=walk(hallPath.slice().reverse(),5.64);assert(Math.abs(downstairs.pos.y-A.floor)<.05,'interior stair descent fails to return to the foyer');
+const below=walk([[-1865,A.z+7],[-1885,A.z+7],[-1896,A.z+7]]);assert(Math.abs(below.pos.y-A.floor)<.05,'gallery has no traversable lower passage');
+console.log(`Library architecture PASS: ${svc.parts.library.triangles} triangles,${meshes.length} material/range meshes,${bays} open bays,${piers} rectangular corner probes,${drawProbes} floor/tread rays,${holes} open source courts/${holeProbes} independent sky probes,${mountedLetters} attached title triangles,${portalWindows} recessed portal panes,${hallProbes} foyer enclosure/glazing/slab probes,${walkingSteps} real player steps including upper gallery and lower passage; zero frame callbacks.`);

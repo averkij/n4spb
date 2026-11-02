@@ -33,7 +33,7 @@ export async function build(ctx) {
     for (const k of K.P.b.values()) { const bad = k.pos.findIndex((v) => !Number.isFinite(v)); if (bad >= 0) console.warn(`[landmarksF] ${name}: NaN vertex in ${k.mat.name} at ${bad / 3 | 0}`); }
     const tris = K.P.tris + K.extraTris;
     const meshes = K.P.build(root, { name });
-    for (const m of meshes) if (cutouts.has(m.material)) ctx.noOutline(m);
+    for (const m of meshes) if (cutouts.has(m.material) || m.material.name==='sg-globe') ctx.noOutline(m);
     svc.triangles += tris; svc.parts[name] = { tris, ms: Math.round(performance.now() - t1) };
   }
   ctx.addStatic(root);

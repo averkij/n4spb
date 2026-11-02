@@ -2,10 +2,11 @@
 // STUDENT (a cartoon figure after drawings by R. Shustrov).  Photos n12201012355/c00 c01 (opened): a shallow CURVED basin with a granite rim and thin jets (the water is a flat film at the rim level), a cobbled path
 // curving round it, a raised wooden DECK on a granite wall behind it, a big faceted granite wedge at the end of the deck; the Student sits on the edge of the deck: a thin figure with a very long neck, a mortarboard
 // with a tassel, a gown and a bow tie, the head thrown back with closed eyes and a smile, a pen in the raised right hand, a book in the left, the legs dangling over the granite, a stack of books and a small snail
-// beside him.  The four mosaic panels (science, education, art, traditions) are on the granite wall.  The water is the Menshikov-fountain recipe (teal toon, silent jets as static tubes).  Solid: deck, wedge, basin.
+// beside him. The four mosaic panels are on the granite wall. Six low live plumes, droplets and ripples follow the curved teal basin. Solid: deck and wedge; the basin is native shallow water.
 import { human, Sculpt, V, face, hand, cached } from '../lib/figures.js';
 import { loft, ball, prism } from './solids.js';
 import { plateQuad } from './plates.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 const DECK = { z0: -11.0, z1: -8.4, h: 0.5, x0: -3.6, x1: 3.6 };
 const CX = 0, CZ = -12, R0 = 7.2, R1 = 5.0, A = 0.62;                 // the curved basin: an annulus sector round (CX, CZ), angles -A..A (0 = the +z direction)
@@ -62,9 +63,14 @@ export const PIECES = [{
     }
     const ring = []; for (let i = 0; i <= N; i++) ring.push(arc(R0 - 0.3, -A + i / N * 2 * A)); for (let i = N; i >= 0; i--) ring.push(arc(R1 + 0.3, -A + i / N * 2 * A));
     P.cap(M.water, ring, 0.22, true, 4);
-    // six silent jets: slim plumes (a stem widening to a foam head)
-    P.tint('#e8f1f4');
-    for (let i = 0; i < 6; i++) { const a = -A * 0.8 + i / 5 * A * 1.6, [x, z] = arc((R0 + R1) / 2, a), h = 0.5 + 0.3 * (i % 3); P.cyl(M.vc, [x, 0.22, z], [x, 0.22 + h, z], 0.013, 0.034, 8, false); ball(P, M.vc, [x, 0.22 + h, z], [0.05, 0.02, 0.05], { w: 8, h: 4 }); }                // review: a pencil-thin spray slightly widening to a soft head (first build: uniform white poles read as lamp-posts; a 0.075 head read as an upside-down cone)
+    // Six low plumes follow the surveyed curved basin in the placed piece frame.
+    const cs = Math.cos(K.yaw || 0), sn = Math.sin(K.yaw || 0), nozzles = [];
+    for (let i = 0; i < 6; i++) {
+      const a = -A * 0.8 + i / 5 * A * 1.6, [x, z0] = arc((R0 + R1) / 2, a), z = z0 + 8;
+      const wx = x * cs + z * sn, wz = -x * sn + z * cs;
+      nozzles.push({ x: wx, z: wz, height: 0.5 + 0.3 * (i % 3), width: 0.02, target: [wx + 0.08 * cs, 0, wz - 0.08 * sn] });
+    }
+    liveFountain(K.ctx, { id: 'n12201012355', x: K.x, z: K.z, y: 0.22, r: 4, nozzles });
     // the deck on its granite wall
     P.tint('#a8a7a2'); P.box(M.vc, DECK.x0, DECK.x1, 0, DECK.h - 0.06, DECK.z0, DECK.z1, 'b');
     P.tint('#8a5a40'); P.box(M.vc, DECK.x0 - 0.05, DECK.x1 + 0.05, DECK.h - 0.06, DECK.h, DECK.z0 - 0.05, DECK.z1 + 0.05, 'b');

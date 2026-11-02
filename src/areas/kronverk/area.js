@@ -65,6 +65,8 @@ export const WATER = {...WATER_TABLE,dataRings:CONTEXT,skipRiverNames:CONTEXT_NA
 export const ZONES = {peopleDensity:{west:{off:true,scale:1,platforms:1},mars:{off:true,zones:[],scale:1}},peopleHot:[],crowHaunts:[{x:-2230,z:-2520,r:120}],farCentres:[]};
 export const GARAGE = {"poses":{"lada":{"x":-2237,"z":-2522,"yaw":0}},"spawn":{"x":-2237,"z":-2522,"yaw":0},"boats":[{"id":"boat-kronverk","dock":"kronverk","x":-3584.3948255495384,"z":-2300.3269857633773,"yaw":-2.2092102701703262}]};
 export const PRUNE_SERVICES = ["city","landmarksFortress","landmarksKronverk","landmarksVladimir","landmarksPetroCompletion","landmarksPetrovskyStadium","landmarksPetrovskyYacht","landmarksPetrovskyWest","landmarksZhdanovka"];
-export const HOOKS = {deckServices:['landmarksTroitsky'],...makeHooks(MODULES)};
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
+export const HOOKS = withFountainKeepouts({deckServices:['landmarksTroitsky'],...makeHooks(MODULES)}, FOUNTAIN_SITES);
 export const HEIGHT_PATCHES = [];
 export const CROSS_PLACES = [];

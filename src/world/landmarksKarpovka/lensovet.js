@@ -13,6 +13,8 @@ import { LS, pairs, planFence, rotOf, wallBox } from './frame.js';
 import { ringEdges } from './prism.js';
 import { inflate, coverFn } from './surfaces.js';
 import { plantTrees } from './trees.js';
+import { liveFountain } from '../lib/live-fountain.js';
+import { fountainBasin } from '../lib/fountain-basin.js';
 
 const TAU = Math.PI * 2;
 export const HL = { terr: 1.0, gal: 4.2, f3: 7.4, fl: 3.1, top0: 16.7, roof: 20.2, wing: 17.7 };
@@ -251,7 +253,13 @@ function terrace(K) {
   const fp = [-2167.2, -4022.3];
   G.tube(P, M.terraceL, fp[0], fp[1], HL.terr, HL.terr + 0.5, 1.75, 1.55, 16, 6, 0.5, { capTop: M.terraceL }); G.tube(P, M.terrace, fp[0], fp[1], HL.terr + 0.2, HL.terr + 0.52, 1.3, 1.3, 16, 4, 0.3);
   P.cap(M.water, G.ngon(16, 1.3, 0, fp[0], fp[1]), HL.terr + 0.515, true, 2); P.col(M.terrace, fp[0], fp[1], HL.terr + 0.4, HL.terr + 0.9, 0.22, 0.16, 8, true);
-  ph.addCylinder(fp[0], fp[1], 1.75, HL.terr, HL.terr + 0.9);
+  liveFountain(ctx, { id: 'w1109059112', x: fp[0], z: fp[1], y: HL.terr + 0.515, r: 1.3, nozzles: Array.from({ length: 6 }, (_, i) => {
+    const a = i * TAU / 6, x = Math.sin(a), z = Math.cos(a);
+    return { x: x * 0.18, y: 0.385, z: z * 0.18, height: 0.8, width: 0.022, target: [x * 0.95, 0, z * 0.95] };
+  }) });
+  fountainBasin(ctx, { id: 'w1109059112', x: fp[0], z: fp[1], r: 1.3, waterY: HL.terr + .515,
+    bedY: HL.terr + .4, rimR: 1.525, rimBottom: HL.terr, rimTop: HL.terr + .52,
+    segments: 16, pedestal: { r: .22, y0: HL.terr + .4, y1: HL.terr + .9 } });
   // blue spruces on the lawns
   const trees = [];
   for (const [c, d, s, fam] of [[-33, 1.6, 1.05, 'spruceA'], [-24, 3.4, 0.9, 'spruceB'], [-13.5, 5.2, 1.15, 'spruceA'], [12.5, 5.6, 1.2, 'spruceA'], [17, 4.6, 1.1, 'spruceB'], [30, 1.2, 0.95, 'spruceA']]) {

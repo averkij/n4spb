@@ -4,6 +4,7 @@
 // Everything is drawn in the cathedral model frame (frame.js); OSM world coordinates are converted with Mdl().
 import * as THREE from 'three';
 import { GREEN, AREAS, BARRIERS, FURNITURE, FOUNTAINS, ROADS } from '../data/city.js';
+import { liveFountain } from '../lib/live-fountain.js';
 import * as L from '../layout.js';
 import { C0, ROT, Mdl, W, boxAt, cylAt } from './frame.js';
 import { mound, arcWall, arcFlat } from './prims.js';
@@ -81,6 +82,13 @@ export function build(K) {
   const fo = fountainAt();
   function fountainAt() { const f = FOUNTAINS.find((q) => q.id === 'w101292107'); const m = Mdl(f.x, f.z); return { x: m.mx, z: m.mz }; }
   fountain(P, M, fo.x, fo.z);
+  const nozzles = [{ height: 6.8, width: 0.045, target: [0.18 * Math.cos(ROT), 0, -0.18 * Math.sin(ROT)] }];
+  for (let i = 0; i < 40; i++) {
+    const a = i / 40 * TAU + ROT, s = Math.sin(a), c = Math.cos(a);
+    nozzles.push({ x: s * 2.4, y: 0.06, z: c * 2.4, height: 6.0, width: 0.018, target: [s * 0.4, 0, c * 0.4] });
+  }
+  const fw = W(fo.x, fo.z);
+  liveFountain(K.ctx, { id: 'w101292107', x: fw.x, z: fw.z, y: 0.34, r: 7.4, nozzles, far: 380 });
   {                                                                                    // WATER IS REACHABLE (docs/AREAS.md 13.7): no solid disc any more: the basin is 0.34 m of shallow water to wade in, the rim 40 breakable bays, the middle pillar solid
     const R = 8.2, r0 = 7.4, h = 0.5, seg = 40, bays = [], at = (t, r) => W(fo.x + Math.sin(t) * r, fo.z + Math.cos(t) * r);
     for (let i = 0; i < seg; i++) {
@@ -154,12 +162,7 @@ function fountain(P, M, x, z) {
   const wp = []; for (let k = 0; k < 40; k++) { const t = k / 40 * TAU; wp.push([Math.sin(t) * r0, h - 0.16, Math.cos(t) * r0]); }
   P.fan(M.water, wp, [0, 1, 0], (q) => [q[0] / 4, q[2] / 4]);                    // water
   P.pop();
-  // a bell of thin jets from a ring of needles (white emissive, no outline) + a light mist
-  for (let i = 0; i < 40; i++) {
-    const a = i / 40 * TAU, s = Math.sin(a), c = Math.cos(a);
-    P.cyl(M.jetW, [x + s * 2.4, h - 0.1, z + c * 2.4], [x + s * 0.4, h + 6.0, z + c * 0.4], 0.014, 0.009, 3, false);
-  }
-  P.cyl(M.jetW, [x, h - 0.1, z], [x, h + 6.8, z], 0.06, 0.03, 4, false);
+  // The bell of water is dynamic (liveFountain above), outside this static collector.
   P.cyl(M.rim, [x, h - 0.15, z], [x, h + 0.25, z], 0.25, 0.25, 8, true);
 }
 

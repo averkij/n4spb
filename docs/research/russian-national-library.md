@@ -1,6 +1,6 @@
 # Russian National Library: circular entrance and fountain forecourt
 
-Updated 2026-11-01. The seven owner-supplied photographs are modelling
+Updated 2026-11-02. The seven owner-supplied photographs are modelling
 references, not textures. The first three establish the open circular
 colonnade, roof oculus, square slender columns, curved inscription, recessed
 arched glazing and broad granite approach. Photograph 4 establishes the
@@ -8,6 +8,15 @@ grey paving with offset dark blocks, clipped planting and paired black
 lamps. Photographs 1 and 5 establish the modern six-bowl fountain; photograph
 6 shows the full-length Speransky statue and polished black plinth. Photograph
 7 establishes the low glazed underpass pavilion, authored separately.
+
+The owner's follow-up distinguishes the outdoor circular court from the large
+hall behind its western glazed elevation. Keep the court open to the sky, but
+enclose the western foyer with substantial side returns and a ceiling. Real
+window apertures reveal the broad stair, upper gallery, columns and ceiling
+beams. The former eight-metre blind vestibule and exposed backs of lightwell
+walls do not describe that room. Its plan and walking routes are exported by
+`library-plan.js` / `services.landmarksMoskovskaya.library.hall`; generic trees
+and props are excluded from the whole library footprint, including lightwells.
 
 The source project was inspected before authoring. The current district
 builder had a coarse circular building but no detailed fountain square. The

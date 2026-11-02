@@ -575,7 +575,9 @@ export const GARAGE = {
 export const PRUNE_SERVICES = ['city', 'landmarksC', 'landmarksD', 'landmarksMariinsky', 'landmarksNikolsky', 'landmarksNewHolland', 'landmarksYusupov'];
 /** the area-specific hooks of the engine modules (milestone M6, docs/AREAS.md section 9: keep-outs of trees / tufts / props / ways / parking, the crowd garden, the deck services; the call sites read
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */
-export const HOOKS = makeHooks(MODULES);      // the hook set of src/areas/north/hooks.js gated by the module list: none of its modules is in this list, so it is inert here
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
+export const HOOKS = withFountainKeepouts(makeHooks(MODULES), FOUNTAIN_SITES);
 /** the height patches of layout.heightAt (milestone M6, docs/AREAS.md section 9): the hook set gated by MODULES, see src/areas/north/hooks.js */
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 

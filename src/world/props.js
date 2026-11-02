@@ -22,9 +22,11 @@ import { placeDoors } from './props/doors.js';
 import { placeWest } from './props/west.js';
 import { placeStands, placeTerraces } from './props/stands.js';
 import { placeAds, finishClocks } from './props/ads.js';
+import { placeFountains } from './props/fountains.js';
 
 // order matters: the OSM points are facts (they go first), then the verandas (they need the frontage), the facade-side things (doors, tubs, stands) and the sparse extras
 const PHASES = [
+  ['fountains', placeFountains],
   ['osm', placeOsm],
   ['terraces', placeTerraces],
   ['doors', placeDoors],
@@ -49,7 +51,7 @@ export async function build(ctx) {
   try { S.tris += finishClocks(S); } catch (e) { console.error('[props] clocks failed:', e); failed.push('clocks: ' + (e && e.stack || e)); }
   const t2 = performance.now(); S.tris += flushInstances(S); S.stats.ms.flush = Math.round(performance.now() - t2);
   S.tris += S.panels.finish(S.root);
-  ctx.services.props = { benches: S.svc.benches, lamps: S.svc.lamps, bins: S.svc.bins, shelters: S.svc.shelters, kiosks: S.svc.kiosks, terraces: S.svc.terraces, racks: S.svc.racks, pillars: S.svc.pillars, boxes: S.svc.boxes, planters: S.svc.planters, urns: S.svc.urns, clocks: S.svc.clocks, stalls: S.svc.stalls, stats: S.stats };
+  ctx.services.props = { benches: S.svc.benches, lamps: S.svc.lamps, bins: S.svc.bins, shelters: S.svc.shelters, kiosks: S.svc.kiosks, terraces: S.svc.terraces, racks: S.svc.racks, pillars: S.svc.pillars, boxes: S.svc.boxes, planters: S.svc.planters, urns: S.svc.urns, clocks: S.svc.clocks, stalls: S.svc.stalls, fountains: S.svc.fountains, stats: S.stats };
   if (typeof process !== 'undefined' && process.env && process.env.PROPS_DUMP) ctx.services.props.inst = (() => { const o = {}; for (const [n, l] of [...S.inst, ...[...S.kinst.values()].map((a) => [a.name, a.list])]) (o[n] = o[n] || []).push(...l.map((m) => [Math.round(m.elements[12] * 10) / 10, Math.round(m.elements[14] * 10) / 10, Math.round(Math.atan2(m.elements[8], m.elements[10]) * 100) / 100])); return o; })();      // tools/props-islands.mjs --inst: the instance lists by type, for the frozen-district proof
   S.stats.dynTris = S.dynGeo ? Math.round(S.dynGeo.tris) : 0;
   S.stats.buildMs = Math.round(performance.now() - t0);

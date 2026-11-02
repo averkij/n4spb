@@ -659,7 +659,9 @@ export const GARAGE = {
 export const PRUNE_SERVICES = ['city', 'landmarksA', 'landmarksB', 'landmarksC', 'landmarksD', 'landmarksNorthFull', 'landmarksGarden', 'landmarksMars'];      // landmarksNorthFull (not the strip's landmarksNorth, which this page does not build) publishes the door points of its claimed buildings; landmarksGarden the gates of the Summer Garden, landmarksMars the doors of the barracks and the houses of the Mars Field
 /** the area-specific hooks of the engine modules (milestone M6, docs/AREAS.md section 9: keep-outs of trees / tufts / props / ways / parking, the crowd garden, the deck services; the call sites read
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */
-export const HOOKS = makeHooks(MODULES);      // the hook set of src/areas/north/hooks.js gated by the module list: here only the deck service of northBridges is live (the Tauride / Smolny keep-outs wait for their modules)
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
+export const HOOKS = withFountainKeepouts(makeHooks(MODULES), FOUNTAIN_SITES);
 /** the height patches of layout.heightAt (milestone M6, docs/AREAS.md section 9: `[{ id, box: [x0, x1, z0, z1], at(x, z) -> number | null }]`, the first non-null answer wins): the hook set gated by MODULES, see src/areas/north/hooks.js */
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 

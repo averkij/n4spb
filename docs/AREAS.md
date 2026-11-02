@@ -1850,3 +1850,61 @@ library architecture/forecourt/underpass tests under `tools/area.mjs moskovskaya
 The source parking lot overlaps the central pilotis: the area parking hook
 removes its generated slots and bay paint there, preserving the free passage
 in the integrated scene as well as in the isolated architectural model.
+
+### 9.3.0 — Live fountains, library hall and Singer crown
+
+Live water is now a standing owner rule in `CLAUDE.md`, covering every current
+and future area. `world/lib/live-fountain.js` supplies shared flowing jets,
+advecting droplets, impact ripples and evening/night illumination. One spatial
+controller per context visits nearby fountain buckets; bounded dynamic meshes
+have finite render ranges, no shadows and no outline pass. The performance tier
+uses three droplets per nozzle, medium six. Original library water remains intact.
+
+Twenty-five authored static fountains use this helper. Four existing live
+Alexander/Tauride/Paradny sites retain their original streams and gain shared
+droplets/ripples. Mapped fountains without specialist models are covered by
+`props/fountains.js`: surveyed basin rings and holes remain exact, duplicate
+node/polygon records resolve to one effect, and specialist IDs retain ownership.
+The sixteen-area audit resolves 131 unique in-play mapped IDs: 106 receive a
+fallback in at least one page and 29 receive a specialist model; four use
+different coverage in overlapping pages whose module lists differ. All 174
+page-local records resolve to live water, with zero exclusions or duplicates.
+Road-edge sites use flush spray without new masonry or paving over asphalt.
+Native basin water is reused; new shallow water and floor geometry stay open
+to walking and driving. Seven former full-basin cylinders have been replaced
+by shallow floors, real water, solid central supports and breakable rim bays;
+both Paradny basins also register water and breakable perimeters.
+The 1809 Voronikhin trough uses its mapped specialist ID, with a small live
+spout and accessible shallow water in place of its old blanket body collider.
+The Steregushchy seacock also spills live water into its receiving terrace.
+Ordinary still pools remain still pools.
+
+All sixteen live areas were rebaked for the shared water pass. Browser review
+then exposed planting above some basins. Palace and Admiralty now preserve a
+1.7m opening in the Small Hermitage Hanging Garden (`w67548566`) around its
+real mapped fountain (`n9307113823`); the surrounding flower carpet and outer
+garden boundary remain intact. `tools/lib/area-data-corrections.mjs` reapplies
+the opening during area-data generation; `hermitage-fountain-bed-test.mjs`
+checks actual flower triangles, native water and walking clearance.
+
+Eleven affected areas also apply basin keepouts through their existing tree
+and tuft hooks, using generated `fountain-rings.js` data and
+`areas/fountain-keepout.js`. Trees keep 0.75m off the water and tufts 0.25m;
+dry polygon islands and earlier area hooks remain intact. These area-local
+planting corrections have matching follow-up bakes after the shared pass.
+The final manifest check confirms all sixteen areas fresh, with 1,612 complete
+products; the repeated environment audit finds zero basin trunk overlaps.
+
+The library's western glazed elevation now encloses a substantial hall with
+ceiling beams, columns, broad physical stairs and a mezzanine. Its side returns
+join the surveyed outer skin. Transparent panes occupy real window apertures,
+and the gallery and lower passage are walkable. The outdoor circular court,
+colonnade and ten source lightwells remain open. Generic plants and props are
+excluded from the library footprint. `services.landmarksMoskovskaya.library.hall`
+publishes the plan, datums and walking routes.
+
+Singer's crown now has a tapered glazed pavilion, curved ribs, raised copper
+leaves and garlands, a carved corner arch, feathered eagle and paired draped
+figures carrying the inclined globe. Static carving detail has an authored
+280m range; the principal crown silhouette remains in the building's skyline.
+These changes affect Palace and Admiralty; no area boundaries or transitions change.

@@ -612,12 +612,14 @@ export const PRUNE_SERVICES = [
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */
 // the hook set of src/areas/north/hooks.js gated by the module list: none of its modules is in this list, so it is inert here, EXCEPT inGarden: the "garden" of the crowd is the Smolensky cemetery here (cemetery.js: the
 // polygon of GREEN r2736670), whose people density is a quarter of the island's and without riders (ZONES.peopleDensity.garden below); the North's own inGarden (the Tauride Garden, x > 915) is never true on the island
-export const HOOKS = { ...makeHooks(MODULES), inGarden: inCemetery };
+export const HOOKS = withFountainKeepouts({ ...makeHooks(MODULES), inGarden: inCemetery }, FOUNTAIN_SITES);
 /** the height patches of layout.heightAt (milestone M6, docs/AREAS.md section 9): the hook set gated by MODULES, see src/areas/north/hooks.js */
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 
 import { inCemetery } from './cemetery.js';
 import { makeHooks, makeHeightPatches } from '../north/hooks.js';      // shared with the parked North: the hook bodies are gated by the module list
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
 
 // ---------------------------------------------------------------- the places of the OTHER areas (docs/AREAS.md: core/gates.js, the HUD list "Места · Places")
 /**

@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { PARADNY_PODIUM,PARADNY_Y as Y,PARADNY_STAIRS,PARADNY_FLIGHTS,PARADNY_LANDINGS,PARADNY_FOUNTAINS,inParadny,paradnyDeckY } from './paradny-surface.js';
 import { PARADNY_FLOOR } from './paradny-floor.js';
+import { knockBays } from '../lib/fence-bays.js';
+import { liveFountain } from '../lib/live-fountain.js';
 const pairs=r=>Array.from({length:r.length/2},(_,i)=>[r[i*2],r[i*2+1]]);
 const edges=r=>pairs(r).map((a,i,all)=>[a,all[(i+1)%all.length]]);
 const dseg=(x,z,a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)};
@@ -43,16 +45,20 @@ export function paradnyCourts(K,root){
  for(const p of PARADNY_LANDINGS){P.box(M.graniteWarm,p.x-p.w/2,p.x+p.w/2,0,p.y+.015,p.z-p.w/2,p.z+p.w/2);ctx.physics.addWalkBox(p.x,p.z,p.w,p.w,0,p.y+.015,0);}
  // Two surveyed triangular black-granite basins. The fountain contractor records
  // 13 jets per basin, with the central jet reaching 5m.
- const jets=[],waterMat=ctx.mat.toon('#779b9d',{paint:.06}),spray=ctx.mat.toon('#c7e0df',{paint:.08});
+ const jets=[],rimBays=[],waterMat=ctx.mat.toon('#779b9d',{paint:.06}),spray=ctx.mat.toon('#c7e0df',{paint:.08,emissive:'#6bcbd5',emissiveIntensity:.08});
  K.decalMats.add(waterMat);
  for(const f of PARADNY_FOUNTAINS)for(const poly of f.polys){
+  const firstJet=jets.length;
   const pts=pairs(poly.o),cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cz=pts.reduce((s,p)=>s+p[1],0)/pts.length;
   P.cap(rim,pts,Y+.12,true,2);const inner=pts.map(p=>[cx+(p[0]-cx)*.88,cz+(p[1]-cz)*.92]);P.cap(waterMat,inner,Y+.6,true,2);
-  for(const[a,b]of edges(poly.o)){const len=Math.hypot(b[0]-a[0],b[1]-a[1]),rot=Math.atan2(b[0]-a[0],b[1]-a[1]);P.push((a[0]+b[0])/2,0,(a[1]+b[1])/2,rot);P.box(rim,-.32,.32,Y+.12,Y+.77,-len/2,len/2);P.pop();ctx.physics.addBox((a[0]+b[0])/2,(a[1]+b[1])/2,.65,len,rot,Y,Y+.8);}
+  ctx.physics.addWater({ring:inner.flat(),level:Y+.6});
+  for(const[a,b]of edges(poly.o)){const len=Math.hypot(b[0]-a[0],b[1]-a[1]),rot=Math.atan2(b[0]-a[0],b[1]-a[1]);P.push((a[0]+b[0])/2,0,(a[1]+b[1])/2,rot);P.box(rim,-.32,.32,Y+.12,Y+.77,-len/2,len/2);P.pop();rimBays.push({x0:a[0],z0:a[1],x1:b[0],z1:b[1],y:Y,ghost:true});}
   jets.push({x:cx,z:cz,h:5});for(let side=0;side<3;side++)for(let i=0;i<4;i++){const a=inner[side],b=inner[(side+1)%3],t=(i+.5)/4;jets.push({x:cx+((a[0]+(b[0]-a[0])*t)-cx)*.68,z:cz+((a[1]+(b[1]-a[1])*t)-cz)*.68,h:1.2+1.8*(1-Math.abs(t-.5)*2)});}
+  liveFountain(ctx,{id:f.id,x:cx,z:cz,y:Y+.6,r:5,drawStreams:false,far:300,nozzles:jets.slice(firstJet).map(j=>({x:j.x-cx,y:.01,z:j.z-cz,height:j.h,width:.035,target:[j.x-cx+.12,0,j.z-cz]}))});
  }
+ knockBays(ctx,{name:'paradny-fountain-rims',bays:rimBays,parts:[],far:300,collider:{y0:Y,y1:Y+.8,thick:.65},rec:{kind:'fence',mass:700,h:.8,anchored:12,hitK:.3,metal:false,minDv:0}});
  const jetGeo=new THREE.CylinderGeometry(.045,.12,1,7,4),mesh=new THREE.InstancedMesh(jetGeo,spray,jets.length),foam=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),spray,jets.length*8),mat=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),scale=new THREE.Vector3();
- const update=t=>{jets.forEach((j,i)=>{const h=j.h*(.95+.05*Math.sin(t*2.2+i));v.set(j.x,Y+.61+h/2,j.z);scale.set(1,h,1);mat.compose(v,q,scale);mesh.setMatrixAt(i,mat);
+ const update=t=>{const n=ctx.shared.uNight?.value||0,sunY=ctx.shared.uSunDir?.value?.y??1;spray.emissiveIntensity=.08+1.3*Math.max(0,Math.min(1,Math.max((.22-sunY)/.22*.55,(n-.03)/.55)));jets.forEach((j,i)=>{const h=j.h*(.95+.05*Math.sin(t*2.2+i));v.set(j.x,Y+.61+h/2,j.z);scale.set(1,h,1);mat.compose(v,q,scale);mesh.setMatrixAt(i,mat);
   for(let k=0;k<8;k++){const f=((t*.48+k/8+i*.137)%1),yy=4*f*(1-f)*h,r=.07+.12*(1-f);v.set(j.x+Math.sin(i+k*2.4)*f*.48,Y+.62+yy,j.z+Math.cos(i+k*2.4)*f*.48);scale.set(r,r*1.6,r);mat.compose(v,q,scale);foam.setMatrixAt(i*8+k,mat);}
  });mesh.instanceMatrix.needsUpdate=true;foam.instanceMatrix.needsUpdate=true;};update(0);for(const m of[mesh,foam]){m.computeBoundingSphere();m.boundingSphere.radius+=3;ctx.noOutline(m);ctx.add(m);}ctx.onUpdate((dt,t)=>update(t));
  // Symmetric planted beds and seating retain the mapped central axial paths.

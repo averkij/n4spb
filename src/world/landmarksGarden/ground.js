@@ -4,6 +4,7 @@
 // AREAS, WATER, BARRIERS.  Dossier docs/research/summer-garden.md 2.3, 5.1, 6.5; photos refs/summer-garden 184 206 085 216.
 import * as THREE from 'three';
 import { GREEN, ROADS, AREAS, WATER, BARRIERS, FOUNTAINS } from '../data/city.js';
+import { liveFountain } from '../lib/live-fountain.js';
 import { RING, inRing, rotOf } from './frame.js';
 import { GROUPS_LIST } from './groups.js';
 import { ribbon, fillPoly, fillPolyFine, inflate, pairs, coverFn, wall3D } from './surfaces.js';
@@ -65,7 +66,6 @@ export function build(K) {
     const r = f.id === 'n3165417100' ? 3.6 : 2.4, ring = Array.from({ length: 20 }, (_, i) => [f.x + Math.cos(i / 20 * Math.PI * 2) * r, f.z + Math.sin(i / 20 * Math.PI * 2) * r]);
     basins.push({ id: f.id, ring, name: f.name });
   }
-  const jet = ctx.mat.toon('#eef6fa', { name: 'lmGd-jet', transparent: true, opacity: 0.6, depthWrite: false });
   const rimBays = [], railBays = [];
   for (const b of basins) {
     const n = b.ring.length;
@@ -80,8 +80,12 @@ export function build(K) {
     let rad = 0; for (const p of b.ring) rad += Math.hypot(p[0] - cx, p[1] - cz); rad /= n;
     const big = rad > 4;
     const hJet = big ? 5.5 : 3.5;
-    P.cyl(jet, [cx, 0.42, cz], [cx, 0.42 + hJet, cz], 0.12, 0.03, 8, false);                                                  // the central jet
-    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, r1 = rad * 0.45; P.cyl(jet, [cx + Math.cos(a) * r1, 0.42, cz + Math.sin(a) * r1], [cx + Math.cos(a) * r1 * 1.15, 0.42 + hJet * 0.45, cz + Math.sin(a) * r1 * 1.15], 0.05, 0.015, 5, false); }
+    const nozzles = [{ height: hJet, width: 0.07, target: [0.45, 0, 0] }];
+    for (let k = 0; k < 8; k++) {
+      const a = k / 8 * Math.PI * 2, x = Math.cos(a) * rad * 0.45, z = Math.sin(a) * rad * 0.45;
+      nozzles.push({ x, z, height: hJet * 0.45, width: 0.035, target: [x * 1.15, 0, z * 1.15] });
+    }
+    liveFountain(ctx, { id: b.id, x: cx, z: cz, y: 0.42, r: rad, nozzles, far: 320 });
     P.cyl(M.marbleCoping, [cx, 0.42, cz], [cx, 0.62, cz], 0.35, 0.28, 10, true);
     (svc.fountains ||= []).push({ id: b.id, name: b.name, x: cx, z: cz, r: rad });
     svc.crowd.push({ x: cx, z: cz, r: rad + 4, n: 5, kind: 'fountain' });

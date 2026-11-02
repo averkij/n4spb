@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import * as L from '../layout.js';
 import { ringEdges, onEdge, localOnEdge, archPath, rectPath } from './kit.js';
 import { addPolyColliders } from '../lib/massing.js';
+import { buildSingerCrown } from './singer-crown.js';
 
 const ID = 'w102305449';
 const Y_CORN = 23.4, Y_MAN = 28.4, Y_G = 5.6;       // cornice, mansard ridge, top of the ground floor
@@ -17,7 +18,7 @@ export function build(K) {
     gray: T('#7c7b82', { name: 'sg-gray', paint: 0.05, map: ctx.tex.draw(256, 256, (g, w, h) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(40,38,44,0.45)'; for (let i = 0; i < 4; i++) g.fillRect(0, i * 64, w, 3); for (let i = 0; i < 4; i++) { const o = (i % 2) * 64; for (let k = 0; k < 3; k++) g.fillRect(o + k * 128 % 256, i * 64, 2, 64); } const r = ctx.rng(7); for (let i = 0; i < 180; i++) { g.fillStyle = `rgba(30,28,34,${0.04 + r() * 0.06})`; g.fillRect(r() * w, r() * h, 2 + r() * 8, 1 + r() * 2); } }, { key: 'sg-gray-tex' }) }), grayLight: T('#9a999f', { name: 'sg-grayL' }), red: T('#5a4549', { name: 'sg-red', paint: 0.05 }), redDark: T('#4a3a3e', { name: 'sg-redD' }),
     gold: T('#d9b04a', { name: 'sg-gold', emissive: '#5a4208', emissiveIntensity: 0.35 }), bronze: T('#6f5a38', { name: 'sg-bronze' }), green: T('#5e9576', { name: 'sg-green', paint: 0.04 }), greenDark: T('#3d6f5c', { name: 'sg-greenD' }),
     roof: T('#4a4e54', { name: 'sg-roof' }), win: T('#3f5670', { name: 'sg-win' }), winDark: T('#2d3c4c', { name: 'sg-winD' }), shop: T('#7c6450', { name: 'sg-shop', emissive: '#3a2810', emissiveIntensity: 0.3 }),
-    chim: T('#7a5a4c', { name: 'sg-chim' }), trim: T('#b4b0a8', { name: 'sg-trim' }), globe: T('#b8c8cc', { name: 'sg-globe', transparent: true, opacity: 0.8 }), plain: T('#bfae8c', { name: 'sg-plain' }),
+    chim: T('#7a5a4c', { name: 'sg-chim' }), trim: T('#b4b0a8', { name: 'sg-trim' }), globe: T('#96b1bd', { name: 'sg-globe', transparent: true, opacity: 0.45, depthWrite: false }), plain: T('#bfae8c', { name: 'sg-plain' }),
     sign: T('#ffffff', { name: 'sg-sign', map: ctx.tex.draw(512, 64, (g, w, h) => { g.fillStyle = '#d9b04a'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a2a10'; g.textAlign = 'center'; g.textBaseline = 'middle'; ctx.tex.fitText(g, 'Компанiя Зингеръ', w / 2, h / 2 + 2, w * 0.9, h * 0.62, ctx.tex.FONTS.serif, 700); }, { key: 'sg-sign' }) }),
   };
   const nev = edges.find((e) => e.i === 9), canal = edges.find((e) => e.i === 5);
@@ -49,7 +50,9 @@ export function build(K) {
   for (const e of edges) onEdge(P, e, (len) => {
     if (e === nev) nevskyFront(K, S, len);
     else if (e === canal) canalFront(K, S, len);
-    else if (e.len < 2.5 && e.i >= 6 && e.i <= 8) cornerWall(P, S, len);
+    // The continuous glazed oriel below owns these chamfer edges. A second
+    // flat stone skin cuts through its windows and the carved upper arch.
+    else if (e.len < 2.5 && e.i >= 6 && e.i <= 8) { /* rounded tower skin */ }
     else plainWall(P, S, len);
   });
   // ---- tower at the corner
@@ -72,10 +75,6 @@ export function build(K) {
 const norm = (dx, dz, area) => { const l = Math.hypot(dx, dz) || 1; let nx = dz / l, nz = -dx / l; if (area > 0 !== true) { nx = -nx; nz = -nz; } return [nx, nz]; };
 function ringOrigin(e) { const dx = e.b[0] - e.a[0], dz = e.b[1] - e.a[1], l = Math.hypot(dx, dz); const xa = [e.n[1], -e.n[0]]; const fwd = dx * xa[0] + dz * xa[1] > 0; const o = fwd ? e.a : e.b; return { x: o[0], z: o[1], ux: xa[0], uz: xa[1] }; }
 
-function cornerWall(P, S, len) {
-  P.quad(S.red, [0, 0, 0], [len, 0, 0], [len, Y_G + 0.9, 0], [0, Y_G + 0.9, 0], [0, 0, 1]);
-  P.quad(S.gray, [0, Y_G + 0.9, 0], [len, Y_G + 0.9, 0], [len, Y_CORN, 0], [0, Y_CORN, 0], [0, 0, 1]);
-}
 function plainWall(P, S, len) {
   P.quad(S.plain, [0, 0, 0], [len, 0, 0], [len, Y_CORN, 0], [0, Y_CORN, 0], [0, 0, 1]);
 }
@@ -249,37 +248,5 @@ function tower(K, S, u, d) {
     P.pop();
   }
   for(const y of[5.5,6.5,10.0,13.4,17.0,22.6])P.cyl(S.bronze,[cx,y,wz],[cx,y+.14,wz],R+.18,R+.18,24,true);
-  P.cyl(S.trim, [cx, Y_CORN + 0.6, wz], [cx, Y_CORN + 1.1, wz], R + 0.3, R + 0.3, 20, true);
-  // green copper bell with scroll feet (photo 58 / 60: a flared bell, a glazed lantern in the middle, a narrow cap), then the glazed lantern with 12 ribs
-  const yb = Y_CORN + 1.1, rg = R - 0.3, bellH = 1.2, lanH = 5.0;
-  const bell = [[0, 0], [R + 0.25, 0], [R + 0.38, .25], [R + .1, .6], [R-.85,bellH]];
-  P.geo(S.green, new THREE.LatheGeometry(bell.map((q) => new THREE.Vector2(q[0], q[1])), 20), cx, yb, wz);
-  P.cyl(S.greenDark, [cx, yb + 0.9, wz], [cx, yb + 1.0, wz], R + 0.32, R + 0.32, 20, true);
-  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + 0.2; P.cyl(S.greenDark, [cx + Math.sin(a) * (R + 0.3), yb + 0.6, wz + Math.cos(a) * (R + 0.3)], [cx + Math.sin(a) * (R + 0.6), yb + 1.5, wz + Math.cos(a) * (R + 0.6)], 0.28, 0.12, 5, true); }
-  const yl = yb + bellH, rl = R - 0.85;
-  P.cyl(S.winDark, [cx, yl, wz], [cx, yl + lanH, wz], rl, rl * 0.86, 20, false);
-  for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; let prev = null; for (let i = 0; i <= 8; i++) { const t = i / 8, r = rl * (1.0 - 0.14 * t) + 0.1, y = yl + lanH * t; const p = [cx + Math.sin(a) * r, y, wz + Math.cos(a) * r]; if (prev) P.cyl(S.green, prev, p, 0.1, 0.1, 4, false); prev = p; } }
-  for (let i = 0; i < 3; i++) { const t = (i + 0.5) / 3, r = rl * (1.0 - 0.14 * t) + 0.12; P.cyl(S.green, [cx, yl + lanH * t, wz], [cx, yl + lanH * t + 0.14, wz], r + 0.08, r + 0.08, 20, true); }
-  const yc = yl + lanH;
-  P.geo(S.green, new THREE.LatheGeometry([[0, 0], [rl * 0.9, 0], [rl * 0.95, 0.35], [rl * 0.7, 1.0], [rl * 0.5, 1.8], [0.5, 2.4], [0, 2.6]].map((q) => new THREE.Vector2(q[0], q[1])), 20), cx, yc, wz);
-  // the bronze figure on the cap holding the globe
-  const yt = yc + 2.2;
-  P.cyl(S.green, [cx, yt, wz], [cx, yt + 2.2, wz], 0.7, 0.35, 8, true);
-  P.cyl(S.green, [cx, yt + 2.2, wz], [cx, yt + 3.0, wz], 0.35, 0.26, 8, true);
-  P.geo(S.green, new THREE.SphereGeometry(0.28, 8, 6), cx, yt + 3.25, wz);
-  P.cyl(S.green, [cx + 0.1, yt + 2.9, wz], [cx + 0.6, yt + 4.0, wz], 0.1, 0.1, 5, true);
-  // the glass globe with a meridian skeleton and the gold band (a plain wordmark band, no text)
-  const gy = yt + 4.9;
-  P.geo(S.globe, new THREE.SphereGeometry(1.65, 16, 12), cx + 0.35, gy, wz);
-  // True spherical meridians replace the former straight crossed rods.
-  P.geo(S.gold,new THREE.CylinderGeometry(1.71,1.71,.43,32,1,true),cx+.35,gy,wz,.28,0,-.28);
-  for(let k=0;k<6;k++)P.geo(S.trim,new THREE.TorusGeometry(1.68,.028,4,32),cx+.35,gy,wz,0,k*Math.PI/6,0);
-  for(const lat of[-.82,.82])P.geo(S.trim,new THREE.TorusGeometry(Math.sqrt(1.68**2-lat**2),.025,4,28),cx+.35,gy+lat,wz,Math.PI/2,0,0);
-  // the eagle (spread wings) at the right of the tower base
-  P.push(cx, Y_CORN + 1.0, wz+R-.1, 0);
-  P.geo(S.green,new THREE.SphereGeometry(1,10,7),0,1.1,.1,0,0,0,.48,.95,.4);
-  P.geo(S.green,new THREE.SphereGeometry(.32,8,6),0,2.1,.2);
-  for(const sg of[-1,1])for(let i=0;i<8;i++)P.cyl(S.greenDark,[sg*.32,1.25,.1],[sg*(.75+i*.19),1.55+i*.22,.08],.13,.045,5,true);
-  for(let i=0;i<5;i++)P.cyl(S.green,[0,.6,.1],[(i-2)*.18,-.35,.2],.1,.045,5,true);
-  P.pop();
+  buildSingerCrown(K,S,cx,wz);
 }

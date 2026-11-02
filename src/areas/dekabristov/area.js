@@ -450,7 +450,9 @@ export const PRUNE_SERVICES = [
  *  them through lib/area-tables.js and are a no-op for a key that is absent) */
 // the hook set of src/areas/north/hooks.js gated by the module list: none of its modules is in this list, so it is inert here, EXCEPT inGarden: the "garden" of the crowd is the four cemeteries of the island (cemetery.js:
 // the GREEN polygons r2736670, r7738342, r7738341, w23426250), whose people density is a quarter of the usual and without riders (ZONES.peopleDensity.garden above); the North's own inGarden (the Tauride Garden, x > 915) is never true here
-export const HOOKS = { ...makeHooks(MODULES), inGarden: inCemetery };
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
+export const HOOKS = withFountainKeepouts({ ...makeHooks(MODULES), inGarden: inCemetery }, FOUNTAIN_SITES);
 /** the height patches of layout.heightAt (milestone M6, docs/AREAS.md section 9): the hook set gated by MODULES, see src/areas/north/hooks.js */
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 

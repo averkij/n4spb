@@ -16,6 +16,8 @@ import { partsGeos, addInstanced, mat4 } from './inst.js';
 import { fillPolyClipped, coverFn } from './surfaces.js';
 import { plantTrees } from './trees.js';
 import { addPolyColliders } from '../lib/massing.js';
+import { liveFountain } from '../lib/live-fountain.js';
+import { fountainBasin } from '../lib/fountain-basin.js';
 
 const TAU = Math.PI * 2;
 const st = (s, t) => [s, -t];                                       // (s, t) -> local (x, z)
@@ -211,7 +213,12 @@ function grounds(K) {
     for (let i = 0; i < n; i++) { const t = (i + 0.5) * TAU / n; P.quad(M.granKFlat, pt(i, RO, 0), pt(i + 1, RO, 0), pt(i + 1, RO, 0.5), pt(i, RO, 0.5), [Math.sin(t), 0, Math.cos(t)]); P.quad(M.granKFlat, pt(i, RO, 0.5), pt(i + 1, RO, 0.5), pt(i + 1, RI, 0.5), pt(i, RI, 0.5), [0, 1, 0]); P.quad(M.granKFlat, pt(i, RI, 0.5), pt(i + 1, RI, 0.5), pt(i + 1, RI, 0.3), pt(i, RI, 0.3), [-Math.sin(t), 0, -Math.cos(t)]); }
     P.cap(M.water, Array.from({ length: n }, (_, i) => [f.x + Math.sin(i * TAU / n) * RI, f.z + Math.cos(i * TAU / n) * RI]), 0.32, true, 4);
     P.col(M.granKFlat, f.x, f.z, 0.3, 1.1, 0.25, 0.18, 8, true); P.col(M.granKFlat, f.x, f.z, 1.1, 1.2, 0.7, 0.6, 12, true);
-    ph.addCylinder(f.x, f.z, RO, 0, 0.6); }
+    liveFountain(ctx, { id: 'n10245075680', x: f.x, z: f.z, y: 0.32, r: RI, nozzles: Array.from({ length: 8 }, (_, i) => {
+      const a = i * TAU / 8, x = Math.sin(a), z = Math.cos(a);
+      return { x: x * 0.6, y: 0.87, z: z * 0.6, height: 0.3, width: 0.023, target: [x * 1.4, 0, z * 1.4] };
+    }) });
+    fountainBasin(ctx, { id: 'n10245075680', x: f.x, z: f.z, r: RI, waterY: .32,
+      rimR: (RO + RI) / 2, rimTop: .5, pedestal: { r: .7, y0: .3, y1: 1.2 } }); }
   const gp = []; for (const [s, t] of [[36, 12], [44, 20], [40, 34], [45, 8], [20, 30], [24, 46], [34, 56], [22, 58], [38, 46]]) { const w = KS.W(s, -t); gp.push({ x: w.x, z: w.z, fam: (s + t) % 3 ? 'limeA' : 'mapleA', s: 0.9 + ((s * 7 + t) % 5) * 0.05, yaw: s, y: 0.05 }); }
   plantTrees(K, gp, 'lmT-mansionTrees');
   K.svc.trees.push(...gp.map((t) => ({ x: t.x, z: t.z, r: 3.2 * t.s, h: 17 * t.s })));

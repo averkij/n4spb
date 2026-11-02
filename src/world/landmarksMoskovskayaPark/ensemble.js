@@ -2,6 +2,7 @@
 // Glory fountain. Geometry/photo references: docs/research/moskovskaya-park.md.
 import { site, porticoFrame, entranceApproach } from './sites.js';
 import { safeSpot } from './kit.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 function relief(P,M,x,back) {
  P.push(0,0,back+2);
@@ -56,19 +57,18 @@ export function fountain(ctx,P,M,svc) {
  P.cyl(M.water,0,.29,0,11.9,.035,900);
  P.torus(M.granite,0,.40,0,12.2,.22,Math.PI/2,0,1100);
  P.torus(M.bronze,0,1.28,0,3.6,.27,Math.PI/2,0,650);
+ const nozzles=[];
  for(let i=0;i<12;i++){const a=i*Math.PI/6,x=3.6*Math.cos(a),z=3.6*Math.sin(a);P.cyl(M.bronze,x,.73,z,.18,1.15,650);P.sphere(M.patina,x,1.39,z,.4,.6,.36,350);
-  const a0=[x,1.5,z],a1=[x*1.25,4.25,z*1.25],a2=[x*1.95,.31,z*1.95];jet(P,M,a0,a1,a2,.035);
+  nozzles.push({x,y:1.21,z,height:1.15,width:.035,target:[x*1.95,.02,z*1.95]});
  }
- for(let i=0;i<24;i++){const a=i*Math.PI/12,x=10.8*Math.cos(a),z=10.8*Math.sin(a);P.cyl(M.bronze,x,.56,z,.13,.54,550);jet(P,M,[x,.85,z],[x*.82,2.4,z*.82],[x*.68,.31,z*.68],.025);}
- P.beam(M.foam,[0,.31,0],[0,11.8,0],.095,400);
- for(let i=0;i<8;i++){const a=i*Math.PI/4;jet(P,M,[0,8,0],[Math.cos(a)*.6,12,Math.sin(a)*.6],[Math.cos(a)*1.2,2,Math.sin(a)*1.2],.025);}
+ for(let i=0;i<24;i++){const a=i*Math.PI/12,x=10.8*Math.cos(a),z=10.8*Math.sin(a);P.cyl(M.bronze,x,.56,z,.13,.54,550);nozzles.push({x,y:.56,z,height:.7,width:.025,target:[x*.68,.02,z*.68]});}
+ nozzles.push({height:11.5,width:.075,target:[.45,.02,0]});
+ for(let i=0;i<8;i++){const a=i*Math.PI/4;nozzles.push({x:Math.cos(a)*.1,y:7.71,z:Math.sin(a)*.1,height:1.15,width:.025,target:[Math.cos(a)*1.2,.02,Math.sin(a)*1.2]});}
+ liveFountain(ctx,{id:'w32073130',x:f.x,z:f.z,y:.29,r:11.9,nozzles,far:420});
  // The old source filled the basin with a blocking cylinder. Keep the visible
  // shallow floor walkable and leave the surrounding water completely open.
  ctx.physics.addWalkBox(f.x,f.z,17,17,0,.23,0);
  ctx.physics.addWater({ring:Array.from({length:48},(_,i)=>[f.x+11.9*Math.cos(i*Math.PI/24),f.z+11.9*Math.sin(i*Math.PI/24)]).flat(),level:.29});
  for(let i=0;i<12;i++){const a=i*Math.PI/6;ctx.physics.addCylinder(f.x+3.6*Math.cos(a),f.z+3.6*Math.sin(a),.18,.23,1.4);}
  P.pop();svc.monuments.push({...f,name:'Фонтан «Венок славы»',h:12});svc.photoSpots.push({x:f.x-29,z:f.z+14,yaw:-65,name:'Венок славы и Аллея Героев'});
-}
-function jet(P,M,a,b,c,r) {
- let prev=a;for(let i=1;i<=12;i++){const t=i/12,s=1-t,p=a.map((v,k)=>s*s*v+2*s*t*b[k]+t*t*c[k]);P.beam(M.foam,prev,p,r,400);prev=p;}
 }

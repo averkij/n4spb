@@ -101,10 +101,30 @@ try{
   const boat=ids.find(v=>v.kind==='boat').id;await beside(boat);const start=await state();await hold(['KeyW'],6500);const sailed=await state();check('motorboat sails on real park water',Math.hypot(sailed.x-start.x,sailed.z-start.z)>8&&sailed.water!==null,sailed);await hold(['KeyW','KeyA'],1200);check('boat steering changes heading',Math.abs((await state()).yaw-sailed.yaw)>.02);await page.keyboard.press('KeyV');await exit();
   await page.evaluate(async()=>{await __regions.ensureAt(-1795,7452);__setCam(-1795,null,7452,90,0);__ctx.gates.teleported();});
   const entrance=await walkTo(-1815,7452);check('library steps reach raised colonnade',entrance.y>1.3&&entrance.y<1.65,entrance);
+  const hall=await page.evaluate(()=>__ctx.services.landmarksMoskovskaya.library.hall);
+  check('normal baked library publishes its walkable interior hall',!!hall?.route?.length&&hall.mezzanine>hall.floor+4,hall&&{floor:hall.floor,mezzanine:hall.mezzanine,steps:hall.stair.steps});
+  await walkTo(-1815,hall.route[0][1]);
+  for(const [x,z]of hall.route)await walkTo(x,z);
+  check('real walking climbs the interior stair to the upper gallery',Math.abs((await state()).player.y-hall.mezzanine)<.12,(await state()).player);
+    await page.evaluate(()=>{__ctx.playerObj.yaw=-Math.PI/2;__ctx.playerObj.pitch=-.14;});await sleep(100);
+  await page.screenshot({path:path.join(out,'library-upper-gallery.png')});report.screenshots.push('library-upper-gallery.png');
+  for(const [x,z]of [...hall.route].reverse())await walkTo(x,z);
+  check('real walking descends all interior stair treads to the hall floor',Math.abs((await state()).player.y-hall.floor)<.12,(await state()).player);
+  // Return through the central doorway before turning along the lower hall;
+  // the diagonal from the outdoor court crosses the real curved glazing.
+  await walkTo(...hall.route[1]);
+  for(const [x,z]of hall.lowerRoute)await walkTo(x,z);
+  check('lower hall remains walkable beneath the upper gallery',Math.abs((await state()).player.y-hall.floor)<.12,(await state()).player);
+    await page.evaluate(()=>{__ctx.playerObj.yaw=-Math.PI/2;__ctx.playerObj.pitch=.08;});await sleep(100);
+  await page.screenshot({path:path.join(out,'library-lower-hall.png')});report.screenshots.push('library-lower-hall.png');
+  for(const [x,z]of [...hall.lowerRoute].reverse())await walkTo(x,z);
+  await walkTo(...hall.route[1]);
+  await walkTo(...hall.route[0]);await walkTo(-1815,hall.route[0][1]);await walkTo(-1815,7452);
   await walkTo(-1795,7452);
   await page.evaluate(async()=>{await __regions.ensureAt(-1232.9,7685.3);__setCam(-1232.9,null,7685.3,0,0);__ctx.gates.teleported();});
   await walkTo(-1232.9,7667);await walkTo(-1232.9,7685.3);
   check('Basseynaya pilotis crosses in both directions on the normal baked page',Math.abs((await state()).player.y)<.1);
+    await page.evaluate(()=>{__ctx.playerObj.yaw=0;__ctx.playerObj.pitch=.12;});await sleep(100);
   await page.screenshot({path:path.join(out,'basseynaya-pilotis.png')});report.screenshots.push('basseynaya-pilotis.png');
   await page.evaluate(async()=>{await __regions.ensureAt(-1760,7456);__setCam(-1760,4,7456,90,10);});
   const fountainBefore=await page.evaluate(()=>Array.from(__ctx.dynamicRoot.children.find(m=>m.name==='rnb-water-droplets').instanceMatrix.array));await sleep(600);
@@ -113,6 +133,7 @@ try{
   await walkTo(-1736.3,7398.3);const down=await walkTo(-1736.8,7382.9);
   check('underpass stairs descend to actual tunnel floor',down.y<-3.5&&down.y>-4.1,down);
   for(const [x,z] of [[-1725,7382.6],[-1713,7382.3],[-1701,7382.0],[-1691.2,7381.8]])await walkTo(x,z);
+    await page.evaluate(()=>{__ctx.playerObj.yaw=Math.PI/2;__ctx.playerObj.pitch=0;});await sleep(100);
   await page.screenshot({path:path.join(out,'library-underpass-inside.png')});report.screenshots.push('library-underpass-inside.png');
   await walkTo(-1690.8,7397.3);const up=await walkTo(-1690.8,7400);
   check('underpass east exit returns to street height',Math.abs(up.y)<.25,up);

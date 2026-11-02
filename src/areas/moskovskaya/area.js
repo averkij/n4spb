@@ -87,7 +87,11 @@ export const GARAGE = { poses: { lada: { x: -1698, z: 7096, yaw: 0 } }, spawn: {
 export const PRUNE_SERVICES = ['city', 'landmarksMoskovsky', 'landmarksMoskovskaya', 'landmarksMoskovskayaPark'];
 const STRUGATSKY_GARDENS = GREEN.filter(g => ['w29171389', 'w29171421', 'w29382034', 'w31264819'].includes(g.id));
 const ringHas = (x, z, p) => { let on = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) if ((p[i + 1] > z) !== (p[j + 1] > z) && x < (p[j] - p[i]) * (z - p[i + 1]) / (p[j + 1] - p[i + 1]) + p[i]) on = !on; return on; };
-const districtTreeReject = (x, z) => forecourtContains(x,z) || inUnderpassPavilion(x,z,1) || inUnderpassMouth(x,z,1) || inFormalTreeClearing(x, z) || STRUGATSKY_GARDENS.some(g => g.polys.some(p => ringHas(x, z, p.o) && !(p.h || []).some(h => ringHas(x, z, h))));
+// These low mapped shells include authored halls and open, paved lightwells.
+// The generic building height test cannot protect either from generated trees.
+const LIBRARY_FOOTPRINTS = BUILDINGS.filter(b=>['r1806688','r3466512'].includes(b.id)).flatMap(b=>b.polys);
+const inLibrary = (x,z) => LIBRARY_FOOTPRINTS.some(p=>ringHas(x,z,p.o));
+const districtTreeReject = (x, z) => inLibrary(x,z) || forecourtContains(x,z) || inUnderpassPavilion(x,z,1) || inUnderpassMouth(x,z,1) || inFormalTreeClearing(x, z) || STRUGATSKY_GARDENS.some(g => g.polys.some(p => ringHas(x, z, p.o) && !(p.h || []).some(h => ringHas(x, z, h))));
 export const HOOKS = {
   // The mapped car park overlaps the newly open pilotis. Keep its central
   // passage free of generated parked cars and bay paint; driving remains open.
@@ -96,8 +100,8 @@ export const HOOKS = {
     const pilotis=BUILDINGS.find(b=>b.id==='w31192359').polys;
     return (x,z)=>districtTreeReject(x,z)||pilotis.some(p=>ringHas(x,z,p.o));
   },
-  tuftReject: () => (x,z) => forecourtContains(x,z) || inUnderpassMouth(x,z,.5),
-  propReject: () => (x,z) => forecourtContains(x,z) || inUnderpassPavilion(x,z,.5) || inUnderpassMouth(x,z,.5),
+  tuftReject: () => (x,z) => inLibrary(x,z) || forecourtContains(x,z) || inUnderpassMouth(x,z,.5),
+  propReject: () => (x,z) => inLibrary(x,z) || forecourtContains(x,z) || inUnderpassPavilion(x,z,.5) || inUnderpassMouth(x,z,.5),
   groundHoles: () => [FORECOURT_PAVED_RING],
   groundWayReject: r => !r.tunnel && !['primary','primary_link','secondary','secondary_link','tertiary','tertiary_link','residential','service','unclassified','living_street'].includes(r.hw) && r.pts?.every(p=>forecourtContains(p[0],p[1])),
   waterBodies: () => [...FOUNTAIN_WATER_BODIES, ...FORECOURT_WATER_BODIES],

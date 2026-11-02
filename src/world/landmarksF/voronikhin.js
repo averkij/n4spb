@@ -6,6 +6,7 @@ import { C0, ROT, W, Mdl, boxAt, cylAt } from './frame.js';
 import { GREEN, BARRIERS, ROADS, FURNITURE, TREES } from '../data/city.js';
 import { ringToModel, ringOf, inPoly, recById, fenceRun, ribbon, tree, lantern, templateOf, benchGeo } from './util.js';
 import { knockInstances } from '../lib/knock-inst.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 const PARK = 'r2050448', FENCE = 'w151672020';
 const fountainModel = () => Mdl(-1571.4, -225.9);
@@ -82,8 +83,8 @@ function fountain1809(K) {
   }, { key: 'lmF-1809' });
   const mSign = ctx.mat.toon('#ffffff', { map: sign, name: 'lmF-1809', paint: 0.02 });
   P.push(mx, 0, mz, Math.PI / 2);                                     // faces east (the street)
-  P.box(M.pink, -1.6, 1.6, 0.14, 0.4, -0.2, 1.9, '');
-  P.box(M.pink, -1.5, 1.5, 0.4, 1.4, -0.2, 0.9, '');
+  P.box(M.pink, -1.6, 1.6, 0.14, 0.24, -0.2, 1.9, '');
+  P.box(M.pink, -1.5, 1.5, 0.24, 1.4, -0.2, 0.9, '');
   const arch = new THREE.Shape(); arch.moveTo(-1.5, 1.4); arch.lineTo(1.5, 1.4); arch.absarc(0, 1.4, 1.5, 0, Math.PI, false); arch.lineTo(-1.5, 1.4);
   const g = new THREE.ShapeGeometry(arch, 12), ua = g.attributes.uv, pa = g.attributes.position;
   for (let i = 0; i < pa.count; i++) ua.setXY(i, (pa.getX(i) + 1.5) / 3, (pa.getY(i) - 1.4) / 1.5 * 0.8 + 0.1);
@@ -91,10 +92,22 @@ function fountain1809(K) {
   P.extrude(M.pink, arch, -0.2, 1.1, 1, 12);
   P.box(M.rim, -1.0, 1.0, 0.9, 1.25, 0.92, 1.0, 'kb');
   P.geo(M.gold, K.maskGeo || (K.maskGeo = new THREE.SphereGeometry(0.28, 8, 6)), 0, 0.95, 1.05, 0, 0, 0, 1, 1.1, 0.5);                    // Neptune mask
-  P.box(M.stoneDark, -1.2, 1.2, 0.14, 0.5, 1.0, 1.9, '');               // trough
+  P.box(M.stoneDark, -1.2, 1.2, 0.24, 0.28, 1.0, 1.9, ''); // shallow trough floor
+  for(const x of[-1.2,1.1])P.box(M.stoneDark,x,x+.1,.28,.52,1.0,1.9);
+  P.box(M.stoneDark,-1.1,1.1,.28,.52,1.8,1.9);
   P.quad(M.water, [-1.1, 0.51, 1.1], [1.1, 0.51, 1.1], [1.1, 0.51, 1.8], [-1.1, 0.51, 1.8], [0, 1, 0]);
+  const point=(x,y,z)=>new THREE.Vector3(x,y,z).applyMatrix4(P.m);
+  const center=point(0,0,1.45),mouth=point(0,.95,1.2);
+  const flow=liveFountain(ctx,{id:'n2306201359',x:center.x,z:center.z,y:.51,r:.45,far:180,
+    nozzles:[{x:mouth.x-center.x,y:.44,z:mouth.z-center.z,height:.055,width:.018,target:[0,0,0]}]});
+  flow.nozzles[0].ripple=.22; // keep small impact rings within the narrow trough
+  const corners=[[-1.1,1.1],[1.1,1.1],[1.1,1.8],[-1.1,1.8]].map(([x,z])=>point(x,.28,z));
+  ph.addWater({ring:corners.flatMap(p=>[p.x,p.z]),level:.51});
+  for(const ids of[[0,1,2],[0,2,3]])ph.addWalkTriangle(ids.map(i=>corners[i].toArray()),.04);
+  const platform=point(0,0,.85),back=point(0,0,.35);
+  ph.addWalkBox(platform.x,platform.z,3.2,2.1,ROT+Math.PI/2,.24,.14);
+  ph.addBox(back.x,back.z,3.2,1.1,ROT+Math.PI/2,.24,2.9);
   P.pop();
-  boxAt(ph, mx, mz, 4.0, 3.4, Math.PI / 2, -1, 3.6);
 }
 
 function trees(K, ring) {

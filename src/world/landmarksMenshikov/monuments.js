@@ -13,6 +13,8 @@ import { revolve, frustum, tbox, ball } from './geo.js';
 import { bust, cached } from '../lib/figures.js';
 import { figureMats } from '../lib/figures.js';
 import { FOUNT } from './garden.js';
+import { liveFountain } from '../lib/live-fountain.js';
+import { fountainBasin } from '../lib/fountain-basin.js';
 
 const TAU = Math.PI * 2;
 const sph = (() => { let g = null; return () => g || (g = new THREE.SphereGeometry(1, 8, 6)); })();
@@ -118,10 +120,17 @@ function fountain(K, f) {
     for (const t of [0.5, 0.5 + Math.PI]) putto(P, M, Math.sin(t) * 0.34, 3.2, Math.cos(t) * 0.34, t);
     revolve(P, M.castIron, [[0, 4.15], [0.35, 4.17], [0.7, 4.3], [1.0, 4.45], [1.02, 4.56], [0.9, 4.57], [0.5, 4.45], [0.2, 4.38]], 20, { crease: 45 });
     revolve(P, M.castIron, [[0.12, 4.5], [0.3, 4.65], [0.34, 4.9], [0.24, 5.05], [0.14, 5.15], [0.2, 5.25], [0.05, 5.5], [0, 5.6]], 10, { crease: 50 });
-    // thin jets from the upper bowl rim into the lower one (silent)
-    for (let i = 0; i < 6; i++) { const t = i * TAU / 6 + 0.3; P.cyl(M.water, [Math.sin(t) * 1.0, 4.5, Math.cos(t) * 1.0], [Math.sin(t) * 1.3, 3.1, Math.cos(t) * 1.3], 0.012, 0.012, 3, false); }
-    ctx.physics.addCylinder(GF.W(a, b).x, GF.W(a, b).z, 4.6, 0, 0.5);                  // the basin rim blocks, the middle is not walkable either
-    ctx.physics.addCylinder(GF.W(a, b).x, GF.W(a, b).z, 4.0, 0, 6);
+    // Flow between the two bowls, then into the surrounding shallow basin.
+    const nozzles = [];
+    for (let i = 0; i < 8; i++) {
+      const t = i * TAU / 8 + 0.3, s = Math.sin(t), c = Math.cos(t);
+      nozzles.push({ x: s, y: 4.2, z: c, height: 0.14, width: 0.022, target: [s * 1.3, 2.8, c * 1.3] });
+      nozzles.push({ x: s * 1.78, y: 2.8, z: c * 1.78, height: 0.18, width: 0.028, target: [s * 3.4, 0, c * 3.4] });
+    }
+    const w = GF.W(a, b);
+    liveFountain(ctx, { id: f.id, x: w.x, z: w.z, y: 0.3, r: 3.96, nozzles });
+    fountainBasin(ctx, { id: f.id, x: w.x, z: w.z, r: 3.95, waterY: .3, bedY: .04,
+      rimR: 4.2, rimTop: .47, segments: 36, pedestal: { r: 1.1, y1: 5.6 } });
   } finally { P.pop(); }
   const w = GF.W(a, b); K.svc.monuments.push({ id: f.id, name: 'Румянцевский сад: чугунный фонтан', x: w.x, z: w.z, h: 5.1 });
 }

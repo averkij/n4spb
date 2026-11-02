@@ -14,6 +14,7 @@ import * as G from './geo.js';
 import { byId, pairs, dist, centroid, rotOf, rotOut, inRing } from './frame.js';
 import { walls, house } from './house.js';
 import { human, cached, extend, figureMats } from '../lib/figures.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 const SIT = (extra = {}) => ({ pelvis: [0, 0.5, -0.06], pelvisRot: [0.05, 0, 0], legs: { L: { foot: [0.12, 0, 0.36], yaw: 0.2, pole: [0, 0.2, 1] }, R: { foot: [-0.13, 0, 0.34], yaw: -0.25, pole: [0, 0.2, 1] } }, ...extra });
 const STAND = (extra = {}) => ({ pelvis: [0, 0.95, 0], legs: { L: { foot: [0.12, 0, 0.05], pole: [0, 0, 1] }, R: { foot: [-0.12, 0, -0.04], pole: [0, 0, 1] } }, ...extra });
@@ -131,6 +132,23 @@ function steregushchy(K) {
   P.box(M.bronzeLit, -0.82, 0.82, yc + 0.6, yc + 3.7, -0.2, -0.16, 'k', 1); for (const x of [-0.95, 0.95]) for (let i = 0; i < 9; i++) P.cyl(M.bronzeLit, [x, yc + 0.5 + i * 0.5, -0.2], [x, yc + 0.5 + i * 0.5, -0.16], 0.035, 0.035, 5, true);
   P.cyl(br, [0, yc + 3.05, -0.2], [0, yc + 3.05, -0.08], 0.36, 0.36, 14, true); P.cyl(M.lanternGlass, [0, yc + 3.05, -0.08], [0, yc + 3.05, -0.07], 0.25, 0.25, 12, true);
   P.cyl(br, [0.5, yc + 2.9, -0.2], [0.5, yc + 2.9, -0.1], 0.25, 0.25, 10, true);
+  // The open seacock on the bronze hull spills into the shallow catchment
+  // ahead of the rock. Its floor is the existing upper granite terrace;
+  // the thin water film and low drainage lip leave its approach walkable.
+  P.cyl(br,[.5,yc+2.9,-.1],[.5,yc+2.9,.02],.065,.06,8,false);
+  const waterY=T2+.03, localPool=[[-1.2,2.2],[1.2,2.2],[1.2,3.04],[-1.2,3.04]];
+  P.cap(M.water,localPool,waterY,true,2);
+  for(const x of[-1.25,1.2])P.box(M.granitePinkFlat,x,x+.05,T2,T2+.055,2.15,3.08,'');
+  const worldPoint=(x,y,z)=>new THREE.Vector3(x,y,z).applyMatrix4(P.m);
+  const source=worldPoint(.5,yc+2.9,.025),landing=worldPoint(.5,waterY,2.65),centre=worldPoint(0,waterY,2.62);
+  const waterRing=localPool.flatMap(([x,z])=>{const p=worldPoint(x,waterY,z);return[p.x,p.z];});
+  ph.addWater({ring:waterRing,level:waterY});
+  const animation=liveFountain(ctx,{id:'steregushchy-seacock',x:centre.x,z:centre.z,y:waterY,r:1.3,far:300,nozzles:[
+    {x:source.x-centre.x,y:source.y-waterY,z:source.z-centre.z,height:.08,width:.045,target:[landing.x-centre.x,0,landing.z-centre.z]},
+  ]});
+  // This is a narrow receiving trough; its rings must stay in the water.
+  animation.nozzles[0].ripple=.25;
+  svc.steregushchyFountain={id:'steregushchy-seacock',source:source.toArray(),landing:landing.toArray(),waterRing,waterY,bedY:T2,animation};
   G.frustum(P, br, 0, 0.15, yc - 0.9, yc + 0.7, 6, 1.5, 0.75, 0.5, 1, 1, { capTop: br });
   P.quad(M.sign('stereg', 256, 64, ['СТЕРЕГУЩIЙ'], { bg: '#3a4a40', fg: '#9db0a0', pad: 0.3 }), [-1.6, yc + 4.25, -0.195], [1.6, yc + 4.25, -0.195], [1.6, yc + 4.8, -0.195], [-1.6, yc + 4.8, -0.195], [0, 0, 1]);
   P.pop();

@@ -7,6 +7,8 @@
 import { ringEdges, insetRing, pointIn, slopeBetween, fenceAlong } from './shapes.js';
 import { bust, cached, figureMats } from '../lib/figures.js';
 import * as L from '../layout.js';
+import { liveFountain } from '../lib/live-fountain.js';
+import { fountainBasin } from '../lib/fountain-basin.js';
 
 export const DEG = Math.PI / 180;
 export const SAV = { x: -5390, z: -3380, rot: -17 * DEG };
@@ -94,8 +96,29 @@ export function build(K) {
     for (const z of [-17, -6.5, 5]) bench(-4.2, z, -bR);
     // fountain: a round granite bowl on a drum, a small jet
     const fx = 6, fz = -5;
-    P.col(M.granite, fx, fz, 0, 0.5, 0.7, 0.7, 14, true); P.col(M.granite, fx, fz, 0.5, 0.85, 1.25, 1.05, 14, true); P.col(M.metal, fx, fz, 0.85, 1.7, 0.03, 0.01, 4, true);
-    colliders.cyls.push({ x: fx, z: fz, r: 1.3 });
+    P.col(M.granite, fx, fz, 0, 0.5, 0.7, 0.7, 14, true); P.col(M.granite, fx, fz, 0.5, 0.72, 1.25, 1.05, 14, true);
+    const water = ctx.mat.toon('#739d9d', { name: 'savina-fountain-water', paint: 0 }), ring = Array.from({ length: 20 }, (_, i) => [fx + Math.sin(i * Math.PI / 10) * .9, fz + Math.cos(i * Math.PI / 10) * .9]);
+    P.cap(water, ring, .82, true, 2);
+    for (let i = 0; i < 20; i++) {
+      const a = i * Math.PI / 10, b = (i + 1) * Math.PI / 10, pt = (t,r,y) => [fx + Math.sin(t)*r,y,fz + Math.cos(t)*r];
+      P.quad(M.granite, pt(a,1.05,.72),pt(b,1.05,.72),pt(b,1.05,.85),pt(a,1.05,.85));
+      P.quad(M.granite, pt(a,.9,.85),pt(b,.9,.85),pt(b,.9,.72),pt(a,.9,.72));
+      P.quad(M.granite, pt(a,1.05,.85),pt(b,1.05,.85),pt(b,.9,.85),pt(a,.9,.85));
+    }
+    const waterWorld = (lx,lz) => ({ x: SAV.x + lx*Math.cos(SAV.rot)+lz*Math.sin(SAV.rot), z: SAV.z-lx*Math.sin(SAV.rot)+lz*Math.cos(SAV.rot) });
+    const fw = waterWorld(fx, fz);
+    liveFountain(ctx, { id: 'savina-courtyard-fountain', x: fw.x, z: fw.z, y: 0.82, r: 0.9,
+      nozzles: [{ height: 0.84, width: 0.025, target: [0.2, 0, 0] }], far: 220 });
+    fountainBasin(ctx, { id: 'savina-courtyard-fountain', x: fw.x, z: fw.z, r: .9,
+      waterY: .82, bedY: .72, rimR: .975, rimBottom: .72, rimTop: .85,
+      pedestal: { r: .7, y0: 0, y1: .5 } });
+    // Two short stepped approaches make the raised cup reachable without a
+    // solid basin-sized collider; car wheels use these same walkable treads.
+    for (const sign of [-1, 1]) for (let i = 0; i < 3; i++) {
+      const ox = sign * (1.7 - i * .4), y = (i + 1) * .24;
+      P.box(M.granite,fx+ox-.2,fx+ox+.2,0,y,fz-.45,fz+.45);
+      const sw = waterWorld(fx+ox,fz);ctx.physics.addWalkBox(sw.x,sw.z,.4,.9,SAV.rot,y,0);
+    }
     // the bust on a stone pedestal
     const bx = -3.3, bz = 3.6, FM = figureMats(ctx), bk = FM.keys('bronze', 'bronze'), bf = bustFig();
     P.box(M.granite, bx - 0.55, bx + 0.55, 0, 0.3, bz - 0.55, bz + 0.55, 'b', 1.5); P.box(M.granite, bx - 0.36, bx + 0.36, 0.3, 1.7, bz - 0.36, bz + 0.36, '', 1.5); P.box(M.granite, bx - 0.42, bx + 0.42, 1.7, 1.8, bz - 0.42, bz + 0.42, '', 1.5);

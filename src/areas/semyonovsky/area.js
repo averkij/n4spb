@@ -93,6 +93,8 @@ const DEG = Math.PI / 180;
 export const GARAGE = { poses: { lada: { x: -2540.2, z: 1817.3, yaw: 0 * DEG } }, spawn: { x: -2540.2, z: 1817.3, yaw: 0 * DEG },
   boats: [{ id: 'boat-semyonovsky', dock: 'semyonovsky', x: -1378.3, z: 800.5, yaw: 2.224 }] };
 export const PRUNE_SERVICES = ['city', 'landmarksCentralSouth'];
-export const HOOKS = makeHooks(MODULES);
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
+export const HOOKS = withFountainKeepouts(makeHooks(MODULES), FOUNTAIN_SITES);
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 export const CROSS_PLACES = [];

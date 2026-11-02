@@ -17,6 +17,7 @@ import { courtWorld } from './precinct.js';
 import { wallBoxes } from './ringkit.js';
 import { knockFurniture, FURNITURE_REC } from '../lib/knock-furniture.js';
 import { knockBays, splitBays, unitPanel } from '../lib/fence-bays.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 export const STRIP = { w0: -5.5, w1: 3.1, e0: 14.2, e1: 22.3, a0: 6.2, a1: 10.7, lawn0: 72.2, lawn1: 425.5, end: 475.5, len: 479 };
 export const CROSS = [108, 136, 209, 236, 260, 287, 350, 378];
@@ -111,6 +112,13 @@ export function build(K) {
   const blockSp = [], blockIt = [], rimBays = [], a0 = Math.PI / 8, ro = (ap) => ap / Math.cos(a0);
   for (const [s, q] of FOUNTAINS) {
     const c = bw(s, q); ph.addCylinder(c.x, c.z, 1.05, 0, 3.0);
+    const nozzles = [];
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4, x = Math.sin(a), z = Math.cos(a);
+      nozzles.push({ x: x * 0.5, y: 1.99, z: z * 0.5, height: 0.1, width: 0.025, target: [x * 0.75, 1.11, z * 0.75] });
+      nozzles.push({ x: x * 0.88, y: 1.11, z: z * 0.88, height: 0.12, width: 0.025, target: [x * 1.8, 0, z * 1.8] });
+    }
+    liveFountain(ctx, { id: s < 200 ? 'w214409235' : 'w214409237', x: c.x, z: c.z, y: 0.55, r: 2.35, nozzles });
     const rimR = ro(2.575), vs = Array.from({ length: 8 }, (_, i) => { const t = a0 + i * Math.PI / 4; return bw(s + Math.cos(t) * rimR, q + Math.sin(t) * rimR); });
     for (let i = 0; i < 8; i++) { const A = vs[i], B = vs[(i + 1) % 8]; rimBays.push({ x0: A.x, z0: A.z, x1: B.x, z1: B.z, y: 0, ghost: true }); }
     const inner = Array.from({ length: 8 }, (_, i) => { const t = a0 + i * Math.PI / 4, R = ro(2.35) * 0.97, p = bw(s + Math.cos(t) * R, q + Math.sin(t) * R); return [p.x, p.z]; });

@@ -22,6 +22,7 @@ import { hercules, flora, bustOf, przhevalskyCamel } from './statues.js';
 import { ellip } from './sculpt.js';
 import { buildGardenTrees } from './gtrees.js';
 import { W, AB } from './frame.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 const FOUNTAIN = [-2334.8, -494.8];
 const BUSTS = [['gorchakov', 'А. М. Горчаков', -2352.2, -507.8], ['glinka', 'М. И. Глинка', -2340.7, -516], ['lermontov', 'М. Ю. Лермонтов', -2316.4, -508], ['gogol', 'Н. В. Гоголь', -2352, -480.7]];
@@ -189,5 +190,22 @@ function jets(K, ctx, cx, cz) {
   const meshes = parts.build(grp, { name: 'lmH-jets', cast: false });
   for (const m of meshes) ctx.noOutline(m);
   ctx.add(grp);
-  ctx.onUpdate((dt, t) => { grp.scale.y = 0.96 + 0.04 * Math.sin(t * 2.3) + 0.02 * Math.sin(t * 5.1); });
+  // Keep the authored broad jet silhouettes and their pulse, with advecting
+  // spray and impact ripples supplied by the bounded nearby water system.
+  const nozzles = [{ height: 16.38, width: .1, target: [.4, 0, 0] }];
+  for (let i=0;i<8;i++) {
+    const a=i*Math.PI/4,c=Math.cos(a),s=Math.sin(a);
+    nozzles.push({x:c*4.5,z:s*4.5,height:5.8,width:.06,target:[c*.3,0,s*.3]});
+  }
+  for (let i=0;i<40;i++) {
+    const a=i*Math.PI/20,c=Math.cos(a),s=Math.sin(a);
+    nozzles.push({x:c*12.3,y:.03,z:s*12.3,height:3.25,width:.04,target:[c*8.8,0,s*8.8]});
+  }
+  liveFountain(ctx,{id:'w74168797',x:cx,z:cz,y:.62,r:13,nozzles,drawStreams:false,far:420});
+  ctx.onUpdate((dt, t) => {
+    grp.scale.y = 0.96 + 0.04 * Math.sin(t * 2.3) + 0.02 * Math.sin(t * 5.1);
+    const n = ctx.shared.uNight?.value || 0, sunY = ctx.shared.uSunDir?.value?.y ?? 1;
+    const lit = Math.max(0, Math.min(1, Math.max((.22-sunY)/.22*.55,(n-.03)/.55)));
+    mat.emissiveIntensity = .35 + lit * 1.25;
+  });
 }

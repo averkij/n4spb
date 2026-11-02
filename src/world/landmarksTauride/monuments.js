@@ -22,6 +22,7 @@ import { knockBays, unitProfile, faceLeft } from '../lib/fence-bays.js';
 import { PATHS } from './data/paths.js';
 import { GARDEN_GREEN } from './data/footprints.js';
 import { MEMORIAL, CHAIKOVSKY, YESENIN, FOUNTAIN, ORANGERY, PLAY, PITCH_FENCE } from './data/furniture-design.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 const TAU = Math.PI * 2;
 const ringHas = (o, x, z) => { let c = false; for (let i = 0, j = o.length - 2; i < o.length; j = i, i += 2) if ((o[i + 1] > z) !== (o[j + 1] > z) && x < (o[j] - o[i]) * (z - o[i + 1]) / (o[j + 1] - o[i + 1]) + o[i]) c = !c; return c; };
@@ -365,11 +366,17 @@ function buildFountain(ctx, parent, f, out, add) {
   // the water: a disc just under the rim; the spout: an animated thin cone and a few droplets
   const wg = new THREE.CircleGeometry(R, 24); wg.rotateX(-Math.PI / 2);
   const wm = new THREE.Mesh(wg, ctx.mat.toon(D.water, { paint: 0.06, name: 'tauride-fountain-water' })); wm.position.set(f.x, y + rt - D.waterDrop, f.z); wm.name = 'tauride-fountain-water'; wm.receiveShadow = true; ctx.noOutline(wm); ctx.noBatch(wm); parent.add(wm); out.meshes.push(wm); out.draws++; out.triangles += 24;
-  const spray = ctx.mat.toon(D.spray, { paint: 0.08, name: 'tauride-fountain-spray' }), jet = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.03, 1, 6, 1), spray);
+  const spray = ctx.mat.toon(D.spray, { paint: 0.08, name: 'tauride-fountain-spray', emissive: '#6bcbd5', emissiveIntensity: .08 }), jet = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.03, 1, 6, 1), spray);
   const drops = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), spray, 8);
   jet.name = 'tauride-fountain-jet'; drops.name = 'tauride-fountain-drops'; ctx.noOutline(jet); ctx.noOutline(drops);
   const beakY = top + 0.575 * BK, bzz = bzc + 0.46 * BK, M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V3 = new THREE.Vector3(), S3 = new THREE.Vector3();
+  const waterY = y + rt - D.waterDrop;
+  liveFountain(ctx,{id:f.id,x:f.x,z:f.z,y:waterY,r:R,drawStreams:false,far:280,nozzles:[
+    {x:bx-f.x,y:beakY-waterY,z:bzz-f.z,height:D.jetH,width:.024,target:[bx-f.x+.3,0,bzz-f.z+.65]},
+  ]});
   const update = (t) => {
+    const n = ctx.shared.uNight?.value || 0, sunY = ctx.shared.uSunDir?.value?.y ?? 1;
+    spray.emissiveIntensity = .08 + 1.3 * Math.max(0, Math.min(1, Math.max((.22-sunY)/.22*.55,(n-.03)/.55)));
     const h = D.jetH * (0.92 + 0.08 * Math.sin(t * 2.1));
     jet.position.set(bx, beakY + h / 2, bzz); jet.scale.set(1, h, 1);
     for (let k = 0; k < 8; k++) { const ph = ((t * 0.7 + k / 8) % 1), yy = beakY + 4 * ph * (1 - ph) * h * 0.55, r = 0.03; V3.set(bx + Math.sin(k * 2.3) * ph * 0.5, yy, bzz + Math.cos(k * 2.3) * ph * 0.5); S3.set(r, r * 1.5, r); M4.compose(V3, Q, S3); drops.setMatrixAt(k, M4); }

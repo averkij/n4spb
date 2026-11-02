@@ -19,6 +19,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { REGISTRY } from '../src/areas/registry.js';
 import { clipParts, facadeTextOf, partFileText, grow, NOSPLIT } from './strip-data-clip.mjs';
+import { applyAreaDataCorrections } from './lib/area-data-corrections.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_ORIG = 'D:/git2/agi-fun-tests/102_3d_piter/src/world/data';
@@ -107,6 +108,7 @@ export async function cutArea({ area, orig, margin = 120, waterRing = 600, comma
   }
   const raw = {}; for (const name of NAMES) raw[name] = parts.reduce((n, P) => n + (P.arrays.get(name) || []).length, 0) / (name === 'TREES' ? 2 : 1);
   const { stats } = clip ? clipParts(parts, { extRects: EXTENT_RECTS, waterRing }) : { stats: {} };      // clip: false = the selection alone (the test of the clip library itself)
+  applyAreaDataCorrections(area,parts);
 
   // ---- the facade
   const commit = sourceCommit(origDir);

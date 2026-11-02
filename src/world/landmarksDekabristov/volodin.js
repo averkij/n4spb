@@ -1,8 +1,8 @@
 // landmarksDekabristov/volodin.js - the SQUARE OF ALEXANDER VOLODIN (сквер Александра Володина, GREEN r10331754, park, 21 763 m2, 189 x 171 m, the Smolenka mouth) with the LIGHT-AND-MUSIC FOUNTAIN (Светомузыкальный фонтан,
 // OSM w1396274666, amenity=fountain, a round basin 16 m across at (-7994.7, -2078.9)): the grounds of site.js (the lawn, 15 walkways, the trees along them, the three benches of the data) and the fountain:
 //  * the BASIN is WATER, never a wall (docs/AREAS.md 13.7, the Andrew-boulevard recipe): ctx.physics.addWater({ ring, level: 0.30 }) - a walker wades in and a car drives in; the 0.4 m granite rim is drawn and its collider is a
-//    ring of 16 breakable GHOST bays (lib/fence-bays.js: a car breaks one off and drives through); the basin floor, the 0.30 m water film, the jets (one tall central plume, eight ring jets, sixteen low jets: static slim cones with
-//    foam heads, no collider) and the ring of 24 coloured floor lights (emissive discs: the "light" of the Light-and-Music fountain; no sound: the fountain music is not played) are drawn;
+//    ring of 16 breakable GHOST bays (lib/fence-bays.js: a car breaks one off and drives through); the basin floor, the 0.30 m water film, the live jets (one tall central plume, eight ring jets, sixteen low jets), sparkling droplets,
+//    ripples and the ring of 24 coloured floor lights are drawn. Water brightens at dusk; fountain music is not played.
 //  * the paved PLAZA round the rim (R 8.6 .. 13.6 m, PAVED_RINGS in groups.js) with six lantern posts (knock records) and the benches turned to the basin.
 // The jets and the number of lights are generic (OWNER CHECK: no photo of the real nozzle pattern).  Solid on purpose: nothing (the trunks only); breakable: the rim bays, the lanterns, the benches.
 import { buildSite } from './site.js';
@@ -13,6 +13,7 @@ import { furnish } from './furniture.js';
 import { knockBays } from '../lib/fence-bays.js';
 import * as G from './geo.js';
 import { fillPolyFine } from './surfaces.js';
+import { liveFountain } from '../lib/live-fountain.js';
 
 const N = 28;
 
@@ -41,11 +42,12 @@ export async function build(K) {
     // the floor lights: 24 emissive discs on two rings (colours alternate)
     const L = [M.lightBlue, M.lightRed, M.lightGreen, M.lightWhite];
     for (let i = 0; i < 24; i++) { const r = i % 2 ? R * 0.74 : R * 0.9, a = i * 2 * Math.PI / 24; G.tube(P, L[i % 4], Math.cos(a) * r, Math.sin(a) * r, 0.04, 0.09, 0.2, 0.16, 8, 1, 1, { capTop: L[i % 4] }); }
-    // the jets: slim plumes with a foam head: the central one 4.5 m, eight at 0.45 R (2.0 m), sixteen at 0.78 R (0.9 m)
-    const jet = (x, z, h) => { G.tube(P, M.foam, x, z, 0.09, 0.09 + h, 0.05, 0.02, 7, 1, 1, {}); G.ball(P, M.foam, x, 0.09 + h, z, 0.1 + h * 0.02, 6); };
+    // Live central plume, inner jets and low outer ring; basin geometry stays static.
+    const nozzles = [], jet = (x, z, height) => nozzles.push({ x, z, height, width: 0.04, target: [x + 0.12, 0, z] });
     jet(0, 0, 4.5); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; jet(Math.cos(a) * R * 0.45, Math.sin(a) * R * 0.45, 2.0 + (i % 2) * 0.4); }
     for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + 0.2; jet(Math.cos(a) * R * 0.78, Math.sin(a) * R * 0.78, 0.9); }
     P.pop();
+    liveFountain(ctx, { id: f.id, x: cx, z: cz, y: 0.3, r: Rj, nozzles, far: 360 });
     // the breakable ghost rim (the water of the basin was registered above)
     const rimR = (Rin + Rout) / 2, vs = ring(rimR, 16), bays = vs.map((a, i) => { const b = vs[(i + 1) % 16]; return { x0: a[0], z0: a[1], x1: b[0], z1: b[1], y: 0, ghost: true }; });
     knockBays(ctx, { name: 'lmdek-volodin-rim', bays, parts: [], collider: { y0: 0, y1: 0.45, thick: 0.6, e0: 0.1, e1: 0.1 }, far: 300,

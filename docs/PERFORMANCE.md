@@ -2279,3 +2279,142 @@ about 51 FPS. The earlier 118m sample above is the initial 9.2.0 sample; this
 81m run is the final source+bake snapshot. Its traffic stop/heading still
 differs from the 77m baseline, so the 0.17ms mean difference is not attributed
 to the fountain. Final source, bake and generated revision map agree.
+
+## 2026-11-02 — Live fountain coverage and library hall (9.3.0)
+
+All sixteen live pages now resolve every mapped fountain to either an authored
+effect or the shared fallback: **131 unique in-play IDs**, 141 fallback and 33
+specialist page-local records. The unique sets overlap in four IDs because
+adjacent pages load different specialist modules. No mapped in-play site is
+excluded or unresolved, and generic effects are not duplicated. Twenty-five
+formerly static authored sites now have live jets; four already-live sites
+retain their original streams and gain shared droplets/ripples. The library's
+successful existing water effect is unchanged.
+
+The new shared controller uses 256m spatial buckets and one callback/context,
+three shared materials/geometries and finite-range dynamic instances without
+shadows or outlines. Distant fountains do not upload buffers. Supplemental
+effects suppress their duplicate stream mesh entirely (two active draws).
+The performance tier uses three droplets/nozzle and medium six. The bounded
+geometry regression exercises 185 fountains / 42,336 transformed vertices,
+deterministic replay, departure/arrival, evening/night and unchanged physics.
+
+The fallback's new static geometry ranges from zero to 5,930 triangles/page;
+Moskovskaya adds 2,564. Exact basin holes remain dry. Native water is reused;
+road-touching fountains add spray and shallow native water without new stone,
+floor, water-surface meshes or blocking colliders across asphalt. Seven old
+full-basin cylinders are replaced with reachable water and breakable perimeter
+bays, and both Paradny basins now register native water.
+The final authored audit also adds the Voronikhin 1809 spout and Steregushchy
+seacock. The trough's old blanket body collider is tightened to its rear stone
+and replaced over the water by a shallow floor and low walkable platform;
+an actual Player enters it from the front in the regression. Voronikhin's
+mapped ID is explicitly specialist-owned, preventing a second generic bowl.
+The final coverage audit records 806 water/mesh probes and zero exclusions,
+unresolved sites or duplicate generic effects. Raw results and per-page counts:
+`shots/fountain-refresh/final-coverage.txt` and `final-coverage-summary.json`.
+
+The library is **47,894 static triangles / 12 material-range meshes / zero
+callbacks**. The real-player CPU regression takes 4,290 steps through its new
+foyer, broad stair, gallery and lower passage; ten source courts remain open.
+The complete Moskovskaya landmark module is 281,900 triangles under its 300k
+budget. Singer's new crown uses static collectors and 280m carving detail.
+Source depth probes: Singer close-up 2 noisy pixels, library outside 10,
+stair view 6 and gallery view 2 (each at most 0.001%). The gallery initially
+exposed coplanar rear jambs; moving their rear face 4cm into the room removed
+the 2,057-pixel overlap. Every reviewed image was inspected.
+
+CPU integration: all **282 water-reachability checks / 16 areas pass**;
+library architecture, forecourt, underpass and Basseynaya regressions pass;
+closure/import/runtime-only lints pass. Strict furniture checks pass for the
+whole Moskovskaya page and Singer/Kazan vicinity. Raw zero-budget local surface
+checks retain two existing samples in each area (shared road-end/fillet and
+unchanged Kazan paving), within the documented area budgets. Moskovskaya's
+marking audit passes; Palace retains its already documented missing signal
+stop bar. The broader Vasilyevsky road audit retains furniture failures;
+its surface and ribbon audits pass. No exemptions were added. Audit artifacts:
+`shots/fountain-integration-audit/`, authored site poses:
+`shots/fountain-refresh/sites.json`.
+
+Before-source normal matching-bake Palace drives at medium, 1280×720, 20s:
+
+| Route | Load s | Mean / p50 / p95 / max ms | Mean draws | Distance m | CDP used / backing MiB |
+| --- | ---: | --- | ---: | ---: | ---: |
+| Station, 9.2.0 | 30.325 | 28.46 / 33.3 / 33.5 / 316.7 | 1,269 | 355 | 512 / 750 |
+| Admiralty gate, 9.2.0 | 30.388 | 40.27 / 33.4 / 50.1 / 199.9 | 1,826 | 80 | 529 / 1,324 |
+
+These baselines ran serially without other GPU work. Their raw diagnostics
+and end frames are `shots/crown-refinement/before-{station,admiralty}.*`.
+
+Normal shipping-page functional verification at the performance tier passes
+81/81 checks across Palace, Moskovskaya, Vasilyevsky and Admiralty: fresh bakes,
+real moving jet/drop/ripple buffers, three shared materials, evening/night
+highlights, remote upload suppression and restored animation on return.
+Original library and Alexander Garden effects remain active. There are no
+module/browser errors or failed regions. Artifacts:
+`shots/fountain-playtest-performance/`. Its short static render samples are
+functional diagnostics, not substitutes for timed driving measurements.
+
+The normal medium Moskovskaya walking/transport test passes 61/61 checks,
+including both directions through the new hall and physical stairs, the lower
+passage, the pilotis and the existing underpass; car/boat controls and destination
+streaming also pass. Matching-bake views from the owner's library camera and
+inside both levels are `shots/fountain-refresh/library-shipping_*`.
+
+Rendered fountain review exposed a procedural birch inside the Vasilyevsky
+basin and a flower carpet above the Hermitage fountain. The latter now has a
+generator-persistent 1.7m planting opening, checked against actual flower
+triangles in Palace and Admiralty. An environment-only audit of all sixteen
+pages found 38 trunk/site/area overlaps in eleven areas (35 centres in water,
+three at its boundary). It preserves full page claims but omits later street
+pruning, so this is an upper bound on visible intrusions. The eleven areas now
+compose basin masks with existing tree/tuft hooks. Focused tests compare 296
+exact source records, retain dry polygon holes and reject all 38 measured stem
+positions. Planting masks have a regeneration/check tool and add no frame work.
+The repeated actual environment audit now finds **zero centre or trunk-edge
+overlaps across all sixteen areas**, down from 38. After-results are in
+`shots/fountain-refresh/tree-interiors-after/`; the original audit remains intact.
+Baseline evidence: `shots/fountain-refresh/tree-interiors/`; regressions:
+`fountain-planting-test.mjs`, `vasilyevsky-fountain-trees-test.mjs` and
+`hermitage-fountain-bed-test.mjs` under `tools/`.
+
+All sixteen areas were rebaked for the shared fountain controller, then the
+eleven affected areas were rebaked after the final planting corrections.
+`bake-manifest-check.mjs` and `bake-scene.mjs --plan --check` both pass:
+**all sixteen fresh / 1,612 complete products / 730.7 MiB gzip**. Final logs:
+`shots/fountain-refresh/{bake-planting-final,manifests-final,plan-final}.txt`.
+
+The final normal performance-tier rerun of Vasilyevsky and Admiralty passes
+36/36 checks, with zero errors or failed regions. All seven PNGs were inspected:
+the Vasilyevsky basin is free of the birch, the Hermitage basin is visible through
+its planting opening, and original/supplemental water and night accents remain
+correct. Evidence: `shots/fountain-playtest-final/` and
+`shots/fountain-refresh/fountain-playtest-final.txt`.
+
+Final matching-bake medium drives use the same 1280×720, 20s commands as their
+baselines. They run serially, after CPU audits stop, with no profiling or mid-run
+screenshots; CDP diagnostics are collected after timing. The library comparison
+is the final 9.2.0 run documented above (81m / 19.62ms), rather than a second
+before-source capture in this round.
+
+| Route | Load s | Mean / p50 / p95 / max ms | >40 / >80ms frames | Mean draws | Distance m | CDP used / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Station, 9.3.0 | 28.082 | 24.16 / 16.7 / 33.4 / 300.0 | 13 / 3 | 1,171 | 352 | 393 / 719 |
+| Admiralty gate, 9.3.0 | 27.669 | 26.45 / 16.8 / 49.9 / 166.8 | 47 / 4 | 1,289 | 66 | 615 / 1,334 |
+| Library approach, 9.3.0 | 14.486 | 17.34 / 16.7 / 16.8 / 116.7 | 5 / 3 | 1,123 | 88 | 437 / 613 |
+
+These averages are approximately 41, 38 and 58 FPS. All three drives have zero
+module errors and failed regions. Traffic/collision outcomes differ: station
+loads 36 regions versus 37 before, Admiralty travels 66m versus 80m, and library
+88m versus 81m. Draw/mean differences therefore are not attributed to the water
+or planting changes. Admiralty still has a roughly 50ms p95, and region/GC
+hitches remain visible; smooth 30 FPS throughout the old centre remains
+unfinished. Heap used and backing storage are distinct end samples, not a
+retained-memory estimate. End frames were opened and inspected.
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/fountain-refresh/after-station
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/fountain-refresh/after-admiralty
+node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-1700,7540,1.62" --json --diagnostics --out shots/fountain-refresh/after-library
+node tools/fountain-playtest.mjs --areas vasilyevsky,admiralty --q performance --out shots/fountain-playtest-final
+```

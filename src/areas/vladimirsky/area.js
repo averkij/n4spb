@@ -383,7 +383,9 @@ export const PRUNE_SERVICES = ['city', 'landmarksA', 'landmarksB', 'landmarksC',
 // The hook set (milestone M6, docs/AREAS.md section 9): hooks.js builds it from the module list above (a hook that serves a landmark module is dormant until the module is in MODULES).
 import { makeHooks, makeHeightPatches } from '../north/hooks.js';      // shared with the parked North: the hook bodies are gated by the module list
 /** the hooks of the engine modules (keep-outs of trees / tufts / props / ways / parking, the garden of the crowd cap, the deck services): src/areas/north/hooks.js documents the contract */
-export const HOOKS = makeHooks(MODULES);
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
+export const HOOKS = withFountainKeepouts(makeHooks(MODULES), FOUNTAIN_SITES);
 /** the height patches of layout.heightAt (the first patch that answers wins): none of the modules of this area has one */
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 
