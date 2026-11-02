@@ -27,6 +27,9 @@ const url = (f) => pathToFileURL(f).href;
 
 if (!row) { console.log('FAIL: no registry row for ' + area); process.exit(1); }
 const N = await import(url(path.join(dir, 'city.js')));
+const waterfrontFile=path.join(dir,'waterfront.js');
+const WF=fs.existsSync(waterfrontFile)?await import(url(waterfrontFile)):{BUILDINGS:[],OVERLAPS:[]};
+const waterfrontIds=new Set(WF.BUILDINGS.map(b=>b.id));
 const S = await import(url(path.join(root, 'src/world/data/city.js')));
 const TOL = 0.06;     // m: the clip rounds its points to 0.1 m
 const inRect = (r, x, z, t = 0) => x >= r.x0 - t && x <= r.x1 + t && z >= r.z0 - t && z <= r.z1 + t;
@@ -82,7 +85,7 @@ check('part files: line 1 a comment, then one `export const NAME = JSON.parse(".
   });
 });
 check('the facade arrays are the concatenation of the part arrays in RECT_NAMES order (NOSPLIT ones: the first part)', () => {
-  for (const k of SPLIT_NAMES) assert.equal(N[k].length, PARTS.reduce((n, P) => n + P.arrays.get(k).length, 0), k);
+  for (const k of SPLIT_NAMES) assert.equal(N[k].length, PARTS.reduce((n, P) => n + P.arrays.get(k).length, 0)+(WF[k]?.length||0), k);
   for (const k of NOSPLIT_NAMES) assert.equal(N[k].length, PARTS[0].arrays.get(k).length, k);
 });
 
@@ -106,7 +109,7 @@ check('every vertex of every line / polygon / point lies in the extent union (RI
     if (k === 'TREES') { for (let i = 0; i < N.TREES.length; i += 2) if (!inUnion(EXT, N.TREES[i], N.TREES[i + 1], TOL)) bad.push('TREES ' + N.TREES[i] + ',' + N.TREES[i + 1]); continue; }
     const rs = WATERISH.has(k) ? EXT_W : EXT;
     for (const rec of N[k]) {
-      if (k === 'BUILDINGS') { if (!inUnion(EXT, rec.cx, rec.cz)) bad.push(k + ' ' + rec.id + ' centroid'); continue; }
+      if (k === 'BUILDINGS') { if (!waterfrontIds.has(rec.id)&&!inUnion(EXT, rec.cx, rec.cz)) bad.push(k + ' ' + rec.id + ' centroid'); continue; }
       if (k === 'OVERLAPS') continue;
       const v = vertsOf(rec);
       if (KEEP_WHOLE_IDS[k] && KEEP_WHOLE_IDS[k].has(rec.id)) { let touch = false; for (const p of rec.polys || []) if (clipRingUnion(pairs(p.o).concat([pairs(p.o)[0]]), rs).length) touch = true; if (!touch) bad.push(k + ' ' + rec.id + ' (kept whole) does not touch the extent'); continue; }      // gdm cluster B: a record that stays whole (strip-data-clip.mjs KEEP_WHOLE_IDS) must touch the union; its vertices may lie outside
@@ -164,7 +167,8 @@ if (fs.existsSync(path.join(origDir, 'city.js'))) {
   else {
     const r = await cutArea({ area, orig: origDir, command: m[2] });
     check('regenerating from the full-city data gives byte-identical part files and facade', () => {
-      assert.equal(fs.readFileSync(path.join(dir, 'city.js'), 'utf8'), r.facade, 'city.js');
+      const localFacade=fs.readFileSync(path.join(dir,'city.js'),'utf8').replace(/^import \* as WF from '\.\/waterfront\.js';\r?\n/m,'').replace(/\.concat\(WF\.(BUILDINGS|OVERLAPS)\)/g,'');
+      assert.equal(localFacade, r.facade, 'city.js local territory');
       r.parts.forEach((P, i) => assert.equal(fs.readFileSync(path.join(dir, P.file), 'utf8'), r.partTexts[i], P.file));
     });
   }

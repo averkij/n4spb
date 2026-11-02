@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.4.0** (2026-11-02, minor): Improve cross-river waterfront views; close roof gaps, expose tram rails, prioritize road streaming, straighten road markings, make station flower fences breakable, and open the Winter Canal arch
 - **9.3.0** (2026-11-02, minor): Add live water to every fountain, enclose the library hall and refine Singer House crown
 - **9.2.0** (2026-11-02, minor): Refine Singer House and library facades, animate illuminated library fountains, and open Basseynaya 53 colonnade for walking
 - **9.1.0** (2026-11-01, minor): Remake the National Library, fountain forecourt and walkable underpass; close exposed bridge and quay geometry

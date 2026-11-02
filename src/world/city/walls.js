@@ -68,6 +68,7 @@ function addSubWall(ctx, B, rec, e, s0, s1, o) {
   const w = { id: key, bi: rec.bi, rec, e, a: [e.a[0] + e.dx * s0, e.a[1] + e.dz * s0], b: [e.a[0] + e.dx * s1, e.a[1] + e.dz * s1], dx: e.dx, dz: e.dz, nx: e.nx, nz: e.nz, s0, s1, len, N, bw, arch, shop: !!o.shop, units: [], doors: [], bal: [], base: o.y0, plinth: o.plinth, G: o.G, PN: tab.PN, floors: tab.floors, H: st.H, hole: e.hole, street: e.street, gate: false };
   w.midX = (w.a[0] + w.b[0]) / 2; w.midZ = (w.a[1] + w.b[1]) / 2;
   let flags = tintFlags(st.gfTint) | wearFlags(st.wear) | trimFlags(st.trimClass);
+  if(b.waterfront||!L.inPlay(st.ob.cx,st.ob.cz,-50))flags|=F.SCENIC;
   let balM = 0, doorM = 0, pierM = 0, sdoorM = 0, centre = -1;
   const floors = tab.floors, street = (!!e.street || !!st.allFronts) && !e.hole;      // allFronts: a free-standing yard house (KNOWN `yard`) has doors and trim on every outer wall
   // Detail offsets are local to w.a, which already includes s0.

@@ -70,12 +70,21 @@ export async function build(ctx) {
   const t0 = performance.now(), T = {}, lap = (k) => { T[k] = Math.round(performance.now() - t0); if(ctx.recordBake)console.log(`[city-bake] ${k}: ${T[k]} ms`); };
   const root = new THREE.Group(); root.name = 'city'; ctx.addStatic(root);
   const owned = await ownedGroups(ctx);
+  const panoramaGroups=new Set((L.GROUPS.landmarksRiverfront||[]).map(g=>g.key));
+  const panorama=b=>owned.has(L.groupOf(b.id))&&panoramaGroups.has(L.groupOf(b.id));
   LOD.items.length = 0; LOD.scale = (ctx.quality && ctx.quality.lod) || 1;
   const near = (x, z, m) => L.inPlay(x, z, -m);                              // within m metres of the play area (the union of the eight rectangles, not its bounding box: the notches stay plain scenery)
 
   // ---- 1. classification
   // draw records: raised parts get their real thickness, bodies under raised parts that have none are synthesised (prep.js); owned buildings only act as occluders
-  const prep = prepare(BUILDINGS, (b) => isOwned(owned, b.id));
+  // The panorama replaces rendering only. Existing wall physics and door
+  // records in an overlap must stay exactly as they were before it was added.
+  const skip=b=>isOwned(owned,b.id)&&!panorama(b);
+  // Scenic neighbours cannot change a local wall's visibility runs, support
+  // fill or carriage-arch choice: those runs also define physical walls.
+  const localPrep=prepare(BUILDINGS.filter(b=>!b.waterfront),skip);
+  const scenicPrep=prepare(BUILDINGS.filter(b=>b.waterfront),skip);
+  const prep={list:localPrep.list.concat(scenicPrep.list),occluders:localPrep.occluders.concat(scenicPrep.occluders),fills:localPrep.fills+scenicPrep.fills};
   const described = prep.list.map((b) => ({ b, st: describe(b) }));
   const customs = described.filter((r) => r.st.custom);                      // hand-built towers (towers.js): not drawn by the wall pipeline, still occluders
   // canopies (building=roof) and moored ships of the new regions (st.special, canopies.js) are not houses: no walls, no part in the street-wall graph, no wall colliders
@@ -87,7 +96,10 @@ export async function build(ctx) {
   const decks = deckPlan(OVERLAPS, drawnIds, (id) => { const q = L.buildingById(id); return !!q && !!regionOf(q); }), dupSkip = decks.skip;      // roofs.js: the rule of the older regions is unchanged
   lap('classify');
   // ---- 2. the street wall graph + colours
-  const net = analyse(list, occluders);
+  const net=analyse(list.filter(r=>!r.b.waterfront),occluders.filter(r=>!r.b.waterfront));
+  const scenicNet=analyse(list.filter(r=>r.b.waterfront),occluders);
+  for(const [id,r]of scenicNet.rec)net.rec.set(id,r);
+  for(const [id,r]of scenicNet.adj)net.adj.set(id,r);
   const styles = new Map(list.map((r) => [r.b.id, r.st]));
   lap('edges');
   assignColours(styles, net.adj, list.map((r) => r.b));
@@ -103,18 +115,20 @@ export async function build(ctx) {
   lap('passages');
   // ---- 4. walls, cornices, decks
   const M = new CityMeshes();
+  const panoramaMeshes=new CityMeshes();
   const info = [];
   let colliderCount = 0;
   for (const item of list) {
     const rec = net.rec.get(item.b.id), { b, st } = rec;
+    const draw=panorama(b)?panoramaMeshes:M;
     const y0 = Math.max(0, b.minH || 0), floating = y0 > 0.2;
-    rec.walls = buildWalls(ctx, rec, (x, z) => M.walls(x, z), {});
+    rec.walls = buildWalls(ctx, rec, (x, z) => draw.walls(x, z), {});
     // cornices along the visible pieces
     for (const ring of rec.rings) for (const e of ring.edges) {
       if (!e.pieces.length) continue;
       const simple = e.hole || !e.street;
       const mx = e.a[0] + e.dx * e.len / 2, mz = e.a[1] + e.dz * e.len / 2;
-      addCornice(M.core(mx, mz), e, y0 + st.H, st.trim, 1, simple ? CORNICE_SIMPLE : undefined);
+      addCornice(draw.core(mx, mz), e, y0 + st.H, st.trim, 1, simple ? CORNICE_SIMPLE : undefined);
     }
     // deck (flat sheet-iron) on top of the cornice line
     if (!dupSkip.has(b.id)) {
@@ -122,14 +136,15 @@ export async function build(ctx) {
       const hex = st.dist ? (st.roofKnown || pickW(hash01((st.fam || b.id) + 'rf'), st.fresh ? (st.arch === ARCH.PANEL || st.arch === ARCH.MODERN ? VO_ROOFS_FLAT : VO_ROOFS) : DISTRICT_ROOFS)) : pickW(hash01(b.id + 'rf'), ROOF_COLOURS);
       st.roofHex = hex;
       const dY = y0 + st.H + CORNICE_H + (decks.lift.has(b.id) ? 0.03 : 0);
-      const RB = M.roof(st.ob.cx, st.ob.cz); RB.cur.set(hex);
+      const RB = draw.roof(st.ob.cx, st.ob.cz); RB.cur.set(hex);
       for (const poly of b.polys) addDeck(RB, poly, dY);
       st.deckY = dY;
     }
     // colliders: thin wall boxes along the visible pieces (gaps at arches and metro doorways)
-    if (!floating && near(st.ob.cx, st.ob.cz, 40)) colliderCount += edgeColliders(ctx, rec);
+    if (!b.waterfront && !floating && near(st.ob.cx, st.ob.cz, 40)) colliderCount += edgeColliders(ctx, rec);
     info.push(rec);
   }
+  for(const stream of Object.values(panoramaMeshes.s))stream.clear();
   lap('walls');
   M.seal(); // Bound ordinary-number collectors before the detail passes.
   // ---- 5. passages (tunnel vaults), details
@@ -137,7 +152,8 @@ export async function build(ctx) {
   const canopies = buildCanopies(ctx, { M, items: specials, near });
   for (const r of specials) { r.st.hex = r.st.knownHex || '#8c9195'; r.st.color = new THREE.Color(r.st.hex); styles.set(r.b.id, r.st); }
   const pass = buildPassages(ctx, { M, gates });
-  const details = buildDetails(ctx, { root, M, info, styles, owned, net });
+  const detailOwners=new Set([...owned].filter(g=>!panoramaGroups.has(g)));
+  const details = buildDetails(ctx, { root, M, info, styles, owned:detailOwners, net });
   lap('details');
   const tris = M.flush(ctx, root);
   lap('flush');
@@ -155,7 +171,7 @@ export async function build(ctx) {
     service.walls = service.walls.map(w => Object.fromEntries(fields.map(k=>[k,w[k]])));
     service.report = Object.fromEntries(Object.entries(service.report).map(([k,v])=>[k, Array.isArray(v) ? v.length : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([,a])=>a == null || typeof a !== 'object')) : v]));
     captureRegions(ctx, 'city-base', root, { service, colliders: ctx.physics.items.slice(colliderStart),
-      silhouettes: captureSilhouettes(info) });
+      silhouettes: captureSilhouettes(info.filter(r=>!panorama(r.b))) });
     lap('capture');
   }
 }

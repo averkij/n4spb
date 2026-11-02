@@ -87,7 +87,7 @@ function partnerDraws(w, v, x, z) {
 
 /** lateral position (in the frame of way w, + = right) of the line shared with the carriageway across w's left edge, at every vertex: the middle between the two asphalt edges (they touch where net.js
  *  fillMedians closed the gap, and overlap by up to 1.4 m where the data's carriageways overlap: the line must not run along only one of the two edges, inside the lane of the other) */
-function medOffsets(w) {
+export function medOffsets(w) {
   if (w._medOff) return w._medOff;
   w._medOff = w.x.map((_, k) => {
     const v = w.medPartner && w.medPartner[k];
@@ -96,20 +96,17 @@ function medOffsets(w) {
     for (let i = 0; i + 1 < v.n; i++) {
       const dx = v.x[i + 1] - v.x[i], dz = v.z[i + 1] - v.z[i], l2 = dx * dx + dz * dz || 1e-12, t = Math.max(0, Math.min(1, ((w.x[k] - v.x[i]) * dx + (w.z[k] - v.z[i]) * dz) / l2));
       const px = v.x[i] + dx * t, pz = v.z[i] + dz * t, d = Math.hypot(w.x[k] - px, w.z[k] - pz);
-      if (!best || d < best.d) best = { d, i, t, side: ((w.x[k] - px) * -dz + (w.z[k] - pz) * dx) };
+      if (!best || d < best.d) best = { d, i, t, lateral: Math.abs((w.x[k] - px) * -dz + (w.z[k] - pz) * dx) / Math.sqrt(l2), side: ((w.x[k] - px) * -dz + (w.z[k] - pz) * dx) };
     }
     if (!best || best.side > 0) return -w.hL[k];                      // (the partner's right side faces us: not a head-on pair)
-    const hLv = v.hL[best.i] + (v.hL[best.i + 1] - v.hL[best.i]) * best.t, edgeV = best.d - hLv;      // the partner's left edge: edgeV metres from our centre line, to our left
-    return -Math.max(Math.min(w.hL[k], edgeV), (w.hL[k] + edgeV) / 2);
+    // Paint follows the base carriageways, not their junction-mouth flares,
+    // parking pockets or iterative median infill. Those widths can change by
+    // a metre at one vertex and used to bend a straight double line.
+    // Use perpendicular separation: a partner ending just before this vertex
+    // must not pull the divider sideways toward its clamped endpoint.
+    const hW = w.hb[k], hV = v.hb[best.i] + (v.hb[best.i + 1] - v.hb[best.i]) * best.t;
+    return -(hW + best.lateral - hV) / 2;
   });
-  // a junction mouth widens the half width hL over ONE or TWO vertices (Kirochnaya at -52.8 and -80.9: 5 and 8.5 m against 4.7 m around), which throws the shared line 1-2 m out in a kink: a vertex that
-  // lies more than 0.8 m from the median of its five-vertex window (all of them with a partner) takes that median
-  const o = w._medOff, src = o.slice();
-  for (let k = 2; k + 2 < o.length; k++) {
-    if (!(w.med[k] && w.medPartner[k - 2] && w.medPartner[k - 1] && w.medPartner[k] && w.medPartner[k + 1] && w.medPartner[k + 2])) continue;
-    const m = [src[k - 2], src[k - 1], src[k], src[k + 1], src[k + 2]].sort((p, q) => p - q)[2];
-    if (Math.abs(src[k] - m) > 0.8) o[k] = m;
-  }
   return w._medOff;
 }
 
@@ -177,8 +174,16 @@ export function planMarkings(net, graph, o = {}) {
     return len;
   };
   const sample = (w, s, latFn) => { const q = wayAt(w, s), off = latFn(q), nx = -q.tz, nz = q.tx; return { x: q.x + nx * off, z: q.z + nz * off, nx, nz, s, q }; };
+  const pairedSkips = new Map();
+  const skipsOf = (w, partner) => {
+    const own = continuations(net, w);
+    if (!partner) return own;
+    let pairs = pairedSkips.get(w); if (!pairs) pairedSkips.set(w, pairs = new Map());
+    if (!pairs.has(partner)) pairs.set(partner, new Set([...(own || []), ...(continuations(net, partner) || [])]));
+    return pairs.get(partner);
+  };
   /** why a point carries no paint: 'gate' (the rule itself does not ask for it there), 'deck' (a bridge deck of the bridges module), 'cross' (zebra bars), 'cover' (another carriageway's asphalt) or '' */
-  const hidOf = (w, skip2, gate) => (p) => (gate && gate(p) ? 'gate' : deckAt(p.x, p.z, 0.3) ? 'deck' : nearCrossing(net, p.x, p.z, RULES.zebraClear) ? 'cross' : net.cover(p.x, p.z, { skip: w, skip2, skipSet: continuations(net, w) }) > 0.2 ? 'cover' : '');
+  const hidOf = (w, skip2, gate) => (p) => (gate && gate(p) ? 'gate' : deckAt(p.x, p.z, 0.3) ? 'deck' : nearCrossing(net, p.x, p.z, RULES.zebraClear) ? 'cross' : net.cover(p.x, p.z, { skip: w, skip2, skipSet: skipsOf(w, skip2) }) > 0.2 ? 'cover' : '');
   /** ask for a line of `kind` along w between arclengths lo and hi at the lateral position latFn(q): dashed (1 m / 3 m from `anchor`), or solid at the offsets `offs` (a double line = two thin lines);
    *  o.hid tells where there is no paint. Records the rule (what was asked / drawn / hidden by what) and pushes the drawn pieces. */
   const ask = (kind, w, lo, hi, latFn, width, o) => {

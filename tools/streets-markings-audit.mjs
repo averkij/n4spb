@@ -24,7 +24,7 @@ const log = (...a) => console.log(...a);
 const L = await imp('src/world/layout.js');
 const { buildNet, nearCrossing, wayAt } = await imp('src/world/streets/net.js');
 const { buildLaneGraph } = await imp('src/world/streets/lanegraph.js');
-const { planMarkings, drawPlan, classOf, eligible, edgesOf, RULES } = await imp('src/world/streets/markings.js');
+const { planMarkings, drawPlan, classOf, eligible, edgesOf, medOffsets, RULES } = await imp('src/world/streets/markings.js');
 const { buildCrossings, buildMarkings: buildNew } = await imp('src/world/streets/surface.js');
 const { MB } = await imp('src/world/streets/util.js');
 const { setDecksEnabled, deckAt } = await imp('src/world/streets/decks.js');
@@ -180,7 +180,10 @@ const pairStat = (ways) => {
       for (let k = 0; k < n; k++) {
         const s = e.f.lo + (e.f.hi - e.f.lo) * (k + 0.5) / n, q = wayAt(w, s);
         if (!w.med[q.k] || !w.med[Math.min(w.n - 1, q.k + 1)]) continue;
-        const v = w.medPartner && w.medPartner[q.k], x = q.x + q.tz * q.hL, z = q.z - q.tx * q.hL;
+        // Test the divider between base carriageways, rather than the widened
+        // asphalt edge (which can lie over a metre away at a junction flare).
+        const v = w.medPartner && w.medPartner[q.k], mo = medOffsets(w), off = mo[q.k] + (mo[Math.min(w.n - 1, q.k + 1)] - mo[q.k]) * q.f;
+        const x = q.x - q.tz * off, z = q.z + q.tx * off;
         if (deckAt(x, z, 0.3) || nearCrossing(net, x, z, RULES.zebraClear) || net.cover(x, z, { skip: w, skip2: v }) > 0.2) continue;
         const d = drawersAt(x, z);
         if (d.size === 0 && droppedAt(x, z)) { st.stub = (st.stub || 0) + 1; continue; }       // (a stub the rule dropped on purpose)

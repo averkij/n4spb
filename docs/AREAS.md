@@ -1908,3 +1908,56 @@ leaves and garlands, a carved corner arch, feathered eagle and paired draped
 figures carrying the inclined globe. Static carving detail has an authored
 280m range; the principal crown silhouette remains in the building's skyline.
 These changes affect Palace and Admiralty; no area boundaries or transitions change.
+
+### 9.4.0 — Views across both Neva banks
+
+Thirteen river-facing pages now retain the surveyed opposite waterfront as a
+separate visual strip. `tools/waterfront-data.mjs` selects the first 180m behind
+the Neva and northern branch banks within 1500m of the receiving territory,
+using the correct full-city source and newer current area records. Complete
+building families keep roofs and upper parts together. PLAY/EXTENT, the planning
+map, playable territories and transitions are unchanged. Moskovskaya, Morskoy
+and Semyonovsky receive no river strip.
+
+| Receiving page | Added building/part records |
+| --- | ---: |
+| Palace | 1,022 |
+| Smolny | 386 |
+| Vladimirsky | 416 |
+| Admiralty | 813 |
+| Vasilyevsky | 956 |
+| Gavan | 622 |
+| Dekabristov | 1,336 |
+| Kolomna | 944 |
+| Morskie Vorota | 251 |
+| Okrug 65 | 299 |
+| Kronverk | 1,513 |
+| Aptekarsky | 1,597 |
+| Islands | 363 |
+
+The 10,518 records are page-local supplements: overlaps intentionally retain
+the same building in multiple separately loaded areas. Ordinary houses use
+the existing windowed city facades, cornices, roof streams and baked region
+loader. The new `landmarksRiverfront` adapter reuses actual Fortress, Strelka,
+University, Winter Palace/Hermitage and Admiralty/Senate architecture where the
+receiving page lacks their specialist module. It creates no population,
+navigation service, collision objects or frame callbacks. Existing local
+physical walls and door records remain independent of the visual strip.
+
+The facade shader retains an analytically filtered window rhythm on scenic
+walls beyond the normal fine-detail fade. Actual waterfront footprints also
+clear the synthetic horizon grid. Small landmark ornament has finite feature
+ranges; tall skyline masses remain readable across the river. This retains the
+nearest architectural row and its principal landmarks, rather than loading the
+whole opposite district. Source coverage still has edges, and genuine blank
+construction footprints remain blank: w1390919084 at Tuchkov Buyan is a mapped
+16,701m² construction mass, not a synthetic residential facade.
+
+`waterfront-test.mjs` checks all sixteen territory tables, unique page-local IDs,
+family references and specialist ownership. Its Palace geometry regression
+retains all 31,464 original collider records and 24,940 navigation door records
+exactly; the separate architecture adds neither colliders nor update callbacks.
+Both river-facing directions have procedural screenshot review. See
+[WATERFRONT-VIEWS.md](WATERFRONT-VIEWS.md) for generation, implementation and
+focused checks; matching-bake integration/performance evidence is recorded
+separately in `PERFORMANCE.md`.

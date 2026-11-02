@@ -30,6 +30,7 @@ export const F = {
   SHOP: 1, BLANK: 2, NET: 4, GATE: 8, QUOIN_L: 16, QUOIN_R: 32, TINT1: 64, TINT2: 128, WEAR1: 256, WEAR2: 512, COURT: 1024, NOCENTRE: 2048, RICH: 4096, GREENNET: 8192, NIGHTSHOP: 16384, ARCHOPEN: 32768, TRIM1: 65536, GRANITE: 524288,
   MAJOLICA: 1048576,     // NORDIC / GABLE: glazed tile band under the top storey (bit 20)
   SOCLE: 2097152,        // NORDIC: rough granite socle that steps up to the top of the ground floor at the feature / door bays (bit 21); NEOCLASSIC1910: the order is half-columns (rounder shading)
+  SCENIC: 4194304,       // visual margin / waterfront: retain filtered window rhythm after fine ornament fades (bit 22)
 };
 export const tintFlags = (t) => (t & 3) * F.TINT1;       // ground-floor tint 0 same / 1 dark grey-brown / 2 terracotta / 3 pale
 export const wearFlags = (w) => (w & 3) * F.WEAR1;       // wear 0 fresh .. 3 worn
@@ -42,6 +43,16 @@ float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * 
   return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y); }
 vec3 sr(vec3 c){ return c * c; }                       // sRGB-ish literal -> linear (gamma 2)
 float box1(float d, float aa){ return 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, d); }
+// Analytic box-filtered periodic aperture. A distant window still has its
+// proper fractional pixel coverage, rather than fading the entire facade to
+// one colour or clamping derivatives and making a shimmering dot grid.
+float pulseIntegral(float x,float period,float width){
+  return floor(x/period)*width+clamp(mod(x,period)-(period-width)*0.5,0.0,width);
+}
+float apertureAA(float x,float period,float width,float pixel){
+  float p=max(pixel,1e-4),w=min(width,period*0.9);
+  return clamp((pulseIntegral(x+p*0.5,period,w)-pulseIntegral(x-p*0.5,period,w))/p,0.0,1.0);
+}
 float rectD(vec2 q, vec2 hs){ vec2 d = abs(q) - hs; return max(d.x, d.y); }
 // window outline distance (negative inside). head 0 flat, 1 round (semicircle), 2 segmental arc
 float winD(vec2 q, vec2 hs, int head){
@@ -710,6 +721,18 @@ const GLSL_WALL = /* glsl */`
     float mesh = 0.86 + 0.14 * step(0.5, fract((u * bw) / 0.02)) * step(0.5, fract(y / 0.02));
     col = mix(col, canvas * mesh, bGreenNet ? 0.62 : 0.78);
     avgc = mix(avgc, canvas, 0.6);
+  }
+  if((fl & 4194304)!=0 && !bBlank && arch>0 && arch<18 && arch!=12 && arch!=15 && fcls>=0){
+    // The far Neva bank is commonly 0.8-2m/pixel. Keep its actual bay/storey
+    // rhythm there while mullions, grime and tiny mouldings use the old fade.
+    float wx=apertureAA(u*bw,bw,2.0*hw,fwc.x);
+    float wy=apertureAA(fy-sill-hh+fh*0.5,fh,2.0*hh,fwc.y);
+    vec3 glass=mix(uGlassLo,uGlassHi,0.32);
+    vec3 coarse=mix(wall,glass,wx*wy*0.92);
+    float frameX=apertureAA(u*bw,bw,2.0*hw+0.22,fwc.x);
+    float frameY=apertureAA(fy-sill-hh+fh*0.5,fh,2.0*hh+0.22,fwc.y);
+    coarse=mix(coarse,trim,max(0.0,frameX*frameY-wx*wy)*0.8);
+    avgc=coarse;
   }
   col = mix(avgc, col, detail);
   diffuseColor.rgb = col;

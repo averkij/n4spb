@@ -21,7 +21,7 @@ import { buildClutter } from './clutter.js';
 export function buildDetails(ctx, { root, M, info, styles, owned, net }) {
   const out = { triangles: 0, entrances: [], report: {} };
   // the margin of the data (beyond the play area + 50 m; the play area is the union of the eight rectangles) only gets walls / cornices / decks / colliders
-  const near = info.filter((r) => ctx.L.inPlay(r.st.ob.cx, r.st.ob.cz, -50));
+  const near = info.filter((r) => !r.b.waterfront && ctx.L.inPlay(r.st.ob.cx, r.st.ob.cz, -50));
   const run = (name, fn) => {
     const started = performance.now();
     if (ctx.recordBake) console.log(`[city-detail] ${name} start`);

@@ -353,11 +353,28 @@ function canalArch(K, PM, ctx, svc) {
     if (Math.abs(nu) < 0.9) continue;
     K.onEdgeFn(e, (len) => {
       const cx = localOnEdge(e, cv[0], cv[1]).u, R = 6.0, y0 = -0.6;
-      const holes = [{ x: cx, y0, w: 2 * R, h: 6.05, head: 'arch' }];
-      K.wallWithHoles(cream, 0, len, y0, 14.3, holes, 4, 4);
+      // The water opening is a notch, not a closed Shape hole touching the
+      // wall's lower edge. Triangulating that coincident edge produced pale
+      // crossbars across the canal at y0, one on each face of the gallery.
+      const archPoints = (r, reverse = false) => Array.from({ length: 25 }, (_, i) => {
+        const a = Math.PI * (reverse ? i / 24 : 1 - i / 24);
+        return [cx + Math.cos(a) * r, y0 + 0.05 + Math.sin(a) * r];
+      });
+      K.wallQuad(cream, 0, cx - R, y0, 14.3, 4);
+      K.wallQuad(cream, cx + R, len, y0, 14.3, 4);
+      const crown = new THREE.Shape();
+      crown.moveTo(cx - R, y0 + 0.05);
+      for (const p of archPoints(R).slice(1)) crown.lineTo(...p);
+      crown.lineTo(cx + R, 14.3); crown.lineTo(cx - R, 14.3); crown.closePath();
+      const crownGeo = new THREE.ShapeGeometry(crown);
+      P.geo(cream, crownGeo, 0, 0, 0); crownGeo.dispose();
       // stepped rusticated ring with radial joints and a keystone
       for (const [sw, d, m] of [[1.1, 0.22, shade], [0.55, 0.36, cream]]) {
-        const s = new THREE.Shape(); archPath(s, cx, y0, 2 * R + 2 * sw, 0.05, false); const hole = new THREE.Path(); archPath(hole, cx, y0, 2 * R, 0.05, true); s.holes.push(hole);
+        const s = new THREE.Shape(); s.moveTo(cx - R - sw, y0);
+        for (const p of archPoints(R + sw)) s.lineTo(...p);
+        s.lineTo(cx + R + sw, y0); s.lineTo(cx + R, y0);
+        for (const p of archPoints(R, true)) s.lineTo(...p);
+        s.lineTo(cx - R, y0); s.closePath();
         P.extrude(m, s, 0, d, 1, 12);
       }
       P.box(shade, cx - 0.6, cx + 0.6, 6.0, 7.6, 0, 0.5, 'kb');

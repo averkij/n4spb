@@ -2,12 +2,12 @@
 //   * CHAIN BOLLARDS along the Nevsky kerbs: black cast iron post 0.85 m (flared base, collar, ball finial) every 2.6 m, a black chain sagging 0.22 m between neighbours;
 //     interrupted at crossings, bus stops and junction mouths (walks.js decides where). Instanced (posts and chain spans), colliders on the posts.
 //   * GUARD RAILS along Ligovsky and around Vosstaniya Square: black cast-iron panels 2.5 m x 1.0 m (top rail, pickets, bottom rail, posts) with a hanging flower box of pink
-//     petunias on the street side. Instanced panels cut to the run.
+//     petunias on the street side. Each panel breaks off with its pickets and flower box, opening its own collider gap (12 km/h anchor).
 // KNOCKABLE (core/knock.js, docs/DRIVING-COLLISIONS.md): the bollard posts break off at the foot; the chain spans are single light bodies of their own (one thin collider per SPAN, not the merged boxes of the rails:
 //   a car meeting the chain between two posts pushes it down and drives on) and fall with their post (the onKnock of a post takes the one or two spans that hang on it). Without ctx.knock (headless tools)
 //   the spans are one static mesh again; the colliders are per span in both cases.
 // A block has chains OR rails, never both. Returns { guardRails: [{id, pts}], stats }.
-// SOLID (2026-10-07, "people walk through the fences"): the panels and the chain spans have thin colliders (addFenceBoxes: the segments of a run merged into long boxes, flagged `fence`), so the player
+// SOLID (2026-10-07, "people walk through the fences"): panels and chain spans have individual thin colliders (addFenceBoxes, flagged `fence`), so the player
 //   and, through people/nav.js (obstacles -> segBlocked / pushOut), every pedestrian is stopped by them; before, only the bollard posts were solid and the whole railing was open. The runs end where
 //   the pavement has its openings (walks.js: crossings, bus stops, junction mouths). Two further rules live here: (1) a panel is cut to the stretch that no placed panel covers (the old "drop the panel
 //   whose middle is near another's" test punched holes of up to 1.1 m into the rails: the middle of the short last panel of a run was computed as 1.25 m from its start), (2) a run longer than
@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { VB } from './vb.js';
 import { PointGrid } from './util.js';
-import { instances, INST_STATS } from './furn.js';
+import { INST_STATS } from './furn.js';
 import { knockInstances } from '../lib/knock-inst.js';
 import { WALK_Y } from './surface.js';
 
@@ -120,7 +120,7 @@ export function buildBarriers(ctx, net, walks, poles, root, lamps = []) {
     });
   }
   // solid, per SPAN: a thin `fence` box each (people/nav.js reads them as walls: nobody steps through the chain between two bollards; the runs end at the crossings), the handle kept for the knock record
-  // (the rails keep their merged boxes below). The span ends are a hand's breadth beyond the posts, a junction fillet may shorten a box or leave a span without one.
+  // The span ends are a hand's breadth beyond the posts; a junction fillet may shorten a box or leave a span without one.
   const clearOfRoad = (x, z) => net.cover(x, z, {}) < -0.1;                         // (net.cover: > 0 on the asphalt incl. parking pockets and junction fillets)
   const tFence = (typeof performance !== 'undefined' ? performance : Date).now();
   const spanBox = new Array(ch.length).fill(null);
@@ -140,7 +140,7 @@ export function buildBarriers(ctx, net, walks, poles, root, lamps = []) {
   if (ch.length) INST_STATS['pt-chain-links'] = { n: ch.length, tris: Math.round((chain.index ? chain.index.count : chain.attributes.position.count) / 3 * ch.length) };
   out.stats.posts = posts.length; out.stats.chains = ch.length; out.stats.chainGates = chainGates;
   // ---- guard rails: panels along every run
-  const rail = railModel(), pan = [], panBox = [];
+  const rail = railModel(), pan = [];
   // the segments of the placed panels by 4 m cell (the neighbour test of the runs that share a kerb line)
   const placed = new Map(), PC = 4;
   const eachCell = (x0, z0, x1, z1, fn) => { for (let a = Math.floor((Math.min(x0, x1) - 0.7) / PC); a <= Math.floor((Math.max(x0, x1) + 0.7) / PC); a++) for (let b = Math.floor((Math.min(z0, z1) - 0.7) / PC); b <= Math.floor((Math.max(z0, z1) + 0.7) / PC); b++) fn(a * 8192 + b); };
@@ -164,12 +164,10 @@ export function buildBarriers(ctx, net, walks, poles, root, lamps = []) {
     if (l - t > 0.3) out.push([t, l]);
     return out;
   };
-  const runSegs = [];                                                 // the segments of the drawn panels in run order: [[ax, az, bx, bz] ...] per run (merged into the colliders below)
   const railRuns = [];                                                  // the runs of walks.js with their gates cut out (a piece keeps the id of its run + 'g<k>')
   walks.rails.forEach((r, idx) => splitAtGates(r.pts, GATE_EVERY, GATE_W).forEach((pts, k) => railRuns.push({ r, pts, id: 'rail' + idx + (k ? 'g' + k : '') })));
   out.stats.gates = railRuns.length - walks.rails.length;
   railRuns.forEach(({ r, pts, id }) => {
-    const segs = []; runSegs.push(segs);
     out.guardRails.push({ id, pts });
     // the street side of a run on side `r.side` of a way: the road is on the -normal side; the flower box hangs toward the road
     for (let i = 0; i + 1 < pts.length; i++) {
@@ -191,7 +189,7 @@ export function buildBarriers(ctx, net, walks, poles, root, lamps = []) {
         for (const [u0, u1] of uncovered(ax, az, dx, dz, l)) {
           const sx = ax + dx * u0, sz0 = az + dz * u0, ex = ax + dx * u1, ez = az + dz * u1;
           const it = { x: toRoad ? sx : ex, y: WALK_Y, z: toRoad ? sz0 : ez, rotY: toRoad ? rotY : rotY + Math.PI, sz: (u1 - u0) / rail.len };
-          pan.push(it); panBox.push(it); segs.push([sx, sz0, ex, ez]); markPlaced(sx, sz0, ex, ez);
+          pan.push(it); markPlaced(sx, sz0, ex, ez);
         }
         ax += dx * l; az += dz * l; left -= l;
       }
@@ -204,13 +202,23 @@ export function buildBarriers(ctx, net, walks, poles, root, lamps = []) {
     g.fillRect(0, h * 0.28, w, 3);
   }, { key: 'pt-pickets' });
   const mPick = ctx.mat.toon(IRON, { map: picketTex, alphaTest: 0.5, side: 'double', name: 'pt-pickets' });
-  const pk = instances(ctx, rail.pickets, mPick, pan, 'pt-rail-pickets', { shadow: false }); if (pk) ctx.noOutline(pk);
-  instances(ctx, rail.iron, mVC, pan, 'pt-rails');
-  instances(ctx, rail.box, mVC, panBox, 'pt-rail-flowers', { shadow: false });
+  // One body and collider per visible panel: an impact carries the iron,
+  // pickets and flower box together and opens only that panel's gap.
+  const panelItems = new Array(pan.length).fill(null);
+  const panelRuns = pan.map(p => [[p.x, p.z, p.x + Math.sin(p.rotY) * rail.len * p.sz, p.z + Math.cos(p.rotY) * rail.len * p.sz]]);
+  out.stats.railBoxes = FENCES_OFF ? 0 : addFenceBoxes(ctx, panelRuns, 0.12, 1.1, clearOfRoad, (box, i) => { panelItems[i] = box; });
+  const placePanel = p => new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotY), new THREE.Vector3(1, 1, p.sz));
+  const panels = knockInstances(ctx, { name: 'pt-guard-rails', spots: pan, items: panelItems, far: 360,
+    parts: [
+      { geo: rail.pickets, mat: mPick, name: 'pickets', shadow: false, noOutline: true, place: placePanel },
+      { geo: rail.iron, mat: mVC, name: 'iron', place: placePanel },
+      { geo: rail.box, mat: mVC, name: 'flowers', shadow: false, place: placePanel },
+    ],
+    rec: p => ({ kind: 'fence', x: p.x + Math.sin(p.rotY) * rail.len * p.sz / 2, z: p.z + Math.cos(p.rotY) * rail.len * p.sz / 2,
+      rotY: p.rotY - Math.PI / 2, mass: 45, h: 1.1, w: rail.len * p.sz + 0.1, d: 0.3, r: 0.15, anchored: 12, hitK: 0.2, metal: true }),
+  });
+  out.stats.knockRails = panels.records.filter(Boolean).length;
   out.stats.rails = pan.length;
-  // solid: the player and the pedestrians (people/nav.js reads the thin `fence` boxes as walls for its lattice and routes) are stopped by the panels like by the real railing; the runs end where the
-  // pavement has its openings (crossings, bus stops, junction mouths), so the gaps are open
-  out.stats.railBoxes = FENCES_OFF ? 0 : addFenceBoxes(ctx, runSegs, 0.12, 1.1, clearOfRoad);
   out.stats.fenceMs = Math.round((typeof performance !== 'undefined' ? performance : Date).now() - tFence);
   return out;
 }

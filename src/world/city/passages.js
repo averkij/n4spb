@@ -16,6 +16,7 @@ const GRID = 16;
 export function planPassages(ctx, net, list) {
   const grid = new Map();
   for (const [, r] of net.rec) for (const ring of r.rings) for (const e of ring.edges) {
+    if(r.b.waterfront)continue; // panorama never adds gates, tunnel colliders or navigation
     if ((r.b.minH || 0) > 0.5) continue;                 // a raised part (room over the arch) is the roof of the passage: the arch belongs to the body below it, never cut into the part (its spring line is above the part's top: a hole)
     if (!e.pieces.some((p) => p.yLow < 0.2 && p.t1 - p.t0 > 3)) continue;
     const x0 = Math.min(e.a[0], e.b[0]) - 2, x1 = Math.max(e.a[0], e.b[0]) + 2, z0 = Math.min(e.a[1], e.b[1]) - 2, z1 = Math.max(e.a[1], e.b[1]) + 2;
@@ -54,6 +55,7 @@ export function planPassages(ctx, net, list) {
   // same building) when one lies straight behind the gate; no courtyard behind -> no gate (a blind tunnel would be worse than a plain wall)
   let dossierGates = 0;
   for (const [, rec] of net.rec) {
+    if(rec.b.waterfront)continue;
     const spec = rec.st && rec.st.gate; if (!spec || rec.b.minH > 0.5) continue;
     let best = null;
     for (const ring of rec.rings) if (!ring.hole) for (const e of ring.edges) { if (e.street && !e.gates && e.pieces.some((p) => p.yLow < 0.2) && (!best || e.len > best.len)) best = e; }

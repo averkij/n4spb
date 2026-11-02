@@ -52,7 +52,9 @@ export class ColorBuilder {
 
 // side profile, travelled bottom (outward) -> front (up) -> top (inward); the normal of a segment is the travel direction rotated by -90 degrees
 export const CORNICE = [[0, 0], [0.25, 0], [0.25, 0.28], [0.8, 0.28], [0.8, 0.78], [0.6, 1.0], [0.0, 1.0]];
-export const CORNICE_SIMPLE = [[0, 0], [0.3, 0], [0.3, 0.42], [0.0, 0.5]];
+// The small courtyard moulding still needs a fascia up to the common deck
+// datum. Ending at 0.5 left a half-metre opening below every flat roof here.
+export const CORNICE_SIMPLE = [[0, 0], [0.3, 0], [0.3, 0.42], [0.0, 0.5], [0.0, 1.0]];
 export const CORNICE_H = 1.0;
 
 /** unit miter vector at vertex i of a ring (offset by d = V + M * d is the corner of the two offset lines) */

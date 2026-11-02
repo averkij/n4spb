@@ -11,7 +11,8 @@
 // colour. Nothing here is closer than ~130 m to the playable area.
 import * as THREE from 'three';
 import * as L from '../layout.js';
-import { EXTENT, EXTENT_RECTS } from '../data/city.js';
+import { EXTENT, EXTENT_RECTS, BUILDINGS } from '../data/city.js';
+import { waterfrontCoverage } from './waterfront-coverage.js';
 import { FAR_FOG, FAR_GRID, fromGrid } from './farconf.js';
 import { farFogPatch, FAR_FOG_GLSL } from './ground.js';
 import { Acc, hash2, mix, sstep, lonLatToXZ, pointInRing, distToRing, coneCulled } from './util.js';
@@ -28,10 +29,12 @@ const SQ = L.SQUARE;
 const FAR_BELT = 1700;
 /** distance (m) from (x, z) to the coverage union (0 inside) */
 const distanceToCoverage = (x, z) => coverageDistance(EXTENT_RECTS, x, z);
+const onWaterfront = waterfrontCoverage(BUILDINGS);
 const TV = [30.3207, 59.9766];
 /** a far silhouette of a sight stands only while no landmark module draws the sight: the module is in the build list (ctx.buildList) and its claims (layout.GROUPS.<module>) exist. The strip builds none of the five sights
  *  that have a silhouette here (Peter and Paul, Smolny, the Strelka, the University embankment, the TV tower), so all of them are drawn across the Neva / on the horizon */
-const sightIsReal = (ctx, m) => (ctx.buildList || []).includes(m) && (L.GROUPS[m] || []).length > 0;
+const sightIsReal = (ctx, m) => ((ctx.buildList || []).includes(m) && (L.GROUPS[m] || []).length > 0) ||
+  ((ctx.buildList || []).includes('landmarksRiverfront') && (L.GROUPS.landmarksRiverfront||[]).some(g=>g.sourceModule===m));
 const WALL = [['#e3c288', 3], ['#d9917f', 2], ['#cfd6c4', 1.6], ['#b9d0b0', 1.5], ['#e6e2d8', 2.2], ['#e6d2a0', 2.6], ['#cc7f6c', 1.4], ['#aab2c0', 1.4], ['#e8b898', 1.6], ['#d8b8a0', 1.2], ['#c9b48a', 1.4]];
 const PANEL = [['#c9c5bb', 2], ['#d7c8aa', 1.5], ['#b8c4cc', 1.5], ['#cfc2b4', 1.2]];
 const pickFrom = (tab, r) => { let t = 0; for (const [, w] of tab) t += w; let x = r * t; for (const [c, w] of tab) { x -= w; if (x <= 0) return c; } return tab[0][0]; };
@@ -150,7 +153,7 @@ function genBlocks(ctx) {
   for (const [i, j] of cells) {
     const u0 = G.u0 + G.pu * i, v0 = G.v0 + G.pv * j, uc = u0 + G.pu / 2, vc = v0 + G.pv / 2, c = fromGrid(uc, vc);
     const d = Math.hypot(c.x - SQ.x, c.z - SQ.z), pd = d > RMAX ? distanceToCoverage(c.x, c.z) : 1e9, belt = d > RMAX; if (belt && pd > FAR_BELT) continue;
-    if (inE(c.x, c.z, 60)) continue;
+    if (inE(c.x, c.z, 60) || onWaterfront(c.x,c.z)) continue;
     if (nearRiver(c.x, c.z) || nearNeva(c.x, c.z) || rail(c.x, c.z) || lm.some((p) => Math.hypot(p[0] - c.x, p[1] - c.z) < 130)) continue;
     let dm = d; for (const q of ZONES.farCentres) dm = Math.min(dm, Math.hypot(c.x - q.x, c.z - q.z) + q.bias);      // the area's ZONES.farCentres (the strip: the historic centre reaches the Admiralty and over the Neva (Vasilievsky, Petrograd side): dense stone blocks there too)
     const dens = belt ? 0.92 * (1 - 0.55 * sstep(FAR_BELT * 0.5, FAR_BELT, pd)) : dm < 2600 ? 0.95 : dm < 3400 ? 0.82 : 0.82 * (1 - 0.85 * sstep(3400, RMAX, dm));
@@ -160,7 +163,7 @@ function genBlocks(ctx) {
     const ub = u0 + 9, ue = u0 + G.pu - 9, vb = v0 + 9, ve = v0 + G.pv - 9;
     const place = (lu, lv, w, dd, h, along, col, fh = 3.9) => {                    // lu / lv: centre in grid coords; along: 0 = long side along u, 1 = along v
       const p = fromGrid(lu, lv), rot = rot0 + (along ? Math.PI / 2 : 0);
-      if (inE(p.x, p.z, 8) || nearRiver(p.x, p.z) || nearNeva(p.x, p.z)) return;
+      if (inE(p.x, p.z, 8) || onWaterfront(p.x,p.z) || nearRiver(p.x, p.z) || nearNeva(p.x, p.z)) return;
       const bw = along ? dd : w, bd = along ? w : dd;
       if (spansWater(p.x, p.z, rot, bw, bd)) return;
       items.push({ x: p.x, z: p.z, rot, w: bw, d: bd, h, col, fh });

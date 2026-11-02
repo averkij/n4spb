@@ -47,6 +47,16 @@ points in its "exactly one median line" check. Lane lines, pocket lines, stop ba
 
 ## Numbers (2026-10-06, whole city)
 
+2026-11-02: the shared divider uses the two base carriageway widths (`hb`),
+before junction flares, pockets and iterative median infill. Perpendicular
+separation is used at a partner's split endpoint. This removes the artificial
+curves reported at `361.3,2.3,106,419.7,0` and applies to every paired roadway.
+The previous five-vertex outlier filter could leave smaller visible kinks.
+`tools/street-rendering-test.mjs` guards both width flares and split endpoints.
+Continuations of either carriageway do not hide their shared paint at OSM way
+seams. The audit probes the divider position, rather than a junction's flared
+asphalt edge.
+
 | | before | after |
 |---|---|---|
 | solid centre / median / pocket points the rules ask for that were painted | 74 % | 100 % (plan) |

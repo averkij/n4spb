@@ -126,7 +126,11 @@ export function buildTramRails(net, P, Bed, isOwned = null) {
         let prev = null;
         for (let i = 0; i < r.length; i++) {
           const a = r[Math.max(0, i - 1)], b = r[Math.min(r.length - 1, i + 1)]; let tx = b[0] - a[0], tz = b[1] - a[1]; const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
-          const nx = -tz, nz = tx, x = r[i][0] + nx * off, z = r[i][1] + nz * off, y = ROAD_Y + LIFT * 1.4;
+          const nx = -tz, nz = tx, x = r[i][0] + nx * off, z = r[i][1] + nz * off;
+          // Reserved tracks can run through raised mapped paving (y=0.12).
+          // Depth bias hid the buried rails only at a distance; use the real
+          // surface datum near the camera too. Road-running rails stay flush.
+          const y = (net.cover(x, z, {}) > -0.3 ? ROAD_Y : WALK_Y) + LIFT * 1.4;
           const v0 = P.vert(x + nx * rw / 2, y, z + nz * rw / 2, 0, 0, UP, col), v1 = P.vert(x - nx * rw / 2, y, z - nz * rw / 2, 1, 0, UP, col);
           if (prev) P.quad(prev[0], prev[1], v1, v0);
           prev = [v0, v1];

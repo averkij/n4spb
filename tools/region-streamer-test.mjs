@@ -33,4 +33,29 @@ assert.equal(loaded.length, 3, 'explicit loads must share requests');
 assert.deepEqual(released, loaded, 'hydrated regions must release packed metadata exactly once');
 assert.equal(streamer.stats.failed, 0);
 delete globalThis.requestIdleCallback;
-console.log('RESULT: OK (nearby streaming, deferred destination, teleport, deduplication)');
+
+// Simulate driving while a distant city decode is still outstanding. Road
+// surfaces need the other slot immediately, even when the browser has no idle
+// time. A road beyond the bounded near ring must remain unloaded.
+const idle2 = [], calls = [];
+globalThis.requestIdleCallback = fn => idle2.push(fn);
+let finishCity, active = 0, maxActive = 0;
+const slow = createRegionStreamer(ctx, {
+  async load(name) {
+    calls.push(name); active++; maxActive = Math.max(maxActive, active);
+    if (name === 'city-slow') await new Promise(resolve => { finishCity = resolve; });
+    active--; return { geometries: [], objects: [] };
+  },
+});
+await slow.register({ materials: [], textures: [], regions: [region('city-slow', 1000), region('street-surfaces-ahead', 1600), region('street-surfaces-far', 6000)] }, new THREE.Group());
+slow.start(); idle2.shift()(); await new Promise(resolve => setImmediate(resolve));
+assert.deepEqual(calls, ['city-slow']);
+slow.update(1300, 0); await new Promise(resolve => setImmediate(resolve));
+assert.deepEqual(calls, ['city-slow', 'street-surfaces-ahead'], 'driving cannot wait for the in-flight speculative city request or an idle callback');
+assert(slow.readyAt(1600, 0, 20), 'near road is fully hydrated');
+assert(!calls.includes('street-surfaces-far'), 'road priority does not load the entire area');
+assert(maxActive <= 2, 'road priority shares the two-slot decoding budget');
+finishCity(); await new Promise(resolve => setImmediate(resolve));
+while(idle2.length){idle2.shift()();await new Promise(resolve=>setImmediate(resolve));}
+delete globalThis.requestIdleCallback;
+console.log('RESULT: OK (nearby streaming, deferred destination, teleport, deduplication, road priority under stalled city decoding)');

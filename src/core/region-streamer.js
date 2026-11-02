@@ -72,6 +72,7 @@ export function createRegionStreamer(ctx, baked) {
   // Keep a generous ring ahead of the player, without decoding the entire
   // island in the background while they are trying to walk or drive.
   const prefetchRadius = 1400;
+  const roadRadius = 450;
   const fetchRegion = r => {
     if (r.state === 'ready') return Promise.resolve();
     if (r.promise) return r.promise;
@@ -105,6 +106,19 @@ export function createRegionStreamer(ctx, baked) {
     const list = within(px, pz, radius);
     // Limit decompression/attachment concurrency on both startup and teleports.
     for (let i = 0; i < list.length; i += 2) await Promise.all(list.slice(i, i + 2).map(fetchRegion));
+  };
+  // A slow speculative city request must not hold up the road the car is
+  // approaching. Use the second decoding slot for nearby street surfaces,
+  // without waiting for an idle callback or the running background pump.
+  const warmRoad = () => {
+    if (pending.size >= 2) return;
+    let next = null, nearest = roadRadius;
+    for (const r of regions) {
+      if (r.state !== 'queued' || !r.asset.startsWith('street-surfaces-')) continue;
+      const d = distance(r, x, z);
+      if (d <= nearest) { next = r; nearest = d; }
+    }
+    if (next) fetchRegion(next).catch(e => console.warn('[region]', e.message));
   };
   const idle = () => new Promise(resolve => typeof requestIdleCallback === 'function' ? requestIdleCallback(resolve, { timeout: 500 }) : setTimeout(resolve, 30));
   const pump = async () => {
@@ -158,9 +172,9 @@ export function createRegionStreamer(ctx, baked) {
     update(px, pz) {
       x = px; z = pz;
       const now = performance.now();
-      if (started && !running && now - lastPump >= 200) { lastPump = now; pump(); }
+      if (started && now - lastPump >= 200) { lastPump = now; warmRoad(); if (!running) pump(); }
     },
-    start() { started = true; pump(); },
+    start() { started = true; warmRoad(); pump(); },
     pending,
   };
 }

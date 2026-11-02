@@ -191,6 +191,12 @@ async function main() {
   for (const f of fs.readdirSync(outDir)) if (/^city(-[\w]+)?\.js$/.test(f) && !keep.has(f)) { fs.rmSync(path.join(outDir, f)); console.log('removed stale', f); }
   r.parts.forEach((P, i) => fs.writeFileSync(path.join(outDir, P.file), r.partTexts[i]));
   fs.writeFileSync(path.join(outDir, 'city.js'), r.facade);
+  // The visual shore strip is a separate product, not wider gameplay data.
+  // A live re-cut must reattach/regenerate it without changing PLAY / EXTENT.
+  if(outDir===path.join(root,'src','areas',area,'data')&&fs.existsSync(path.join(outDir,'waterfront.js'))){
+    const waterfront=spawnSync(process.execPath,[path.join(root,'tools/waterfront-data.mjs'),'--area',area],{cwd:root,stdio:'inherit'});
+    if(waterfront.status!==0)throw new Error('waterfront supplement regeneration failed');
+  }
   console.log(`written to ${outDir} (${Date.now() - t0} ms)`);
 }
 if (process.argv[1] && path.resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) await main();

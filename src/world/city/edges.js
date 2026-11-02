@@ -200,6 +200,10 @@ export function analyse(list, occluders = []) {
             const hit = pg.at(sx + nx * 2.5, sz + nz * 2.5) || pg.at(sx + nx * 5, sz + nz * 5);
             if (hit) e.street = { road: null, gap: 3, name: hit.name, square: true };
           }
+          // The opposite-bank visual strip deliberately imports no roads or
+          // navigation. Its exposed outer elevations still need the normal
+          // Petersburg facade grammar, rather than brown courtyard walls.
+          if (!e.street && r.b.waterfront) e.street = { road: null, gap: 3, name: r.b.addr?.street || '', waterfront: true };
         }
         ring.edges.push(e);
       }

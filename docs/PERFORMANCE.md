@@ -2418,3 +2418,101 @@ node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "-2493.
 node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-1700,7540,1.62" --json --diagnostics --out shots/fountain-refresh/after-library
 node tools/fountain-playtest.mjs --areas vasilyevsky,admiralty --q performance --out shots/fountain-playtest-final
 ```
+
+## 2026-11-02: waterfront views and rendering corrections, 9.4.0
+
+The river panorama now includes bounded surveyed waterfront strips and the
+existing Fortress, Strelka, University, Hermitage and Admiralty architectural
+models. Window rows retain analytic pixel coverage at cross-river distances.
+The additional architecture has finite feature ranges and no population,
+physical registration or frame callbacks. Supplemental city records use the
+normal baked region loader. See `WATERFRONT-VIEWS.md` for selection and ownership.
+
+Other corrections close the half-metre gap between simple courtyard cornices
+and roof decks, put reserved tram rails above raised paving, remove degenerate
+crossbars from the Winter Canal gallery arch, and base shared road dividers on
+carriageway widths before junction flares. Both carriageways' continuations
+remain clear of their shared paint. Station flower fences now have individual
+breakable panels; their iron, pickets and flower box move together, removing
+only the struck panel's collider. Near road regions can use the second decoding
+slot while a speculative city request is stalled, rather than waiting behind it.
+
+Controlled procedural screenshots are evidence of geometry and appearance,
+not driving FPS. In the isolated river sample at medium, 1600x700, the initial
+267 calls / 425,485 triangles become approximately 500 calls / 512,695 triangles
+with the waterfront architecture and filtered windows. The analytic windows
+add no meshes, textures or materials. Exact Palace CPU comparisons retain all
+31,464 existing city colliders and 24,940 navigation doors; the separate panorama
+adds no colliders or update callbacks.
+
+The following baseline uses normal baked loading, Edge/D3D11 on the RTX 3090 Ti,
+medium quality, 1280x720, 20 seconds of W input, no profiling or mid-run capture.
+Used heap and backing storage are separate CDP end samples in MiB.
+
+| Route / snapshot | Load s | Mean / p50 / p95 / max ms | >40 / >80ms | Mean draws | Distance m | Used / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Station, Vladimirsky 9.3.0 | 22.953 | 23.95 / 16.7 / 33.4 / 366.6 | 15 / 2 | 1,227 | 92 | 583 / 911 |
+| Moskovsky, 9.3.0 | 16.538 | 19.65 / 16.7 / 33.4 / 300.1 | 4 / 3 | 1,027 | 455 | 436 / 612 |
+
+Focused checks pass for shell closure, median widths/split endpoints, raised
+tram heads, a thrown flower panel and its untouched neighbour, the unobstructed
+canal opening and the retained vault. The delayed-city streaming regression
+proves that an approaching road loads without idle time, within the two-request
+budget. The default markings and wall audits, all Moskovskaya road/marking
+audits, and the station's focused furniture audit pass.
+
+Existing audit limitations remain explicit: the parked strip's furniture
+audit reports 74 Mikhailovsky Castle fence objects on narrow service roads;
+Palace's full markings audit reports one missing Kuznechny stop bar, also
+present before this round; Moskovskaya's wall audit reports one short low-wall
+sliver at (-754.4,5294.3). Nevsky's focused east, centre and west road-marking
+checks pass. The original transient grey-road report was not reproduced at a
+stationary camera; the demonstrated loading blockage is fixed and covered by
+the stalled-request test.
+
+Final matching-bake drives use the same settings and commands as the baseline,
+with no CPU audits running concurrently. All three have zero module errors
+and failed regions. Their end frames were opened and inspected.
+
+| Route / snapshot | Load s | Mean / p50 / p95 / max ms | >40 / >80ms | Mean draws | Distance m | Used / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Station, Vladimirsky 9.4.0 | 21.666 | 21.14 / 16.7 / 33.4 / 283.4 | 9 / 2 | 1,164 | 149 | 571 / 899 |
+| Moskovsky, 9.4.0 | 16.165 | 17.96 / 16.7 / 33.2 / 316.7 | 4 / 3 | 1,054 | 455 | 438 / 597 |
+| Admiralty gate, Palace 9.4.0 | 27.706 | 29.31 / 33.3 / 50.0 / 183.3 | 48 / 7 | 1,620 | 147 | 563 / 1,213 |
+
+These average approximately 47, 56 and 34 FPS. Station traffic/collision
+outcomes differ (149m versus 92m), so its mean/draw difference is not attributed
+to these changes. The Moskovsky routes cover the same distance. Admiralty is
+an additional stress sample, without a fresh controlled before run in this
+round; its 50ms p95 and transient hitches remain outside smooth 30 FPS.
+CDP samples describe used heap and backing storage separately, not retained
+memory. The grey-road priority correction has a controlled stalled-request
+regression; these drives alone do not prove reproduction of the original
+transient loading symptom.
+
+The normal baked Palace and Kronverk river views retain the facade window
+rhythm and actual landmark shells from both shores. The other final camera
+checks show the closed Moskovsky roof, rails reaching the camera, straight
+Nevsky double lines, an unobstructed Winter Canal opening with its bridge and
+vault intact, and one thrown flower-fence panel with standing neighbours.
+All seven scene PNGs and nine driving-control PNGs were opened and inspected.
+The real-page driving control test passes (entry, acceleration, nitro, cameras,
+braking, exit and bridge traversal); its optional broad fuzz is disabled.
+The quick boat suite passes all 28 checks. Existing shader compiler warnings
+and the duplicate `st_floor` texture-painter warning remain; final captures
+report no module or page errors.
+
+All sixteen areas were rebaked after the final source correction. The manifest
+check reports **16 fresh areas / 1,869 complete products / 756.2 MiB gzip**.
+Evidence and JSON diagnostics are under `shots/fixes-1102/`, including
+`bake-final.txt`, `bakecheck.txt`, `final-{palace,mosk,reverse}*`,
+`final-controls*`, `boat.txt` and the before/after drive files.
+
+```powershell
+node tools/drive-bench.mjs --area vladimirsky --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/fixes-1102/after-centre
+node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-1736,7325,0" --json --diagnostics --out shots/fixes-1102/after-mosk-drive
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/fixes-1102/after-admiralty
+node tools/drive-test.mjs --area palace --q medium --nofuzz --out shots/fixes-1102/final-controls
+node tools/area.mjs palace tools/boat-test.mjs --quick
+node tools/bake-manifest-check.mjs
+```
