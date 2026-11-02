@@ -2183,3 +2183,99 @@ views and the three reported bridge/quay views were opened and inspected under
 normal loading. Artifacts are `shots/library/shipping-final_*`,
 `shipping-playtest-final.txt`, `shots/bridge-seams/shipping_*` and
 `shots/bridge-underdeck/shipping_*`.
+
+## 9.2.0 — Landmark facade and fountain pass (2026-11-02)
+
+Singer House remains static and batched with shared materials. Its revised
+corner glazing, dormers, bronze ornament, lantern and globe add approximately
+59k triangles to landmarksF (328,853 total). Moskovskaya's complete landmark
+module measures 275,087 triangles, below the revised 300k contract: it now owns
+Basseynaya 53 as well as the library and its animated water. The library itself
+is 41,081 static triangles (45k focused limit). Windows use flat frame/pane
+geometry, keeping the extra light-well return skins inexpensive.
+
+The fountain uses four bounded dynamic instance meshes: 1,152 jet segments,
+864 droplets on medium/high (432 on low), 144 impact rings and 12 submerged
+light patches. They cast no shadows and skip the outline pass. A single
+allocation-free callback skips buffer uploads beyond 390m; authored render
+range is 350m. Fixed conservative bounds cover every pulse and ripple. No
+engine, transport, other-area update loop or world-wide light was added.
+
+The focused geometry/player tests pass: four bidirectional Basseynaya passages,
+solid columns/cores, a walkable roof, deterministic fountain time, evening/night
+lighting, distant update suppression, library return glazing, eight open
+entrance bays, ten sky-open courts, the raised stair walk and basin entry/exit.
+The underpass regression also passes all 16 walking routes and four car
+crossings. Source module/city checks, layout, closure/import/runtime lints pass.
+Depth probes at the supplied viewpoints: Singer 3/2 noisy pixels; library and
+pilotis zero. The library/fountain overview exposed coplanar stair trim; inset
+tread nosings reduce it from 891 pixels (0.097%) to 13 (0.001%).
+
+Moskovskaya roads and strict markings pass. Palace's road wrapper still fails
+with the documented furniture violations (90 on-road, 131 edge, 175 median);
+surface/ribbon checks pass. Its marking audit still lacks the existing
+Kuznechny Lane stop bar, approach 2 at n1562060894. These older failures remain
+visible; no audit exemption was introduced. Evidence: `shots/landmark-refresh/`.
+
+Normal matching-bake drives use Edge / ANGLE D3D11 / RTX 3090 Ti, 1280×720,
+medium, 20 seconds of W input, no profiling/mid-shot, and CDP diagnostics
+collected after timing. GPU jobs run serially; no audits overlap timed drives.
+
+| Route | Version | Load s | Frame ms mean / p50 / p95 | Max ms | Frames >40 / >80 ms | Mean draws | Travel m | CDP used / backing MiB |
+| --- | --- | ---: | --- | ---: | --- | ---: | ---: | --- |
+| Station / Nevsky | 9.1.0 | 28.39 | 26.09 / 33.2 / 33.4 | 200.1 | 10 / 4 | 1283 | 355 | 552 / 1329 |
+| Station / Nevsky | 9.2.0 | 27.98 | 22.97 / 16.7 / 33.4 | 283.5 | 8 / 3 | 1161 | 352 | 561 / 1335 |
+| Library approach | 9.1.0 | 17.52 | 19.45 / 16.7 / 33.4 | 150.1 | 8 / 3 | 1234 | 77 | 537 / 634 |
+| Library approach | 9.2.0 | 17.32 | 19.24 / 16.7 / 33.4 | 150.0 | 8 / 3 | 1129 | 118 | 439 / 595 |
+| Admiralty (final only) | 9.2.0 | 27.36 | 36.87 / 33.4 / 50.1 | 166.7 | 112 / 5 | 1819 | 101 | 445 / 701 |
+
+Station and library averages are approximately 44 and 52 FPS. Traffic/collision
+outcomes differ: the station car stops at a different angle and loads 36 versus
+37 regions; the library drive travels 118m instead of 77m and loads 49 versus
+48 regions. These are observations, not evidence of a speedup. Admiralty has no
+paired baseline in this round and averages only 27 FPS: comfortable 30 FPS
+throughout the old centre remains unfinished. Submission cost, dense traffic
+and region/GC hitches remain the next measured investigation. CDP used heap
+and backing storage are distinct end samples, not retained-memory estimates.
+All five drives have zero module errors and zero failed regions.
+
+Reproduce the final samples:
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/landmark-refresh/after-station
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/landmark-refresh/after-admiralty
+node tools/drive-bench.mjs --area moskovskaya --q medium --seconds 20 --start "-1700,7540,1.62" --json --diagnostics --out shots/landmark-refresh/after-library
+node tools/moskovskaya-playtest.mjs
+```
+
+Only Palace, Admiralty and Moskovskaya are rebaked. All sixteen live manifests
+pass `bake-manifest-check.mjs`: 1,612 complete products / 730.7 MiB gzip.
+
+The first normal-page pilotis walk caught generated lot cars across the new
+opening. A Moskovskaya-only parking hook now removes the overlapping central
+slots and paint, without forbidding the driven car. A mapped-lot regression
+guards both passage lanes. Moskovskaya was rebaked again (revision
+`8d6bb7bbab3f7e427dc8`); local strict furniture/surface audits and the full
+Moskovskaya marking audit pass after this last correction.
+
+The final normal-page playtest passes **35/35 checks**, including actual
+bidirectional pilotis walking, moving fountain droplets, car and boat
+boarding/acceleration/steering/braking/exit, raised library entry, the complete
+underpass walk and destination streaming. No module/browser errors or failed
+regions occur. The final matching-bake views were opened and inspected.
+Integrated depth probes: library return 0 noisy pixels, pilotis 8 (0.001%),
+fountain overview 17 (0.002%) and Singer reference view 31 (0.003%), all below
+0.02%. Artifacts: `shipping-final_*`, `shipping-night_*`, `z-shipping_*`,
+`z-singer-shipping_*` and `shipping-playtest-final.txt` in
+`shots/landmark-refresh/`; playtest images/report are in
+`shots/moskovskaya-playtest/`.
+
+The library drive was repeated after the final parking correction, with the
+same command and `--out shots/landmark-refresh/after-library-final`: load 17.35s,
+frame mean/p50/p95 **19.62 / 16.7 / 33.4ms**, max 150.1ms, 10 frames >40ms / 3
+>80ms, mean 1,117 draws, 81m travelled, CDP used/backing **423 / 595 MiB**.
+It ends with 48 loaded regions and no failed regions/module errors, averaging
+about 51 FPS. The earlier 118m sample above is the initial 9.2.0 sample; this
+81m run is the final source+bake snapshot. Its traffic stop/heading still
+differs from the 77m baseline, so the 0.17ms mean difference is not attributed
+to the fountain. Final source, bake and generated revision map agree.

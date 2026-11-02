@@ -102,6 +102,13 @@ try{
   await page.evaluate(async()=>{await __regions.ensureAt(-1795,7452);__setCam(-1795,null,7452,90,0);__ctx.gates.teleported();});
   const entrance=await walkTo(-1815,7452);check('library steps reach raised colonnade',entrance.y>1.3&&entrance.y<1.65,entrance);
   await walkTo(-1795,7452);
+  await page.evaluate(async()=>{await __regions.ensureAt(-1232.9,7685.3);__setCam(-1232.9,null,7685.3,0,0);__ctx.gates.teleported();});
+  await walkTo(-1232.9,7667);await walkTo(-1232.9,7685.3);
+  check('Basseynaya pilotis crosses in both directions on the normal baked page',Math.abs((await state()).player.y)<.1);
+  await page.screenshot({path:path.join(out,'basseynaya-pilotis.png')});report.screenshots.push('basseynaya-pilotis.png');
+  await page.evaluate(async()=>{await __regions.ensureAt(-1760,7456);__setCam(-1760,4,7456,90,10);});
+  const fountainBefore=await page.evaluate(()=>Array.from(__ctx.dynamicRoot.children.find(m=>m.name==='rnb-water-droplets').instanceMatrix.array));await sleep(600);
+  check('integrated fountain droplets move',await page.evaluate(before=>__ctx.dynamicRoot.children.find(m=>m.name==='rnb-water-droplets').instanceMatrix.array.some((v,i)=>v!==before[i]),fountainBefore));
   await page.evaluate(async()=>{await __regions.ensureAt(-1736.3,7401);__setCam(-1736.3,null,7401,0,0);__ctx.gates.teleported();});
   await walkTo(-1736.3,7398.3);const down=await walkTo(-1736.8,7382.9);
   check('underpass stairs descend to actual tunnel floor',down.y<-3.5&&down.y>-4.1,down);

@@ -1,11 +1,12 @@
 // Current Chasha Znaniy forecourt; surveyed outer scallops, reconstructed
 // unified basin/six bowls from the owner's seven photographs and Vodokanal.
-// docs/research/russian-national-library.md. No runtime callbacks.
+// docs/research/russian-national-library.md. Water animation: library-water.js.
 import * as THREE from 'three';
 import { GREEN, MONUMENTS } from '../data/city.js';
 import { triangulateRing, subtractConvex, clipHalf } from '../environment/clip.js';
 import { knockInstances } from '../lib/knock-inst.js';
 import { roadClear, boxClear } from './common.js';
+import { libraryWater } from './library-water.js';
 
 import { FORECOURT_PAVED_RING, FORECOURT_POOL, forecourtContains, forecourtPointInRing as pointInFlat } from './library-forecourt-plan.js';
 export * from './library-forecourt-plan.js';
@@ -15,7 +16,6 @@ const BOWLS=[{x:-1771.5,z:7453.5,r:5.4,h:1.45},{x:-1758.3,z:7453.3,r:5.6,h:1.65}
  {x:-1773.6,z:7464.4,r:1.85,h:1.32},{x:-1754.1,z:7473.7,r:1.95,h:1.32}];
 function fill(K,mat,o,y,physical=false){for(const t of triangulateRing(o)){K.P.fan(mat,t.map(([x,z])=>[x,y,z]),[0,1,0],p=>[p[0]/4,p[2]/4]);if(physical)K.ctx.physics.addWalkTriangle(t.map(([x,z])=>[x,y,z]),.12);}}
 function rim(K,o,mat,y=.43,width=.36,physical=true,y0=.15,draw=true){for(let i=0;i<o.length;i+=2){const j=(i+2)%o.length,ax=o[i],az=o[i+1],bx=o[j],bz=o[j+1],dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz);if(l<.01)continue;const cx=(ax+bx)/2,cz=(az+bz)/2,rot=Math.atan2(dx,dz);if(draw){K.P.push(cx,0,cz,rot);K.P.box(mat,-width/2,width/2,y0,y,-l/2,l/2);K.P.pop();}if(physical)K.ctx.physics.addWalkBox(cx,cz,width,l,rot,y,y0);}}
-function jets(K,mat,x,z,y,r,n,height){for(let i=0;i<n;i++){const a=i*Math.PI*2/n,ox=Math.cos(a)*r,oz=Math.sin(a)*r;let prev=[x+ox,y,z+oz];for(let j=1;j<=4;j++){const t=j/4,p=[x+ox*(1-.3*t),y+height*4*t*(1-t),z+oz*(1-.3*t)];K.detail.cyl(mat,prev,p,.027,.018,3,false);prev=p;}}}
 function fountain(K,M){
  const {ctx}=K;fill(K,M.floor,FORECOURT_POOL,.16,true);fill(K,M.water,FORECOURT_POOL,.24);rim(K,FORECOURT_POOL,M.rim);
  for(const b of BOWLS){
@@ -54,15 +54,12 @@ function fountain(K,M){
     ctx.physics.addWalkBox((xa+xb)/2,b.z,.5,4.5,0,y,.16);
    }
   }
-  jets(K,M.foam,b.x,b.z,b.h-.10,b.r*.54,b.r>3?24:8,b.r>3?3.6:1.15);
-  if(b.r>3)jets(K,M.foam,b.x,b.z,b.h-.1,b.r*.15,8,5.1);
  }
  // The registry returns its first matching surface, so upper bowl water
  // precedes the main pool underneath it.
  ctx.physics.addWater({ring:FORECOURT_POOL,level:.24});
- // Low nozzles around the larger pools; exact plumbing/nozzle count estimated.
- for(const b of BOWLS.slice(0,2))jets(K,M.foam,b.x,b.z,.25,b.r+1,24,1.25);
- K.svc.libraryFountain={id:'chasha-znaniy',ring:FORECOURT_POOL,level:.24,bowls:BOWLS};
+ const animation=libraryWater(ctx,BOWLS);
+ K.svc.libraryFountain={id:'chasha-znaniy',ring:FORECOURT_POOL,level:.24,bowls:BOWLS,animation};
 }
 function landscaping(K,M){
  const gardens=GREEN.flatMap(g=>g.kind==='grass'?g.polys.filter(p=>p.o.some((x,i)=>!(i%2)&&forecourtContains(x,p.o[i+1]))):[]);

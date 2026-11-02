@@ -132,11 +132,24 @@ export function library(K,records){
         }
         wall(P,M.stone,e,isMain?A.floor:0,h,ph);
         onEdge(D,e,len=>{
-          const n=len>2.4?Math.floor(len/3.8):0;
+          // Rounded wings contain many 1.5–3.7 m source edges. Floor(len/3.8)
+          // silently removed every window there, leaving blank curved walls.
+          const n=len>.85?Math.max(1,Math.round(len/3.8)):0;
           for(let i=0;i<n;i++)for(let y=isMain?3.0:1.2;y+2.6<h-.5;y+=isMain?4.1:3.8){
-            const u=(i+.5)*len/n;
-            D.box(M.frame,u-.83,u+.83,y,y+2.5,.025,.08);
-            D.quad(M.glass,[u-.73,y+.1,.09],[u+.73,y+.1,.09],[u+.73,y+2.4,.09],[u-.73,y+2.4,.09],[0,0,1]);
+            const u=(i+.5)*len/n,half=Math.min(.83,len/n*.5-.18);
+            D.quad(M.frame,[u-half,y,.08],[u+half,y,.08],[u+half,y+2.5,.08],[u-half,y+2.5,.08],[0,0,1]);
+            D.quad(M.glass,[u-half+.1,y+.1,.09],[u+half-.1,y+.1,.09],[u+half-.1,y+2.4,.09],[u-half+.1,y+2.4,.09],[0,0,1]);
+            D.quad(M.stone,[u-.035,y+.1,.14],[u+.035,y+.1,.14],[u+.035,y+2.4,.14],[u-.035,y+2.4,.14],[0,0,1]);
+            D.quad(M.stone,[u-half+.1,y+1.65,.14],[u+half-.1,y+1.65,.14],[u+half-.1,y+1.71,.14],[u-half+.1,y+1.71,.14],[0,0,1]);
+            // The open portico also exposes the RETURNS of the small light
+            // wells. Finish their outward backing as well as the well-facing
+            // skin; otherwise this viewpoint sees an entirely blank cylinder.
+            {
+              const z=-.54;
+              D.quad(M.frame,[u-half,y,z],[u+half,y,z],[u+half,y+2.5,z],[u-half,y+2.5,z],[0,0,-1]);
+              D.quad(M.glass,[u-half+.1,y+.1,z-.025],[u+half-.1,y+.1,z-.025],[u+half-.1,y+2.4,z-.025],[u-half+.1,y+2.4,z-.025],[0,0,-1]);
+              D.quad(M.stone,[u-.035,y+.1,z-.05],[u+.035,y+.1,z-.05],[u+.035,y+2.4,z-.05],[u-.035,y+2.4,z-.05],[0,0,-1]);
+            }
           }
         });
       }
@@ -193,7 +206,9 @@ export function library(K,records){
   for(const s of LIBRARY_STEPS){
     P.box(M.granite,s.x0,s.x1,0,s.y,s.z0,s.z1);
     const it=ph.addWalkBox((s.x0+s.x1)/2,A.z,s.x1-s.x0,s.z1-s.z0,0,s.y,0);it.sticky=true;
-    D.box(M.joint,s.x1-.035,s.x1,s.y-.025,s.y+.008,s.z0,s.z1);
+    // Inset tread nosing: the old box shared its vertical face with the
+    // granite riser and flickered across the full stair width in depth QA.
+    D.quad(M.joint,[s.x1-.10,s.y+.025,s.z0],[s.x1-.04,s.y+.025,s.z0],[s.x1-.04,s.y+.025,s.z1],[s.x1-.10,s.y+.025,s.z1],[0,1,0]);
   }
   // Two granite spheres flank the climb, as in both supplied front photos.
   for(const z of[A.z-18.1,A.z+18.1]){

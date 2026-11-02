@@ -91,7 +91,7 @@ const BUDGET_AREA = {
   // Moskovskaya's 14.39 km² source+map cut: measured static totals + ~15%.
   // Fine landmark counts are tracked separately from its generic city budget.
   moskovskaya: { environment: 980e3, streets: 1.39e6, city: 1.37e6, props: 345e3,
-    landmarksMoskovsky: 27e3, landmarksMoskovskaya: 210e3,
+    landmarksMoskovsky: 27e3, landmarksMoskovskaya: 300e3,
     landmarksMoskovskayaPark: 260e3, coastalBridges: 345e3 },
   north: { landmarksOktyabrsky: 57e3 },
   // the two live areas (measured at 320efb6 with `node tools/area.mjs <id> tools/check.mjs --area-modules`, + about 15 %): their territories are 7.0 and 9.4 km2 against the strip's ~2 km2, so the generic modules build 2 to 2.5 times the strip's triangles

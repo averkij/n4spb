@@ -21,6 +21,12 @@ export function build(K) {
     sign: T('#ffffff', { name: 'sg-sign', map: ctx.tex.draw(512, 64, (g, w, h) => { g.fillStyle = '#d9b04a'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a2a10'; g.textAlign = 'center'; g.textBaseline = 'middle'; ctx.tex.fitText(g, 'Компанiя Зингеръ', w / 2, h / 2 + 2, w * 0.9, h * 0.62, ctx.tex.FONTS.serif, 700); }, { key: 'sg-sign' }) }),
   };
   const nev = edges.find((e) => e.i === 9), canal = edges.find((e) => e.i === 5);
+  // Owner's Nevsky/canal photograph (2026-11): warm oak window frames,
+  // restrained patinated bronze and continuous ornament below the glazing.
+  S.oak=T('#b58a4c',{name:'sg-oak'});
+  S.green=T('#72866a',{name:'sg-patina',paint:.025});
+  S.greenDark=T('#435b4b',{name:'sg-patina-shadow'});
+  S.shop=T('#34434a',{name:'sg-shop-glazing',emissive:'#4d3922',emissiveIntensity:.18});
 
   // ---- roof: mansard (sloped faces inset 3.4 m) + flat top
   const ring = []; for (let i = 0; i < poly.o.length; i += 2) ring.push([poly.o[i], poly.o[i + 1]]);
@@ -88,9 +94,28 @@ function glass(P, S, x, y, w, h, arch, mat) {
     P.face(m, s, -0.25, 1, 8);
   } else P.quad(m, [x - w / 2, y, -0.25], [x + w / 2, y, -0.25], [x + w / 2, y + h, -0.25], [x - w / 2, y + h, -0.25], [0, 0, 1]);
   // a mullion and two transoms
-  P.box(S.bronze, x - 0.03, x + 0.03, y, y + h - (arch ? w / 2 : 0), -0.24, -0.2, 'kb');
+  P.box(S.oak, x - 0.045, x + 0.045, y, y + h - (arch ? w / 2 : 0), -0.24, -.16, 'kb');
   const hh = h - (arch ? w / 2 : 0);
-  for (const k of [0.33, 0.66]) P.box(S.bronze, x - w / 2, x + w / 2, y + hh * k - 0.03, y + hh * k + 0.03, -0.24, -0.2, 'kb');
+  for (const k of [0.33, 0.66]) P.box(S.oak, x - w / 2, x + w / 2, y + hh * k - 0.035, y + hh * k + 0.035, -0.24, -.16, 'kb');
+  for(const sg of[-1,1])P.box(S.oak,x+sg*w/2-.055,x+sg*w/2+.055,y,y+hh,-.24,-.13,'kb');
+  if(arch)archRim(P,S.oak,x,y,w,h,.065,-.16);
+}
+
+// Raised arch voussoirs and iron scrollwork read at walking distance without
+// a separate material/mesh for each carved piece.
+function archRim(P,mat,x,y,w,h,r=.12,z=.12){
+ const spring=y+h-w/2;
+ for(const sg of[-1,1])P.cyl(mat,[x+sg*w/2,y,z],[x+sg*w/2,spring,z],r,r,5,false);
+ let prev=[x+w/2,spring,z];
+ for(let i=1;i<=16;i++){const a=i*Math.PI/16,p=[x+Math.cos(a)*w/2,spring+Math.sin(a)*w/2,z];P.cyl(mat,prev,p,r,r,5,false);prev=p;}
+}
+function scrollBand(P,S,x,y,w,z=.16){
+ P.box(S.greenDark,x-w/2,x+w/2,y,y+.42,z-.04,z+.02,'kb');
+ for(let i=0;i<Math.max(2,Math.round(w/.6));i++){
+  const u=x-w/2+.3+i*.6;
+  P.geo(S.bronze,new THREE.TorusGeometry(.16,.026,4,10,Math.PI*1.8),u,y+.21,z+.045,0,0,i%2?Math.PI:0);
+  P.cyl(S.gold,[u-.16,y+.12,z+.06],[u+.17,y+.31,z+.06],.018,.018,4,false);
+ }
 }
 function balcony(P, S, x, y, w, d = 0.55) {
   P.box(S.bronze, x - w / 2 - 0.1, x + w / 2 + 0.1, y - 0.18, y, 0, d, 'k');
@@ -131,10 +156,11 @@ function nevskyFront(K, S, len) {
   // glazing + frames
   for (const h of g0) { shopGlass(P, S, h.x, h.y, h.w, h.h); }
   for (const h of up) {
-    if (h.arch) { glass(P, S, h.x, h.y, h.w, h.h, true); continue; }
+    if (h.arch) { glass(P, S, h.x, h.y, h.w, h.h, true); archRim(P,S.trim,h.x,h.y,h.w+.24,h.h+.12,.12,.09); continue; }
     glass(P, S, h.x, h.y, h.w, h.h, false);
     if (h.h > 3) { P.box(S.gold, h.x - h.w / 2 - 0.05, h.x + h.w / 2 + 0.05, h.y - 0.28, h.y - 0.1, 0, 0.14, 'kb'); }
     if (h.w > 2.9 && h.y < 14.5) balcony(P, S, h.x, h.y - 0.05, h.w);
+    if(h.y<17)scrollBand(P,S,h.x,h.y-.58,h.w);
   }
   // door in the middle arch: bronze doors with a golden case
   P.box(S.gold, cx[2] - 1.9, cx[2] - 1.7, 0.0, 5.0, 0, 0.35, 'kb'); P.box(S.gold, cx[2] + 1.7, cx[2] + 1.9, 0.0, 5.0, 0, 0.35, 'kb');
@@ -157,6 +183,11 @@ function nevskyFront(K, S, len) {
 function shopGlass(P, S, x, y, w, h) {
   const hs = Math.max(0.05, h - w / 2), s = new THREE.Shape(); archPath(s, x, y, w, hs, false);
   P.face(S.shop, s, -0.4, 1, 8);
+  archRim(P,S.redDark,x,y,w+.26,h+.13,.18,.10);
+  for(const side of[-1,1]){
+    P.box(S.red,x+side*(w/2+.43)-.18,x+side*(w/2+.43)+.18,.15,h+.3,0,.34,'kb');
+    for(const yy of[.8,2.2,3.6])P.geo(S.gold,new THREE.TorusGeometry(.16,.035,4,10),x+side*(w/2+.43),yy,.37);
+  }
   P.box(S.winDark, x - w / 2 - 0.02, x + w / 2 + 0.02, y, y + 1.0, -0.45, -0.35, 'kb');
   P.box(S.bronze, x - 0.04, x + 0.04, y + 1.0, y + hs, -0.38, -0.32, 'kb');
   for (const k of [1.0, 2.9]) P.box(S.bronze, x - w / 2, x + w / 2, y + k, y + k + 0.07, -0.38, -0.32, 'kb');
@@ -171,8 +202,8 @@ function canalFront(K, S, len) {
   wallHoles(P, S.red, 0, len, 0, Y_G, g0);
   P.box(S.redDark, 0, len, Y_G, Y_G + 0.9, 0, 0.25, 'kb');
   wallHoles(P, S.gray, 0, len, Y_G + 0.9, Y_CORN, up);
-  for (const h of g0) glass(P, S, h.x, h.y, h.w, h.h, true, S.shop);
-  for (const h of up) { glass(P, S, h.x, h.y, h.w, h.h, false); if (h.h > 2.5) P.box(S.gold, h.x - h.w / 2 - 0.05, h.x + h.w / 2 + 0.05, h.y - 0.26, h.y - 0.1, 0, 0.12, 'kb'); }
+  for (const h of g0) shopGlass(P,S,h.x,h.y,h.w,h.h);
+  for (const h of up) { glass(P, S, h.x, h.y, h.w, h.h, false); if (h.h > 2.5) scrollBand(P,S,h.x,h.y-.6,h.w); }
   P.box(S.trim, -0.15, len + 0.15, Y_CORN - 0.5, Y_CORN + 0.45, 0, 0.55, '');
   for (let x = 0.3; x < len; x += 0.5) P.box(S.trim, x - 0.07, x + 0.07, Y_CORN + 0.45, Y_CORN + 1.25, 0.2, 0.34, 'kb');
   P.box(S.trim, -0.1, len + 0.1, Y_CORN + 1.25, Y_CORN + 1.4, 0.14, 0.4, 'kb');
@@ -181,10 +212,11 @@ function canalFront(K, S, len) {
 
 function dormer(P, S, x, y) {
   P.box(S.roof, x - 0.9, x + 0.9, y, y + 2.6, -2.0, 0.1, 'b');
-  const s = new THREE.Shape(); s.moveTo(x - 1.0, y + 2.6); s.lineTo(x + 1.0, y + 2.6); s.lineTo(x, y + 3.5); s.lineTo(x - 1.0, y + 2.6);
+  const s = new THREE.Shape(); s.moveTo(x - 1.12, y + 2.4); s.absarc(x,y+2.4,1.12,Math.PI,0,true);s.lineTo(x-1.12,y+2.4);
   P.extrude(S.roof, s, -2.0, 2.1, 1, 2);
   P.quad(S.win, [x - 0.5, y + 0.5, 0.14], [x + 0.5, y + 0.5, 0.14], [x + 0.5, y + 2.2, 0.14], [x - 0.5, y + 2.2, 0.14], [0, 0, 1]);
   P.box(S.trim, x - 0.7, x - 0.5, y + 0.3, y + 2.4, 0.1, 0.22, 'kb'); P.box(S.trim, x + 0.5, x + 0.7, y + 0.3, y + 2.4, 0.1, 0.22, 'kb'); P.box(S.trim, x - 0.7, x + 0.7, y + 2.3, y + 2.55, 0.1, 0.26, 'kb');
+  archRim(P,S.trim,x,y+2.0,2.15,1.55,.13,.22);
 }
 
 function valkyrie(P, S, x, y, sg) {
@@ -192,19 +224,35 @@ function valkyrie(P, S, x, y, sg) {
   P.cyl(S.green, [0, 0.0, 0.35], [0, 2.6, 0.45], 0.42, 0.3, 6, false);
   P.cyl(S.green, [0, 2.6, 0.45], [0, 3.5, 0.45], 0.28, 0.24, 6, true);
   P.cyl(S.green, [0, 3.5, 0.45], [0, 3.95, 0.45], 0.2, 0.2, 6, true);
-  P.box(S.greenDark, sg * 0.25, sg * 0.55, 1.2, 3.9, 0.18, 0.28, 'kb');                    // wing
+  P.geo(S.green,new THREE.SphereGeometry(.25,8,6),0,3.8,.48);
+  for(let i=0;i<6;i++)P.cyl(S.greenDark,[sg*.2,1.7,.3],[sg*(.6+i*.16),3.3+i*.16,.33],.09,.04,5,true);
+  for(const s of[-1,1]){P.cyl(S.green,[s*.24,2.8,.42],[s*.55,3.3,.6],.12,.09,6);P.cyl(S.green,[s*.55,3.3,.6],[s*.65,3.95,.62],.09,.06,6);}
   P.pop();
 }
 
 function tower(K, S, u, d) {
   const P = K.P, y0 = 17.5, R = 3.6, cx = u, cz = d;      // the tower stands d metres inside the Nevsky wall (cz > 0 would be outward: here negative)
   const wz = -Math.abs(cz);
-  // masonry corner bay up to the cornice
-  P.cyl(S.gray, [cx, y0, wz], [cx, Y_CORN + 0.6, wz], R, R, 20, false);
+  // Continuous rounded oriel, with stacked oak-framed windows. The previous
+  // solid upper cylinder and blank chamfer hid the defining corner glazing.
+  P.cyl(S.gray,[cx,0,wz],[cx,Y_CORN+.6,wz],R,R,24,false);
+  for(let i=0;i<24;i++){
+    const a=i*Math.PI/12,r=R+.035,pitch=2*r*Math.tan(Math.PI/24);
+    P.push(cx+Math.sin(a)*r,0,wz+Math.cos(a)*r,a);
+    for(const [y,h]of[[.3,4.8],[6.85,2.9],[10.25,2.9],[13.65,3.0],[17.25,4.5]]){
+      const w=pitch-.11;
+      P.quad(S.win,[-w/2,y,.045],[w/2,y,.045],[w/2,y+h,.045],[-w/2,y+h,.045],[0,0,1]);
+      for(const x of[-w/2,w/2])P.box(S.oak,x-.035,x+.035,y,y+h,.05,.14,'kb');
+      for(const yy of[y,y+h*.62,y+h])P.box(S.oak,-w/2,w/2,yy-.04,yy+.04,.05,.14,'kb');
+      if(y>5&&y<17)scrollBand(P,S,0,y-.57,pitch,.18);
+    }
+    P.pop();
+  }
+  for(const y of[5.5,6.5,10.0,13.4,17.0,22.6])P.cyl(S.bronze,[cx,y,wz],[cx,y+.14,wz],R+.18,R+.18,24,true);
   P.cyl(S.trim, [cx, Y_CORN + 0.6, wz], [cx, Y_CORN + 1.1, wz], R + 0.3, R + 0.3, 20, true);
   // green copper bell with scroll feet (photo 58 / 60: a flared bell, a glazed lantern in the middle, a narrow cap), then the glazed lantern with 12 ribs
-  const yb = Y_CORN + 1.1, rg = R - 0.3, bellH = 2.7, lanH = 3.5;
-  const bell = [[0, 0], [R + 0.25, 0], [R + 0.55, 0.45], [R + 0.3, 1.1], [R - 0.2, 1.8], [R - 0.7, 2.4], [R - 0.8, bellH]];
+  const yb = Y_CORN + 1.1, rg = R - 0.3, bellH = 1.2, lanH = 5.0;
+  const bell = [[0, 0], [R + 0.25, 0], [R + 0.38, .25], [R + .1, .6], [R-.85,bellH]];
   P.geo(S.green, new THREE.LatheGeometry(bell.map((q) => new THREE.Vector2(q[0], q[1])), 20), cx, yb, wz);
   P.cyl(S.greenDark, [cx, yb + 0.9, wz], [cx, yb + 1.0, wz], R + 0.32, R + 0.32, 20, true);
   for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + 0.2; P.cyl(S.greenDark, [cx + Math.sin(a) * (R + 0.3), yb + 0.6, wz + Math.cos(a) * (R + 0.3)], [cx + Math.sin(a) * (R + 0.6), yb + 1.5, wz + Math.cos(a) * (R + 0.6)], 0.28, 0.12, 5, true); }
@@ -223,11 +271,15 @@ function tower(K, S, u, d) {
   // the glass globe with a meridian skeleton and the gold band (a plain wordmark band, no text)
   const gy = yt + 4.9;
   P.geo(S.globe, new THREE.SphereGeometry(1.65, 16, 12), cx + 0.35, gy, wz);
-  P.cyl(S.gold, [cx + 0.35, gy - 0.06, wz], [cx + 0.35, gy + 0.06, wz], 1.7, 1.7, 16, false);
-  for (let k = 0; k < 4; k++) { const a = k * Math.PI / 4; P.cyl(S.greenDark, [cx + 0.35 + Math.sin(a) * 1.68, gy, wz + Math.cos(a) * 1.68], [cx + 0.35 - Math.sin(a) * 1.68, gy, wz - Math.cos(a) * 1.68], 0.04, 0.04, 4, false); }
-  P.cyl(S.greenDark, [cx + 0.35, gy - 1.68, wz], [cx + 0.35, gy + 1.68, wz], 0.04, 0.04, 4, false);
+  // True spherical meridians replace the former straight crossed rods.
+  P.geo(S.gold,new THREE.CylinderGeometry(1.71,1.71,.43,32,1,true),cx+.35,gy,wz,.28,0,-.28);
+  for(let k=0;k<6;k++)P.geo(S.trim,new THREE.TorusGeometry(1.68,.028,4,32),cx+.35,gy,wz,0,k*Math.PI/6,0);
+  for(const lat of[-.82,.82])P.geo(S.trim,new THREE.TorusGeometry(Math.sqrt(1.68**2-lat**2),.025,4,28),cx+.35,gy+lat,wz,Math.PI/2,0,0);
   // the eagle (spread wings) at the right of the tower base
-  P.push(cx + 3.3, Y_CORN + 2.2, wz + 0.4, -0.3);
-  P.box(S.green, -0.2, 0.2, 0, 1.0, -0.2, 0.2, 'b'); P.box(S.greenDark, 0.1, 1.9, 0.9, 2.6, -0.05, 0.05, 'b'); P.box(S.greenDark, -1.4, -0.1, 0.9, 2.2, -0.05, 0.05, 'b');
+  P.push(cx, Y_CORN + 1.0, wz+R-.1, 0);
+  P.geo(S.green,new THREE.SphereGeometry(1,10,7),0,1.1,.1,0,0,0,.48,.95,.4);
+  P.geo(S.green,new THREE.SphereGeometry(.32,8,6),0,2.1,.2);
+  for(const sg of[-1,1])for(let i=0;i<8;i++)P.cyl(S.greenDark,[sg*.32,1.25,.1],[sg*(.75+i*.19),1.55+i*.22,.08],.13,.045,5,true);
+  for(let i=0;i<5;i++)P.cyl(S.green,[0,.6,.1],[(i-2)*.18,-.35,.2],.1,.045,5,true);
   P.pop();
 }

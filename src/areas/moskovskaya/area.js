@@ -6,7 +6,7 @@ import { GROUPS_LIST as DISTRICT_GROUPS } from '../../world/landmarksMoskovskaya
 import { GROUPS_LIST as PARK_GROUPS, PAVED_RINGS as PARK_PAVED, FOUNTAIN_WATER_BODIES } from '../../world/landmarksMoskovskayaPark/groups.js';
 import { inFormalTreeClearing } from '../../world/landmarksMoskovskayaPark/plan.js';
 import { COASTAL_BRIDGE_GROUPS, COASTAL_BRIDGE_ZONES } from '../../world/coastalBridges/sites.js';
-import { GREEN, RIVER } from './data/city.js';
+import { BUILDINGS, GREEN, RIVER } from './data/city.js';
 import { FORECOURT_PAVED_RING, FORECOURT_WATER_BODIES, forecourtContains } from '../../world/landmarksMoskovskaya/library-forecourt-plan.js';
 import { UNDERPASS_GROUND_HOLES, UNDERPASS_BUILDING_IDS, inUnderpassMouth, inUnderpassPavilion } from '../../world/landmarksMoskovskaya/library-underpass-plan.js';
 
@@ -89,7 +89,13 @@ const STRUGATSKY_GARDENS = GREEN.filter(g => ['w29171389', 'w29171421', 'w293820
 const ringHas = (x, z, p) => { let on = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) if ((p[i + 1] > z) !== (p[j + 1] > z) && x < (p[j] - p[i]) * (z - p[i + 1]) / (p[j + 1] - p[i + 1]) + p[i]) on = !on; return on; };
 const districtTreeReject = (x, z) => forecourtContains(x,z) || inUnderpassPavilion(x,z,1) || inUnderpassMouth(x,z,1) || inFormalTreeClearing(x, z) || STRUGATSKY_GARDENS.some(g => g.polys.some(p => ringHas(x, z, p.o) && !(p.h || []).some(h => ringHas(x, z, h))));
 export const HOOKS = {
-  deckServices: ['coastalBridges'], treeReject: () => districtTreeReject,
+  // The mapped car park overlaps the newly open pilotis. Keep its central
+  // passage free of generated parked cars and bay paint; driving remains open.
+  parkingReject: (x,z)=>x>-1300&&x< -1164&&z>7663&&z<7691,
+  deckServices: ['coastalBridges'], treeReject: () => {
+    const pilotis=BUILDINGS.find(b=>b.id==='w31192359').polys;
+    return (x,z)=>districtTreeReject(x,z)||pilotis.some(p=>ringHas(x,z,p.o));
+  },
   tuftReject: () => (x,z) => forecourtContains(x,z) || inUnderpassMouth(x,z,.5),
   propReject: () => (x,z) => forecourtContains(x,z) || inUnderpassPavilion(x,z,.5) || inUnderpassMouth(x,z,.5),
   groundHoles: () => [FORECOURT_PAVED_RING],
@@ -97,7 +103,7 @@ export const HOOKS = {
   waterBodies: () => [...FOUNTAIN_WATER_BODIES, ...FORECOURT_WATER_BODIES],
 };
 export const GROUND_HOLES = UNDERPASS_GROUND_HOLES;
-export const OPEN_GROUND_BUILDING_IDS = UNDERPASS_BUILDING_IDS;
+export const OPEN_GROUND_BUILDING_IDS = [...UNDERPASS_BUILDING_IDS,'w31192359'];
 export const PAVED_RINGS = [{ module: 'landmarksMoskovskayaPark', rings: PARK_PAVED.map(w => w.ring || w) }, { module:'landmarksMoskovskaya', rings:[FORECOURT_PAVED_RING] }];
 export const HEIGHT_PATCHES = [];
 export const CROSS_PLACES = [];

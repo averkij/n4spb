@@ -1,6 +1,7 @@
 // Exact OSM records from the whole-city source; related parts inherit claims.
 // Photo and map dossier: docs/research/moskovskaya-landmarks.md.
 export const GROUPS_LIST = [
+  { key:'mz-basseynaya',name:'Бассейная улица, 53 · дом на колоннах',ids:['w31192359'],osm:[],at:[-1231.9,7677.2] },
   { key: 'mz-chesme-church', name: 'Чесменская церковь', ids: ['w870663628'], osm: [], at: [-1139.7, 8408.5] },
   { key: 'mz-chesme-palace', name: 'Чесменский дворец', ids: ['r3100461'], osm: [], at: [-1315.1, 8345.3] },
   { key: 'mz-spire', name: 'Дом со шпилем', ids: ['w32272976'], osm: [], at: [-1672.1, 7553.9] },

@@ -1824,3 +1824,29 @@ quay pavement and a clear departure into the harbour. See the updated
 [coastal guide](COASTAL-AREAS.md) for access coordinates and the three new
 research dossiers. The planning territories and area transition graph are
 unchanged; the draft map's live catalogue now names Lakhta and the flagpoles.
+
+### 9.2.0 — Singer House, library facades and Basseynaya pilotis
+
+The owner's Nevsky/canal photograph guides the Singer House revision in
+`landmarksF/singer.js`: a glazed rounded corner, oak-coloured frames, bronze
+scroll bands, curved dormers, a taller glazed lantern and spherical globe ribs.
+It is used by Palace and Admiralty; no territory or transition changes.
+
+Moskovskaya's library now finishes both exposed skins of its secondary wings
+and light-well returns. Short footprint edges receive proportioned windows.
+Its entrance, piers, stairs and ten open roof courts remain in place; inset
+tread nosings remove coplanar stair-riser trim. `library-water.js` replaces
+the fixed fountain rods with 144 animated jets, 864 droplets at medium/high
+quality, impact ripples and aqua uplights that fade in at dusk/night. Four
+bounded dynamic meshes share one nearby-only update; water/physics are unchanged.
+
+`mz-basseynaya` claims w31192359 (Basseynaya 53). `basseynaya.js` keeps its
+mapped U-shaped footprint, raises the central ground storey onto rectangular
+columns and retains solid end wings and four stair cores. The area excludes
+this footprint from blanket ground solidity and tree placement; explicit
+roof triangles preserve roof walking. The two tested passages include the
+owner's x=-1232.9 viewpoint. Tests: `basseynaya-water-test.mjs` and the existing
+library architecture/forecourt/underpass tests under `tools/area.mjs moskovskaya`.
+The source parking lot overlaps the central pilotis: the area parking hook
+removes its generated slots and bay paint there, preserving the free passage
+in the integrated scene as well as in the isolated architectural model.

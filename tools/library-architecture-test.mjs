@@ -7,6 +7,7 @@ import {makeKit} from '../src/world/landmarksMoskovskaya/common.js';
 import {library} from '../src/world/landmarksMoskovskaya/library.js';
 import {LIBRARY_PLAN as A,LIBRARY_PIERS,LIBRARY_STEPS,libraryPoint} from '../src/world/landmarksMoskovskaya/library-plan.js';
 import {Player} from '../src/core/player.js';
+import {ringEdges,frameOf} from '../src/world/landmarksD/kit.js';
 const {ctx,L,THREE,errors}=await buildWorld({modules:[]});assert.deepEqual(errors,[]);
 const root=new THREE.Group(),svc={houses:[],monuments:[],photoSpots:[],entrances:[],parts:{},triangles:0};
 const K=makeKit(ctx,root,svc),updates=ctx._updates.length;
@@ -18,6 +19,19 @@ const meshes=[];ctx.staticRoot.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&o.n
 const ray=new THREE.Raycaster();ray.layers.enableAll();
 const hitAt=(x,z,y=40)=>{ray.set(new THREE.Vector3(x,y,z),new THREE.Vector3(0,-1,0));return ray.intersectObjects(meshes,false)[0];};
 const ph=ctx.physics;
+// These source light-well returns are viewed from the opposite side through
+// the open portico at the owner's -1831.4,3,7478.4 viewpoint. Both visible
+// skins must carry glazing; front-only windows leave blank cylinders here.
+let returnPanes=0;
+for(const e of ringEdges(L.buildingById('r1806688').polys[0]).filter(e=>e.hole&&e.len>1.3&&e.a[0]>-1876&&e.a[0]<-1863)){
+ const f=frameOf(e),n=Math.max(1,Math.round(e.len/3.8)),u=e.len/n*.5+.18,x=f.x+f.xa[0]*u,z=f.z+f.xa[1]*u;
+ for(const sign of[-1,1]){
+  ray.set(new THREE.Vector3(x+e.n[0]*sign*1.1,4,z+e.n[1]*sign*1.1),new THREE.Vector3(-e.n[0]*sign,0,-e.n[1]*sign));
+  const hit=ray.intersectObjects(meshes,false)[0];
+  assert(hit&&hit.object.material.color.getHexString()==='42606b','exposed rounded return lacks front-sided glazing');returnPanes++;
+ }
+}
+assert(returnPanes>30);
 // Independent front-sided probes of the two photographed recessed portal
 // windows: a narrow placeholder frame must not stand in for their glazing.
 let portalWindows=0;

@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.2.0** (2026-11-02, minor): Refine Singer House and library facades, animate illuminated library fountains, and open Basseynaya 53 colonnade for walking
 - **9.1.0** (2026-11-01, minor): Remake the National Library, fountain forecourt and walkable underpass; close exposed bridge and quay geometry
 - **9.0.1** (2026-11-01, patch): Fix natural-bank walking, shoreline joins, floating quay fixtures and open hedge and bridge-rail ends
 - **9.0.0** (2026-11-01, major): Add Moskovskaya Zastava with researched Victory Park, Strugatsky Square, Chesme, library and avenue landmarks
