@@ -85,6 +85,40 @@ The fortress beach has no invisible apron barrier. Its sand ramps remain usable
 for walkers/cars; the physics water query excludes sand above the actual
 waterline, so a boat cannot sail through the beach mesh.
 
+### Yelagin shores (9.5.0)
+
+The outer coast has a low stone waterline below a grass bank. Inner ponds,
+channels and small islands have continuous green banks without granite quay
+walls or parapets, following the owner's outer-coast and pond photographs.
+Authored piers, bridge abutments and architectural masonry remain structural.
+
+The area's shore region follows the complete mapped coast. Exposed edges are
+extracted from the union of the water polygons, so overlapping pond records and
+data seams do not create walls across water or erase real island banks. A
+bounded 2 m terrain grid replaces independent offset strips at narrow corners;
+the drawn Float32 triangles also supply physical ground and its clipping cuts.
+The submerged continuation allows walkers and cars to return from the water.
+Trees retain their park placement and use the new terrain height for trunks,
+shadows and colliders. Existing formal canal banks elsewhere retain their
+authored profiles.
+
+`tools/yelagin-shore-test.mjs` checks union-boundary coverage, continuous terrain
+and low outer stone versus green pond banks. `tools/natural-bank-test.mjs`
+checks real meshes against physics and walks the banks in both directions.
+Run both through `node tools/area.mjs islands`; the latter also covers the
+unchanged Moskovskaya banks when run with that area. Boat-passage coverage and
+matching-bake browser measurements are recorded in `docs/PERFORMANCE.md`.
+
+The deployment claim checks distinguish this park work from the intentional
+cross-river panorama. Panorama groups must match their registered source IDs
+and coordinates; their complete footprints may extend outside the local cut.
+The city retains arch interiors, signs and architectural decorations alongside
+the authored shells, while main walls and main roof decks remain exclusive to
+the landmark owner. Missing-shell and duplicate-shell mutants must still fail.
+Generated city supports now inherit their original building's panorama owner,
+so their generic top faces are discarded too. Collision and entrance records
+remain identical to the preceding snapshot.
+
 ## Verification and known limits
 
 The area topology/arrival suite passes **490 checks**, the real gate machine

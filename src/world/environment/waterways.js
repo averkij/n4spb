@@ -24,6 +24,8 @@ import { RIVER, WATER, EXTENT_RECTS } from '../data/city.js';
 import { EAST_WATER, EAST_WATER_BOUNDS } from '../data/east-water.js';
 import { WATER as AREA_WATER } from '../lib/area-tables.js';
 import { naturalBankSurfaces, bankHeightQuery, fitNaturalBankWidths } from './shore-profile.js';
+import { exposedShoreChains } from './shore-chains.js';
+import { shoreTerrain } from './shore-terrain.js';
 
 import { NEVA_DOWNSTREAM } from './neva-downstream.js';
 import { NEVA_MALAYA } from './neva-malaya.js';
@@ -392,6 +394,10 @@ function build() {
   for (let gi = 0; gi < rings.length; gi++) {
     const g = rings[gi], { o, n } = g, flags = [];
     for (let i = 0; i < n; i++) { const j = (i + 1) % n; const ax = o[i * 2], az = o[i * 2 + 1], bx = o[j * 2], bz = o[j * 2 + 1]; flags.push(isForcedBank(ax, az, bx, bz) || (!g.owner && Math.hypot(bx - ax, bz - az) > 0.05 && !(onClipLine(ax, az, bx, bz) && locallyOpen(ax, az, bx, bz)) && !(g.key === 'neva' && (onDataLine(ax, az, bx, bz) || onFarJoin(ax, az, bx, bz))) && !coincides(gi, ax, az, bx, bz) && !isOpenMouth(ax, az, bx, bz) && !insideSame(gi, ax, az, bx, bz))); }
+    if (AREA_WATER.naturalShoreRegion) for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      if (AREA_WATER.naturalShoreRegion((o[i * 2] + o[j * 2]) / 2, (o[i * 2 + 1] + o[j * 2 + 1]) / 2)) flags[i] = false;
+    }
     if (flags.every(Boolean)) {
       const pts = []; for (let i = 0; i < n; i++) pts.push([o[i * 2], o[i * 2 + 1]]); pts.push(pts[0]);
       chains.push({ key: g.key, pts: g.waterLeft ? pts : pts.reverse(), closed: true });
@@ -423,12 +429,13 @@ function build() {
     }
   }
   // the Neva scenery beyond the data (FAR_SOURCES): a plain granite wall + parapet along the shores, drawn by quay.js outside the data region (the data banks rule inside it)
+  if (AREA_WATER.naturalShoreRegion) stitched.push(...exposedShoreChains(rings, AREA_WATER.naturalShoreRegion, wetAt));
   const farBanks = [];
   for (const src of FAR_SOURCES) src.rings.forEach((o, ri) => farChains(o, src.box, !!src.inData, src.inData ? joinsData : null).forEach((P, k) => farBanks.push({ id: src.name + '.' + ri + '.' + k, name: src.name + '.' + ri + '.' + k, key: 'neva', pts: P, closed: false, landSide: -1, len: chainLen(P), w: WATERWAYS.neva, far: true })));
   const banks = [];
   // caps: the arclengths (middle) of the dead-end walls on the border of the data region (the cut edge of a canal polygon, see the header): the bank chain goes on behind one with the OTHER bank of the canal (what the full city holds as two chains)
   const capsOf = (pts) => { const out = []; let s = 0; for (let i = 0; i + 1 < pts.length; i++) { const l = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); if (l > 0.05 && onDataLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])) out.push(s + l / 2); s += l; } return out; };
-  stitched.filter((c) => c.pts.length >= 2 && chainLen(c.pts) > 2).forEach((c, i) => banks.push({ id: c.key + '#' + i, name: c.key + '#' + i, key: c.key, pts: c.pts, closed: c.closed, landSide: -1, len: chainLen(c.pts), w: WATERWAYS[c.key], caps: c.key === 'neva' ? [] : capsOf(c.pts) }));
+  stitched.filter((c) => c.pts.length >= 2 && chainLen(c.pts) > (c.natural ? 1e-5 : 2)).forEach((c, i) => banks.push({ id: c.key + '#' + i, name: c.key + '#' + i, key: c.key, pts: c.pts, closed: c.closed, natural: !!c.natural, landSide: -1, len: chainLen(c.pts), w: WATERWAYS[c.key], caps: c.key === 'neva' ? [] : capsOf(c.pts) }));
   // water pieces: every data ring (outer) + plugs; the real Neva polygons beyond the data (clipped against the extents by the builders)
   const pieces = [];
   for (const g of rings) pieces.push({ id: g.id, key: g.key, o: g.o, kind: g.kind, box: g.box });
@@ -519,20 +526,23 @@ export function slopeRuns() {
       const P = bank.pts, S = [0];
       for (let i = 1; i < P.length; i++) S.push(S[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
       const total = S[S.length - 1];
+      // Natural union boundaries also contain sub-metre links at pond mouths
+      // and bridge approaches. The formal-quay minimum length would drop them.
+      if(reach.continuous && bank.natural){_runs.push(makeRun(reach,bank,P,S,0,total));continue;}
       let i = 0, cur = null;
       const flush = (s1) => { if (cur !== null && s1 - cur > 3) _runs.push(makeRun(reach, bank, P, S, cur, s1)); cur = null; };
       for (let s = 0; s <= total + 1e-6; s += 0.5) {
         while (i + 2 < S.length && S[i + 1] < s) i++;
         const a = P[i], b = P[i + 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, t = Math.min(1, Math.max(0, (s - S[i]) / ((S[i + 1] - S[i]) || 1)));
         const x = a[0] + (b[0] - a[0]) * t, z = a[1] + (b[1] - a[1]) * t, nx = (b[1] - a[1]) / l, nz = -(b[0] - a[0]) / l;
-        const ok = reach.test(x, z, nx, nz, bank, s) && !inZoneGap(reach.key, x, z);
+        const ok = reach.test(x, z, nx, nz, bank, s) && (reach.continuous || !inZoneGap(reach.key, x, z));
         if (ok && cur === null) cur = Math.max(0, s - 0.25);
         else if (!ok && cur !== null) flush(s - 0.25);
       }
       flush(total);
     }
   }
-  fitNaturalBankWidths(_runs,(x,z)=>waterwayAt(x,z)!==null);
+  fitNaturalBankWidths(_runs.filter(r=>!r.reach.continuous),(x,z)=>waterwayAt(x,z)!==null);
   return _runs;
 }
 function makeRun(reach, bank, P, S, s0, s1) {
@@ -544,7 +554,7 @@ function makeRun(reach, bank, P, S, s0, s1) {
   // Width fitting at its two endpoints would miss that basin and retain an
   // apron over the neighbouring bank. Bound the spacing before fitting.
   const authored=new Set(pts),dense=[pts[0]];
-  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2));for(let j=1;j<=n;j++)dense.push(j===n?b:[a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]);}
+  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],n=reach.continuous?1:Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2));for(let j=1;j<=n;j++)dense.push(j===n?b:[a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]);}
   pts.splice(0,pts.length,...dense);
   const seg = [];
   for (let i = 0; i + 1 < pts.length; i++) { const dx = pts[i + 1][0] - pts[i][0], dz = pts[i + 1][1] - pts[i][1], l = Math.hypot(dx, dz) || 1e-6; seg.push({ tx: dx / l, tz: dz / l, nx: dz / l, nz: -dx / l }); }
@@ -558,9 +568,17 @@ function makeRun(reach, bank, P, S, s0, s1) {
   });
   return { reach, bank, s0, s1, pts, fr, closed };
 }
-let _slopeSurfaces=null,_slopeHeight=null;
+let _slopeSurfaces=null,_slopeHeight=null,_terrain=null;
+function continuousTerrain(){
+  if(_terrain)return _terrain;
+  const runs=slopeRuns().filter(r=>r.reach.continuous),wet=(x,z)=>waterwayAt(x,z)!==null;
+  // Owned pier/abutment edges still shape the water boundary. Include them in
+  // distance measurements without generating a second bank over their walls.
+  const boundaries=runs.length?exposedShoreChains(waterGeo().rings,AREA_WATER.naturalShoreRegion,wet,true):[];
+  return _terrain=shoreTerrain(runs,WATERWAYS,wet,boundaries);
+}
 /** Exact visible natural-bank quads, also the source of layout.heightAt. */
-export function slopeSurfaces(){return _slopeSurfaces||(_slopeSurfaces=naturalBankSurfaces(slopeRuns(),WATERWAYS));}
+export function slopeSurfaces(){return _slopeSurfaces||(_slopeSurfaces=[...naturalBankSurfaces(slopeRuns().filter(r=>!r.reach.continuous),WATERWAYS),...continuousTerrain().surfaces]);}
 /** Physical natural bank, including the submerged return from the water bed. */
 export function slopeHeightAt(x,z){if(!SLOPE_REACHES.length)return null;return(_slopeHeight||(_slopeHeight=bankHeightQuery(slopeSurfaces())))(x,z);}
 /** Actual top edge, including a narrowed dry strip between adjacent basins. */
@@ -572,12 +590,14 @@ export function slopeQuads() {
   if (_quads) return _quads;
   _quads = [];
   for (const r of slopeRuns()) {
+    if(r.reach.continuous)continue;
     const d0 = -0.1, d1 = r.reach.run + 0.3;
     for (let i = 0; i + 1 < r.fr.length; i++) {
       const a = r.fr[i], b = r.fr[i + 1], q = [[a.x + a.mx * d0 * a.k, a.z + a.mz * d0 * a.k], [b.x + b.mx * d0 * b.k, b.z + b.mz * d0 * b.k], [b.x + b.mx * d1 * b.k*(b.landScale??1), b.z + b.mz * d1 * b.k*(b.landScale??1)], [a.x + a.mx * d1 * a.k*(a.landScale??1), a.z + a.mz * d1 * a.k*(a.landScale??1)]];
       _quads.push({ reach: r.reach.id, key: r.reach.key, q, flat:q.flat() });
     }
   }
+  _quads.push(...continuousTerrain().cuts);
   return _quads;
 }
 /** true when (x, z) lies on a slope (the strip between the water edge and the slope top): not water (L.inRiver stays false), but nothing may stand or walk there */
@@ -598,8 +618,8 @@ export function slopeAt(x, z, grow = 0) {
 /** the slope strips as closed flat rings [x, z, x, z, ...] (water edge -> slope top + 0.3 m), one per run: other modules treat them like water polygons when they clip surfaces (streets/bld.js grid() stops the
  *  pavement strips 0.45 m before a river ring: add these rings to the RIVER rings there, so a pavement never floats over a slope) */
 export function slopeRings() {
-  return slopeRuns().map((r) => {
+  return [...slopeRuns().filter(r=>!r.reach.continuous).map((r) => {
     const left = r.fr.map((q) => [q.x, q.z]), right = r.fr.map((q) => [q.x + q.mx * (r.reach.run + 0.3) * q.k*(q.landScale??1), q.z + q.mz * (r.reach.run + 0.3) * q.k*(q.landScale??1)]).reverse();
     return [...left, ...right].flat();
-  });
+  }),...continuousTerrain().cuts.map(c=>c.flat)];
 }

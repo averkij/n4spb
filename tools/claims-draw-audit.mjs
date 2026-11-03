@@ -43,6 +43,7 @@
 // `environment` (the ground plane covers every footprint), `rail`, `metro` and `bridges` are reported, never graded. --where <id> prints sample centroids (x, y, z, distance to the outline,
 // mesh name) per module inside that footprint. Prints one block per module and a RESULT: OK / FAIL line; exit 1 on FAIL.
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { riverfrontSourceOf } from './lib/riverfront-groups.mjs';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -230,6 +231,7 @@ ctx.knock = createKnock(ctx);
 
 // ---------------------------------------------------------------- the claim tables (with the mutant applied to the audit's own view, never to the modules)
 const claimedBy = new Map();       // id -> { module, key, viaParent? }
+const panoramaKeys=new Set((L.GROUPS.landmarksRiverfront||[]).filter(riverfrontSourceOf).map(g=>g.key));
 for (const [m, list] of Object.entries(L.GROUPS)) for (const g of list) { for (const id of g.ids || []) claimedBy.set(id, { module: m, key: g.key }); for (const id of g.osm || []) claimedBy.set(id, { module: m, key: g.key }); }
 for (const b of D.BUILDINGS) if (b.parent && claimedBy.has(b.parent) && !claimedBy.has(b.id)) claimedBy.set(b.id, { ...claimedBy.get(b.parent), viaParent: b.parent });
 for (const id of mutantIds) { if (!claimedBy.has(id)) { console.log(`--mutant unclaim:${id}: the id is not claimed in area ${AREA}`); process.exit(2); } claimedBy.delete(id); }
@@ -333,7 +335,7 @@ console.log(`claims-draw-audit area ${AREA}: ${claimedBy.size} claimed ids (${ta
 //   own: of hi, those that are not foliage and belong to THIS building and not to a deeper neighbour of another claim group (rule 1) }
 const counts = new Map();
 //   fol / low / shallow / stolen: of the centroids inside a claimed building that are NOT own, why (a plant; at or below the band; within the inset of the outline; deeper inside a neighbour of another claim group)
-const bump = (m, i, f) => { const k = m + '|' + i; let c = counts.get(k); if (!c) counts.set(k, (c = { n: 0, hi: 0, deep: 0, minDeepY: Infinity, overlap: 0, own: 0, fol: 0, low: 0, shallow: 0, stolen: 0 })); c.n++; if (f.hi) c.hi++; if (f.deep) { c.deep++; c.minDeepY = Math.min(c.minDeepY, f.y); } if (f.overlap) c.overlap++; if (f.own) c.own++; else if (f.why) c[f.why]++; };
+const bump = (m, i, f) => { const k = m + '|' + i; let c = counts.get(k); if (!c) counts.set(k, (c = { n: 0, hi: 0, deep: 0, minDeepY: Infinity, overlap: 0, shared: 0, own: 0, fol: 0, low: 0, shallow: 0, stolen: 0 })); c.n++; if (f.hi) c.hi++; if (f.deep) { c.deep++; c.minDeepY = Math.min(c.minDeepY, f.y); } if (f.overlap) c.overlap++; if (f.shared && !f.overlap) c.shared++; if (f.own) c.own++; else if (f.why) c[f.why]++; };
 const groupOf = (t) => (t.claim ? t.claim.module + '/' + t.claim.key : 'unclaimed:' + t.id);
 const V = new THREE.Vector3(), M = new THREE.Matrix4(), tmpM = new THREE.Matrix4();
 const centroidsOf = (o, out, meshIdx, owners) => {
@@ -409,6 +411,13 @@ for (const name of names) {
     tris += centroidsOf(o,pts,meshNames.length-1,owners);
   }
   let tested = 0;
+  const roofLevels=new Map();
+  const mainRoofLevels=id=>{
+    if(roofLevels.has(id))return roofLevels.get(id);
+    const levels=[];
+    for(const [bid,style]of ctx.services.city?.styles||[])if((bid===id||isAncestor(id,bid))&&Number.isFinite(style.deckY))levels.push(style.deckY);
+    roofLevels.set(id,levels);return levels;
+  };
   for (let p = 0, q = 0; p < pts.length; p += 3, q++) {
     const x = pts[p], y = pts[p + 1], z = pts[p + 2], l = grid.get(ck(Math.floor(x / CELL), Math.floor(z / CELL))); if (!l) continue;
     let inUnclaimed = false; const hits = [];
@@ -431,8 +440,16 @@ for (const name of names) {
       if (!t.claim && !meshFoliage[owners[q]]) for (const child of t.claimedDescendants || []) {
         if (child.claim.module === name && y > child.above && withinChildApron(child.fp,x,z)) { delegated = true; break; }
       }
-      bump(name, i, { y, hi, deep: !delegated && y > ABOVE && d >= DEEP, overlap: hi && t.claim && inUnclaimed, own, why });
-      if (WHERE.size && WHERE.has(t.id) && (!argv.includes('--where-high') || hi)) { const k = t.id + '|' + name; const s = samples[k] || (samples[k] = []); if (s.length < 10) s.push(`(${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)}) d ${d.toFixed(2)} ${meshNames[owners[q]]}`); }
+      // city.js discards the panorama's generic walls/decks, while retaining
+      // arch interiors, cornices and small mapped details. Those streams are
+      // cooperative geometry only for a verified source panorama. Main walls,
+      // flat main decks and towers stay forbidden. Roof additions must differ
+      // from the declared main-deck heights; none satisfy owner rule 1.
+      const family=meshNames[owners[q]],levels=name==='city'&&/^city-roofs(?:$|[-|/])/.test(family)?mainRoofLevels(t.id):[];
+      const roofAddition=levels.length>0&&levels.every(level=>Math.abs(y-level)>.025);
+      const shared=hi&&name==='city'&&t.claim?.module==='landmarksRiverfront'&&panoramaKeys.has(t.claim.key)&&(/^city-(core|fine|rails|signs)(?:$|[-|/])/.test(family)||roofAddition);
+      bump(name, i, { y, hi, deep: !delegated && y > ABOVE && d >= DEEP, overlap: hi && t.claim && inUnclaimed, shared, own, why });
+      if (WHERE.size && WHERE.has(t.id) && (!argv.includes('--where-high') || hi) && !shared) { const k = t.id + '|' + name; const s = samples[k] || (samples[k] = []); if (s.length < 10) s.push(`(${x.toFixed(1)}, ${y.toFixed(2)}, ${z.toFixed(1)}) d ${d.toFixed(2)} ${meshNames[owners[q]]}`); }
     }
   }
   perModule[name] = { meshes, tris, centroids: pts.length / 3, inFootprints: tested, detached, ms: perModule[name].ms + Date.now() - t0 };
@@ -465,7 +482,8 @@ for (let i = 0; i < targets.length; i++) {
   }
   if (!t.building) continue;                   // the generic modules inside a claimed park / paving / way / point: reported only (see the header)
   for (const [m, c] of Object.entries(gen)) {
-    const n = c.hi - c.overlap;
+    const n = c.hi - c.overlap - (c.shared||0);
+    if(c.shared)notes.push(`${m} contributes ${c.shared} arch/decorative triangles to the registered panorama ${t.id}; primary walls and roofs remain independently graded`);
     const msg = `${m} draws ${n} triangles above ${ABOVE} m and deeper than ${INSET} m inside the claimed building ${t.id} of ${owner} / ${t.claim.key}${t.rec.name ? ' (' + t.rec.name + ')' : ''}${c.overlap ? ` (+ ${c.overlap} in an overlapping unclaimed building, not graded)` : ''}`;
     const waiver = (GENERIC_WAIVERS[AREA] || {})[t.id + '|' + m];
     if (owned && n >= MIN_GENERIC && waiver) notes.push(msg + ` (waived: ${waiver})`);

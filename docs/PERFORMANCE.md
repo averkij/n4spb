@@ -2620,3 +2620,72 @@ node tools/drive-test.mjs --area palace --q medium --nofuzz --out shots/fixes-11
 node tools/area.mjs palace tools/boat-test.mjs --quick
 node tools/bake-manifest-check.mjs
 ```
+
+## 2026-11-03 — Yelagin natural shores and deployment repair (9.5.0)
+
+Yelagin's outer shore now has grass and a low stone waterline. Pond channels
+and small islands meet the water with green banks. Union-boundary extraction
+removes duplicate water seams, and a bounded 2 m height field avoids folded
+offset strips at narrow corners. Rendering and walking use the same Float32
+triangles. Trees follow the new terrain, including their shadows and colliders.
+
+The shoreline test passes 5,780 boundary probes and 308,744 terrain-edge checks.
+The real-mesh bank test passes 5,334 raycasts and 24 two-way walking routes;
+Moskovskaya's unchanged profiles pass 44 routes. Islands passes all 17 water
+access checks, 138 quick boat-passage checks, the complete road audit, and
+20,004/20,004 painted-line geometry probes. Layout and landmark-group checks
+pass in all 18 areas. The full geometry ownership audit also passes all 18.
+
+The preceding remote deployment failed its panorama claim checks. The extent
+audit now validates the exact registered source claim for distant architecture.
+The geometry audit distinguishes shared arches, signs and decorations from
+main walls/decks; missing-shell and duplicate-shell mutants still fail.
+A real render defect was also corrected: generated supports now inherit their
+source's panorama owner, so generic top faces are discarded with the generic
+building. A Palace city+panorama comparison preserves all 34,221 collision
+records and 27,776 entrance records exactly (SHA-256 equality).
+
+The final manifest check reports **16 fresh areas / 1,869 complete products /
+756.2 MiB gzip**. The final normal-loading Islands browser test matches revision
+`ac2c71e8344ea2b1068e`, exits a pond with actual keyboard movement and returns
+to it without a rescue or unsupported floor. No module errors or failed regions
+were reported. Evidence is under `shots/yelagin/`, including `bake-final.txt`,
+`bakecheck-final.txt`, `natural-final.txt`, `boat-final.txt`, `claims-geometry-final.txt`,
+`panorama-guard.txt`, `physics-{before,after}.json` and `shipping-final/`.
+
+Matching-bake driving comparisons use detached `6f5b745` as the baseline,
+Edge/D3D11 on RTX 3090 Ti, 1280×720, medium quality, and 20 seconds of real W
+input. GPU jobs run serially after CPU audits finish; there is no profiling or
+mid-drive capture. CDP diagnostics are collected after timing.
+
+| Route / snapshot | Load s | Mean / p50 / p95 / max ms | >40 / >80ms | Mean draws | Distance m | Used / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Station, 9.4.2 | 26.020 | 23.12 / 16.7 / 33.4 / 200.0 | 15 / 3 | 1,105 | 344 | 571 / 1,132 |
+| Station, 9.5.0 | 21.957 | 19.41 / 17.6 / 34.9 / 229.9 | 3 / 2 | 1,098 | 244 | 573 / 815 |
+| Ryukhina, 9.4.2 | 22.732 | 19.74 / 16.7 / 33.4 / 233.4 | 7 / 4 | 958 | 291 | 341 / 377 |
+| Ryukhina, 9.5.0 | 21.041 | 18.08 / 17.5 / 18.3 / 229.6 | 4 / 3 | 939 | 291 | 465 / 601 |
+
+Final averages are approximately 52 FPS in the centre and 55 FPS on Ryukhina.
+Traffic/collision outcomes differ on the centre run, so its mean change is not
+attributed to this work. Islands travels the same distance, while loaded regions
+vary from 52 to 55. Its end sample uses 123.5 MiB more JS heap and 223.7 MiB more
+backing storage; the new terrain/query data also has a bounded CPU footprint.
+These are end samples, not retained-memory measurements. Centre p95 is still
+34.9 ms and transient hitches remain around 230 ms: smooth 30 FPS throughout
+the city remains unfinished. Region attachment and long tasks remain profiling
+targets. Existing shader and duplicate texture-painter warnings remain.
+
+All five final shoreline views and both drive end frames were opened and
+reviewed. The real-page car test passes entry, acceleration, nitro, cameras,
+braking, exit and Anichkov traversal. Its bounded rerun uses `gates=0` to keep
+the harness in one page; the unrestricted first run crossed an area boundary
+during nitro and invalidated the harness's page-local references. Fuzz is off.
+The nine final control screenshots were opened and reviewed.
+
+```powershell
+node tools/area.mjs islands tools/yelagin-shore-test.mjs
+node tools/area.mjs islands tools/natural-bank-test.mjs --json shots/yelagin/walk-routes.json
+node tools/panorama-claims-test.mjs
+node tools/drive-bench.mjs --area vladimirsky --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/yelagin/after-centre
+node tools/drive-bench.mjs --area islands --q medium --seconds 20 --start "-5161.6,-4248.2,4.9" --json --diagnostics --out shots/yelagin/after-islands
+```

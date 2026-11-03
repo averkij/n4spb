@@ -12,3 +12,7 @@ export const RIVERFRONT_SOURCES = [
   ['landmarksI',I.filter(g=>g.ids.length)],
   ['landmarksH',H.filter(g=>g.ids.length&&g.key!=='bronze-horseman')],
 ];
+export function riverfrontSourceOf(g){
+  const source=RIVERFRONT_SOURCES.find(([m])=>m===g.sourceModule)?.[1].find(q=>'riverfront-'+q.key===g.key);
+  return source&&JSON.stringify(g.ids)===JSON.stringify(source.ids)&&JSON.stringify(g.at)===JSON.stringify(source.at)?source:null;
+}

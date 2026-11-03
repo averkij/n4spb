@@ -71,7 +71,9 @@ export async function build(ctx) {
   const root = new THREE.Group(); root.name = 'city'; ctx.addStatic(root);
   const owned = await ownedGroups(ctx);
   const panoramaGroups=new Set((L.GROUPS.landmarksRiverfront||[]).map(g=>g.key));
-  const panorama=b=>owned.has(L.groupOf(b.id))&&panoramaGroups.has(L.groupOf(b.id));
+  // Generated supports retain their source's visual owner. Their synthetic
+  // IDs are absent from the claim map, but their physics still belongs here.
+  const panorama=b=>{const key=L.groupOf(b._fillOf||b.id);return owned.has(key)&&panoramaGroups.has(key);};
   LOD.items.length = 0; LOD.scale = (ctx.quality && ctx.quality.lod) || 1;
   const near = (x, z, m) => L.inPlay(x, z, -m);                              // within m metres of the play area (the union of the eight rectangles, not its bounding box: the notches stay plain scenery)
 

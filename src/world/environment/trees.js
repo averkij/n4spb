@@ -19,7 +19,7 @@ import { createTreeInstanceWriter } from './tree-instances.js';
 import { BUILDINGS, GREEN, EXTENT, TREES, TREE_ROWS } from '../data/city.js';
 import * as L from '../layout.js';
 import { isOwned } from '../lib/claims.js';
-import { HOOKS } from '../lib/area-tables.js';
+import { HOOKS, WATER as AREA_WATER } from '../lib/area-tables.js';
 import { SPECIES, FAMILIES, canopyGeometry, trunkGeometry } from './treegeo.js';
 import { canopyMaterial, coniferMaterial, trunkMaterial } from './leafmat.js';
 import { riverBanks, waterBanks } from './river.js';
@@ -175,13 +175,14 @@ export function placeTrees(ctx, field, owned, extraAvoid = []) {
       if (L.isOnRoad(x, z, F.trunk * 1.1 + 0.3)) return no('road');                                                   // the trunk (and 0.3 m) clear of every drivable way incl. the courtyard lanes the field does not read
       if (inMergedStrip(x, z)) return no('strip');                                                                   // not between two carriageways that net.js merges
       if (inBay(x, z, F.trunk * 0.9)) return no('bay');                                                              // never in a parking pocket of a side street
-      if (!field.free(x, z, o.extra ?? 0, { onPave: !!o.onPave, loose: !!o.loose, claimOk: !!o.claimOk, road: o.road, bld: o.bld ?? (F.shrub ? 1.3 : F.sp === 'spruce' ? 2.2 : 2.4 * Math.min(1, 0.55 + 0.45 * s)), shore: o.shore })) return no('free');
+      if (!field.free(x, z, o.extra ?? 0, { onNaturalBank: !!AREA_WATER.naturalShoreRegion?.(x,z), onPave: !!o.onPave, loose: !!o.loose, claimOk: !!o.claimOk, road: o.road, bld: o.bld ?? (F.shrub ? 1.3 : F.sp === 'spruce' ? 2.2 : 2.4 * Math.min(1, 0.55 + 0.45 * s)), shore: o.shore })) return no('free');
       if (!o.noHedge && !avoidOk(x, z, r * 0.5)) return no('hedge');          // mapped trees (OSM nodes / rows) are ground truth: they stand in a hedge if need be
     }
     const pack = o.pack ?? (F.shrub ? 0.5 : 0.55);
     for (const nb of near(x, z)) if (Math.hypot(nb.x - x, nb.z - z) < (nb.r + r) * (nb.shrub || F.shrub ? Math.min(pack, 0.42) : pack)) return no('pack');
     const pal = colors[F.sp], c = pal[Math.floor(R() * pal.length)];
     const t = { src: o.src || 'other', x, z, fam, sp: F.sp, shrub: !!F.shrub, s, sy: s * R.range(0.92, 1.1), yaw: R() * 6.283, r, h: F.H * s, tr: F.trunk * Math.min(1.1, 0.7 + 0.35 * s), hex: c, bright: R.range(0.93, 1.07), onPave: !!o.onPave };
+    t.y = AREA_WATER.naturalShoreRegion?.(x,z) ? L.heightAt(x,z) : 0;
     list.push(t);
     const k = key(cellOf(x), cellOf(z)); let a = grid.get(k); if (!a) grid.set(k, (a = [])); a.push(t);
     stats[o.src || 'other'] = (stats[o.src || 'other'] || 0) + 1;
@@ -359,7 +360,7 @@ export function buildTrees(ctx, root, field, owned, extraAvoid = []) {
     const m4 = new T.Matrix4(), qt = new T.Quaternion(), v = new T.Vector3(), sc = new T.Vector3(), cc = new T.Color();
     list.forEach((t, i) => {
       const d = t.r * (t.shrub ? 1.9 : t.sp === 'spruce' ? 2.1 : 2.2);
-      qt.setFromAxisAngle(new T.Vector3(0, 1, 0), t.yaw); m4.compose(v.set(t.x, t.onPave ? 0.128 : 0.035, t.z), qt, sc.set(d, 1, d)); blob.setMatrixAt(i, m4);
+      qt.setFromAxisAngle(new T.Vector3(0, 1, 0), t.yaw); m4.compose(v.set(t.x, t.y + (t.onPave ? 0.128 : 0.035), t.z), qt, sc.set(d, 1, d)); blob.setMatrixAt(i, m4);
       blob.setColorAt(i, cc.set(t.sp === 'spruce' ? '#14221a' : '#1e2a14'));
     });
     blobMesh = blob;
@@ -369,7 +370,7 @@ export function buildTrees(ctx, root, field, owned, extraAvoid = []) {
 
   // trunk colliders (play area only; farther trees are scenery)
   const P = L.WORLD.play; let colliders = 0;
-  for (const t of list) if (L.inPlay(t.x, t.z, -5)) { t.col = ctx.physics.addCylinder(t.x, t.z, t.tr, 0, t.shrub ? 1.3 : 4.5); colliders++; }
+  for (const t of list) if (L.inPlay(t.x, t.z, -5)) { t.col = ctx.physics.addCylinder(t.x, t.z, t.tr, t.y, t.y + (t.shrub ? 1.3 : 4.5)); colliders++; }
 
   // ---- LOD assignment (re-packed from the camera position at walking speed)
   const state = new Int8Array(list.length).fill(-1);

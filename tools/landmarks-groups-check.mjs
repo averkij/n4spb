@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveTest } from './lib/area-test-data.mjs';
+import { riverfrontSourceOf } from './lib/riverfront-groups.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CITY = await import(pathToFileURL(path.join(root, 'src/world/data/city.js')).href);
 const L = await import(pathToFileURL(path.join(root, 'src/world/layout.js')).href);
@@ -29,19 +30,26 @@ const bad = (m) => { problems++; console.log('PROBLEM', m); };
 for (const mod of KEPT) {
   const groups = L.GROUPS[mod];
   if (!groups) { bad(`${mod}: no GROUPS entry in layout.js`); continue; }
-  for (const g of groups) {
+  for (const group of groups) {
+    const g=process.argv.includes('--mutant-panorama')&&mod==='landmarksRiverfront'?{...group,at:[group.at[0]+1,group.at[1]]}:group;
+    // The opposite-bank panorama deliberately retains complete architectural
+    // families beyond the playable data cut. Verify their provenance and all
+    // claimed IDs, rather than applying the local footprint extent to them.
+    // A forged scenery tag cannot exempt an ordinary or modified group.
+    const scenery=mod==='landmarksRiverfront'&&!!riverfrontSourceOf(g);
+    if(mod==='landmarksRiverfront'&&!scenery)bad(`${mod}/${g.key}: panorama claim does not match its registered source group`);
     const missIds = g.ids.filter((id) => !byId.has(id));
     const missOsm = g.osm.filter((id) => !known.has(id));
     if (missIds.length) bad(`${mod}/${g.key}: building ids missing from the data: ${missIds.join(', ')}`);
     if (missOsm.length) bad(`${mod}/${g.key}: osm ids missing from the data: ${missOsm.join(', ')}`);
     if (!g.ids.length && !g.osm.length) bad(`${mod}/${g.key}: claims nothing`);
-    if (!g.at || !inRects(CITY.EXTENT_RECTS, g.at[0], g.at[1])) bad(`${mod}/${g.key}: 'at' ${JSON.stringify(g.at)} is outside the data extent`);
+    if (!g.at || !scenery && !inRects(CITY.EXTENT_RECTS, g.at[0], g.at[1])) bad(`${mod}/${g.key}: 'at' ${JSON.stringify(g.at)} is outside the data extent`);
     // geometry of the members (ids + parts): vertices inside the play rectangles / the extent
     let n = 0, inPlay = 0, inExt = 0;
     for (const b of L.groupMembers(g.key)) for (const p of b.polys || []) for (let i = 0; i < p.o.length; i += 2) {
       n++; if (inRects(CITY.PLAY_RECTS, p.o[i], p.o[i + 1])) inPlay++; if (inRects(CITY.EXTENT_RECTS, p.o[i], p.o[i + 1], SLACK[g.key] || 0)) inExt++;
     }
-    if (n && inExt < n) bad(`${mod}/${g.key}: ${n - inExt} of ${n} footprint vertices lie outside the data extent`);
+    if (!scenery && n && inExt < n) bad(`${mod}/${g.key}: ${n - inExt} of ${n} footprint vertices lie outside the data extent`);
     console.log(`${mod.padEnd(20)} ${g.key.padEnd(24)} ids ${g.ids.length - missIds.length}/${g.ids.length} osm ${g.osm.length - missOsm.length}/${g.osm.length} members ${L.groupMembers(g.key).length} verts in play ${n ? Math.round(100 * inPlay / n) : '-'}% extent ${n ? Math.round(100 * inExt / n) : '-'}%`);
   }
 }

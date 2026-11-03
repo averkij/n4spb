@@ -2,6 +2,7 @@
 // node tools/area.mjs <area> tools/natural-bank-test.mjs [--mutant-flat]
 // The mutant restores the old flat invisible bank floor and must fail.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { buildWorld } from './lib/headless-world.mjs';
 import { slopeRuns, slopeSurfaces, WATERWAYS, pointInFlat } from '../src/world/environment/waterways.js';
 import { WATER } from '../src/world/data/city.js';
@@ -64,5 +65,6 @@ for(const r of runs){for(let i=0;i+1<r.fr.length;i++){
   routes.push({id,bank:r.bank.id,land,wet});touched.add(id);
 }}
 if(process.env.AREA==='moskovskaya')for(const id of ['r77680','r109994','r11008649','r11010469','r147758','r1380826','r11010790','r11014824','r11016386'])assert(touched.has(id),'no two-way real walk tested for park pond '+id);
+const json=process.argv.indexOf('--json');if(json>=0)fs.writeFileSync(process.argv[json+1],JSON.stringify({routes},null,2));
 console.log(JSON.stringify({area:process.env.AREA,runs:runs.length,closed,triangles,drawProbes,maxRenderError:maxError,routes:routes.length,ponds:[...touched],rejectedForRealStructure:rejected,walkingSteps:steps}));
 console.log('PASS natural-bank geometry, terrain, closed seams and actual two-way walking');

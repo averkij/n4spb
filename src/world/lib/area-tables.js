@@ -74,6 +74,7 @@ export const WATER = {
   pierFit: obj(W.pierFit),
   precisePiers: arr(W.precisePiers),
   slopeReaches: arr(W.slopeReaches),
+  naturalShoreRegion: typeof W.naturalShoreRegion === 'function' ? W.naturalShoreRegion : null,
   /** { RIVER record name: waterway key } for the RIVER records whose data `key` is null (Admiralty-Haymarket: the Kryukov, Admiralty, Novo-Admiralty and New Holland canals) */
   keyByName: obj(W.keyByName),
   /** { name: waterway key }: a RIVER record without a key is drawn as that waterway when its name is listed (Vladimirsky-Ligovka: the Obvodny canal as a 'neva' trench); empty = the strip's rule, only RIVER[].key counts */

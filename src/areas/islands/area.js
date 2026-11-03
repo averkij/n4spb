@@ -14,6 +14,7 @@ import * as G9 from '../../world/landmarksKamennyTheatre/groups.js';
 import * as G10 from '../../world/landmarksKamennyDachasEast/groups.js';
 import * as G11 from '../../world/landmarksKamennyDachasWest/groups.js';
 import { WATER_TABLE, BRIDGE_GROUPS } from '../petro/water.js';
+import { YELAGIN_SLOPES, yelaginShoreRegion } from './shore.js';
 export const ID = 'islands';
 export const BAKE_DIR = 'baked/islands/';
 export const REQUIRE_BAKE = true;
@@ -70,7 +71,7 @@ export const TEST = {claimed:[],viewKeys:['Digit1','Place.hero'],mustHaveAreas:[
 const OWNERS=[['landmarksKrestovsky',G0],['landmarksYelaginPalace',G1],['landmarksYelaginKitchen',G2],['landmarksYelaginServices',G3],['landmarksYelaginRossi',G4],['landmarksYelaginSpits',G5],['landmarksYelaginPark',G6],['landmarksKamennyPalace',G7],['landmarksKamennyChurch',G8],['landmarksKamennyTheatre',G9],['landmarksKamennyDachasEast',G10],['landmarksKamennyDachasWest',G11]];
 const collect=(key)=>OWNERS.flatMap(([owner,g])=>(g[key]||[]).map(w=>({...w,owner})));
 export const PAVED_RINGS=OWNERS.map(([module,g])=>({module,rings:(g.PAVED_RINGS||[]).map(w=>w.ring||w)}));
-export const WATER = {...WATER_TABLE,dataRings:CONTEXT,skipRiverNames:CONTEXT_NAMES,skipRiverKeys:['malaya-neva'],ownerRings:collect('WATER_RINGS'),bankRings:collect('BANK_RINGS'),keepOut:collect('KEEP_OUT')};
+export const WATER = {...WATER_TABLE,dataRings:CONTEXT,skipRiverNames:CONTEXT_NAMES,skipRiverKeys:['malaya-neva'],ownerRings:collect('WATER_RINGS'),bankRings:collect('BANK_RINGS'),keepOut:collect('KEEP_OUT'),naturalShoreRegion:yelaginShoreRegion,slopeReaches:YELAGIN_SLOPES};
 export const ZONES = {peopleDensity:{west:{off:true,scale:1,platforms:1},mars:{off:true,zones:[],scale:1}},peopleHot:[],crowHaunts:[{x:-5140,z:-4250,r:120}],farCentres:[]};
 export const GARAGE = {"poses":{"lada":{"x":-5132,"z":-4250,"yaw":0}},"spawn":{"x":-5132,"z":-4250,"yaw":0},"boats":[{"id":"boat-islands","dock":"islands","x":-5188.672320133853,"z":-4742.703816836817,"yaw":-1.4615027411394266}]};
 export const PRUNE_SERVICES = ["city","landmarksKrestovsky","landmarksYelaginPalace","landmarksYelaginKitchen","landmarksYelaginServices","landmarksYelaginRossi","landmarksYelaginSpits","landmarksYelaginPark","landmarksKamennyPalace","landmarksKamennyChurch","landmarksKamennyTheatre","landmarksKamennyDachasEast","landmarksKamennyDachasWest"];

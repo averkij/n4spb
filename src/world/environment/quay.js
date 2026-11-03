@@ -1070,7 +1070,10 @@ export function buildQuay(ctx, root) {
   // n4spb (cluster B): the mouth arms of the Smolenka (texture and material only where there is a piece: no canvas, no mesh in the other areas)
   if (!face.mouth.empty) mk(face.mouth, ctx.mat.toon('#ffffff', { map: wallTexture(ctx, 'mouth', 'smolenka'), paint: 0.05, name: 'env-quay-wall-mouth' }), 'env-quay-wall-mouth');
   if (!bermB.empty) mk(bermB, ctx.mat.toon('#ffffff', { map: bermTexture(ctx), paint: 0.05, name: 'env-quay-berm' }), 'env-quay-berm', false);
-  mk(grass, ctx.mat.toon('#ffffff', { map: grassTexture(ctx), paint: 0.06, name: 'env-quay-grass' }), 'env-quay-grass');
+  const grassMesh=mk(grass, ctx.mat.toon('#ffffff', { map: grassTexture(ctx), paint: 0.06, name: 'env-quay-grass' }), 'env-quay-grass');
+  // The park terrain continues below water. Its grid footprint must not draw
+  // a black staircase through the transparent water along submerged cells.
+  if(grassMesh && slopeRuns().some(r=>r.reach.continuous))ctx.noOutline(grassMesh);
   const submerged=mk(bedB, ctx.mat.toon('#686b4e', { paint: 0.04, name: 'env-quay-submerged-bank' }), 'env-quay-submerged-bank', false);
   if(submerged)ctx.noOutline(submerged); // no black shelf perimeter showing through the water
   mk(capB, ctx.mat.toon('#a69489', { paint: 0.05, side: 'double', name: 'env-quay-slope-caps' }), 'env-quay-slope-caps');

@@ -10,7 +10,7 @@ export function createTreeInstanceWriter(trees, shapeOf = null) {
     const t = trees[i], shape = shapeOf ? shapeOf(t) : t, o = i * 16, c = Math.cos(t.yaw), s = Math.sin(t.yaw);
     const sx = shape.sx ?? t.s, sy = shape.sy ?? t.sy ?? t.s, sz = shape.sz ?? sx;
     matrices[o] = sx * c; matrices[o + 2] = -sx * s; matrices[o + 5] = sy;
-    matrices[o + 8] = sz * s; matrices[o + 10] = sz * c; matrices[o + 12] = t.x; matrices[o + 13] = shapeOf ? shape.y ?? 0 : 0;
+    matrices[o + 8] = sz * s; matrices[o + 10] = sz * c; matrices[o + 12] = t.x; matrices[o + 13] = shape.y ?? 0;
     matrices[o + 14] = t.z; matrices[o + 15] = 1;
     colors.set(shape.rgb || t.rgb, i * 3);
   }

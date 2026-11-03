@@ -18,8 +18,8 @@ import * as L from '../layout.js';
 import { BUILDINGS, ROADS, AREAS, GREEN, LANDUSE, PARKING, CROSSINGS, CROSSING_NODES, SIGNALS, BUS_STOPS, DOORS, FURNITURE, MONUMENTS, BARRIERS, RAILS, ENTRANCES, EXTENT } from '../data/city.js';
 import { isOwned } from '../lib/claims.js';
 import { waterPolys } from './river.js';
-import { slopeQuads } from './waterways.js';
-import { ZONES, HOOKS } from '../lib/area-tables.js';
+import { slopeQuads, slopeAt } from './waterways.js';
+import { ZONES, HOOKS, WATER as AREA_WATER } from '../lib/area-tables.js';
 import { extraClaimRings } from './claims.js';
 import { clamp, hash2 } from './util.js';
 import { classLayer } from './class-palette.js';
@@ -306,7 +306,7 @@ export function buildField(ctx, owned, baked = null) {
   for (const w of waterPolys()) fillPoly(dg, wat, { o: w.o, h: w.h }, 1);
   for (const w of (HOOKS.waterBodies ? HOOKS.waterBodies() : [])) fillPoly(dg, wat, { o: w.o, h: w.h }, 1);                // HOOKS.waterBodies (docs/AREAS.md 9.1): the ponds of a landmark module (the Tauride Garden): in the water mask, so env.waterAt / shoreDist / the distance atlas of the water shader know them
   for (const ring of extraClaimRings(ctx)) fillPoly(dg, claim, { o: ring, h: [] }, 1);                                 // the Kapodistrias promenade of landmarksOktyabrsky (the module paves it)
-  for (const sq of slopeQuads()) fillPoly(dg, claim, { o: sq.q.flat(), h: [] }, 1);                                  // grass slopes of the Swan Canal / Moika (quay.js draws them): no trunks, hedges, beds or tufts
+  for (const sq of slopeQuads()) if(!sq.vegetated) fillPoly(dg, claim, { o: sq.q.flat(), h: [] }, 1);                 // formal slopes exclude planting; park banks allow terrain-rooted trees below
   for (const g of GREEN) if (g.kind === 'pitch' || g.kind === 'playground' || g.kind === 'garden' || g.kind === 'flowerbed' || g.kind === 'fitness_station') for (const p of g.polys) fillPoly(dg, hard, p, 1);
   for (const g of PARKING) for (const p of g.polys) fillPoly(dg, hard, p, 1);
   for (const c of CROSSINGS) stamp(dg, pts, c.pts, (c.w || 3) / 2 + 1.2, 1);
@@ -403,6 +403,7 @@ function hydrateField(p, keepRawField = false) {
   field.free = (x, z, extra = 0, o = {}) => {
     const k = di(x, z); if (k < 0) return true;
     if (claim.get(k) && !o.claimOk) return false;
+    if (!o.onNaturalBank && AREA_WATER.naturalShoreRegion && slopeAt(x,z)) return false;
     const d = distances.getWord(k); if (d === undefined) return false;
     if ((d & 255) < ((o.bld ?? 2.2) + extra) * QD || (d >>> 8 & 255) < ((o.road ?? 1.3) + extra) * QD || qT.get(k) < (1.0 + extra) * QD) return false;
     if (!o.loose && (qP.get(k) < (0.8 + extra * 0.5) * QD || qH.get(k) < (1.0 + extra) * QD)) return false;       // loose: pavement trees ignore mapped footways and fences along the facade
@@ -410,7 +411,7 @@ function hydrateField(p, keepRawField = false) {
     return ((d >>> 16 & 255) - 128) / 8 > (o.shore ?? 5.5) + extra * 0.5;
   };
   /** true inside an AREA / GREEN / courtyard that a landmark owner draws and plants itself (no trunks, hedges, beds, tufts) */
-  field.claimed = (x, z) => { const k = di(x, z); return k >= 0 && claim.get(k) === 1; };
+  field.claimed = (x, z) => { const k = di(x, z); return k >= 0 && (claim.get(k) === 1 || !!AREA_WATER.naturalShoreRegion && slopeAt(x,z)); };
   /** mark a disc as built-over for trunks / tufts / hedges (round flowerbeds are placed after the field exists) */
   field.addBlock = (x, z, r) => {
     for (let dz = -Math.ceil(r + 2); dz <= Math.ceil(r + 2); dz++) for (let dx = -Math.ceil(r + 2); dx <= Math.ceil(r + 2); dx++) {
@@ -419,7 +420,7 @@ function hydrateField(p, keepRawField = false) {
     }
   };
   /** clear ground for low things (hedges, beds): not in a building (m metres from the wall), not on a carriageway / hard surface, not in water */
-  field.clear = (x, z, m = 0.5) => { const k = di(x, z); if (k < 0) return true; const d = distances.getWord(k); return d !== undefined && !claim.get(k) && (d & 255) >= m * QD && (d >>> 8 & 255) >= 0.5 * QD && qH.get(k) >= 0.2 * QD && qT.get(k) >= 0.2 * QD && ((d >>> 16 & 255) - 128) / 8 >= 0.5; };
+  field.clear = (x, z, m = 0.5) => { const k = di(x, z); if (k < 0) return true; const d = distances.getWord(k); return d !== undefined && !claim.get(k) && (d & 255) >= m * QD && (d >>> 8 & 255) >= 0.5 * QD && qH.get(k) >= 0.2 * QD && qT.get(k) >= 0.2 * QD && ((d >>> 16 & 255) - 128) / 8 >= 0.5 && !(AREA_WATER.naturalShoreRegion && slopeAt(x,z)); };
   /** distance (m) to the outer edge of the paving beside the roads (0 on it) */
   field.paveDist = (x, z) => { const k = di(x, z); return k < 0 ? DIST_CAP : distances.get(k, 3) / QD; };
   /** which ground the shader paints at x, z: 'grass' | 'asphalt' | 'setts' | 'gravel' (the same competition of four noise fields as the shader) */
