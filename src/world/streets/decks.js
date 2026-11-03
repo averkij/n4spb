@@ -8,6 +8,8 @@ import { SITES, EXT, frameOf } from '../bridges/sites.js';
 import { WATER } from '../data/city.js';
 import { LONG, hump } from '../bridges/long-sites.js';
 import { BRIDGE_GROUP_KEYS } from '../lib/area-tables.js';
+import { PONDS, SLUICES, frameOfPond, pondApproaches } from '../bridges/yelaginPonds/specs.js';
+import { heightAt } from '../layout.js';
 
 const SH = 0.4;
 let DECKS = null, ENABLED = true;
@@ -59,6 +61,13 @@ function build() {
     const cw = { x:f.cx+s.len/2*f.c, z:f.cz+s.len/2*f.s }, R=Math.hypot(s.len/2+4,s.hw+4);
     DECKS.push({s,f,toUV,cw,R,long:true,y:hump(s.len,s.crown),n:1,iv:[[-.4,s.len+.4],[-.4,s.len+.4]],v0:-s.hw-.3,v1:s.hw+.3});
   }
+  if (BRIDGE_GROUP_KEYS.has('yelagin-ponds')) for (const s of [...PONDS, ...SLUICES]) {
+    const f=frameOfPond(s), sluice=s.wd!==undefined, hw=sluice?s.wd/2:s.hw;
+    const hl=sluice?Math.max(9,s.len)/2+.45:Math.max(f.len,s.ring?.[0]||0)/2,approaches=pondApproaches(s,heightAt);
+    const u0=-Math.max(hl,...approaches.filter(a=>a.side<0).map(a=>a.outer)),u1=Math.max(hl,...approaches.filter(a=>a.side>0).map(a=>a.outer)),mid=(u0+u1)/2;
+    const toUV=(x,z)=>[(x-f.cx)*f.c+(z-f.cz)*f.s,-(x-f.cx)*f.s+(z-f.cz)*f.c];
+    DECKS.push({s,f,toUV,cw:{x:f.cx+mid*f.c,z:f.cz+mid*f.s},R:Math.hypot((u1-u0)/2,hw)+4,n:1,iv:[[u0,u1],[u0,u1]],v0:-hw,v1:hw,ext:0,sh:0});
+  }
   // the decks by 64 m cell of their quick-reject square (in DECKS order: the first deck under a point wins as before); deckAt is asked for every kerb sample, lamp, pocket and pole
   GRID = new Map();
   for (const d of DECKS) for (let cx = Math.floor((d.cw.x - d.R) / DG); cx <= Math.floor((d.cw.x + d.R) / DG); cx++) for (let cz = Math.floor((d.cw.z - d.R) / DG); cz <= Math.floor((d.cw.z + d.R) / DG); cz++) { const k = cx * 4096 + cz; let l = GRID.get(k); if (!l) GRID.set(k, (l = [])); l.push(d); }
@@ -72,11 +81,11 @@ export function deckAt(x, z, margin = 0) {
   const list = GRID.get(Math.floor(x / DG) * 4096 + Math.floor(z / DG)) || NONE;
   for (const d of list) {
     if (Math.abs(x - d.cw.x) > d.R || Math.abs(z - d.cw.z) > d.R) continue;
-    const [u, v] = d.toUV(x, z), m = margin - SH;
+    const [u, v] = d.toUV(x, z), m = margin - (d.sh??SH);
     if (v < d.v0 - margin || v > d.v1 + margin) continue;
     const t = Math.min(d.n, Math.max(0, (v - d.v0) / (d.v1 - d.v0 || 1) * d.n)), i = Math.min(d.n - 1, Math.floor(t)), a = t - i;
     const uL = d.iv[i][0] + ((d.iv[Math.min(d.n, i + 1)][0]) - d.iv[i][0]) * a, uR = d.iv[i][1] + ((d.iv[Math.min(d.n, i + 1)][1]) - d.iv[i][1]) * a;
-    if (u >= uL - EXT - m && u <= uR + EXT + m) return d.s;
+    if (u >= uL - (d.ext??EXT) - m && u <= uR + (d.ext??EXT) + m) return d.s;
   }
   return null;
 }
@@ -88,8 +97,8 @@ export function deckRings({longOnly=false}={}) {
   return DECKS.filter(d=>!longOnly||d.long).map((d) => {
     const pts = [], f = d.f;
     const at = (u, v) => [f.cx + u * f.c - v * f.s, f.cz + u * f.s + v * f.c];
-    for (let k = 0; k <= d.n; k++) pts.push(at(d.iv[k][0] - EXT, d.v0 + (d.v1 - d.v0) * k / d.n));
-    for (let k = d.n; k >= 0; k--) pts.push(at(d.iv[k][1] + EXT, d.v0 + (d.v1 - d.v0) * k / d.n));
+    for (let k = 0; k <= d.n; k++) pts.push(at(d.iv[k][0] - (d.ext??EXT), d.v0 + (d.v1 - d.v0) * k / d.n));
+    for (let k = d.n; k >= 0; k--) pts.push(at(d.iv[k][1] + (d.ext??EXT), d.v0 + (d.v1 - d.v0) * k / d.n));
     return { id: d.s.id, ring: pts.flat() };
   });
 }

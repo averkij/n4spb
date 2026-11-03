@@ -581,6 +581,8 @@ function continuousTerrain(){
 export function slopeSurfaces(){return _slopeSurfaces||(_slopeSurfaces=[...naturalBankSurfaces(slopeRuns().filter(r=>!r.reach.continuous),WATERWAYS),...continuousTerrain().surfaces]);}
 /** Physical natural bank, including the submerged return from the water bed. */
 export function slopeHeightAt(x,z){if(!SLOPE_REACHES.length)return null;return(_slopeHeight||(_slopeHeight=bankHeightQuery(slopeSurfaces())))(x,z);}
+/** Soil grid beneath paving/plant roots; the narrow stone coping may cover it. */
+export function slopeGroundHeightAt(x,z){if(!SLOPE_REACHES.length)return null;return(_slopeHeight||(_slopeHeight=bankHeightQuery(slopeSurfaces())))(x,z,true);}
 /** Actual top edge, including a narrowed dry strip between adjacent basins. */
 export function slopeTopAt(r,s){let i=0;while(i+2<r.fr.length&&r.fr[i+1].s<s)i++;const a=r.fr[i],b=r.fr[i+1],t=Math.max(0,Math.min(1,(s-a.s)/(b.s-a.s||1))),d=r.reach.run+.3;
   const x=q=>q.x+q.mx*q.k*d*(q.landScale??1),z=q=>q.z+q.mz*q.k*d*(q.landScale??1);return{x:x(a)+(x(b)-x(a))*t,z:z(a)+(z(b)-z(a))*t};}

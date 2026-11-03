@@ -3,9 +3,13 @@
 //   * PLAZA: 27 m x 13 m between the returns and the park edge, raised by TERRACE (0.30 m) over the lawn, rounded east corners (R 3 m), gravel #c9b5a2, a 0.22 m granite curb 0.34 m high along the free
 //     edges (the park-side steps replace it between a = -9 .. +9: stairs.js).  Walk box: rectangle a -13.9..13.9, b -13.2..-0.2.
 //   * GRAVEL RING: the OSM area w1217811697 (29 vertices, 700 m2) is claimed in groups.js; streets then does not draw it (nor the footway ribbons inside it): this file lays the same gravel texture over the whole
-//     ring at y 0.045 (under the raised plaza it is hidden).  Hand-over note: the cobble wings lie at the rim of the ring.
+//     ring draped 0.045 m above the grass bank (under the raised plaza it is hidden).  Hand-over note: the cobble wings lie at the rim of the ring.
 import { TERRACE, TERRACE_E, faceB, HL, world, local, box } from './frame.js';
 import { arc, strip, flat } from './wall.js';
+import { MB } from '../streets/util.js';
+import { terrainPolygon } from '../streets/terrain-ribbon.js';
+import { triangulateRing } from '../environment/clip.js';
+import { slopeGroundHeightAt } from '../environment/waterways.js';
 
 const CURB_H = TERRACE + 0.04, CURB_W = 0.22, R_C = 3.0;
 export const SIDE = { a: 14.0, bRet: -5.9 };
@@ -38,15 +42,17 @@ export function terrace(ctx, P, M, svc) {
   svc.terrace = { x: cx, z: cz, w, d, rotY: r, y: TERRACE };
 }
 
-/** the gravel layer over the whole claimed ring (mapped area w1217811697): flat at y 0.045, hidden under the raised plaza, visible on the wings */
+/** The raised plaza stays level; its gravel wings follow the actual grass bank. */
 export function gravelRing(ctx, P, M, areas) {
   const a = areas.find((q) => q.id === 'w1217811697');
   if (!a) return 0;
   let n = 0;
+  const B=new MB(),heightAt=(x,z)=>slopeGroundHeightAt(x,z)??ctx.L.heightAt(x,z);
   for (const poly of a.polys || []) {
-    const pts = []; for (let i = 0; i < poly.o.length; i += 2) pts.push(local(poly.o[i], poly.o[i + 1]));
-    P.cap(M.gravel, pts, 0.045, true, 3); n++;
+    for(const tri of triangulateRing(poly.o,poly.h||[]))terrainPolygon(B,tri,.045,3,{heightAt,waterY:ctx.L.WATERWAYS.neva.water});
+    n++;
   }
+  if(!B.empty){const geo=B.build(),p=geo.attributes.position;for(let i=0;i<p.count;i++){const[a,b]=local(p.getX(i),p.getZ(i));p.setXYZ(i,a,p.getY(i),b);}P.geo(M.gravel,geo);geo.dispose();}
   return n;
 }
 void world; void faceB;

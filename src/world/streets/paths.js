@@ -1,5 +1,6 @@
 // streets/paths.js - mapped footways / paths / steps (ROADS hw footway, path, steps, pedestrian) and the pedestrian-area paving (AREAS)
-// that is not claimed by a landmark module. Flat ribbons on the ground (y 0.04), clipped to nothing: they are mapped where people walk.
+// that is not claimed by a landmark module. Ordinary ground uses flat ribbons;
+// natural park banks use terrain triangles, with water and bridge decks clear.
 import { pairs, chaikin, densify, dpKeep } from './util.js';
 import { ROADS, CROSSINGS, AREAS } from '../data/city.js';
 import { profMax } from './style.js';
@@ -7,7 +8,11 @@ import * as THREE from 'three';
 import { addCap } from '../lib/massing.js';
 import { SLAB_TILE, PAVER_TILE, ASPHALT_TILE, BRICK_TILE } from './tex.js';
 import { deckAt, deckRings } from './decks.js';
-import { triangulateRing, subtractConvex } from '../environment/clip.js';
+import { triangulateRing, subtractConvex, ccw, boxOfPoly } from '../environment/clip.js';
+import { WATER as WATER_TABLE } from '../lib/area-tables.js';
+import { heightAt, WATERWAYS } from '../layout.js';
+import { terrainRibbon } from './terrain-ribbon.js';
+import { slopeGroundHeightAt } from '../environment/waterways.js';
 
 const FOOT_W = { footway: 2.4, path: 1.8, pedestrian: 5, steps: 2.2, cycleway: 2.2 };
 export const PATH_Y = 0.04;
@@ -66,6 +71,9 @@ function inPavementBand(net, px, pz) {
  *  zebra and the sidewalk generator draw those. Returns the centrelines for the pedestrian service. */
 export function buildPaths(Bfoot, Bsteps, net, X = {}, owned = () => false) {
   const lines = [];
+  const region=WATER_TABLE.naturalShoreRegion, heights=new Map();let terrainCuts=null;
+  const ground=(x,z)=>{const key=x+','+z;if(!heights.has(key))heights.set(key,slopeGroundHeightAt(x,z)??heightAt(x,z));return heights.get(key);};
+  const waterY=region?Math.max(...WATER_TABLE.slopeReaches.filter(r=>r.continuous).map(r=>WATERWAYS[r.key].water)):0;
   // Named squares already have one paving surface. Do not draw lower path
   // ribbons under it: differing slope-based depth offsets make them bleed
   // through at grazing angles. Keep the complete path for pedestrian routing.
@@ -83,12 +91,19 @@ export function buildPaths(Bfoot, Bsteps, net, X = {}, owned = () => false) {
     let pts = pairs(r.pts); if (pts.length < 2) continue;
     if (pts.length > 2) pts = chaikin(pts, 1, 60);
     pts = densify(pts, 2.5);
+    const natural=region&&pts.some(p=>region(p[0],p[1]));
     const w = r.w ?? FOOT_W[r.hw];
     // split into runs outside the asphalt
     let run = [];
     const flush = () => {
       // a path claimed by a landmark module (owned) and the parts inside a named square are not drawn here (the square / the module owns the surface); the complete line stays for pedestrian routing
       const drawRun = (sub, steps) => {
+        if(natural&&!steps) {
+          if(!terrainCuts)terrainCuts=deckRings().map(d=>{const poly=ccw(pairs(d.ring));return{poly,box:boxOfPoly(poly)};});
+          const [fk,ft]=footClass(r),FB=X[fk]||Bfoot;
+          terrainRibbon(FB,sub,w,PATH_Y+.001*(parseInt(String(r.id).replace(/D/g,'').slice(-3),10)%9),FB===Bfoot?2:ft,{heightAt:ground,waterY,cuts:terrainCuts});
+          return;
+        }
         if (sub.length > 2 && !steps) { const kp = dpKeep([sub], 0.05); sub = sub.filter((_, i) => kp[i]); }          // the 2.5 m samples were only for the clipping tests: draw straight pieces as single quads
         if (sub.length < 2) return;
         if (steps) ribbon(Bsteps, sub, w, PATH_Y + 0.05, 1.5);
@@ -98,7 +113,7 @@ export function buildPaths(Bfoot, Bsteps, net, X = {}, owned = () => false) {
         const steps = r.hw === 'steps';
         if (!owned(r.id)) {
           let visible = [];
-          for (const p of run) { if (deckAt(p[0],p[1],w/2) || (!steps && inSquare(p))) { drawRun(visible, steps); visible = []; } else visible.push(p); }
+          for (const p of run) { if ((!(natural&&!steps)&&deckAt(p[0],p[1],w/2)) || (!steps && inSquare(p))) { drawRun(visible, steps); visible = []; } else visible.push(p); }
           drawRun(visible, steps);
         }
         if (!steps) lines.push({ id: r.id, pts: run, w, hw: r.hw });

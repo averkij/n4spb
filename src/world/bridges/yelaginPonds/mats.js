@@ -56,7 +56,6 @@ export function pondMats(ctx, M) {
   // review 2026-10-14: draw-call budget (25 materials -> 15): the rusty gate plates share the pile material, the black gates the shared M.black, the sluice slab and the treads the concrete grey
   m.plate = m.pile;                                                                    // rusty steel gate plates of the sluices (photos s1s1 s5n1)
   m.gateBlack = M.black || TM('#2a2d30', { paint: 0.03, name: 'brg-yp-gate' });       // black sluice gates under the deck (photo s4s1, sne)
-  m.winch = TM('#b7bdc0', { paint: 0.04, name: 'brg-yp-winch' });                     // pale-grey winch columns with hand wheels
   m.sluiceDeck = m.concrete;                                                           // granite slab deck of a sluice
   m.step = m.concrete;                                                                 // granite treads of the arched bridge
   const panel = (kind, hex0) => {

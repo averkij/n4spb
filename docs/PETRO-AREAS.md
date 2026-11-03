@@ -119,6 +119,27 @@ Generated city supports now inherit their original building's panorama owner,
 so their generic top faces are discarded too. Collision and entrance records
 remain identical to the preceding snapshot.
 
+### Pond crossings and west-spit paths (9.5.2)
+
+Continuous grass banks also replace the legacy full-height quay faces under
+pond bridges. The original mapped central spans remain; supported approaches
+connect their ends to the first dry path on each bank. Railings remain
+breakable. Sluice hand wheels, walkway mechanisms and entrance bollards have
+been removed, including their collision records.
+
+Elagin's mapped footways and the west-spit gravel wings follow the exact 2 m
+terrain triangles. Paving is cut at water and at the footprints of the fifteen
+pond crossings, including their approaches. This removes the flat strips that
+previously floated over channels. The west-spit wing hedges retain their closed
+foliage model and follow the ground; they are no longer converted into green
+picket fences by the port adapter.
+
+`node tools/area.mjs islands tools/yelagin-crossings-test.mjs` checks actual
+drawn paving, stray quay panels, clear sluice passage, thirty real Player
+traversals across all fifteen crossings, and hedge roots and breakability.
+The separate natural-bank and boat-passage tests still cover the shores and
+water routes.
+
 ## Verification and known limits
 
 The area topology/arrival suite passes **490 checks**, the real gate machine

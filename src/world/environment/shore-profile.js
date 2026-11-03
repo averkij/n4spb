@@ -108,14 +108,14 @@ export function bankHeightQuery(surfaces) {
     for(const ids of [[0,1,2],[0,2,3]]){
       const[a,b,c]=ids.map(i=>s.points[i]),den=(b[2]-c[2])*(a[0]-c[0])+(c[0]-b[0])*(a[2]-c[2]);
       if(Math.abs(den)<1e-9)continue;
-      const t={a,b,c,den,x0:Math.min(a[0],b[0],c[0]),x1:Math.max(a[0],b[0],c[0]),z0:Math.min(a[2],b[2],c[2]),z1:Math.max(a[2],b[2],c[2])};
+      const t={a,b,c,den,ground:s.kind==='grass'||s.kind==='bed',x0:Math.min(a[0],b[0],c[0]),x1:Math.max(a[0],b[0],c[0]),z0:Math.min(a[2],b[2],c[2]),z1:Math.max(a[2],b[2],c[2])};
       for(let x=Math.floor(t.x0/cell);x<=Math.floor(t.x1/cell);x++)for(let z=Math.floor(t.z0/cell);z<=Math.floor(t.z1/cell);z++){
         const key=x*8192+z;let list=grid.get(key);if(!list)grid.set(key,list=[]);list.push(t);
       }
     }
   }
-  return(x,z)=>{const list=grid.get(Math.floor(x/cell)*8192+Math.floor(z/cell));if(!list)return null;let h=null;
-    for(const t of list){if(x<t.x0-1e-7||x>t.x1+1e-7||z<t.z0-1e-7||z>t.z1+1e-7)continue;
+  return(x,z,groundOnly=false)=>{const list=grid.get(Math.floor(x/cell)*8192+Math.floor(z/cell));if(!list)return null;let h=null;
+    for(const t of list){if(groundOnly&&!t.ground||x<t.x0-1e-7||x>t.x1+1e-7||z<t.z0-1e-7||z>t.z1+1e-7)continue;
       const{a,b,c,den}=t,u=((b[2]-c[2])*(x-c[0])+(c[0]-b[0])*(z-c[2]))/den,v=((c[2]-a[2])*(x-c[0])+(a[0]-c[0])*(z-c[2]))/den,w=1-u-v;
       if(Math.min(u,v,w)<-1e-7)continue;const y=u*a[1]+v*b[1]+w*c[1];h=h===null?y:Math.max(h,y);
     }return h;

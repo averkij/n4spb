@@ -1,9 +1,10 @@
 // One continuous height field around a park's connected ponds. Independent
 // offset ribbons fold over one another at narrow islands and acute corners;
 // distance to the exposed water boundary keeps those places continuous too.
+export const SHORE_TERRAIN_CELL = 2;
 export function shoreTerrain(runs, waterways, isWater, boundaries = []) {
   if (!runs.length) return { surfaces: [], cuts: [] };
-  const cell = 2, bucket = 32, grid = new Map(), candidates = new Map();
+  const cell = SHORE_TERRAIN_CELL, bucket = 32, grid = new Map(), candidates = new Map();
   const sources=[...runs.map(r=>({r,pts:r.pts,cut:true})),...boundaries.map(b=>({r:runs.find(r=>r.reach.key===b.key),pts:b.pts,cut:false})).filter(s=>s.r)];
   for (const {r,pts,cut} of sources) {
     const { water, bed } = waterways[r.reach.key];

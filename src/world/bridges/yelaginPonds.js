@@ -1,29 +1,24 @@
-// bridges/yelaginPonds.js - the 11 footbridges and the 5 sluices of the ponds of the Yelagin park (group `bridges-yelagin-ponds`).  Dossier: docs/research/yelagin-ponds-bridges.md (OSM ways + deck rings,
+// bridges/yelaginPonds.js - the 11 footbridges and the 4 sluices of the ponds of the Yelagin park (group `bridges-yelagin-ponds`).  Dossier: docs/research/yelagin-ponds-bridges.md (OSM ways + deck rings,
 // ru / en Wikipedia, 30+ Commons photos "Мост на Елагином острове между N и M прудами. 2023", "Гидротехническое водопропускное сооружение ..."), data + coordinates: yelaginPonds/specs.js.
 // What the OSM data hold: every bridge is a 2.4 m `highway=footway` way plus (for 8 of them) a man_made=bridge ring; the water of the ponds is a cut of the ground (bed -1.4 m, POND_Y -0.35, a green rim
 // that slopes 1.1 m inward from the outline, a 0.4 m collider box along the outline).  Nothing drew a deck: the environment laid an invisible walk box over the water (quay.js fallback), and the pond
 // outline colliders stood across both ends of the deck.  This module claims the ways + rings (bridges/groups.js row `yelagin-ponds`), draws the real bridges and:
 //   * measures the bank lines of the channel under every deck from the layout (heightAt < -0.8) and puts the abutment faces 1.15 m inside them (over the rim slope);
 //   * opens the outline colliders of the pond where they cross a deck (the leftover pieces beside the deck are put back);
-//   * lays walk ramps / stairs for the deck, side colliders along the railings, bollards at the mouths of the narrow ones (a car passes only the 8 m wide road-width decks).
+//   * lays walk ramps / stairs for the deck, side colliders along the railings and clear supported approaches.
 // Types: T timber trestle (pipe-pile bents, plank deck, steel X-lattice), A arched strut bridge (steel arch ribs + posts + diagonals, granite landings with 5 steps), G granite abutments + pale haunched
-// girder + cast-iron ring-and-diamond railing between granite posts, C plank culvert; sluices: granite headwall block, gate frame(s) with winch columns and hand wheels, X railing, granite end posts.
+// girder + cast-iron ring-and-diamond railing between granite posts, C plank culvert; sluices: granite headwall block, gate faces below a clear walkway, X railing, granite end posts.
 // NO flags / flagpoles / lamps on the carriageway (the lamp poles of the paths are the streets' business).  One Parts per spatial cell (clusters of <= 150 m): the meshes cull as one.
-import * as THREE from 'three';
 import { Parts } from './kit.js';
-import { PONDS, SLUICES } from './yelaginPonds/specs.js';
+import { PONDS, SLUICES, frameOfPond } from './yelaginPonds/specs.js';
 import { pondMats, RAIL } from './yelaginPonds/mats.js';
+import { bridgeApproaches } from './yelaginPonds/approaches.js';
 
-export { PONDS, SLUICES };
+export { PONDS, SLUICES, frameOfPond };
 const RIM = 1.15, BED = -0.5;                                                  // the foot of everything under the water line: the pond water is at -0.35 (no geometry below it: its toon outline would show through)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-/** frame of a bridge record: centre (the middle of the OSM way + the ring shift), T (rad) = direction of +u */
-export function frameOfPond(sp) {
-  const T = Math.atan2(sp.b[1] - sp.a[1], sp.b[0] - sp.a[0]), c = Math.cos(T), s = Math.sin(T), du = sp.ring ? sp.ring[2] : 0, dv = sp.ring ? sp.ring[3] : 0;
-  const mx = (sp.a[0] + sp.b[0]) / 2, mz = (sp.a[1] + sp.b[1]) / 2;
-  return { T, c, s, cx: mx + du * c - dv * s, cz: mz + du * s + dv * c, len: Math.hypot(sp.b[0] - sp.a[0], sp.b[1] - sp.a[1]) };
-}
+/** World/local point transforms in the shared footprint frame. */
 const W = (f, u, v) => ({ x: f.cx + u * f.c - v * f.s, z: f.cz + u * f.s + v * f.c });
 const UV = (f, x, z) => ({ u: (x - f.cx) * f.c + (z - f.cz) * f.s, v: -(x - f.cx) * f.s + (z - f.cz) * f.c });
 
@@ -48,6 +43,15 @@ export function buildYelaginPonds(env) {
   const { ctx, M, flush } = env, L = ctx.L, ph = ctx.physics, Y = pondMats(ctx, M), TM = ctx.mat.toon;
   const t0 = Date.now(), out = { list: [], colliders: 0, cells: 0, info: {} };
   const sites = [];
+  const addApproaches=(B,sp)=>{
+    const approaches=bridgeApproaches(ctx,sp,M,Y),f=frameOfPond(sp),base=B.deckAt;
+    B.approaches=approaches.plans;
+    B.deckAt=(x,z)=>base(x,z)??approaches.deckAt(x,z);
+    for(const a of approaches.plans)for(const v of [-a.hw,a.hw]){
+      const p=W(f,a.side*a.outer,v);B.bounds[0]=Math.min(B.bounds[0],p.x-1);B.bounds[1]=Math.min(B.bounds[1],p.z-1);B.bounds[2]=Math.max(B.bounds[2],p.x+1);B.bounds[3]=Math.max(B.bounds[3],p.z+1);
+    }
+    return approaches;
+  };
 
   // ================================================================================================ the bridges
   const makeBridge = (sp) => {
@@ -76,6 +80,7 @@ export function buildYelaginPonds(env) {
     B.crossing={ax:f.c,az:f.s,w:2*hw,len:2*HL};
     B.bounds = (() => { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const [u, v] of [[-HL, -hw], [HL, -hw], [HL, hw], [-HL, hw]]) { const q = w(u, v); x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); z0 = Math.min(z0, q.z); z1 = Math.max(z1, q.z); } return [x0 - 2, z0 - 2, x1 + 2, z1 + 2]; })();
     B.deckAt = (x, z) => { const q = UV(f, x, z); return Math.abs(q.v) <= hw - 0.1 && Math.abs(q.u) <= HL + 0.2 ? yDeck(q.u) : null; };
+    const approaches=addApproaches(B,sp);
     B.draw = (P) => {
       P.push(f.cx, 0, f.cz, -f.T);
       const deckMat = sp.deck === 'wood' ? Y.deckWood : M.asphalt;
@@ -164,13 +169,7 @@ export function buildYelaginPonds(env) {
         }
         for (let i = 0; i <= nb; i++) { const u = railA + bw * i, y = yDeck(u) + 0.04; P.cyl(Y.post, [u, y, v], [u, y + spec.H + 0.04, v], 0.04, 0.035, 5, true); }
       }
-      // ---- bollards across the mouths of the narrow decks (a person passes, a car does not)
-      B.bollards = [];
-      if (2 * hw < 5.0) for (const su of [-1, 1]) {
-        const u = su * (HL + 0.9), n = 2 * Math.max(1, Math.ceil((2 * hw - 0.9) / 2.2)), sp0 = Math.min(1.15, (2 * hw - 0.8) / (n - 1 || 1));       // an even number: a gap in the middle (1.15 m: a person passes, a car does not)
-        for (let k = 0; k < n; k++) { const v = (k - (n - 1) / 2) * sp0; P.cyl(M.steel, [u, 0, v], [u, 0.8, v], 0.08, 0.08, 6, true); P.cyl(M.white, [u, 0.6, v], [u, 0.72, v], 0.085, 0.085, 6, false); B.bollards.push(w(u, v)); }
-      }
-      P.pop();
+      approaches.draw(P);P.pop();
     };
     B.colliders = () => {
       const cl = [];
@@ -182,9 +181,8 @@ export function buildYelaginPonds(env) {
       }
       const top = Math.max(yDeck(mid), yDeck(bk0), yDeck(bk1)) + 1.2;
       for (const sg of [-1, 1]) { const nR = Math.max(1, Math.ceil(2 * HL / 6)); for (let i = 0; i < nR; i++) { const u0 = -HL + 2 * HL * i / nR, u1 = -HL + 2 * HL * (i + 1) / nR, q = w((u0 + u1) / 2, sg * (hw - 0.1)); ph.addBox(q.x, q.z, u1 - u0 + 0.05, 0.26, -f.T, -6, top); cl.push(1); } }
-      for (const q of B.bollards || []) { ph.addCylinder(q.x, q.z, 0.12, -0.5, 1.6); cl.push(1); }
       const cut = openRimBoxes(ph, f, HL, hw, (x, z, l, d, rot) => { ph.addBox(x, z, l, d, rot, -2, 1.25); });
-      B.info.rimCut = cut; B.info.colliders = cl.length; return cl.length;
+      B.info.rimCut = cut; B.info.colliders = cl.length+approaches.colliders(); return B.info.colliders;
     };
     return B;
   };
@@ -196,9 +194,8 @@ export function buildYelaginPonds(env) {
     const B = { id: sp.id, name: sp.name, nameEn: sp.nameEn, x: f.cx, z: f.cz, at: [f.cx, f.cz], info: { type: 'sluice', len: sp.len, rails: 0, colliders: 0 }, masts: [] };
     B.crossing={ax:f.c,az:f.s,w:wd,len:sp.len};
     B.bounds = (() => { let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9; for (const [u, v] of [[-HL, -hv], [HL, -hv], [HL, hv], [-HL, hv]]) { const q = w(u, v); x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); z0 = Math.min(z0, q.z); z1 = Math.max(z1, q.z); } return [x0 - 3, z0 - 3, x1 + 3, z1 + 3]; })();
-    B.deckAt = () => null;
-    const tor = new THREE.TorusGeometry(0.34, 0.022, 4, 12);
-    const cols = [];
+    B.deckAt = (x,z)=>{const q=UV(f,x,z);return Math.abs(q.u)<=HL&&Math.abs(q.v)<=hv?yT:null;};
+    const approaches=addApproaches(B,sp);
     B.draw = (P) => {
       P.push(f.cx, 0, f.cz, -f.T);
       P.box(M.granite, -HL, HL, -0.5, yT - 0.06, -hv, hv, 't', 2.4);                                      // the headwall block
@@ -214,39 +211,25 @@ export function buildYelaginPonds(env) {
           P.box(M.black, uc - gw / 2, uc + gw / 2, 0.1, 0.14, v + sg * 0.1, v + sg * 0.14, '', 1);
         }
       }
-      // winch columns on the deck: portal frame + pale column, spindle and hand wheel (set off the axis: a visitor passes on the other side, the deck is only 2.4 - 3 m wide)
-      for (let g = 0; g < sp.gates; g++) {
-        const uc = sp.gates === 2 ? (g === 0 ? -HL * 0.42 : HL * 0.42) : 0, vc = sp.gates === 2 ? (g === 0 ? 0.4 : -0.4) : 0.45;
-        for (const du of [-0.5, 0.5]) P.box(Y.winch, uc + du - 0.04, uc + du + 0.04, yT, yT + 0.95, vc - 0.08, vc + 0.08, 'b', 1);
-        P.box(Y.winch, uc - 0.55, uc + 0.55, yT + 0.88, yT + 0.98, vc - 0.1, vc + 0.1, '', 1);
-        P.cyl(Y.winch, [uc, yT, vc], [uc, yT + 1.05, vc], 0.15, 0.1, 8, true);
-        P.cyl(M.black, [uc, yT + 1.05, vc], [uc, yT + 1.7, vc], 0.03, 0.03, 4, true);
-        P.geo(Y.winch, tor, uc, yT + 1.05, vc, Math.PI / 2, 0, 0, 1, 1, 1);
-        cols.push(w(uc, vc));
-      }
+      // The crossing stays clear: no hand-wheel mechanisms on the walkway.
       // railing: X-lattice along both long sides between granite end posts
       const rm = Y.rail('xlat', '#cfd5d8'), spec = RAIL.xlat, nb = Math.max(1, Math.round((2 * HL - 1.0) / spec.W)), bw = (2 * HL - 1.0) / nb, rv = hv - 0.1;
       for (const sg of [-1, 1]) {
         for (let i = 0; i < nb; i++) { const ua = -HL + 0.5 + bw * i; P.quad(rm, [ua, yT + 0.03, sg * rv], [ua + bw, yT + 0.03, sg * rv], [ua + bw, yT + 0.03 + spec.H, sg * rv], [ua, yT + 0.03 + spec.H, sg * rv], [0, 0, sg]); B.info.rails++; }
         for (const su of [-1, 1]) { const u = su * (HL - 0.28), v = sg * (hv - 0.2); P.box(M.pylon, u - 0.22, u + 0.22, yT, yT + 1.05, v - 0.22, v + 0.22, 'b', 1.2); }
       }
-      // bollards at the two mouths (a person passes, a car does not)
-      B.bollards = [];
-      for (const su of [-1, 1]) for (const v of [-0.65, 0.65]) { const u = su * (HL + 0.8); P.cyl(M.steel, [u, 0, v], [u, 0.8, v], 0.08, 0.08, 6, true); P.cyl(M.white, [u, 0.6, v], [u, 0.72, v], 0.085, 0.085, 6, false); B.bollards.push(w(u, v)); }
       // approach slabs: two granite steps from the ground to the deck
-      for (const su of [-1, 1]) P.box(Y.step, su > 0 ? HL : -HL - 0.45, su > 0 ? HL + 0.45 : -HL, 0, yT * 0.5, -hv, hv, su > 0 ? 'l' : 'r', 1.5);
-      P.pop();
+      for (const su of [-1, 1]) if(!approaches.plans.some(a=>a.side===su))P.box(Y.step, su > 0 ? HL : -HL - 0.45, su > 0 ? HL + 0.45 : -HL, 0, yT * 0.5, -hv, hv, su > 0 ? 'l' : 'r', 1.5);
+      approaches.draw(P);P.pop();
     };
     B.colliders = () => {
       let n = 0;
       const q = w(0, 0); ph.addWalkBox(q.x, q.z, sp.len + 0.2, wd + 0.1, -f.T, yT, -0.5); n++;
-      for (const su of [-1, 1]) { const a = w(su * (HL + 0.225), 0); ph.addWalkBox(a.x, a.z, 0.45, wd, -f.T, yT * 0.5, -0.5); n++; }
+      for (const su of [-1, 1]) if(!approaches.plans.some(a=>a.side===su)){ const a = w(su * (HL + 0.225), 0); ph.addWalkBox(a.x, a.z, 0.45, wd, -f.T, yT * 0.5, -0.5); n++; }
       for (const sg of [-1, 1]) { const a = w(0, sg * (hv - 0.1)); ph.addBox(a.x, a.z, sp.len - 0.7, 0.2, -f.T, -0.5, yT + 1.2); n++; }
       for (const su of [-1, 1]) for (const sg of [-1, 1]) { const a = w(su * (HL - 0.28), sg * (hv - 0.2)); ph.addCylinder(a.x, a.z, 0.28, -1.5, yT + 1.1); n++; }
-      for (const c of cols) { ph.addCylinder(c.x, c.z, 0.17, -1.5, yT + 2.0); n++; }
-      for (const b of B.bollards || []) { ph.addCylinder(b.x, b.z, 0.12, -0.5, 1.6); n++; }
       n += openRimBoxes(ph, f, HL + 0.8, hv + 0.1, (x, z, l, d, rot) => { ph.addBox(x, z, l, d, rot, -2, 1.25); }) * 0;
-      B.info.colliders = n; return n;
+      B.info.colliders = n+approaches.colliders(); return B.info.colliders;
     };
     return B;
   };

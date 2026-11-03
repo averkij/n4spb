@@ -2689,3 +2689,85 @@ node tools/panorama-claims-test.mjs
 node tools/drive-bench.mjs --area vladimirsky --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/yelagin/after-centre
 node tools/drive-bench.mjs --area islands --q medium --seconds 20 --start "-5161.6,-4248.2,4.9" --json --diagnostics --out shots/yelagin/after-islands
 ```
+
+## 2026-11-03 — Elagin pond crossings and grounded paths (9.5.2)
+
+Legacy quay faces no longer stand beside pond bridges over continuous grass
+banks. All fifteen crossings have clear entrances and supported approaches to
+the lowered bank. Sluice winches and entrance bollards are removed. Footways
+and west-spit gravel follow the exact terrain triangles and stop at water;
+bridge footprints reserve their own paving. The west-spit hedges keep their
+closed foliage geometry, grounded roots and breakable bays.
+
+The new crossing test checks 1,330,126 drawn-paving samples, seventy-six sluice
+passage probes and thirty real Player traversals across all fifteen crossings.
+It also checks 384 root vertices on thirty-two hedges and releases their
+colliders after a knock. No legacy quay sheets remain. The largest visible
+paving-lift deviation is 0.02809 m at four coping transitions; fifty-six
+samples are underneath the real stone lip. The shoreline tests still pass
+5,334 drawn-surface probes and twenty-four two-way bank routes in Islands,
+plus forty-four unchanged Moskovskaya routes. Islands passes seventeen water
+access checks, 138 quick boat-passage checks, boat boarding/reboarding and
+the Yacht Bridge clearance and breakable-divider tests. Its road audit and
+20,004/20,004 painted-line geometry probes pass. The road-surface audit retains
+forty-five residual samples within its existing 120-sample allowance. Layout
+and geometry claim checks pass in all eighteen areas. The latter still reports
+ungraded non-building claims, including 123 point/line/polygon warnings in
+Islands, mostly bridge claims outside the module's drawn cut; these are not
+reported as repaired or as an empty audit.
+
+Evidence is under `shots/yelagin-bridges/`. Timed comparisons use the normal
+shipping bakes before this round (9.5.1, commit `e16b81d`) and the final 9.5.2
+bakes, Edge/D3D11 on RTX 3090 Ti, 1280×720, medium quality and twenty seconds of
+real W input. `gates=0` keeps each measurement in one area. CPU audits and
+other GPU jobs are excluded from the timed runs. These measurements are
+separate from the faster 9.5.0 session above; timings across those sessions
+are not treated as a change caused by this patch.
+
+| Route / snapshot | Load s | Mean / p50 / p95 / max ms | >40 / >80 ms | Mean draws | Distance m | Used / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Ryukhina, 9.5.1 | 32.473 | 31.16 / 33.3 / 49.9 / 333.3 | 37 / 3 | 914 | 290 | 389 / 563 |
+| Ryukhina, 9.5.2 | 31.172 | 29.64 / 33.3 / 50.0 / 300.0 | 85 / 5 | 913 | 289 | 447 / 628 |
+| Station, 9.5.1 | 31.442 | 30.25 / 33.3 / 50.0 / 216.7 | 39 / 3 | 1,180 | 367 | 543 / 908 |
+| Station, 9.5.2 | 32.162 | 27.72 / 33.3 / 49.9 / 200.0 | 42 / 3 | 1,169 | 366 | 561 / 1,070 |
+
+Both routes end in the same traffic/obstacle situations, within about one metre
+of the preceding endpoints. Loaded-region counts are identical (Islands 51/101,
+Station 39/99); neither run loses a region. Average rates remain above 30 FPS,
+but p95 stays near 50 ms and Islands has more >40 ms frames and long tasks
+(6 before, 29 after). The slightly lower mean is not evidence that hitching
+improved. CDP end samples also grow: Islands uses about 57 MiB more JS heap and
+65 MiB more backing storage; Station uses 19 MiB and 162 MiB more respectively.
+These are uncollected end snapshots, not retained-memory or allocation profiles.
+The added paving contributes 3.0 MiB gzip to the site. Region work and GC remain
+profiling targets; consistently smooth 30 FPS remains unfinished.
+
+The final manifest check passes **16 fresh areas / 1,869 complete products /
+759.2 MiB gzip**. One Smolny product changed by one byte after its original
+checksum was recorded; the manifest guard caught it. A complete Smolny rebuild
+restored the original expected checksum and a valid gzip stream. No checksum
+was relabelled. The complete Pages whitelist measures **980,041,692 bytes**,
+within the 1,000,000,000-byte guard.
+
+Normal-loading Islands matches revision `c2df71b21dc4bb9c697c`, with no failed
+regions, local assets or module/browser errors. Actual keyboard input traverses
+the three reported crossings in both directions, on their decks and full
+approaches, without rescues. All six reported views, two wider pond views and
+the earlier outer-shore view were opened and reviewed, as were both driving
+end frames and all nine car-control frames.
+
+The normal-page red-car test passes entry, acceleration, nitro, camera changes
+and exit. Its drift sequence hits an obstacle, and its separate Anichkov leg
+remains stationary; neither is counted as a successful traversal. A focused
+normal-page physics check on the verified Nevsky lane accelerates the red car
+to 64.2 km/h and brakes it to zero without damage. It releases the brake when
+stopped: holding the same control continues into reverse. Existing duplicate
+texture-painter and D3D shader warnings remain.
+
+```powershell
+node tools/area.mjs islands tools/yelagin-crossings-test.mjs
+node tools/area.mjs islands tools/boat-passage-test.mjs --quick
+node tools/area.mjs islands tools/water-reachable-test.mjs
+node tools/drive-bench.mjs --area islands --q medium --seconds 20 --start "-5161.6,-4248.2,4.9" --params "gates=0" --json --diagnostics --out shots/yelagin-bridges/after-road-islands
+node tools/drive-bench.mjs --area vladimirsky --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --params "gates=0" --json --diagnostics --out shots/yelagin-bridges/after-road-centre
+```

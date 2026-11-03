@@ -143,6 +143,7 @@ jobs:
           node tools/area.mjs palace tools/quay-fixture-audit.mjs
           node tools/area.mjs islands tools/quay-fixture-audit.mjs
           node tools/area.mjs islands tools/yelagin-shore-test.mjs
+          node tools/area.mjs islands tools/yelagin-crossings-test.mjs
           node tools/area.mjs islands tools/natural-bank-test.mjs
           node tools/tree-instance-test.mjs
       - name: Hook set of the North with the engine call sites (npm run hooks:all)

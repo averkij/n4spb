@@ -1,4 +1,4 @@
-// bridges/yelaginPonds/specs.js - PURE DATA (no imports): the 11 footbridges and the 5 sluices of the ponds of the Yelagin park (docs/research/yelagin-ponds-bridges.md).
+// bridges/yelaginPonds/specs.js - PURE DATA (no imports): the 11 footbridges and the 4 sluices of the ponds of the Yelagin park (docs/research/yelagin-ponds-bridges.md).
 // Coordinates: the local frame of the city (x east, z SOUTH, metres), taken from the OSM ways (raw layer data/osm-raw/bridges.json, Overpass 2026-10-13) and the OBB of their man_made=bridge rings.
 // A bridge frame: origin = the middle of the axis, +u = from the first OSM node to the last one (T = atan2(dz, dx)), +v = (-sin T, cos T) ("right of travel" with z south).
 //   type  T  timber trestle: plank deck on stringers, pipe-pile bents, steel X-lattice railing (photos a1 a2 b1)
@@ -22,10 +22,33 @@ export const PONDS = [
   { id: 'p1n2n', name: 'мост между 1-м и 2-м Северными прудами', nameEn: 'Bridge between the 1st and 2nd Northern ponds (Kitchen side)', type: 'G', a: [-4711.3, -5480.5], b: [-4710.4, -5468.7], ring: [11.9, 5.6, 0, 0], hw: 2.8, crown: 0.08, deck: 'asphalt', rail: { kind: 'ringlat', hex: '#c9cfd2' }, osm: ['w100145336', 'w369563618'], photos: 'g1 09 [V]' },
 ];
 
-/** the sluices: c = centre, T = direction of the DECK axis (+u, across the flow), len / wd = deck length (across the flow) / width (along the flow), gates = number of winch columns */
+/** the sluices: c = centre, T = direction of the DECK axis (+u, across the flow), len / wd = deck length (across the flow) / width (along the flow), gates = number of gate openings */
 export const SLUICES = [
   { id: 's4s', name: 'гидротехническое сооружение между Средней Невкой и 4-м Южным прудом', nameEn: 'Sluice between the Srednyaya Nevka and the 4th Southern pond', a: [-5787.5, -5178.9], b: [-5781.7, -5175.5], len: 6.7, wd: 2.7, gates: 2, look: 'twin', osm: ['w100146852'], photos: 's4s1 s4s2 23 [V]' },
   { id: 's1s', name: 'гидротехническое сооружение между Средней Невкой и 1-м Южным прудом', nameEn: 'Sluice between the Srednyaya Nevka and the 1st Southern pond', a: [-4646.1, -4854.3], b: [-4649.7, -4848.3], len: 7.0, wd: 2.5, gates: 1, look: 'single', osm: [], node: 'n1157609917', photos: 's1s1 s1s2 [V]; the deck is across the culvert w100144528, 4.5 m inland of the lock-gate node [E]' },
   { id: 's5n', name: 'гидротехническое сооружение между Средней Невкой и 5-м Северным прудом', nameEn: 'Sluice between the Bolshaya Nevka and the 5th Northern pond', a: [-6318.5, -5288.0], b: [-6311.5, -5288.0], len: 7.0, wd: 2.4, gates: 1, look: 'single', osm: [], photos: 's5n1 s5n2 [V]; position from the OSM culvert w372681605 [OSM]' },
   { id: 'sne', name: 'гидротехнический затвор на северо-востоке Елагина острова', nameEn: 'Sluice gate in the north-east of Yelagin Island (canal to the Bolshaya Nevka)', a: [-4472.0, -5435.7], b: [-4477.1, -5437.5], len: 5.4, wd: 3.0, gates: 2, look: 'twin', osm: ['w100147063'], node: 'n1157617458', photos: 'sne [V]' },
 ];
+
+/** Pure footprint frame shared by the bridge builder and paving reservations. */
+export function frameOfPond(sp) {
+  const T = Math.atan2(sp.b[1] - sp.a[1], sp.b[0] - sp.a[0]), c = Math.cos(T), s = Math.sin(T), du = sp.ring ? sp.ring[2] : 0, dv = sp.ring ? sp.ring[3] : 0;
+  const mx = (sp.a[0] + sp.b[0]) / 2, mz = (sp.a[1] + sp.b[1]) / 2;
+  return { T, c, s, cx: mx + du * c - dv * s, cz: mz + du * s + dv * c, len: Math.hypot(sp.b[0] - sp.a[0], sp.b[1] - sp.a[1]) };
+}
+
+/** Preserve the mapped span; supported approaches meet the lowered park bank. */
+export function pondApproaches(sp, heightAt) {
+  const f=frameOfPond(sp),sluice=sp.wd!==undefined,hw=sluice?sp.wd/2:sp.hw;
+  const hl=sluice?Math.max(9,sp.len)/2:Math.max(f.len,sp.ring?.[0]||0)/2,out=[];
+  const point=(u,v)=>[f.cx+u*f.c-v*f.s,f.cz+u*f.s+v*f.c];
+  for(const side of [-1,1]){
+    // Narrow islands can slope away immediately beside the path. Meet the
+    // first dry centreline instead of skipping it for the next pond beyond.
+    const ground=u=>heightAt(...point(side*u,0));
+    if(ground(hl)>=-.12)continue;
+    let end=hl+1;while(end<hl+18&&ground(end)<-.12)end+=.5;
+    out.push({side,inner:hl,outer:end,hw,y0:sluice?.32:sp.type==='A'?0:.02,y1:Math.max(0,heightAt(...point(side*end,0)))+.04});
+  }
+  return out;
+}

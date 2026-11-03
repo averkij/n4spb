@@ -846,7 +846,9 @@ export function buildQuay(ctx, root) {
         quadN(bermB, f0, f1, f2, f3, -sg.nx, 0, -sg.nz);
       }
     }
-    sweep(faceDeck[key], wallProf, (i) => !segDeck[i] || segIn[i] || segOpen[i], u0, vWall);
+    // Natural banks continue below bridges. The old full-height quay face
+    // would stand alone above the lowered grass on either side of a crossing.
+    sweep(faceDeck[key], wallProf, (i) => !segDeck[i] || segIn[i] || segOpen[i] || segSlope[i]?.continuous, u0, vWall);
     // The exact same immutable quads supply layout.heightAt. In particular,
     // a low camera in the pond must stand on this slope, never on the old
     // phantom flat terrain above it or a floorless void below it.

@@ -91,5 +91,6 @@ async function buildSource(ctx) {
 export async function build(ctx) {
   const before=new Set(ctx.physics.items), roots=new Set(ctx.staticRoot.children);
   await buildSource(ctx);
-  adaptPortedSolids(ctx,ctx.staticRoot.children.filter(r=>!roots.has(r)),ctx.physics.items.filter(it=>!before.has(it)),"landmarksYelaginSpits");
+  // The wing hedges already own closed, terrain-rooted geometry and bays.
+  adaptPortedSolids(ctx,ctx.staticRoot.children.filter(r=>!roots.has(r)),ctx.physics.items.filter(it=>!before.has(it)&&!it.authoredVegetation),"landmarksYelaginSpits");
 }
