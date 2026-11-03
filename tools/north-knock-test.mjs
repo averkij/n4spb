@@ -2,7 +2,7 @@
 // probe. CPU only, no GPU.  node tools/area.mjs north tools/north-knock-test.mjs [--verbose] [--mutant]
 //   1 census: the static modules of the page's MODULES (tools/modules-list.mjs; traffic / people / wildlife / drive are left out) are built in page order with the real core/knock.js; per module the
 //     records registered and their kinds are printed; every record owns at least one collider that is on ctx.physics with source.knock = the record, and at least one mesh part (an instance of an
-//     InstancedMesh, or an object); the knock stats agree with the list
+//     InstancedMesh, or an object), except the six explicitly authored ghost bays of the Paradny fountain rims; the knock stats agree with the list
 //   2 landmarksNorthFull registers exactly the PIERS bollards and SPANS chains of landmarksNorthFull/fence.js: each pier owns a box collider 2.34 m high, each span a thin `fence` box; a pier hit at
 //     40 km/h breaks off and takes the spans next to it (the onKnock of the fence); a span hit by itself topples and leaves a low rest box
 //   2b landmarksKirochnaya registers exactly its campus benches (landscape.js BENCHES: 5 placements, 4 drawn - the one at (1258, -1130) lies inside a mapped building and is skipped, as in the source): kind bench, a box collider 2.1 x 0.64 m, 1.1 m high, two mesh parts (iron ends,
@@ -57,6 +57,18 @@ const { CAMPUS_ROADS } = await import(url('src/world/landmarksKirochnaya/groups.
 const { BENCHES: BENCH_SPOTS, BENCH_W, BENCH_D, BENCH_H } = await import(url('src/world/landmarksKirochnaya/landscape.js'));
 const BENCHES = BENCH_SPOTS.filter(([x, z]) => !L.insideBuilding(x, z, 1.5));           // the placements the module draws: the one at (1258, -1130) lies inside a mapped building and is skipped, as in the source
 const { PRUNE_SERVICES } = await import(url('src/world/lib/area-tables.js'));
+const { PARADNY_FOUNTAINS, PARADNY_Y } = await import(url('src/world/landmarksTauride/paradny-surface.js'));
+// paradny-courts.js draws these rims into its static kit and registers their
+// colliders as ghost bays through fence-bays.js. Derive their exact positions
+// and lengths from the same mapped rings; other missing visual parts still fail.
+const FOUNTAIN_RIMS = PARADNY_FOUNTAINS.flatMap((f) => f.polys.flatMap(({ o }) =>
+  Array.from({ length: o.length / 2 }, (_, i) => {
+    const j = (i * 2 + 2) % o.length, x = (o[i * 2] + o[j]) / 2, z = (o[i * 2 + 1] + o[j + 1]) / 2;
+    return { x, z, w: Math.hypot(o[j] - o[i * 2], o[j + 1] - o[i * 2 + 1]) };
+  })));
+const isFountainRim = (r) => r.kind === 'fence' && Math.abs(r.y - PARADNY_Y) < 1e-6 && r.anchored === 12 &&
+  FOUNTAIN_RIMS.some((b) => Math.hypot(r.x - b.x, r.z - b.z) < 1e-6 && Math.abs(r.w - b.w) < 1e-6);
+const missingVisuals = (module, records) => records.filter((r) => !r.parts.some((p) => p.mesh || p.obj) && !(module === 'landmarksTauride' && isFountainRim(r)));
 
 const PAGE = mainModules().filter((m) => !DYNAMIC.includes(m));
 const MODULES = MUTANT ? ['landmarksNorthFull', 'landmarksKirochnaya'] : PAGE;
@@ -90,7 +102,7 @@ console.log(`built ${MODULES.length} modules in ${Date.now() - t0} ms; knock sta
 const idle = (seconds, dt = 1 / 30) => { for (let t = 0; t < seconds - 1e-9; t += dt) ctx.knock.update(dt); };
 
 // ---------------------------------------------------------------- 1 census
-if (!MUTANT) check('1 census: every record owns a collider on ctx.physics and a mesh part; the stats agree with the list', () => {
+if (!MUTANT) check('1 census: every record owns a collider and visual parts or an exact authored fountain ghost bay; the stats agree with the list', () => {
   const owners = new Set(); for (const c of ctx.physics.items) if (c.source && c.source.knock) owners.add(c.source.knock);
   const all = ctx.knock.list;
   assert.equal(ctx.knock.stats.registered, all.length, 'stats.registered = the list');
@@ -100,11 +112,23 @@ if (!MUTANT) check('1 census: every record owns a collider on ctx.physics and a 
     const loose = c.records.filter((r) => !r.items.length && !(m === 'streets' && r.kind === 'chain'));
     assert.equal(loose.length, 0, `${m}: ${loose.length} of ${c.n} records have no collider (${loose.slice(0, 3).map((r) => `${r.kind} at ${r.x.toFixed(1)}, ${r.z.toFixed(1)}`).join('; ')})`);
     if (c.noItems) console.log(`     ${m}: ${c.noItems} chain span(s) without a collider (the fillet rule of streets/barriers.js)`);
-    assert.equal(c.noMesh, 0, `${m}: ${c.noMesh} of ${c.n} records have no mesh part`);
+    const missing = missingVisuals(m, c.records);
+    assert.equal(missing.length, 0, `${m}: ${missing.length} of ${c.n} records have no mesh part (${missing.map((r) => `${r.kind} at ${r.x.toFixed(2)}, ${r.z.toFixed(2)}`).join('; ')})`);
     for (const r of c.records) assert(r.items.every((it) => it.source && it.source.knock === r), `${m}: a ${r.kind} at (${r.x.toFixed(1)}, ${r.z.toFixed(1)}) does not own its collider`);
   }
   assert.equal(owners.size, all.filter((r) => r.items.length).length, 'the records found on ctx.physics.items = the records with colliders');
+  const rims = census.landmarksTauride.records.filter(isFountainRim);
+  assert.equal(rims.length, FOUNTAIN_RIMS.length, 'all mapped fountain rim ghost bays are registered');
+  console.log(`     ${rims.length} exact mapped Paradny fountain rim ghost bays (static visuals in paradny-courts.js)`);
   console.log(`     ${all.length} records on the page: ${JSON.stringify(ctx.knock.stats.byKind)}`);
+});
+
+if (!MUTANT) check('1b missing visuals are still rejected for furniture and unrecognised ghost bays', () => {
+  const bench = census.landmarksKirochnaya.records[0], rim = census.landmarksTauride.records.find(isFountainRim);
+  assert.equal(missingVisuals('landmarksKirochnaya', [{ ...bench, parts: [] }]).length, 1, 'a bench with missing parts is rejected');
+  assert.equal(missingVisuals('landmarksTauride', [{ ...rim, parts: [], x: rim.x + 1 }]).length, 1, 'an unrecognised empty bay is rejected');
+  assert.equal(missingVisuals('landmarksTauride', [{ ...rim, parts: [], kind: 'bench' }]).length, 1, 'only the authored fence kind is exempt');
+  assert.equal(missingVisuals('landmarksKirochnaya', [{ ...rim, parts: [] }]).length, 1, 'only the owning module can use the exception');
 });
 
 // ---------------------------------------------------------------- 2 the cannon fence
