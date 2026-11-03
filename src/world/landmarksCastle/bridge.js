@@ -8,10 +8,24 @@ import { pointIn } from './geo.js';
 import * as THREE from 'three';
 import { Parts } from './kit.js';
 import { knockBays } from '../lib/fence-bays.js';
+import { segInfo } from '../streets/net.js';
 
 const DECKS = ['w568786528', 'w568786525', 'w568786527'];
 const FENCES = ['w459074435', 'w459074437', 'w459074433', 'w459074434', 'w568786516'];
 export const TERRACE = [[-743.7, -832.3], [-746.9, -826.2], [-741.1, -824.3], [-731.2, -827.5], [-728.5, -833.6], [-733.6, -835.8]];
+
+// The rails run along the edges of these custom decks, which are walk boxes
+// rather than the standard bridge service. Used by the furniture audit too.
+export function isCastleDeckRail(x, z) {
+  return DECKS.some((id) => {
+    const r = ROADS.find((q) => q.id === id); if (!r) return false;
+    const [ax, az] = r.pts, bx = r.pts[r.pts.length - 2], bz = r.pts[r.pts.length - 1];
+    const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz);
+    const along = ((x - ax) * dx + (z - az) * dz) / len;
+    const side = Math.abs(((x - ax) * dz - (z - az) * dx) / len);
+    return along >= -0.35 && along <= len + 0.35 && Math.abs(side - 2.03) <= 0.55;
+  });
+}
 
 /** WATER IS REACHABLE (docs/AREAS.md 13.7): a railing (granite posts + two iron tubes + pickets) along a -> b is a row of BREAKABLE BAYS (one per post-to-post span, lib/fence-bays.js), pushed to `out`; build() makes them at the end.
  *  o: { h, gap, y0 | yb(t) (the foot along the way: the humped decks), cy1, cth (the collider: top, thickness) } */
@@ -79,7 +93,22 @@ export function build(K, M, D, svc) {
     const f = BARRIERS.find((q) => q.id === id); if (!f) continue;
     for (let i = 0; i + 3 < f.pts.length; i += 2) {
       const a = [f.pts[i], f.pts[i + 1]], b = [f.pts[i + 2], f.pts[i + 3]], len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (len < 0.5) continue;
-      railBays(rbays, a, b, { h: 1.0, gap: 2.7, y0: 0.1, cy1: 1.2, cth: 0.3 }); n++;
+      const bankBays = [];
+      railBays(bankBays, a, b, { h: 1.0, gap: 2.7, y0: 0.1, cy1: 1.2, cth: 0.3 });
+      const net = K.ctx.services.streets?.net;
+      for (const bay of bankBays) {
+        let blocked = false;
+        if (net) for (let t = 0; t <= 1 && !blocked; t += 0.1) {
+          const x = bay.x0 + (bay.x1 - bay.x0) * t, z = bay.z0 + (bay.z1 - bay.z0) * t;
+          net.each(x, z, 8, (w, i) => {
+            if (blocked || w.skipDraw || w.pedestrianOnly || w.bridge) return;
+            const q = segInfo(w, i, x, z);
+            if (q.c.d < q.h + bay.cth / 2 + 0.1) blocked = true;
+          });
+        }
+        if (!blocked) rbays.push(bay);
+      }
+      n++;
     }
   }
   if (rbays.length) {

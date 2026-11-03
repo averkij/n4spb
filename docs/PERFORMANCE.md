@@ -1,5 +1,27 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-03: wreck overlay and castle road furniture (9.4.2)
+
+The wreck overlay remains visible with the HUD hidden; screenshot mode still
+hides it. Castle bank fence bays now leave a clearance at drawable service
+roads. The three custom castle bridge decks retain their breakable railings;
+the furniture audit recognises those deck-edge rails as bridge-owned instead
+of treating the adjoining service ways as if they covered the whole deck.
+
+The strip strict furniture audit changes from 74 on-road / 150 edge / 41 median
+records to 0 / 29 / 41. The 29 edge records have positive road clearance; the
+41 median records are on medians at least 7.5 m wide. These are reported as
+observations, not strict failures. The separate informational signal stop-point
+check still reports 259 points within a foreign carriageway; this change did
+not address traffic stop placement. The live Palace area's broader furniture
+audit still fails on 15 records: 11 cathedral cannon-fence records, two Liteyny
+bridge rail bays and two Mars-field palace fence bays. One additional quay
+stone is allowed by the audit. These findings are outside the old strip's 74
+records and have not been resolved by this change.
+The Palace water-reachability suite passed 22 checks, including water entry
+and the castle moat, but its fence-collider inventory found one unrelated
+streets guard-rail record without a box at (645.1, -128.7); the suite remains red.
+
 ## 2026-11-03: Liteyny markings, vehicle lenses and lane joins (9.4.1)
 
 Liteyny and Bolsheokhtinsky now use the shared road-marking plan on their

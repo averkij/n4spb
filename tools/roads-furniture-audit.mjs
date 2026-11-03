@@ -72,6 +72,7 @@ const L = await imp('src/world/layout.js');
 const { AREAS } = await imp('src/world/data/city.js');
 const { deckAt } = await imp('src/world/streets/decks.js');
 const { segInfo } = await imp('src/world/streets/net.js');
+const { isCastleDeckRail } = await imp('src/world/landmarksCastle/bridge.js');
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.1, 2500);
@@ -400,7 +401,8 @@ for (const o of objs) {
   if (!status) { excluded.offroad++; continue; }
   let reason = null;
   if (o.src !== 'service' && inIsland(o.x, o.z)) reason = 'island';
-  else if (deckAt(o.x, o.z, 0.3) || ctx.services.bridges?.deckY(o.x,o.z)!=null || o.cat === 'bridge_item') reason = 'bridge_owned';
+  else if (deckAt(o.x, o.z, 0.3) || ctx.services.bridges?.deckY(o.x,o.z)!=null || o.cat === 'bridge_item' ||
+    (o.module === 'landmarksCastle' && (o.file.startsWith('lmCastle-rail-') || o.chain.includes('landmarksCastle/bridge.js')) && isCastleDeckRail(o.x, o.z))) reason = 'bridge_owned';
   else if ((o.cat === 'landmark_item' || o.cat === 'ad_pillar') && ev && ev.p.w && ev.p.w.rank === 0) reason = 'courtyard';
   if (reason) { excluded[reason]++; if (ALLROWS) exRows.push({ cat: o.cat, x: +o.x.toFixed(1), z: +o.z.toFixed(1), reason, file: o.file }); continue; }
   const w = (cen && cen.w) || (ev && ev.p.w) || null;

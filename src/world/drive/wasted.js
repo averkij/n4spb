@@ -22,7 +22,7 @@ const CSS = `
 @keyframes w-veil { 0% { opacity: 0; } 6% { opacity: 1; } 84% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes w-pop { 0% { transform: scale(1.7); opacity: 0; } 7% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.07); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #wasted.on .w-text { animation: none; } }
-body.noui #wasted, body.shot #wasted { display: none !important; }`;
+body.shot #wasted { display: none !important; }`;
 
 /** `doc`: the document (absent in node: the logic runs without a label element); `onShow`: called once at each wreck event (drive.js: a toast with the J hint) */
 export function createWasted({ doc = typeof document !== 'undefined' ? document : null, onShow = null } = {}) {
