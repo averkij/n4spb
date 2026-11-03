@@ -81,7 +81,15 @@ export function buildLaneGraph(net) {
         if (d > dn + 0.8) continue;
         best = d; a.cross = c;
       }
-      if (nd.arms.length < 3) { a.dIn = 0; a.dOut = 0; continue; }
+      if (nd.arms.length < 3) {
+        // OSM way seams can change lane width/offset by 1-2 m. Joining the
+        // offset endpoints sideways at the node makes a car swing left/right
+        // almost in place. Leave longitudinal room for a tangent-continuous
+        // transition, also at ordinary two-arm bends. Short links share the
+        // available room through the existing mouth-shortening rule below.
+        a.dIn = a.dOut = nd.arms.length === 2 ? Math.max(8,hCross*1.5) : 0;
+        continue;
+      }
       if (a.cross) { const half = clamp(a.cross.w + 1, 3.5, 6) / 2; a.dIn = best + half + 1.5; a.dOut = best + half + 0.4; }
       else { const m = Math.max(a.box || 0, hCross + 1.5, 6); a.dIn = m + 1.2; a.dOut = m + 0.5; }
     }
@@ -196,7 +204,7 @@ export function buildLaneGraph(net) {
       for (const [a, b] of pairs) {
         if (!a || !b) continue;
         const p0 = a.pts[a.pts.length - 1], p3 = b.pts[0], t0 = tanAt(a.pts, a.pts.length - 1, true), t3 = tanAt(b.pts, 0, false);
-        let pts = nd.arms.length < 3 ? [p0, p3] : bezier(p0, t0, p3, t3, turn === 'straight' ? 8 : 14);
+        let pts = bezier(p0, t0, p3, t3, turn === 'straight' ? 8 : 14);
         // a turn whose curve swings out of the carriageway (the inside of a right turn between two streets at an odd angle: Rastrelli Sq. / Kvarengi Lane at Smolny, Liteyny / Bolsheokhtinsky
         // approaches): try wider and tighter curves, keep the one that stays best on the asphalt (the test of traffic-test.mjs: more than 2.2 m outside = off-lane)
         if (nd.arms.length >= 3 && net.cover) {

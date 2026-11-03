@@ -125,7 +125,7 @@ export function createGateMachine({ gates, config = {}, rectsOf = (id) => (Objec
         lastX = x; lastZ = z;
       }
       const held = clock < holdUntil, v = held ? 0 : Math.sqrt(vx * vx + vz * vz);
-      let chip = null, offer = null, dir = -1;
+      let chip = null, offer = null, dir = -1, offerPriority = 0;
       const walk = mode === 'walk', vehDepth = walk ? 0 : depthFor(mode, v, C), tol = mode === 'fly' ? C.flyTol : C.lateralTol;      // (depthFor / chipFor of a vehicle do not read the zone)
       for (let gi = 0; gi < gates.length; gi++) {
         const g = gates[gi], q = geo[gi], s = st.get(g.id);
@@ -134,8 +134,12 @@ export function createGateMachine({ gates, config = {}, rectsOf = (id) => (Objec
           if (!insideFrom(g, q, x, z)) { s.needExit = false; continue; }      // outside FROM's own territory (a flyer over the wall, a teleport): nothing to do
           const eDepth = walk ? q.zone : vehDepth;
           if (s.needExit && edgeDir(g, q, x, z, eDepth + C.exitMargin, false) < 0) s.needExit = false;      // the player has left the zone by the margin: a decline is over (the time must also have passed)
-          if (blocked || s.open || clock < graceUntil || offer || clock < s.until || s.needExit) continue;
-          const k = edgeDir(g, q, x, z, eDepth, true, held ? 0 : vx, held ? 0 : vz, v); if (k >= 0) { offer = g; dir = k; }
+          // A requested destination can win within a surveyed approach corridor
+          // shared by several territories. It must still pass every ordinary
+          // edge/heading/arrival test; elsewhere registry precedence applies.
+          const p = g.preferWithin, priority = p && x>=p[0] && z>=p[1] && x<=p[2] && z<=p[3] ? 1 : 0;
+          if (blocked || s.open || clock < graceUntil || (offer && priority<=offerPriority) || clock < s.until || s.needExit) continue;
+          const k = edgeDir(g, q, x, z, eDepth, true, held ? 0 : vx, held ? 0 : vz, v); if (k >= 0) { offer = g; dir = k; offerPriority = priority; }
           continue;
         }
         const px = x - q.a0, pz = z - q.a1, cd = px * g.inward[0] + pz * g.inward[1], cs = px * q.tx + pz * q.tz;

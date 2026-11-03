@@ -1,5 +1,87 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-03: Liteyny markings, vehicle lenses and lane joins (9.4.1)
+
+Liteyny and Bolsheokhtinsky now use the shared road-marking plan on their
+raised slabs and approach ramps. Paint follows the slab tessellation instead
+of adding a second, generic five-stripe layout. Two-arm way seams reserve
+longitudinal blending room and use curves with lane-aligned end tangents;
+the former 1–2 m sideways connectors caused the conspicuous left/right NPC
+heading swings. The fleet's existing shared lamp material now retains a pale
+reflector and fluted lens when its per-instance lamp power is zero. No vehicle
+geometry, instance layout, extra material or frame callback was added.
+
+Troitsky's northbound crossing prefers Kronverk inside a registry approach
+corridor. The normal edge eligibility and heading checks still apply. The
+gate and registry edits are runtime-only; the road edits require all sixteen
+live area bakes.
+
+Focused CPU verification: raised marking geometry on both Neva bridges,
+two real embankment seam regressions, 2,966 unchanged stationary NPC poses
+and 58,273 moving poses, three-minute regional traffic runs at Liteyny and
+Vosstaniya, two-minute runs at Bolsheokhtinsky and Moskovsky Prospect,
+23-kind fleet upload goldens, fleet damage isolation, lane storage, roof/
+divider/flower-panel regressions, 95 gate checks, 572 area checks, closure
+lint and runtime-only classification. Traffic runs stay within the existing
+overlap tolerance and report zero red-light, off-lane, teleport or NaN failures.
+Troitsky route checks cover walking, driving and flying, both lanes/pavements,
+and 18/30/60 m/s vehicle approaches.
+
+Audit limits are compared with HEAD through a scratch Node loader, without
+changing the working source. `npm run markings` passes. Palace and Smolny's
+full strict marking audits each retain the same one signalised approach
+without a stop bar; solid coverage stays 95.6% / 95.5%. The 400 m Liteyny
+window retains the same 82.3% coverage failure, zero longitudinal line points
+inside junction boxes and 100% solid-plan geometry coverage. The strip road
+furniture audit retains 74 on-road, 150 edge and 41 median records, with the
+same causes as HEAD; surface and ribbon checks pass. These older audit
+failures are not counted as repaired by this round.
+
+Normal-loading drive comparisons use Edge / ANGLE D3D11 / RTX 3090 Ti,
+1280 × 720, medium, full traffic/population/shadows, twelve seconds of W,
+no profile or mid-drive screenshot, with CPU audits and other GPU jobs stopped.
+The baseline is 6ea8107 with its matching bakes. Evidence and reproducible
+commands are in `shots/liteyny-lines/`; CDP heap and backing storage are
+reported separately after each run.
+
+| Run | Ready (s) | Travel (m) | Mean / p50 / p95 / max frame (ms) | Frames >40 / >80 ms | Mean draws | CDP used / backing (MiB) |
+| --- | ---: | ---: | --- | --- | ---: | --- |
+| Liteyny before, 12 s | 31.57 | 148 | 23.62 / 16.7 / 33.4 / 616.8 | 11 / 6 | 865 | 538 / 1398 |
+| Liteyny final, 12 s | 32.65 | 140 | 25.62 / 16.7 / 50.0 / 550.2 | 41 / 6 | 767 | 536 / 1374 |
+| Vosstaniya before, 12 s | 30.85 | 371 | 32.44 / 33.3 / 50.1 / 400.0 | 48 / 6 | 1302 | 514 / 1408 |
+| Vosstaniya final, 12 s | 30.51 | 351 | 37.72 / 33.3 / 66.6 / 583.4 | 88 / 8 | 1265 | 495 / 1205 |
+| Vosstaniya before, 8 s | 32.95 | 267 | 31.96 / 33.3 / 50.1 / 66.8 | 45 / 0 | 1292 | 483 / 1249 |
+| Vosstaniya final, 8 s | 28.00 | 266 | 22.82 / 16.7 / 33.4 / 33.5 | 0 / 0 | 1303 | 481 / 1099 |
+
+The twelve-second pairs stop at different traffic/collision positions: Liteyny
+(-127,-2017) / (-121,-2009); Vosstaniya (146,19) still moving / (159,44)
+stopped. The shorter old-centre pair was added to check the apparent slowdown
+before those divergent endpoints: both end at roughly (240,71), at 156 km/h,
+with nearly identical draw counts. It shows no repeatable structural slowdown;
+the results do not establish an FPS improvement percentage. The longer routes
+retain substantial hitches and do not establish comfortable 30 FPS throughout
+the city. Streaming/GC and dense integrated-scene work remain the next
+performance investigation, separate from this visual/traffic correction.
+
+Reproduce with `node tools/drive-bench.mjs --area palace --q medium --seconds
+12 --start "-127.8,-1869,357.1" --json --diagnostics --out shots/liteyny-lines/local`
+and the same command with `--start "498.2286,135.1625,76.0322"`. For the matched
+short segment use `--seconds 8`. The before runs use the same commands in an
+untouched 6ea8107 worktree with its own matching source and bake. All six runs
+report zero module and region-loading failures.
+
+Final normal-loading review inspected the supplied Liteyny eye-height view,
+the raised approach from above and in reverse, Kutuzov Embankment,
+Shpalernaya and Nevsky, plus close daylight/night fleet lenses. The red-car
+entry, acceleration/nitro, collision response, camera/cockpit, braking and exit
+script passes with `--params "gates=0" --nofuzz`: its first unscoped run left
+the page at nitro speed and lost the old document's test hooks. Area switching
+was checked separately with real walking input and normal baked loading:
+Troitsky (roughly -1412,-2039) → `kronverk.html`, arriving near (-1418,-2052)
+on foot, automatically playing after the veil clears, with no page/module
+errors. Existing duplicate-texture and D3D shader warnings remain.
+All sixteen final manifests are fresh: 1,869 complete products, 756.2 MiB gzip.
+
 ## 2026-10-31: coastal districts integrated with Petrograd, 8.0.0
 
 The final scene has 15 live pages. Морские ворота and Округ №65 use normal

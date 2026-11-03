@@ -3185,6 +3185,7 @@ GATES.push(...[
     "from": "palace",
     "to": "kronverk",
     "zone": 40,
+    "preferWithin": [-1490, -2180, -1300, -1800],
     "reverse": "e38"
   },
   {
@@ -3309,6 +3310,8 @@ GATES.push(...[
   }
 ]);
 // Measured northern gate order (tools/order-petro-gates.mjs, gates-test run-ups).
+// Troitsky's explicit preferWithin corridor above overrides the overlap order
+// at the bridge only (owner preference, 2026-11-03).
 const EDGE_ORDER = {
   "palace": [
     "e1",

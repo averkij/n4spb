@@ -55,6 +55,7 @@ import { makeSigns } from './streets/signs.js';
 import { makeLabels } from './streets/labels.js';
 import { MeshBuilder } from './lib/massing.js';
 import { ownedGroups, isOwned } from './lib/claims.js';
+import { setNorthDecksEnabled } from './northBridges/sites.js';
 import { HOOKS } from './lib/area-tables.js';
 import { AREAS, ENTRANCES, TRAMWAYS, LAMPS } from './data/city.js';
 import { SHAFTS } from './data/metro.js';
@@ -73,6 +74,7 @@ export async function build(ctx) {
   const { mat, L } = ctx;
   const root = new THREE.Group(); root.name = 'streets'; ctx.addStatic(root);
   const owned = await ownedGroups(ctx);
+  setNorthDecksEnabled(!ctx.buildList || ctx.buildList.includes('northBridges'));
   setDecksEnabled(!ctx.buildList || ctx.buildList.includes('bridges'));          // the bridges module draws the decks (streets/decks.js); without it the roads keep crossing the canals
   const textureBake = await bakedData(ctx, 'street-textures');
   const T = textureBake ? Object.fromEntries(await Promise.all(Object.entries(textureBake).map(async ([key, value]) => [key, await unpackTexture(value)]))) : makeStreetTextures(ctx);

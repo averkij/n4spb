@@ -23,6 +23,7 @@ import { prepLanes, latAt } from './lanes.js';
 import { deckAt, longDeckHeight } from './decks.js';
 import { UP, rgb, dpKeep, clamp } from './util.js';
 import { ROAD_Y, LIFT, WEST_X } from './surface.js';
+import { northDeckHeight, northDeckCuts } from '../northBridges/sites.js';
 
 export const RULES = { dash: 1.0, period: 4.0, lane: 0.14, thin: 0.1, gap: 0.1, laneMin: 2.6, narrow: 5.5, sideDash: 6.5, stopMinApproach: 12, stopW: 0.4, stopWPrimary: 0.6, arrowBefore: 30, zebraClear: 1.0, stubMin: 6, stubAnchor: 3, sliver: 1.5 };
 const WHITE = rgb('#e9e6dc');
@@ -36,7 +37,7 @@ export function centreKindFor(T, rank, wid) {
 }
 /** the road class label of the audit: rank + direction + lanes */
 export const classOf = (w) => `r${w.rank}${w.oneway ? '-1way' : '-2way'}-${w.lanes ? w.lanes.nF : '?'}+${w.lanes ? w.lanes.nB : '?'}`;
-export const eligible = (w) => w.rank >= 1 && !w.skipDraw && !w.pedestrianOnly && w.hw !== 'living_street';
+export const eligible = (w) => w.rank >= 1 && (!w.skipDraw || (w.bridge && northDeckHeight(w.x[0],w.z[0]) !== null)) && !w.pedestrianOnly && w.hw !== 'living_street';
 export const isBusLaneWay = (w) => w.oneway && w.name === 'Невский проспект' && w.rank >= 3 && w.lanes.nF >= 3 && w.x[0] < WEST_X && w.x[w.n - 1] < WEST_X;
 
 /** the ways that carry way w on at its two ends under the same name and rank (one road cut into ways at a seam, Kirochnaya at -42): their asphalt is no 'other carriageway' that hides w's paint */
@@ -319,10 +320,18 @@ export function planMarkings(net, graph, o = {}) {
 /** a strip along pts (x, z, nx, nz): u across, v along; collinear interior points are dropped (a dash = one quad) */
 export function strip(B, pts, width, col, lift, uvLen = 3) {
   if (pts.length > 2) { const keep = dpKeep([pts.map((p) => [p.x, p.z])], 0.012); pts = pts.filter((_, i) => keep[i]); }
+  const draped=[];
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i],a=pts[i-1];
+    if(a)for(const t of northDeckCuts(a,p))draped.push({x:a.x+(p.x-a.x)*t,z:a.z+(p.z-a.z)*t,nx:a.nx+(p.nx-a.nx)*t,nz:a.nz+(p.nz-a.nz)*t});
+    draped.push(p);
+  }
+  pts=draped;
   let prev = null, s = 0;
   pts.forEach((p, i) => {
     if (i) s += Math.hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z);
-    const a = B.vert(p.x + p.nx * width / 2, ROAD_Y + lift, p.z + p.nz * width / 2, 0, s / uvLen, UP, col), b = B.vert(p.x - p.nx * width / 2, ROAD_Y + lift, p.z - p.nz * width / 2, 1, s / uvLen, UP, col);
+    const ax=p.x+p.nx*width/2,az=p.z+p.nz*width/2,bx=p.x-p.nx*width/2,bz=p.z-p.nz*width/2;
+    const a = B.vert(ax, (northDeckHeight(ax,az)??ROAD_Y)+lift, az, 0, s / uvLen, UP, col), b = B.vert(bx, (northDeckHeight(bx,bz)??ROAD_Y)+lift, bz, 1, s / uvLen, UP, col);
     if (prev) B.quad(prev[0], prev[1], b, a);
     prev = [a, b];
   });
@@ -335,7 +344,8 @@ export function drawPlan(plan, P) {
   for (const b of plan.bars) {
     const rx = -b.tz, rz = b.tx, V = (u, c, tu, tv) => {
       const x=b.x+b.tx*u+rx*c,z=b.z+b.tz*u+rz*c;
-      const y=b.longDeck?(longDeckHeight(x,z)??ROAD_Y)+.03:b.y??ROAD_Y+LIFT;
+      const northY=northDeckHeight(x,z);
+      const y=northY!==null?northY+LIFT:b.longDeck?(longDeckHeight(x,z)??ROAD_Y)+.03:b.y??ROAD_Y+LIFT;
       return P.vert(x,y,z,tu,tv,UP,WHITE);
     };
     P.quad(V(-b.depth, b.a, 0, 0), V(0, b.a, 1, 0), V(0, b.b, 1, 1), V(-b.depth, b.b, 0, 1)); n++;

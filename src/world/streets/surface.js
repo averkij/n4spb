@@ -8,6 +8,7 @@ import { ASPHALT_TILE } from './tex.js';
 import { deckAt } from './decks.js';
 import { planMarkings, drawPlan, isBusLaneWay } from './markings.js';
 import { kerbBacking } from './walks.js';                // (walks.js imports this file too: both only use the other at call time)
+import { northDeckHeight } from '../northBridges/sites.js';
 
 export const ROAD_Y = 0.03, WALK_Y = 0.12, KERB_H = 0.15, LIFT = 0.015, KERB_W = 0.2;
 const WHITE = rgb('#e9e6dc'), YELLOW = rgb('#e3c64a'), GULLY = rgb('#2c2d30'), BUSLANE = rgb('#a05a46'), ZEBRA_RED = rgb('#7f4c47');
@@ -204,8 +205,11 @@ export function buildMarkings(net, P, Wear, arrowsOut, Red, graph) {
 
 /** straight-ahead lane arrow (3.6 m long) as a polygon decal */
 export function addArrow(P, a, col = WHITE) {
-  const { x, z, dx, dz, y } = a, nx = -dz, nz = dx, Y = y + LIFT;
-  const V = (u, v, tu, tv) => P.vert(x + dx * u + nx * v, Y, z + dz * u + nz * v, tu, tv, UP, col);
+  const { x, z, dx, dz, y } = a, nx = -dz, nz = dx;
+  const V = (u, v, tu, tv) => {
+    const px=x+dx*u+nx*v,pz=z+dz*u+nz*v;
+    return P.vert(px,(northDeckHeight(px,pz)??y)+LIFT,pz,tu,tv,UP,col);
+  };
   const s0 = V(-1.8, -0.08, 0, 0), s1 = V(-1.8, 0.08, 1, 0), s2 = V(0.6, 0.08, 1, 0.6), s3 = V(0.6, -0.08, 0, 0.6);
   P.quad(s0, s1, s2, s3);
   const h0 = V(0.45, -0.42, 0, 0.6), h1 = V(0.45, 0.42, 1, 0.6), h2 = V(1.85, 0, 0.5, 1);
@@ -226,14 +230,14 @@ export function buildCrossings(net, P) {
       const p = x00 + (k - 0.5) * 1.0; if (p < x0 - 0.3 || p > x1 + 0.3) continue;
       const wear = 0.85 + 0.15 * hash2(c.x * 0.31 + k, c.z * 0.43), col = [ZEBRA_RED[0] * wear, ZEBRA_RED[1] * wear, ZEBRA_RED[2] * wear];
       const bx = c.x + c.nx * p, bz = c.z + c.nz * p;
-      const q = (du, dv, tu, tv) => P.vert(bx + c.tx * du + c.nx * dv, ROAD_Y + LIFT, bz + c.tz * du + c.nz * dv, tu, tv, UP, col);
+      const q = (du, dv, tu, tv) => { const x=bx+c.tx*du+c.nx*dv,z=bz+c.tz*du+c.nz*dv;return P.vert(x,(northDeckHeight(x,z)??ROAD_Y)+LIFT,z,tu,tv,UP,col); };
       P.quad(q(-half, -0.25, 0, 0), q(half, -0.25, 1, 0), q(half, 0.25, 1, 1), q(-half, 0.25, 0, 1));
     }
     for (let k = 0; k < n; k++) {
       const p = x00 + k * 1.0, wear = 0.82 + 0.18 * hash2(c.x * 0.37 + k, c.z * 0.51);
       const col = [WHITE[0] * wear, WHITE[1] * wear, WHITE[2] * wear];
       const bx = c.x + c.nx * p, bz = c.z + c.nz * p;
-      const q = (du, dv, tu, tv) => P.vert(bx + c.tx * du + c.nx * dv, ROAD_Y + LIFT, bz + c.tz * du + c.nz * dv, tu, tv, UP, col);
+      const q = (du, dv, tu, tv) => { const x=bx+c.tx*du+c.nx*dv,z=bz+c.tz*du+c.nz*dv;return P.vert(x,(northDeckHeight(x,z)??ROAD_Y)+LIFT,z,tu,tv,UP,col); };
       P.quad(q(-half, -0.25, 0, 0), q(half, -0.25, 1, 0), q(half, 0.25, 1, 1), q(-half, 0.25, 0, 1));
       stats.stripes++;
     }

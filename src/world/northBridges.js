@@ -10,6 +10,7 @@ import { Parts } from './landmarksD/kit.js';
 import { GROUPS_LIST } from './northBridges/groups.js';
 import { knockBays } from './lib/fence-bays.js';
 import { solidPiers } from './bridges/piers.js';      // the drawn piers in the water are solid for a floating hull
+import { SITES } from './northBridges/sites.js';
 export const OWNS_GROUPS = true;
 
 export function build(ctx) {
@@ -17,14 +18,10 @@ export function build(ctx) {
   const P = new Parts(), surfaces = [], rbays = [];      // rbays: the breakable railing bays (docs/AREAS.md 13.7)
   const stone = ctx.mat.toon('#999d97', { paint: 0.055 }), light = ctx.mat.toon('#bab6a9');
   const metal = ctx.mat.toon('#536863', { paint: 0.03 }), dark = ctx.mat.toon('#3f4a50');
-  const asphalt = ctx.mat.toon('#535a62'), stripe = ctx.mat.toon('#dbd7bf');
+  const asphalt = ctx.mat.toon('#535a62');
   const torus = new THREE.TorusGeometry(0.3, 0.035, 4, 12);
   const claimed = new Set((L.GROUPS.northBridges || GROUPS_LIST).map((g) => g.key));      // the sub-groups THIS area claims
-  const bridges = [
-    // Bank-side ends are averages of the mapped opposing carriageways.
-    { key: 'bolsheokhtinsky', x: 2622.4, z: -1150.1, ex: 2961.1, ez: -1131.1, width: 26, ramp: 110, h: 7.0 },
-    { key: 'liteyny', x: -123.6, z: -1972.35, ex: -77.6, ez: -2356.45, width: 34.6, ramp: 80, h: 6.0 },
-  ].filter((b) => claimed.has('north-' + b.key));
+  const bridges = SITES.filter((b) => claimed.has('north-' + b.key));
   for (const b of bridges) {
     const dx = b.ex - b.x, dz = b.ez - b.z, len = Math.hypot(dx, dz), tx = dx / len, tz = dz / len;
     const rot = Math.atan2(tx, tz), c = Math.cos(rot), s = Math.sin(rot), half = b.width / 2;
@@ -44,8 +41,8 @@ export function build(ctx) {
         P.quad(light, [inner, ya, a], [inner, ya + 0.12, a], [inner, yd + 0.12, d], [inner, yd, d], [-side, 0, 0]);
         P.quad(light, [outer, ya, a], [outer, ya + 0.12, a], [outer, yd + 0.12, d], [outer, yd, d], [side, 0, 0]);
       }
-      const markA = ya + (yd - ya) * 0.9 / (d - a) + 0.045, markD = yd - (yd - ya) * 0.9 / (d - a) + 0.045;
-      for (const u of [-7, -3.5, 0, 3.5, 7]) P.quad(stripe, [u - 0.055, markA, a + 0.9], [u + 0.055, markA, a + 0.9], [u + 0.055, markD, d - 0.9], [u - 0.055, markD, d - 0.9], [0, 1, 0]);
+      // streets/markings paints the real lane graph on this deck: the same
+      // centre divider, dash rhythm and junction clearances as the approaches.
       const [x, z] = pos(0, (a + d) / 2), seglen = d - a;
       ctx.physics.addWalkRamp(x, z, b.width, seglen + 0.035, rot, ya, yd, 1.1);
       surfaces.push({ x, z, c, s, len: seglen, width: b.width, ya, yb: yd });

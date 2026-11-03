@@ -27,6 +27,12 @@ Bridge ways (the Anichkov Bridge, `bridge: 1`) are part of the graph (lanes, con
   `idx` = 0 for the right-most lane in the travel direction (on Nevsky the bus / trolleybus lane: it is separated from the others by a solid white line); `width` metres; `len` metres;
   `speed` free speed in m/s (13.5 avenue, 12 secondary, 11 tertiary, 8 residential, 4.5 service); `from` / `to` = node ids of the ends (`null` at the map edge / a dead end).
 * lanes stop at the **stop line** (incoming) and start **after the zebra** (outgoing) of every junction; the gap is bridged by `connectors`.
+* Two-arm OSM way seams also reserve longitudinal space for a curved connector
+  (at least 8 m per arm when the adjoining links have room). Its end tangents
+  follow the lanes. A 1–2 m change in lane offset must blend along the road,
+  rather than form a sideways segment that makes an NPC pivot left and right.
+  `tools/traffic-turn-test.mjs` checks the real embankment joins and verifies
+  that stopped NPCs retain their heading.
 * Nevsky: 3-5 lanes per carriageway (OSM `lanes`), 2 x 14 m; Ligovsky 3-6; side streets 1-3; courtyards 1 + 1 (rank 0, slow).
 
 `junctions: [{ id, x, z, lanes:[incoming lane ids], out:[outgoing lane ids], signal: signalId|null, connectors:[ids], arms:[{ index, bearing, road, name, rank, crossing, in, out }] }]`

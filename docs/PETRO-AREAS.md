@@ -19,6 +19,12 @@ avoiding an isolated reach behind its original page edge. The tiny southern
 Kronverk/Admiralty overlap is served through Palace and Vasilyevsky: a direct
 gate there immediately triggered its reverse. No lens thresholds were relaxed.
 
+Owner preference, 2026-11-03 (9.4.1): northbound Troitsky Bridge crossings
+default to Kronverk–Vvedensky–Petrovsky. Palace's `e37` gate has a
+`preferWithin` corridor on the bridge approach; Aptekarsky–Posadsky remains an
+available destination. `tools/troitsky-route-test.mjs` checks both lanes and
+pavements in walking, driving and flight modes.
+
 Reproduce the final cuts and water context with:
 
 ```powershell

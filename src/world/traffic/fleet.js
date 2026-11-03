@@ -56,15 +56,29 @@ function patchCarMaterial(base) {
   return m;
 }
 
-function lampMaterial() {
+export function lampMaterial() {
   const m = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false, name: 'pb-car-lamp' });
   m.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aKind;\nattribute vec3 aLamp;')
+      .replace('#include <common>', '#include <common>\nattribute float aKind;\nattribute vec3 aLamp;\nvarying vec2 vLensUv;\nvarying float vLensKind;')
       .replace('#include <color_vertex>', `
         #ifdef USE_COLOR
-        vColor = ( aKind < 0.5 ? vec3( 1.0, 0.93, 0.78 ) * aLamp.x : ( aKind < 1.5 ? vec3( 1.0, 0.13, 0.08 ) * aLamp.y : vec3( 1.0, 0.56, 0.08 ) * aLamp.z ) ) * color;
+        vLensUv = uv; vLensKind = aKind;
+        // A lens still reflects daylight when its bulb is off. In particular,
+        // parked vehicles have aLamp = 0, not an opaque black lamp cover.
+        vColor = ( aKind < 0.5 ? vec3( 0.86, 0.93, 1.0 ) * max(0.55, aLamp.x) : ( aKind < 1.5 ? vec3( 1.0, 0.13, 0.08 ) * max(0.16, aLamp.y) : vec3( 1.0, 0.56, 0.08 ) * max(0.18, aLamp.z) ) ) * color;
         #endif`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec2 vLensUv;\nvarying float vLensKind;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        if (vLensKind < 0.5) {
+          // Silver reflector chambers, fluted glass and a sky reflection;
+          // all fleet archetypes retain their existing lens silhouettes.
+          float chamber = sin(vLensUv.x * 6.2831853 * 2.0);
+          float flute = sin(vLensUv.x * 6.2831853 * 12.0);
+          float reflection = smoothstep(0.48, 0.78, vLensUv.y);
+          diffuseColor.rgb *= 0.68 + 0.15 * chamber * chamber + 0.05 * flute + 0.22 * reflection;
+        }`);
   };
   m.customProgramCacheKey = () => 'pb-car-lamp';
   return m;

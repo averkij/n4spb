@@ -4,6 +4,16 @@ Code: `src/world/streets/markings.js` (`planMarkings` = the PLAN, pure data; `dr
 tyre wear, the red bus lane of west Nevsky, kerb yellow, bay lines, bus-stop zigzag are other builders. Standard: GOST R 51256-2018 as used in Saint Petersburg (white paint only; yellow only on kerbs / zigzags).
 **One rule per class of carriageway, never a patch per spot.** Change the rule in `markings.js` (`RULES`, `centreKindFor`, `edgesOf`), then run the audit.
 
+2026-11-03 (9.4.1): Liteyny and Bolsheokhtinsky use this same plan on their
+raised decks and approach ramps. Their builder no longer overlays five generic
+dashed stripes, including a dashed centre divider. The shared deck frames in
+`northBridges/sites.js` place lane lines, double solids, stop bars, arrows and
+crossings at the drawn slab height; longitudinal paint is split at slab seams
+so simplification cannot bury it in a ramp. Claimed bridge asphalt stays with
+`northBridges`; its road markings stay with `streets`.
+Run `node tools/area.mjs palace tools/north-markings-test.mjs` and the same
+command for `smolny` to check the real claimed ways and raised paint vertices.
+
 ## The rules
 
 | marking | rule |
