@@ -108,7 +108,9 @@ console.log('2. the hole in the environment ground (HOOKS.groundHoles, HOOKS.gro
   }
   // the engine call sites (text): the strip's HOOKS is {} so both are falsy there
   const gtxt = fs.readFileSync(path.join(ROOT, 'src/world/environment/ground.js'), 'utf8'), ftxt = fs.readFileSync(path.join(ROOT, 'src/world/environment/field.js'), 'utf8');
-  ok('the engine reads both through lib/area-tables.js behind a falsy test (the strip changes nothing)', /import \{ HOOKS \} from '\.\.\/lib\/area-tables\.js'/.test(gtxt) && /HOOKS\.groundHoles \? HOOKS\.groundHoles\(\) : null/.test(gtxt) && /import \{ ZONES, HOOKS \} from '\.\.\/lib\/area-tables\.js'/.test(ftxt) && /const wayReject = HOOKS\.groundWayReject;/.test(ftxt) && /if \(wayReject && wayReject\(r\)\) continue;/.test(ftxt));
+  const areaImports=text=>new Set([...text.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]\.\.\/lib\/area-tables\.js['"]/g)].flatMap(m=>m[1].split(',').map(s=>s.trim().split(/\s+as\s+/)[0])));
+  const gi=areaImports(gtxt),fi=areaImports(ftxt);
+  ok('the engine reads both through lib/area-tables.js behind a falsy test (the strip changes nothing)', gi.has('HOOKS') && /HOOKS\.groundHoles \? HOOKS\.groundHoles\(\) : null/.test(gtxt) && fi.has('ZONES') && fi.has('HOOKS') && /const wayReject = HOOKS\.groundWayReject;/.test(ftxt) && /if \(wayReject && wayReject\(r\)\) continue;/.test(ftxt));
 }
 
 // =============================================================== 3. the ground mask
