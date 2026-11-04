@@ -79,6 +79,7 @@ try {
   const t = await open(); const { page } = t;
   assert.equal(t.mainRequests(), 0, 'game waits for Start');
   assert.equal(await page.$eval('#load-diag', e => e.hidden), false);
+  assert((await page.$eval('#diag-version', e => e.textContent)).includes(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version));
   await page.screenshot({ path: path.join(out, 'portrait-paused.png') });
   await page.type('#diag-device', 'iPhone 16 Pro Max, iOS 26.7');
   await page.click('#diag-start');
@@ -222,8 +223,9 @@ try {
   if (process.argv.includes('--full')) {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
-    const staged = process.argv.includes('--staged');
-    if (staged) await real.page.select('#diag-test', 'scene-staged');
+    const jsGzip = process.argv.includes('--js-gzip');
+    const staged = process.argv.includes('--staged') || jsGzip;
+    if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
@@ -254,8 +256,9 @@ try {
     assert(workerEvents.some(e => e.kind === 'gpu:render:end'));
     fs.writeFileSync(path.join(out, 'full-scene-events.json'), JSON.stringify(workerEvents, null, 2));
     if (staged) {
-      for (const phase of ['fetch', 'headers', 'decompress', 'decode', 'transfer', 'transferred'])
+      for (const phase of ['fetch', 'headers', ...(jsGzip ? ['download-compressed', 'import-js-inflater', 'inflate-js'] : ['decompress']), 'decode', 'transfer', 'transferred'])
         assert(workerEvents.some(e => e.kind === 'worker:phase' && e.detail.startsWith(phase + ' ')), `traced worker reports ${phase}`);
+      if (jsGzip) assert(!workerEvents.some(e => e.kind === 'worker:phase' && e.detail.startsWith('decompress ')), 'JS mode bypasses native decompression');
       let active = 0, sent = 0;
       for (const e of workerEvents) {
         if (e.kind === 'worker:sent') { active++; sent++; assert.equal(active, 1, 'at most one active decode'); }

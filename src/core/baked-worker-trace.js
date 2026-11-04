@@ -12,15 +12,25 @@ setInterval(() => {
   if (active.size) postMessage({ loadingDiagnostic: true, kind: 'heartbeat', active: [...active] });
 }, 1000);
 
-globalThis.onmessage = async ({ data: { id, url, rawBytes } }) => {
+globalThis.onmessage = async ({ data: { id, url, rawBytes, gzipJS } }) => {
   try {
     const t0 = performance.now();
     trace(id, 'fetch');
     const response = await fetch(url);
     trace(id, 'headers', `HTTP ${response.status}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    trace(id, 'decompress');
-    const buffer = await readBakedBuffer(response, rawBytes);
+    let buffer;
+    if (gzipJS) {
+      trace(id, 'download-compressed');
+      const compressed = new Uint8Array(await response.arrayBuffer());
+      trace(id, 'import-js-inflater', `${compressed.byteLength} compressed bytes`);
+      const { inflateBakedGzip } = await import('./baked-gzip-js.js');
+      trace(id, 'inflate-js');
+      buffer = inflateBakedGzip(compressed, rawBytes);
+    } else {
+      trace(id, 'decompress');
+      buffer = await readBakedBuffer(response, rawBytes);
+    }
     trace(id, 'decode', `${buffer.byteLength} bytes`);
     const t1 = performance.now(), value = decodeBaked(buffer);
     trace(id, 'transfer');

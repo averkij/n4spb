@@ -8,7 +8,8 @@
   let run = null, previous = null, saved = null, storageError = '', selected = 'current';
   let ui, lastSample = '', lastTick = 0, requestId = 0;
   const watchedRenderers = new WeakSet();
-  const sceneTest = () => run?.test === 'scene' || run?.test === 'scene-staged';
+  const diagnosticsVersion = document.querySelector('meta[name="diagnostics-version"]')?.content || 'unknown';
+  const sceneTest = () => ['scene', 'scene-staged', 'scene-js-gzip'].includes(run?.test);
   const short = value => String(value ?? '').slice(0, 500);
   const safe = fn => { try { return fn(); } catch { return undefined; } };
   const labelURL = value => {
@@ -42,13 +43,14 @@
   function render() {
     if (!ui) return;
     const r = report();
+    ui.version.textContent = `Diagnostics v${diagnosticsVersion}${r?.version ? ' · Report ' + r.version : ''}`;
     ui.status.textContent = r ? `${r.status} · ${r.phase || 'waiting'}${r.elapsedMs ? ` · ${Math.round(r.elapsedMs / 1000)}s` : ''}` : 'No saved attempt. Tap Start test.';
     ui.notice.textContent = storageError || (run ? 'Recording locally. If the page freezes, reopen this same link to recover the last saved report.' : 'The game is paused. A reload will return here without starting another load.');
     const entries = Object.values(r?.pending || {});
     ui.pending.textContent = entries.length ? 'Waiting: ' + entries.slice(-4).map(p => p.asset).join('\n') : 'No recorded pending requests.';
     ui.tail.textContent = (r?.events || []).slice(-6).map(e => `${(e.ms / 1000).toFixed(1)}s ${e.kind}: ${e.detail}`).join('\n');
     ui.previous.disabled = !previous;
-    ui.toggle.textContent = run ? `Diagnostics · ${run.phase || run.status}` : 'Diagnostics · saved reports';
+    ui.toggle.textContent = `Diagnostics v${diagnosticsVersion} · ${run ? run.phase || run.status : 'saved reports'}`;
   }
   function request(kind, asset, rawBytes) {
     if (!run) return null;
@@ -79,7 +81,7 @@
     const NativeWorker = window.Worker;
     window.Worker = class extends NativeWorker {
       constructor(url, options) {
-        const traced = run?.test === 'scene-staged' && labelURL(url).endsWith('/src/core/baked-worker.js');
+        const traced = ['scene-staged', 'scene-js-gzip'].includes(run?.test) && labelURL(url).endsWith('/src/core/baked-worker.js');
         super(traced ? new URL('./src/core/baked-worker-trace.js', location.href) : url, options);
         this.diagnosticRequests = new Map();
         this.diagnosticQueue = []; this.diagnosticBusy = false; this.diagnosticStopped = false;
@@ -138,7 +140,7 @@
         this.diagnosticBusy = true;
         if (run?.pending[item.id]) run.pending[item.id].kind = 'worker:asset';
         event('worker:sent', item.asset);
-        try { super.postMessage(data, ...rest); }
+        try { super.postMessage(run?.test === 'scene-js-gzip' ? { ...data, gzipJS: true } : data, ...rest); }
         catch (error) {
           this.diagnosticRequests.delete(data.id); this.diagnosticBusy = false;
           finish(item.id, 'worker:send-error', error.message);
@@ -321,10 +323,10 @@
     `;
     document.head.append(css);
     const panel = document.createElement('section'); panel.id = 'load-diag'; panel.setAttribute('aria-label', 'Loading diagnostics');
-    panel.innerHTML = `<div class="diag-card"><h1>Loading diagnostics</h1><p id="diag-notice"></p>
+    panel.innerHTML = `<div class="diag-card"><h1>Loading diagnostics</h1><p id="diag-version"></p><p id="diag-notice"></p>
       <p>Reports stay on this device. No report is sent automatically.</p>
       <div id="diag-options"><label>Device / iOS version (optional)<input id="diag-device" type="text" maxlength="120" placeholder="iPhone 16 Pro Max, iOS 26.7"></label>
-      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="scene-staged">Full scene: staged decoding</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option><option value="riverfront">Riverfront geometry only</option></select></label>
+      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="scene-staged">Full scene: staged decoding</option><option value="scene-js-gzip">Full scene: JS gzip decoder</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option><option value="riverfront">Riverfront geometry only</option></select></label>
       <p id="diag-description"></p>
       <label>Decoder <select id="diag-worker"><option value="1">Worker (normal)</option><option value="0">Main thread (comparison)</option></select></label>
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
@@ -336,17 +338,17 @@
     document.body.append(panel);
     const $ = id => document.getElementById('diag-' + id);
     const toggle = document.createElement('button'); toggle.id = 'diag-toggle'; toggle.type = 'button'; document.body.append(toggle);
-    ui = { panel, toggle, status: $('status'), notice: $('notice'), pending: $('pending'), tail: $('tail'), previous: $('previous'), output: $('output') };
+    ui = { panel, toggle, version: $('version'), status: $('status'), notice: $('notice'), pending: $('pending'), tail: $('tail'), previous: $('previous'), output: $('output') };
     const showText = () => { ui.output.hidden = false; ui.output.value = text(); ui.output.focus(); ui.output.select(); };
     const changeTest = () => {
-      const scene = $('test').value === 'scene', staged = $('test').value === 'scene-staged';
+      const scene = $('test').value === 'scene', staged = ['scene-staged', 'scene-js-gzip'].includes($('test').value);
       $('worker').disabled = !scene; $('compile').disabled = !(scene || staged);
-      $('description').textContent = staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
+      $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
     };
     const requestedTest = new URLSearchParams(location.search).get('test');
-    if (['scene-staged', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
+    if (['scene-staged', 'scene-js-gzip', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => { panel.hidden = true; };
@@ -373,7 +375,7 @@
       const test = $('test').value;
       const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
       history.replaceState(null, '', location.pathname + '?' + query);
-      run = { id: Date.now().toString(36), started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test,
+      run = { id: Date.now().toString(36), started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,
         hardwareConcurrency: navigator.hardwareConcurrency, deviceMemoryGiB: navigator.deviceMemory,
         screen: { width: screen.width, height: screen.height, dpr: devicePixelRatio },

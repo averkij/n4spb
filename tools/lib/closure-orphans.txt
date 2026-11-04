@@ -4,6 +4,7 @@
 # Standalone diagnostics.html recorder. No normal area/bake imports it.
 src/core/loading-diagnostics.js
 src/core/baked-worker-trace.js
+src/core/baked-gzip-js.js
 src/world/landmarksGavan/util.js
 src/world/landmarksMakarova/inst.js
 src/world/landmarksMining/prims.js

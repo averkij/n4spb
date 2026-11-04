@@ -404,6 +404,43 @@ without delivering a false asset reply; a 404 produced the original error reply.
 Closure lint, manifest checks and generated-page checks passed. No area bake or
 normal game-loader code changed.
 
+### JavaScript gzip comparison and visible version (9.10.0)
+
+The next iPhone trace stopped on a different chunk, `city-base-0_0`, after HTTP
+200 at the `decompress` phase. The worker's last message was at 6.253 s, while
+the page report continued to 78.648 s; no worker heartbeat was received during
+the long stall. The previously stuck `city-base-0_-1` decoded successfully in
+this attempt. This narrows the failure to the response-body/decompression path
+or a worker failure there, rather than a consistently invalid individual asset.
+It does not prove a particular WebKit bug or memory termination.
+
+`diagnostics.html?test=scene-js-gzip` selects **Full scene: JS gzip decoder**.
+It retains staged/serial worker scheduling but reads the compressed response
+with `arrayBuffer()`, then inflates using the locally vendored fflate 0.8.2 from
+the pinned Three.js package. It bypasses native `DecompressionStream` entirely.
+The diagnostic logs `download-compressed`, `import-js-inflater` and `inflate-js`
+separately. The final output is preallocated to the manifest's declared size;
+size and gzip CRC32 are checked before the ordinary baked-data decoder runs.
+This path temporarily retains a compressed buffer as well as the decoded buffer
+and has additional JavaScript CPU work. It is a comparison/workaround candidate,
+not yet a verified iPhone fix. The normal game continues to use its original path.
+
+The Diagnostics badge and panel now show the current version before the game
+starts. A recovered report's game version is labelled separately, and new reports
+also include `diagnosticsVersion`. Regenerate `diagnostics.html` after a version
+bump as well as after changes to `index.html`; CI checks both inputs.
+
+`node tools/baked-gzip-js-test.mjs` verified all 108 Palace products (486,951,363
+decoded bytes) byte-for-byte against Node zlib and checked invalid CRC, declared
+size and truncation rejection. `node tools/loading-diagnostics-test.mjs --full
+--js-gzip` exercises the full-scene alternative and verifies that no native
+decompression phases are used. The fflate source and its MIT licence are copied
+explicitly into the Pages site by the deployment workflow.
+The full-scene JS-gzip run passed in desktop Chromium, entered play, and recovered
+its report after reload. Screenshots confirmed the visible version in the paused
+panel and running-game badge. All live bakes remained fresh, and closure,
+deployment-asset and generated-page checks passed. iPhone validation is pending.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

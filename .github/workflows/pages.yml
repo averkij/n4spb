@@ -196,6 +196,8 @@ jobs:
           cp manifest.webmanifest dist/      # add-to-home-screen (assets/icons/ travels with assets/)
           mkdir -p dist/vendor/rapier
           cp vendor/rapier/rapier.js vendor/rapier/LICENSE dist/vendor/rapier/
+          mkdir -p dist/vendor/fflate
+          cp vendor/fflate/fflate.module.js vendor/fflate/LICENSE dist/vendor/fflate/
           cp LICENSE LICENSE-sakuragaoka-station.txt NOTICE.md README.md dist/
           touch dist/.nojekyll
           node tools/pages-assets.mjs
