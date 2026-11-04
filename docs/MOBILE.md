@@ -320,6 +320,23 @@ works there; combined scene loading remains the failing case.
 Both real-data modes passed in desktop Chromium, including saved-report
 recovery; an injected nonresponding worker verified bounded failure and cleanup.
 
+### Isolate the first geometry module (9.8.0)
+
+`diagnostics.html?test=riverfront` selects **Riverfront geometry only**. It imports
+the actual Palace layout, context and riverfront module using the page's import
+map, then constructs its geometry with the normal context and Performance
+population settings. It records separate import, context and construction
+milestones, followed by part/triangle counts. It creates no WebGL renderer and
+does not request baked assets or load the other scene modules. An import wait
+has a 90-second watchdog; synchronous construction cannot be interrupted by a
+JavaScript timer. Reopen the page for the last saved phase if it freezes.
+
+Desktop Chromium completed the probe with 472,853 triangles. This is a CPU
+construction test, not a visual correctness or full-scene performance test;
+successful construction would still leave shader compilation, GPU uploads and
+combined scene memory to investigate. The normal game code and all area bakes
+remain unchanged by these support tests.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

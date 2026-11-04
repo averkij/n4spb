@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.8.0** (2026-11-04, minor): Add isolated riverfront geometry test for iPhone startup stalls
 - **9.7.0** (2026-11-04, minor): Add isolated phone tests for sequential and concurrent baked-worker decoding
 - **9.6.0** (2026-11-04, minor): Add a phone loading diagnostics page with persistent reports and worker comparison
 - **9.5.2** (2026-11-03, patch): Fix Elagin bridge approaches, clear crossing hardware, and ground bank paths and hedges

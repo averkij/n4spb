@@ -176,6 +176,21 @@ try {
   assert.deepEqual(hung.errors, [], 'cancelling the probe does not create unhandled rejections');
   await hung.context.close();
 
+  const riverfront = await open();
+  await riverfront.page.select('#diag-test', 'riverfront');
+  await riverfront.page.click('#diag-start');
+  await riverfront.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.status === 'Riverfront test passed', { timeout: 100000 }, key);
+  const riverReport = (await read(riverfront.page)).current;
+  assert(riverReport.riverfront.triangles > 10000);
+  assert(Object.keys(riverReport.riverfront.parts).length > 0);
+  assert(!riverReport.events.some(e => e.kind === 'worker:created'));
+  assert.equal(riverfront.mainRequests(), 0);
+  assert.equal(await riverfront.page.evaluate(() => !!window.__ctx), false);
+  assert.deepEqual(riverfront.errors, []);
+  await riverfront.page.screenshot({ path: path.join(out, 'riverfront-passed.png') });
+  fs.writeFileSync(path.join(out, 'riverfront-report.json'), JSON.stringify(riverReport, null, 2));
+  await riverfront.context.close();
+
   if (process.argv.includes('--full')) {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
@@ -200,7 +215,7 @@ try {
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();
   }
-  console.log('RESULT: OK (paused recovery, worker transfer, import failure, bounded reports, comparison, clipboard/storage fallback, isolated real assets serial/burst, worker timeout' + (process.argv.includes('--full') ? ', real scene + reload' : '') + ')');
+  console.log('RESULT: OK (paused recovery, worker transfer, import failure, bounded reports, comparison, clipboard/storage fallback, isolated real assets serial/burst, worker timeout, riverfront geometry' + (process.argv.includes('--full') ? ', real scene + reload' : '') + ')');
   console.log(`Evidence: ${out}`);
 } finally {
   await browser.close();

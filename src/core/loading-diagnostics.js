@@ -176,6 +176,37 @@
     }
   }
 
+  async function probeRiverfront() {
+    let expired = false;
+    const timeout = setTimeout(() => {
+      expired = true; run.status = 'Riverfront test timed out'; event('probe:error', 'No completion within 90 seconds');
+    }, 90000);
+    try {
+      run.phase = 'Importing riverfront and context'; event('probe:imports');
+      const [THREE, { createContext }, riverfront, L, area] = await Promise.all([
+        import('three'), import('./ctx.js'), import('../world/landmarksRiverfront.js'),
+        import('../world/layout.js'), import('../world/area.js'),
+      ]);
+      if (expired) return;
+      run.phase = 'Creating CPU context and textures'; event('probe:context');
+      await new Promise(resolve => setTimeout(resolve, 0));
+      const scene = new THREE.Scene();
+      const ctx = createContext({ scene, camera: new THREE.PerspectiveCamera(), renderer: null, audio: null,
+        quality: { name: 'performance', level: 'low', pixelRatio: 1, msaa: 2, shadowMap: 1024, petals: 0.35, lod: 0.6, cull: 0.55 },
+        sunDir: new THREE.Vector3(...L.SUN_DIR).normalize() });
+      ctx.area = area; ctx.buildList = ['landmarksRiverfront'];
+      run.phase = 'Constructing riverfront geometry'; event('probe:build');
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await riverfront.build(ctx);
+      run.riverfront = { ...ctx.services.landmarksRiverfront };
+      run.status = 'Riverfront test passed'; run.phase = 'Geometry built; no WebGL or asset worker'; event('probe:complete');
+      // No GPU was created, and the report retains only part/triangle counts.
+      scene.traverse(o => o.geometry?.dispose());
+    } catch (error) {
+      run.status = 'Riverfront test failed'; event('probe:error', error.message);
+    } finally { clearTimeout(timeout); sample(); }
+  }
+
   function sample() {
     if (!run) return;
     const now = performance.now(), ctx = window.__ctx, env = ctx?.services?.environment;
@@ -222,7 +253,7 @@
     panel.innerHTML = `<div class="diag-card"><h1>Loading diagnostics</h1><p id="diag-notice"></p>
       <p>Reports stay on this device. No report is sent automatically.</p>
       <div id="diag-options"><label>Device / iOS version (optional)<input id="diag-device" type="text" maxlength="120" placeholder="iPhone 16 Pro Max, iOS 26.7"></label>
-      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option></select></label>
+      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option><option value="riverfront">Riverfront geometry only</option></select></label>
       <p id="diag-description"></p>
       <label>Decoder <select id="diag-worker"><option value="1">Worker (normal)</option><option value="0">Main thread (comparison)</option></select></label>
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
@@ -239,10 +270,12 @@
     const changeTest = () => {
       const scene = $('test').value === 'scene';
       $('worker').disabled = $('compile').disabled = !scene;
-      $('description').textContent = scene ? 'Build and render the full scene.' : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
+      $('description').textContent = scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
+        ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
+        : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
     };
     const requestedTest = new URLSearchParams(location.search).get('test');
-    if (['assets-sequential', 'assets-burst'].includes(requestedTest)) $('test').value = requestedTest;
+    if (['assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => { panel.hidden = true; };
@@ -278,7 +311,7 @@
       selected = 'current'; lastTick = performance.now();
       $('options').hidden = true;
       setInterval(sample, 1000);
-      if (test !== 'scene') { event('start', test); void probeAssets(); return; }
+      if (test !== 'scene') { event('start', test); void (test === 'riverfront' ? probeRiverfront() : probeAssets()); return; }
       event('start', 'Full scene; waiting for main module');
       const script = document.createElement('script'); script.type = 'module'; script.src = document.getElementById('diagnostic-main').dataset.src;
       script.onerror = () => { run.status = 'Main module failed'; event('module:error', 'Main module or an import could not load'); };
