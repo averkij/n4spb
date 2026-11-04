@@ -336,6 +336,37 @@ construction test, not a visual correctness or full-scene performance test;
 successful construction would still leave shader compilation, GPU uploads and
 combined scene memory to investigate. The normal game code and all area bakes
 remain unchanged by these support tests.
+The user also confirmed that this test passed on the affected iPhone.
+
+### Test combined loading with reduced decoding overlap (9.9.0)
+
+`diagnostics.html?test=scene-staged` selects **Full scene: staged decoding**.
+The real Palace game runs with its normal settings and early shader compilation.
+Only the diagnostic wrapper changes request scheduling: it holds baked-worker
+requests until the riverfront module has completed construction and its early
+compile has returned, then forwards one request at a time. Replies, decoded
+values, and all scene content use the original loader. Queued requests and sent
+requests are recorded separately. Ordinary diagnostics and normal game pages
+retain the original scheduling. This is an experiment, not a confirmed fix;
+it reduces simultaneous decoding but does not remove the scene's retained data.
+
+Both full-scene diagnostic modes also journal entry and return around renderer
+`compile`, `compileAsync`, and the first 20 startup `render` calls. The wrapper
+samples completed-module state immediately before entering a GPU call. This
+closes a gap in the original report: construction and early shader compilation
+run in the same turn, so a shader stall could previously leave a saved snapshot
+with no completed modules. Asynchronous compilation has separate start/end
+events; a start without an end identifies an outstanding call, not its cause.
+The wrapper preserves the original result/Promise and stops logging after the
+loaded marker. It does not measure total GPU memory or catch an OS termination.
+
+`node tools/loading-diagnostics-test.mjs --full --staged` exercises the real
+scene, records all worker events outside the bounded UI log, verifies a maximum
+of one outstanding decode and the initial riverfront gate, and enters play.
+This passed in desktop Chromium with touch-sized viewports; report recovery
+after reload also passed and screenshots were reviewed. Nearby-region streaming
+can legitimately have one request in flight after play starts. All 16 live
+area manifests remain fresh. The affected iPhone's staged result is pending.
 
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context

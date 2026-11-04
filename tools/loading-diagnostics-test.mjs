@@ -194,6 +194,21 @@ try {
   if (process.argv.includes('--full')) {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+    const staged = process.argv.includes('--staged');
+    if (staged) await real.page.select('#diag-test', 'scene-staged');
+    // Capture all worker events before the bounded on-phone journal rolls over.
+    const workerEvents = [];
+    await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
+    await real.page.evaluate(() => {
+      const persist = Storage.prototype.setItem; let last = '';
+      Storage.prototype.setItem = function (key, value) {
+        if (key.startsWith('n4spb.loading-report.v1:')) {
+          const entry = JSON.parse(value)?.current?.events?.at(-1), id = JSON.stringify(entry);
+          if (entry && id !== last) { last = id; if (entry.kind.startsWith('worker:') || entry.kind.startsWith('gpu:')) void window.recordWorkerEvent(entry); }
+        }
+        return persist.call(this, key, value);
+      };
+    });
     await real.page.click('#diag-start');
     await real.page.waitForSelector('#fatal button', { timeout: 60000 });
     await real.page.click('#fatal button');
@@ -207,6 +222,21 @@ try {
     assert.deepEqual(data.current.baked.failures, []);
     assert.deepEqual(await real.page.evaluate(() => window.__errors), []);
     assert.deepEqual(real.errors, []);
+    assert(workerEvents.some(e => e.kind === 'gpu:compile:start'));
+    assert(workerEvents.some(e => e.kind === 'gpu:render:end'));
+    fs.writeFileSync(path.join(out, 'full-scene-events.json'), JSON.stringify(workerEvents, null, 2));
+    if (staged) {
+      let active = 0, sent = 0;
+      for (const e of workerEvents) {
+        if (e.kind === 'worker:sent') { active++; sent++; assert.equal(active, 1, 'at most one active decode'); }
+        if (e.kind === 'worker:decoded' || e.kind === 'worker:asset-error') { active--; assert(active >= 0); }
+      }
+      assert(sent - active >= 7);
+      assert(active === 0 || active === 1); // Region streaming can start another request after entering play.
+      const firstSend = workerEvents.findIndex(e => e.kind === 'worker:sent');
+      const firstCompile = workerEvents.findIndex(e => e.kind === 'gpu:compile:end');
+      assert(firstCompile >= 0 && firstSend > firstCompile, 'first decode waits for riverfront early compile');
+    }
     fs.writeFileSync(path.join(out, 'full-scene-report.json'), JSON.stringify(data, null, 2));
     await real.page.click('#diag-hide');
     await real.page.screenshot({ path: path.join(out, 'full-scene-playing.png') });

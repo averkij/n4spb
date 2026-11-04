@@ -1,5 +1,5 @@
-// Classic, CDN-independent recorder for diagnostics.html ONLY. No imports from
-// scene builders; no changes to the normal entry page, bake or worker protocol.
+// Classic, CDN-independent recorder for diagnostics.html ONLY. Optional probes
+// import real builders; no changes to the normal entry page or bake products.
 // All data stays on this device unless the player copies/downloads a report.
 (() => {
   'use strict';
@@ -7,6 +7,8 @@
   const key = 'n4spb.loading-report.v1:' + location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1);
   let run = null, previous = null, saved = null, storageError = '', selected = 'current';
   let ui, lastSample = '', lastTick = 0, requestId = 0;
+  const watchedRenderers = new WeakSet();
+  const sceneTest = () => run?.test === 'scene' || run?.test === 'scene-staged';
   const short = value => String(value ?? '').slice(0, 500);
   const safe = fn => { try { return fn(); } catch { return undefined; } };
   const labelURL = value => {
@@ -79,12 +81,15 @@
       constructor(url, options) {
         super(url, options);
         this.diagnosticRequests = new Map();
+        this.diagnosticQueue = []; this.diagnosticBusy = false; this.diagnosticStopped = false;
+        this.diagnosticStaged = run?.test === 'scene-staged' && labelURL(url).endsWith('/src/core/baked-worker.js');
         event('worker:created', labelURL(url));
         this.addEventListener('message', e => {
           const data = e.data, item = this.diagnosticRequests.get(data?.id);
           if (!item) return;
           this.diagnosticRequests.delete(data.id);
           finish(item.id, data.error ? 'worker:asset-error' : 'worker:decoded', `${item.asset} ${data.error || `${data.bytes} bytes, read ${Math.round(data.readMs)}ms, decode ${Math.round(data.decodeMs)}ms`}`);
+          if (this.diagnosticStaged) { this.diagnosticBusy = false; this.diagnosticTimer = setTimeout(() => this.drainDiagnosticQueue(), 0); }
         });
         this.addEventListener('error', e => event('worker:error', e.message));
         this.addEventListener('messageerror', () => event('worker:message-error'));
@@ -92,8 +97,13 @@
       postMessage(data, ...rest) {
         let item;
         if (data && typeof data.url === 'string' && typeof data.id === 'number') {
-          item = { id: request('worker:asset', data.url, data.rawBytes), asset: labelURL(data.url) };
+          item = { id: request(this.diagnosticStaged ? 'worker:queued' : 'worker:asset', data.url, data.rawBytes), asset: labelURL(data.url) };
           this.diagnosticRequests.set(data.id, item);
+        }
+        // Only the baked decoder's small request messages are delayed. Other
+        // workers and messages retain their original synchronous semantics.
+        if (this.diagnosticStaged && item) {
+          this.diagnosticQueue.push({ data, rest, item }); this.drainDiagnosticQueue(); return;
         }
         try { return super.postMessage(data, ...rest); }
         catch (error) {
@@ -101,11 +111,54 @@
           throw error;
         }
       }
+      drainDiagnosticQueue() {
+        clearTimeout(this.diagnosticTimer);
+        if (this.diagnosticStopped || this.diagnosticBusy || !this.diagnosticQueue.length) return;
+        if (!window.__stats?.modules?.landmarksRiverfront && !window.__errors?.some(e => e.module === 'landmarksRiverfront')) {
+          this.diagnosticTimer = setTimeout(() => this.drainDiagnosticQueue(), 50); return;
+        }
+        const { data, rest, item } = this.diagnosticQueue.shift();
+        this.diagnosticBusy = true;
+        if (run?.pending[item.id]) run.pending[item.id].kind = 'worker:asset';
+        event('worker:sent', item.asset);
+        try { super.postMessage(data, ...rest); }
+        catch (error) {
+          this.diagnosticRequests.delete(data.id); this.diagnosticBusy = false;
+          finish(item.id, 'worker:send-error', error.message);
+          // Deliver an ordinary asset error to the original loader; do not
+          // silently swallow an asynchronous postMessage failure.
+          this.dispatchEvent(new MessageEvent('message', { data: { id: data.id, error: error.message } }));
+          this.diagnosticTimer = setTimeout(() => this.drainDiagnosticQueue(), 0);
+        }
+      }
       terminate() {
+        this.diagnosticStopped = true; clearTimeout(this.diagnosticTimer); this.diagnosticQueue.length = 0;
         for (const item of this.diagnosticRequests.values()) finish(item.id, 'worker:terminated', item.asset);
         this.diagnosticRequests.clear(); return super.terminate();
       }
     };
+  }
+
+  function watchRenderer(renderer) {
+    if (!renderer || watchedRenderers.has(renderer)) return;
+    watchedRenderers.add(renderer);
+    let renders = 0;
+    for (const method of ['compile', 'compileAsync', 'render']) {
+      const original = renderer[method];
+      if (typeof original !== 'function') continue;
+      renderer[method] = function (...args) {
+        if (!run || document.body.classList.contains('loaded') || method === 'render' && ++renders > 20) return Reflect.apply(original, this, args);
+        const t = performance.now();
+        run.graphicsPhase = method + ':entered'; sample(); event('gpu:' + method + ':start');
+        const done = () => { run.graphicsPhase = method + ':returned'; event('gpu:' + method + ':end', `${Math.round(performance.now() - t)}ms`); };
+        const failed = error => { run.graphicsPhase = method + ':failed'; event('gpu:' + method + ':error', error.message); };
+        try {
+          const result = Reflect.apply(original, this, args);
+          if (method === 'compileAsync') { result.then(done, failed); return result; }
+          done(); return result;
+        } catch (error) { failed(error); throw error; }
+      };
+    }
   }
   for (const level of ['warn', 'error']) {
     const original = console[level];
@@ -212,7 +265,8 @@
     const now = performance.now(), ctx = window.__ctx, env = ctx?.services?.environment;
     run.elapsedMs = Math.round(now - run.startMs);
     run.maxHeartbeatGapMs = Math.max(run.maxHeartbeatGapMs, Math.round(now - lastTick)); lastTick = now;
-    if (run.test !== 'scene') { persist(); render(); return; }
+    if (!sceneTest()) { persist(); render(); return; }
+    watchRenderer(ctx?.renderer);
     run.version = document.getElementById('ver')?.textContent || null;
     run.phase = `${document.getElementById('loadpct')?.textContent || '0%'} ${document.getElementById('loadlabel')?.textContent || ''}`.trim();
     run.mainStarted = !!window.__mainStarted;
@@ -253,7 +307,7 @@
     panel.innerHTML = `<div class="diag-card"><h1>Loading diagnostics</h1><p id="diag-notice"></p>
       <p>Reports stay on this device. No report is sent automatically.</p>
       <div id="diag-options"><label>Device / iOS version (optional)<input id="diag-device" type="text" maxlength="120" placeholder="iPhone 16 Pro Max, iOS 26.7"></label>
-      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option><option value="riverfront">Riverfront geometry only</option></select></label>
+      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="scene-staged">Full scene: staged decoding</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option><option value="riverfront">Riverfront geometry only</option></select></label>
       <p id="diag-description"></p>
       <label>Decoder <select id="diag-worker"><option value="1">Worker (normal)</option><option value="0">Main thread (comparison)</option></select></label>
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
@@ -268,14 +322,14 @@
     ui = { panel, toggle, status: $('status'), notice: $('notice'), pending: $('pending'), tail: $('tail'), previous: $('previous'), output: $('output') };
     const showText = () => { ui.output.hidden = false; ui.output.value = text(); ui.output.focus(); ui.output.select(); };
     const changeTest = () => {
-      const scene = $('test').value === 'scene';
-      $('worker').disabled = $('compile').disabled = !scene;
-      $('description').textContent = scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
+      const scene = $('test').value === 'scene', staged = $('test').value === 'scene-staged';
+      $('worker').disabled = !scene; $('compile').disabled = !(scene || staged);
+      $('description').textContent = staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
     };
     const requestedTest = new URLSearchParams(location.search).get('test');
-    if (['assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
+    if (['scene-staged', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => { panel.hidden = true; };
@@ -311,7 +365,7 @@
       selected = 'current'; lastTick = performance.now();
       $('options').hidden = true;
       setInterval(sample, 1000);
-      if (test !== 'scene') { event('start', test); void (test === 'riverfront' ? probeRiverfront() : probeAssets()); return; }
+      if (!sceneTest()) { event('start', test); void (test === 'riverfront' ? probeRiverfront() : probeAssets()); return; }
       event('start', 'Full scene; waiting for main module');
       const script = document.createElement('script'); script.type = 'module'; script.src = document.getElementById('diagnostic-main').dataset.src;
       script.onerror = () => { run.status = 'Main module failed'; event('module:error', 'Main module or an import could not load'); };
