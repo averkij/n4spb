@@ -236,7 +236,7 @@ not a mobile-vs-desktop performance comparison. See PERFORMANCE.md for memory.
   only counts unfinished boots within 60 seconds and marks a boot successful
   at `body.loaded`; it can miss slower failures and post-load termination.
 
-No runtime fix or bake change was made in this investigation. Changing shared
+No runtime fix or bake change was made in the initial investigation. Changing shared
 loading code requires the normal version/revision, all stale-area bakes and
 integration validation; do not relabel the current bake to bypass those checks.
 
@@ -275,3 +275,74 @@ JSON.stringify({
   errors: window.__errors
 }, null, 2)
 ```
+
+## 11. On-phone loading report (9.6.0)
+
+Open `diagnostics.html` beside the normal landing page. This standalone support
+page loads the same full Palace scene after **Start test**. It defaults to the
+Performance tier, the normal worker and early shader compilation. Record the
+device/iOS version in the optional field; then reproduce the failure once.
+
+The **Diagnostics** button opens the report during loading. After a crash or
+reload, reopen the same URL in the same browser: the game stays paused so the
+last saved report can be recovered without another heavy load. Choose **Copy
+report**, **Download report**, or **Show report text**. Keep the first report
+before trying **Main thread (comparison)** or disabling early compilation.
+The latest two attempts are retained; starting a third replaces the oldest.
+
+The report records module progress, environment milestones, pending fetches and
+worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
+loss and whether the first-frame/loaded marker was reached. Fetch completion
+means response headers arrived, not that its body was decoded. Worker completion
+records the reply after decoding. The event journal is bounded to 140 entries;
+it saves at progress changes and once per second. It does not retain scene
+objects or decoded buffers. Reports stay in localStorage until copied/downloaded
+or site data is cleared; nothing is uploaded automatically. Request labels omit
+query strings, but review device notes and error text before sharing.
+
+A killed process cannot log its own termination. The last persisted phase is
+evidence of where execution stopped, not proof of the cause. Storage can be
+unavailable or lost, and Safari does not expose the Chromium heap measurements.
+The recorder reports storage failures and still allows an in-memory export.
+Logging adds some overhead, so diagnostic timings are not benchmark results.
+Area transitions navigate to the ordinary game pages and end this recording.
+
+### Test from a phone on the local network, without pushing
+
+On the development computer, run:
+
+```sh
+node tools/serve.mjs 5183
+```
+
+Find the computer's physical Ethernet/Wi-Fi IPv4 address (`ipconfig` on Windows).
+Connect the phone to the same router and open
+`http://<computer-ip>:5183/diagnostics.html`. The computer may use Ethernet while
+the phone uses Wi-Fi. Keep the server running. If the page cannot be reached,
+check guest-network client isolation and the local firewall's Node/private-network
+access; mobile data alone cannot reach this private address. HTTP clipboard access
+may be unavailable, in which case the copy action selects report text instead.
+The normal game is at `http://<computer-ip>:5183/`. Local serving still uses the
+page's external CDN imports and differs from GitHub Pages in transport and the
+development revision endpoint, so compare failures by recorded phase.
+
+### Maintenance and verification
+
+`node tools/gen-loading-diagnostics.mjs` derives the support page from `index.html`;
+its `--check` runs in Pages CI. The normal landing page and scene modules do not
+import the recorder. It is explicitly classified as standalone in closure rules;
+all 16 existing area bakes remain fresh. The Pages root-page copy includes the
+support page and the existing source copy includes its recorder.
+
+```sh
+node tools/loading-diagnostics-test.mjs
+node tools/loading-diagnostics-test.mjs --full
+```
+
+The browser tests cover recovery without auto-start, report history, bounded
+events, unchanged fetch/worker transfer behavior, copy fallback, unavailable
+storage, import failure and context loss. The full test also loads the real
+Palace scene and enters play. Both passed on desktop Chromium with touch-sized
+viewports; screenshots were reviewed. This does not validate an actual iPhone
+or establish a fix for its crash. Screenshots/reports are written to a unique
+OS temporary directory printed by the test.

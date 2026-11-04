@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.6.0** (2026-11-04, minor): Add a phone loading diagnostics page with persistent reports and worker comparison
 - **9.5.2** (2026-11-03, patch): Fix Elagin bridge approaches, clear crossing hardware, and ground bank paths and hedges
 - **9.5.1** (2026-11-03, patch): Exclude parked legacy bakes from the Pages upload and enforce the 1 GB site budget.
 - **9.5.0** (2026-11-03, minor): Remake Yelagin shores with continuous grassy pond banks, low outer stone edging and terrain-rooted trees; retain panorama ownership on generated supports and verify shared architectural details in deployment checks

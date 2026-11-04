@@ -39,6 +39,9 @@ export const DYNAMIC_IMPORTS = {
  * A row whose literal is gone from its file is a hard error; so is an asset-looking literal without a row.
  */
 export const RUNTIME_ASSETS = {
+  'src/core/loading-diagnostics.js': {
+    'n4spb-loading-report.json': { path: null, hash: false, why: 'locally generated report download filename, not a fetched scene input' },
+  },
   'vendor/rapier/rapier.js': { 'rapier_wasm3d_bg.wasm': { path: null, hash: false, why: 'the default URL of the wasm in the compat bundle (new URL(..., "<deleted>")): the wasm is embedded in rapier.js, nothing is fetched' } },
   'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html', 'morskie-vorota.html', 'okrug65.html', 'kronverk.html', 'aptekarsky.html', 'islands.html', 'moskovskaya.html']
     .map((p) => [p, { path: null, hash: false, why: 'the page name of a registry row (runtime-only file: a hand-off navigates to it; the page of an area is an entry of its own closure)' }])),
@@ -66,6 +69,9 @@ export function isAllowedServed(rel) {
  * The count is exact, so a new fetch( in the same file fails the lint until somebody reads it.
  */
 export const RUNTIME_CALLS = {
+  'src/core/loading-diagnostics.js': {
+    'new URL(': { count: 1, why: 'redacts query strings from diagnostic request labels; standalone diagnostics page only' },
+  },
   'src/core/baked-world.js': {
     'fetch(': { count: 6, why: 'manifest, bake products and the dev-server endpoints (/__bake_inputs, /__bake/<name>, /__baked_revision)' },
     'new URL(': { count: 2, why: 'new URL(file, assetBase): a product of the manifest under assets/baked/ (the literal URLs are rows of RUNTIME_ASSETS, the worker is a followed JS edge)' },

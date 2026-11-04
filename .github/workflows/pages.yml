@@ -41,6 +41,8 @@ jobs:
         run: node tools/dev-servers-lint.mjs
       - name: Area pages are generated from index.html
         run: node tools/gen-area-html.mjs --check
+      - name: Diagnostic entry matches the landing page
+        run: node tools/gen-loading-diagnostics.mjs --check
       - name: Layout contract (every real area)
         run: node tools/each-area.mjs tools/layout-test.mjs
       - name: Landmark claims (every real area)
