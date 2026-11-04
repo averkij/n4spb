@@ -737,6 +737,56 @@ The original canvas-source full-scene comparison also passed with the new
 recorder. Generated-page and closure checks passed; all 16 live bakes stayed
 fresh. The ordinary game entry and its bake products are unchanged.
 
+#### Geometry working set and pre-draw calls (9.17.0)
+
+The phone's 9.16.0 ImageData attempt still failed. The 1024-square atlas read and
+native upload both returned (`canvasUpload` 3, 4,390,912 cumulative bytes read).
+The last colour submission was 83, an instanced `pt-kp-signal-face1_0.8x0.8|0,0`
+using that shared sign atlas. `lastColourGL` was null: none of the then-wrapped
+native calls had been entered for this submission. This does not establish a
+bad sign or an instancing defect. Shader/program queries and attribute setup
+were gaps in the earlier trace, and previous GPU submissions are asynchronous.
+
+The trace now covers shader/program logs, status and uniform/attribute queries,
+compilation/linking, vertex-array/buffer setup, and both the first normal-depth
+and colour passes. `lastDraw` and `lastDrawGL` identify the pass; the previous
+colour-specific fields are retained. It also records geometry buffer bytes
+after the first depth pass. These diagnostics add synchronous storage overhead
+and are not performance benchmarks.
+
+The bounded geometry inventory assigns each unique backing ArrayBuffer to its
+first encountered mesh name (or parent name for unnamed meshes). This is an
+attribution aid, not exclusive ownership or total process memory. In the
+desktop baseline, far-super copies accounted for 53,694,006 bytes and ground
+super-cell copies for 10,796,598 bytes. Far-proxy source meshes used another
+108,941,046 bytes and remain present in the following comparison.
+
+`diaggeometry=lean` explicitly sets existing runtime switches `supercells=0`
+and `nd=0` before importing main. The first avoids extra merged distant copies,
+retaining member meshes. The second draws source meshes in the normal-depth
+pass instead of building lazy outline proxies; outlines remain enabled. It
+also avoids the lazy-proxy source-buffer holds that defer upload-time CPU
+release. Draw calls can increase and distant triangle detail can differ from
+the simplified super-cell version. This is a loading-memory comparison, not a
+validated mobile quality/performance policy; no new geometry algorithm is
+introduced and ordinary game defaults are unchanged.
+
+Phone link:
+`diagnostics.html?test=scene-js-gzip&diagshadows=0&diagatlas=0&diagtexture=256&diagdrawtrace=1&diagground=plain&diagsignatlas=1024&diagcanvasupload=pixels&diaggeometry=lean`.
+The harness adds `--lean-geometry`, verifies that the switches are applied,
+super-cells are absent, far member meshes remain, initial geometry storage is
+lower, the full scene reaches play, and the controls/report survive reopening.
+The first desktop comparison reduced initial reachable geometry bytes from
+588,769,030 to 519,295,036 and reached loaded/playing.
+With the expanded trace, the lean run also reached play and retained 519,295,036
+geometry bytes after depth rendering. The original configuration reached play
+with 602,978,092 bytes immediately before depth and 594,654,862 after it: lazy
+outline construction occurs after the initial compile-time inventory. Therefore
+initial versus post-depth bytes alone cannot measure upload-time release. The
+observed working-set difference at colour entry was about 75 MB. Both playing
+screenshots were reviewed; no iPhone success is claimed. Recovery tests include
+a depth-pass shader-query checkpoint with no preceding colour draw.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

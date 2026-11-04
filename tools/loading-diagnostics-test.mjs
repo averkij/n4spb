@@ -150,6 +150,17 @@ try {
   assert.equal(recoveredExport.report.lastColourGL.status, 'entered');
   assert.equal(recoveredExport.report.canvasUpload.phase, 'upload:entered');
   await page.screenshot({ path: path.join(out, 'recovered-report.png') });
+  await page.evaluate(key => {
+    const id = JSON.parse(localStorage.getItem(key)).current.id;
+    localStorage.setItem(key + ':draw', JSON.stringify({ runId: id,
+      lastDraw: { number: 1, target: 'normal-depth', status: 'entered' },
+      lastDrawGL: { draw: 1, target: 'normal-depth', call: 'getProgramInfoLog', status: 'entered' } }));
+  }, key);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await show(page); await page.click('#diag-show');
+  const depthRecovery = JSON.parse(await page.$eval('#diag-output', e => e.value));
+  assert.equal(depthRecovery.report.lastDraw.target, 'normal-depth', 'recover a crash before any colour submission');
+  assert.equal(depthRecovery.report.lastDrawGL.call, 'getProgramInfoLog');
   await page.select('#diag-worker', '0');
   await page.click('#diag-compile');
   await page.click('#diag-start');
@@ -376,6 +387,7 @@ try {
     const plainGround = process.argv.includes('--plain-ground');
     const signAtlas = process.argv.includes('--sign-atlas');
     const canvasPixels = process.argv.includes('--canvas-pixels');
+    const leanGeometry = process.argv.includes('--lean-geometry');
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
@@ -385,6 +397,7 @@ try {
     if (plainGround) await real.page.click('#diag-ground');
     if (signAtlas) await real.page.click('#diag-signatlas');
     if (canvasPixels) await real.page.click('#diag-canvasupload');
+    if (leanGeometry) await real.page.click('#diag-geometry');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     const groundCheckpoints = [];
@@ -433,7 +446,7 @@ try {
     assert(data.current.sceneBuffers.dataTextureBytes > 1000000);
     assert(data.current.sceneBuffers.largestTextures.length <= 10);
     assert(data.current.sceneBuffers.canvasRGBA8BytesEstimate > 0);
-    for (const name of ['batch', 'split-instances', 'fixture-cells', 'compact-attributes', 'outline-proxies']) {
+    for (const name of ['batch', 'split-instances', 'fixture-cells', 'compact-attributes', ...(!leanGeometry ? ['outline-proxies'] : [])]) {
       assert(workerEvents.some(e => e.kind === `build:${name}:start`), name + ' start persisted');
       assert(workerEvents.some(e => e.kind === `build:${name}:end`), name + ' completion persisted');
     }
@@ -447,6 +460,10 @@ try {
     }
     if (drawTrace) {
       assert(data.current.lastColourDraw.number > 0);
+      assert.equal(data.current.lastDraw.target, 'colour');
+      assert.equal(data.current.lastDraw.status, 'returned');
+      assert(Number.isFinite(data.current.geometryBeforeDepthBytes) && data.current.geometryBeforeDepthBytes > 0);
+      assert(Number.isFinite(data.current.geometryAfterDepthBytes) && data.current.geometryAfterDepthBytes > 0);
       assert.equal(data.current.lastColourDraw.status, 'returned');
       assert(data.current.lastColourDraw.textures.length <= 12);
       assert(groundCheckpoints.length > 0, 'records first ground submission');
@@ -471,6 +488,21 @@ try {
       assert.equal(data.current.canvasUpload.phase, 'upload:returned');
       assert(data.current.canvasUpload.number > 100, 'conversion covers full-scene canvas uploads');
       if (drawTrace) assert(canvasCheckpoints.length > 0, 'native upload received ImageData');
+    }
+    assert(data.current.sceneBuffers.geometryFirstOwners.length <= 15);
+    assert(data.current.sceneBuffers.largestGeometryBuffers.length <= 10);
+    if (leanGeometry) {
+      assert.equal(data.current.options.supercells, '0');
+      assert.equal(data.current.options.nd, '0');
+      assert(!workerEvents.some(e => e.kind === 'build:outline-proxies:start'));
+      assert(data.current.sceneBuffers.geometryBytes < 530000000, 'lower retained geometry than 589 MB baseline');
+      const groups = await real.page.evaluate(() => {
+        let superCells = 0, far = 0;
+        window.__ctx.scene.traverse(o => { if (o.userData.superCell) superCells++; if (o.name === 'far-proxy') far++; });
+        return { superCells, far };
+      });
+      assert.equal(groups.superCells, 0);
+      assert(groups.far > 0, 'far source meshes retained');
     }
     if (plainGround) {
       assert(data.current.plainGround.meshes > 0);
@@ -515,6 +547,7 @@ try {
     assert.equal(await real.page.$eval('#diag-ground', e => e.checked), plainGround);
     assert.equal(await real.page.$eval('#diag-signatlas', e => e.checked), signAtlas);
     assert.equal(await real.page.$eval('#diag-canvasupload', e => e.checked), canvasPixels);
+    assert.equal(await real.page.$eval('#diag-geometry', e => e.checked), leanGeometry);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();

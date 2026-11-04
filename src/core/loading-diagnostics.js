@@ -38,6 +38,8 @@
       if (checkpoint.groundGL) r.lastGroundGL = checkpoint.groundGL;
       if ('colourGL' in checkpoint) r.lastColourGL = checkpoint.colourGL;
       if (checkpoint.canvasUpload) r.canvasUpload = checkpoint.canvasUpload;
+      if (checkpoint.lastDraw) r.lastDraw = checkpoint.lastDraw;
+      if ('lastDrawGL' in checkpoint) r.lastDrawGL = checkpoint.lastDrawGL;
     }
   });
   const report = () => selected === 'previous' ? previous : (run || saved);
@@ -60,7 +62,8 @@
   }
   function persistDrawCheckpoint() {
     if (run) safe(() => localStorage.setItem(key + ':draw', JSON.stringify({ runId: run.id,
-      draw: run.lastColourDraw, groundGL: run.lastGroundGL, colourGL: run.lastColourGL, canvasUpload: run.canvasUpload })));
+      draw: run.lastColourDraw, groundGL: run.lastGroundGL, colourGL: run.lastColourGL, canvasUpload: run.canvasUpload,
+      lastDraw: run.lastDraw, lastDrawGL: run.lastDrawGL })));
   }
   addEventListener('piter-diagnostic-canvas-upload', e => {
     if (!run) return;
@@ -198,9 +201,15 @@
     const geometry = new Set(), textureBuffers = new Set(), textures = new Set(), materials = new Set(), canvases = new Set();
     let meshes = 0, geometryBytes = 0, dataTextureBytes = 0, canvasPixels = 0;
     const largestTextures = [];
-    const attribute = a => {
+    const owners = new Map(), largestBuffers = [];
+    const attribute = (a, o) => {
       const b = (a?.isInterleavedBufferAttribute ? a.data.array : a?.array)?.buffer;
-      if (b && !geometry.has(b)) { geometry.add(b); geometryBytes += b.byteLength; }
+      if (b && !geometry.has(b)) {
+        geometry.add(b); geometryBytes += b.byteLength;
+        const name = short(o.name || o.parent?.name || o.type);
+        owners.set(name, (owners.get(name) || 0) + b.byteLength);
+        largestBuffers.push({ firstOwner: name, bytes: b.byteLength });
+      }
     };
     const texture = (t, label) => {
       if (!t?.isTexture || textures.has(t)) return;
@@ -216,10 +225,10 @@
     scene?.traverse(o => {
       if (!o.isMesh && !o.isLine && !o.isPoints) return;
       meshes++;
-      attribute(o.geometry?.index);
-      for (const a of Object.values(o.geometry?.attributes || {})) attribute(a);
-      for (const list of Object.values(o.geometry?.morphAttributes || {})) for (const a of list) attribute(a);
-      attribute(o.instanceMatrix); attribute(o.instanceColor);
+      attribute(o.geometry?.index, o);
+      for (const a of Object.values(o.geometry?.attributes || {})) attribute(a, o);
+      for (const list of Object.values(o.geometry?.morphAttributes || {})) for (const a of list) attribute(a, o);
+      attribute(o.instanceMatrix, o); attribute(o.instanceColor, o);
       for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
         if (!m || materials.has(m)) continue;
         materials.add(m);
@@ -229,6 +238,8 @@
     });
     largestTextures.sort((a, b) => (b.width || 0) * (b.height || 0) - (a.width || 0) * (a.height || 0));
     return { meshes, materials: materials.size, geometryBuffers: geometry.size, geometryBytes,
+      geometryFirstOwners: [...owners].map(([name, bytes]) => ({ name, bytes })).sort((a,b) => b.bytes-a.bytes).slice(0, 15),
+      largestGeometryBuffers: largestBuffers.sort((a,b) => b.bytes-a.bytes).slice(0, 10),
       textures: textures.size, dataTextureBytes, canvasCount: canvases.size, canvasPixels,
       canvasRGBA8BytesEstimate: canvasPixels * 4, largestTextures: largestTextures.slice(0, 10) };
   }
@@ -241,20 +252,25 @@
     }
     let renders = 0;
     const draw = renderer.renderBufferDirect;
-    let draws = 0, groundDraw = false, colourDraw = false, colourCalls = 0;
+    let draws = 0, depthDraws = 0, groundDraw = false, activeDraw = false, colourCalls = 0;
     const checkpoint = persistDrawCheckpoint;
     if (run?.options.diagdrawtrace === '1') {
       const gl = renderer.getContext();
-      for (const name of ['useProgram', 'texImage2D', 'texSubImage2D', 'texStorage2D', 'generateMipmap', 'drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced']) {
+      for (const name of ['useProgram', 'getProgramInfoLog', 'getShaderInfoLog', 'getProgramParameter', 'getActiveUniform', 'getUniformLocation', 'getActiveAttrib', 'getAttribLocation',
+        'createShader', 'compileShader', 'createProgram', 'linkProgram', 'bindVertexArray', 'bindBuffer', 'bufferData', 'bufferSubData',
+        'vertexAttribPointer', 'vertexAttribIPointer', 'vertexAttribDivisor', 'enableVertexAttribArray',
+        'texImage2D', 'texSubImage2D', 'texStorage2D', 'generateMipmap', 'drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced']) {
         const original = gl[name];
         if (typeof original !== 'function') continue;
         const wrapped = function (...args) {
-          if (!colourDraw) return Reflect.apply(original, this, args);
+          if (!activeDraw) return Reflect.apply(original, this, args);
           const meta = args.map(v => v === null || ['number', 'string', 'boolean'].includes(typeof v) ? v
             : ArrayBuffer.isView(v) ? { type: v.constructor.name, bytes: v.byteLength }
               : v?.width !== undefined ? { width: v.width, height: v.height, sourceType: v.constructor?.name, dataBytes: v.data?.byteLength } : typeof v);
-          const call = { number: ++colourCalls, draw: draws, call: name, status: 'entered', args: meta };
-          run.lastColourGL = call;
+          const call = { number: ++colourCalls, draw: run.lastDraw.number, pass: run.lastDraw.pass, target: run.lastDraw.target,
+            call: name, status: 'entered', args: meta };
+          run.lastDrawGL = call;
+          if (run.lastDraw.target === 'colour') run.lastColourGL = call;
           if (groundDraw) run.lastGroundGL = call;
           checkpoint();
           try { const result = Reflect.apply(original, this, args); call.status = 'returned'; checkpoint(); return result; }
@@ -265,9 +281,10 @@
       }
     }
     if (typeof draw === 'function' && run?.options.diagdrawtrace === '1') renderer.renderBufferDirect = function (...args) {
-      // Only the first colour render. Keep a compact independent checkpoint to
+      // The first depth and colour renders. Keep a compact checkpoint to
       // avoid rewriting the whole report for every draw or filling its journal.
-      if (run?.renderPass?.number !== 2 || run.renderPass.target !== 'colour' || document.body.classList.contains('loaded')) return Reflect.apply(draw, this, args);
+      if (![1, 2].includes(run?.renderPass?.number) || !['normal-depth', 'colour'].includes(run.renderPass.target) || document.body.classList.contains('loaded')) return Reflect.apply(draw, this, args);
+      const colour = run.renderPass.target === 'colour';
       const [, , geometry, material, object] = args;
       const textures = [];
       const note = (t, label) => { if (t?.isTexture) textures.push({ label, width: t.image?.width, height: t.image?.height, dataBytes: t.image?.data?.byteLength || 0 }); };
@@ -277,15 +294,17 @@
       // on a MeshToonMaterial. These include the ground's class/distance fields.
       for (const [label, u] of Object.entries(renderer.properties.get(material).uniforms || {}))
         if (!textures.some(t => t.label === label)) note(u?.value, label);
-      run.lastColourDraw = { number: ++draws, status: 'entered', object: short(object?.name || object?.parent?.name),
+      const submission = { number: colour ? ++draws : ++depthDraws, pass: run.renderPass.number, target: run.renderPass.target,
+        status: 'entered', object: short(object?.name || object?.parent?.name),
         material: short(material?.name || material?.type), vertices: geometry?.attributes?.position?.count,
         indices: geometry?.index?.count, instances: object?.isInstancedMesh ? object.count : undefined, textures: textures.slice(0, 12) };
-      run.lastColourGL = null; checkpoint();
-      colourDraw = true;
-      groundDraw = object?.name === 'env-ground' || material?.name === 'env-ground' || material?.name === 'diagnostic-ground-plain';
-      try { const result = Reflect.apply(draw, this, args); run.lastColourDraw.status = 'returned'; checkpoint(); return result; }
-      catch (error) { run.lastColourDraw.status = 'failed'; checkpoint(); throw error; }
-      finally { groundDraw = colourDraw = false; }
+      run.lastDraw = submission; run.lastDrawGL = null;
+      if (colour) { run.lastColourDraw = submission; run.lastColourGL = null; }
+      checkpoint(); activeDraw = true;
+      groundDraw = colour && (object?.name === 'env-ground' || material?.name === 'env-ground' || material?.name === 'diagnostic-ground-plain');
+      try { const result = Reflect.apply(draw, this, args); submission.status = 'returned'; checkpoint(); return result; }
+      catch (error) { submission.status = 'failed'; checkpoint(); throw error; }
+      finally { groundDraw = activeDraw = false; }
     };
     const shadowRender = renderer.shadowMap?.render;
     if (typeof shadowRender === 'function') renderer.shadowMap.render = function (...args) {
@@ -306,6 +325,7 @@
         if (!run.sceneBuffers && (method === 'compileAsync' || method === 'render')) run.sceneBuffers = safe(() => sceneInventory(args[0]));
         let detail = '';
         if (method === 'render') {
+          if (renders === 1) run.geometryBeforeDepthBytes = safe(() => sceneInventory(args[0]).geometryBytes);
           const target = renderer.getRenderTarget(), pipeline = window.__pipeline;
           run.renderPass = { number: renders, target: target === pipeline?.targets?.rtND ? 'normal-depth' : target === pipeline?.targets?.rtColor ? 'colour' : target ? 'postprocess' : 'screen',
             width: target?.width ?? renderer.domElement.width, height: target?.height ?? renderer.domElement.height,
@@ -315,7 +335,10 @@
           detail = `#${renders} ${run.renderPass.target}; layers=${run.renderPass.cameraMask}; shadows=${run.renderPass.shadowsEnabled}`;
         }
         run.graphicsPhase = method + ':entered'; sample(); event('gpu:' + method + ':start', detail);
-        const done = () => { run.graphicsPhase = method + ':returned'; event('gpu:' + method + ':end', `${Math.round(performance.now() - t)}ms`); };
+        const done = () => {
+          if (method === 'render' && renders === 1) run.geometryAfterDepthBytes = safe(() => sceneInventory(args[0]).geometryBytes);
+          run.graphicsPhase = method + ':returned'; event('gpu:' + method + ':end', `${Math.round(performance.now() - t)}ms`);
+        };
         const failed = error => { run.graphicsPhase = method + ':failed'; event('gpu:' + method + ':error', error.message); };
         try {
           const result = Reflect.apply(original, this, args);
@@ -495,10 +518,11 @@
       <label><input type="checkbox" id="diag-shadows" checked> Sun shadows (uncheck for comparison)</label>
       <label><input type="checkbox" id="diag-atlas" checked> Texture atlases (uncheck to reduce batching memory; may run slower)</label>
       <label><input type="checkbox" id="diag-texture"> Limit static canvas textures to 256px (comparison; blurry signs)</label>
-      <label><input type="checkbox" id="diag-drawtrace"> Trace first colour draws (adds diagnostic overhead)</label>
+      <label><input type="checkbox" id="diag-drawtrace"> Trace first depth/colour draws (adds diagnostic overhead)</label>
       <label><input type="checkbox" id="diag-ground"> Plain ground material (comparison; removes procedural surface detail)</label>
       <label><input type="checkbox" id="diag-signatlas"> Limit road-sign atlas to 1024px (comparison; blurrier signs)</label>
       <label><input type="checkbox" id="diag-canvasupload"> Upload canvas pixels through ImageData (comparison; extra CPU copying)</label>
+      <label><input type="checkbox" id="diag-geometry"> Lower geometry memory (more draw calls; keep source meshes and outlines)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -518,6 +542,7 @@
       $('ground').disabled = !(scene || staged);
       $('signatlas').disabled = !(scene || staged);
       $('canvasupload').disabled = !(scene || staged);
+      $('geometry').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -531,6 +556,7 @@
     $('ground').checked = new URLSearchParams(location.search).get('diagground') === 'plain';
     $('signatlas').checked = new URLSearchParams(location.search).get('diagsignatlas') === '1024';
     $('canvasupload').checked = new URLSearchParams(location.search).get('diagcanvasupload') === 'pixels';
+    $('geometry').checked = new URLSearchParams(location.search).get('diaggeometry') === 'lean';
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -567,6 +593,9 @@
       if ($('ground').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagground', 'plain');
       if ($('signatlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagsignatlas', '1024');
       if ($('canvasupload').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagcanvasupload', 'pixels');
+      if ($('geometry').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) {
+        query.set('diaggeometry', 'lean'); query.set('supercells', '0'); query.set('nd', '0');
+      }
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,
