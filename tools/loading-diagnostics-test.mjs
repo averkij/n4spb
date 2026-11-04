@@ -257,9 +257,11 @@ try {
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
     const jsGzip = process.argv.includes('--js-gzip');
     const noShadows = process.argv.includes('--no-shadows');
+    const noAtlas = process.argv.includes('--no-atlas');
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
+    if (noAtlas) await real.page.click('#diag-atlas');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
@@ -268,7 +270,7 @@ try {
       Storage.prototype.setItem = function (key, value) {
         if (key.startsWith('n4spb.loading-report.v1:')) {
           const entry = JSON.parse(value)?.current?.events?.at(-1), id = JSON.stringify(entry);
-          if (entry && id !== last) { last = id; if (entry.kind.startsWith('worker:') || entry.kind.startsWith('gpu:')) void window.recordWorkerEvent(entry); }
+          if (entry && id !== last) { last = id; if (/^(worker|gpu|build):/.test(entry.kind)) void window.recordWorkerEvent(entry); }
         }
         return persist.call(this, key, value);
       };
@@ -293,6 +295,14 @@ try {
     assert(data.current.sceneBuffers.geometryBytes > 1000000, 'captures reachable scene buffers before uploads');
     assert(data.current.sceneBuffers.dataTextureBytes > 1000000);
     assert(data.current.sceneBuffers.largestTextures.length <= 10);
+    assert(data.current.sceneBuffers.canvasRGBA8BytesEstimate > 0);
+    for (const name of ['batch', 'split-instances', 'fixture-cells', 'compact-attributes', 'outline-proxies']) {
+      assert(workerEvents.some(e => e.kind === `build:${name}:start`), name + ' start persisted');
+      assert(workerEvents.some(e => e.kind === `build:${name}:end`), name + ' completion persisted');
+    }
+    assert.equal(data.current.batch.atlasPages === 0, noAtlas);
+    assert.equal(await real.page.evaluate(() => window.__stats.batch.atlasPages === 0), noAtlas);
+    if (noAtlas) assert.equal(data.current.options.diagatlas, '0');
     assert.equal(await real.page.evaluate(() => window.__ctx.renderer.shadowMap.enabled), !noShadows);
     assert.equal(workerEvents.some(e => e.kind === 'gpu:shadow:start'), !noShadows);
     if (noShadows) {
@@ -320,6 +330,7 @@ try {
     await real.page.screenshot({ path: path.join(out, 'full-scene-playing.png') });
     await real.page.reload({ waitUntil: 'domcontentloaded' });
     assert.equal(await real.page.$eval('#diag-shadows', e => e.checked), !noShadows);
+    assert.equal(await real.page.$eval('#diag-atlas', e => e.checked), !noAtlas);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();

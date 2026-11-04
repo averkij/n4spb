@@ -176,8 +176,8 @@
   // One inventory after batching, before uploads can release CPU arrays. These
   // are reachable backing buffers, not total process/GPU memory or a live heap.
   function sceneInventory(scene) {
-    const geometry = new Set(), textureBuffers = new Set(), textures = new Set(), materials = new Set();
-    let meshes = 0, geometryBytes = 0, dataTextureBytes = 0;
+    const geometry = new Set(), textureBuffers = new Set(), textures = new Set(), materials = new Set(), canvases = new Set();
+    let meshes = 0, geometryBytes = 0, dataTextureBytes = 0, canvasPixels = 0;
     const largestTextures = [];
     const attribute = a => {
       const b = (a?.isInterleavedBufferAttribute ? a.data.array : a?.array)?.buffer;
@@ -187,6 +187,9 @@
       if (!t?.isTexture || textures.has(t)) return;
       textures.add(t);
       const image = t.image, b = image?.data?.buffer;
+      if (typeof image?.getContext === 'function' && !canvases.has(image)) {
+        canvases.add(image); canvasPixels += image.width * image.height;
+      }
       if (b && !textureBuffers.has(b)) { textureBuffers.add(b); dataTextureBytes += b.byteLength; }
       largestTextures.push({ label: short(t.name || label), width: image?.width, height: image?.height,
         dataBytes: image?.data?.byteLength || 0 });
@@ -207,7 +210,8 @@
     });
     largestTextures.sort((a, b) => (b.width || 0) * (b.height || 0) - (a.width || 0) * (a.height || 0));
     return { meshes, materials: materials.size, geometryBuffers: geometry.size, geometryBytes,
-      textures: textures.size, dataTextureBytes, largestTextures: largestTextures.slice(0, 10) };
+      textures: textures.size, dataTextureBytes, canvasCount: canvases.size, canvasPixels,
+      canvasRGBA8BytesEstimate: canvasPixels * 4, largestTextures: largestTextures.slice(0, 10) };
   }
   function watchRenderer(renderer) {
     if (!renderer || watchedRenderers.has(renderer)) return;
@@ -267,6 +271,13 @@
   addEventListener('unhandledrejection', e => event('unhandledrejection', e.reason?.message || e.reason));
   addEventListener('webglcontextlost', () => { if (run) run.status = 'Graphics context lost'; event('webglcontextlost'); }, true);
   addEventListener('piter-fatal', e => { if (run) run.status = 'Scene failed'; event('fatal', e.detail?.message); });
+  addEventListener('piter-diagnostic-build', e => {
+    if (!run || !sceneTest()) return;
+    const { name, state, ...detail } = e.detail;
+    run.buildPhase = `${name}:${state}`;
+    if (name === 'batch' && state === 'end') run.batch = detail;
+    sample(); event(`build:${name}:${state}`, JSON.stringify(detail));
+  });
   addEventListener('pagehide', e => event('pagehide', `persisted=${e.persisted}`));
   addEventListener('pageshow', e => { if (run && e.persisted) event('pageshow', 'restored from back/forward cache'); });
   document.addEventListener('visibilitychange', () => event('visibility', document.visibilityState));
@@ -413,6 +424,7 @@
       <label>Decoder <select id="diag-worker"><option value="1">Worker (normal)</option><option value="0">Main thread (comparison)</option></select></label>
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
       <label><input type="checkbox" id="diag-shadows" checked> Sun shadows (uncheck for comparison)</label>
+      <label><input type="checkbox" id="diag-atlas" checked> Texture atlases (uncheck to reduce batching memory; may run slower)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -427,6 +439,7 @@
       const scene = $('test').value === 'scene', staged = ['scene-staged', 'scene-js-gzip'].includes($('test').value);
       $('worker').disabled = !scene; $('compile').disabled = !(scene || staged);
       $('shadows').disabled = !(scene || staged);
+      $('atlas').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -434,6 +447,7 @@
     const requestedTest = new URLSearchParams(location.search).get('test');
     if (['scene-staged', 'scene-js-gzip', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
     $('shadows').checked = new URLSearchParams(location.search).get('diagshadows') !== '0';
+    $('atlas').checked = new URLSearchParams(location.search).get('diagatlas') !== '0';
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -464,6 +478,7 @@
       const test = $('test').value;
       const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
       if (!$('shadows').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagshadows', '0');
+      if (!$('atlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagatlas', '0');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

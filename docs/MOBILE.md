@@ -516,6 +516,51 @@ events appeared only in the baseline. The baseline's first colour call included
 Screenshots of both playable scenes were reviewed. Closure, generated-page and
 all 16 live bake-manifest checks passed; no normal game or bake changes.
 
+### Batching allocation comparison (9.12.0)
+
+The phone's shadows-disabled attempt ended earlier, with its last checkpoint at
+97% (13.402 s), all 29 baked products decoded and no pending requests. No final
+compile or render entry was recorded. A new document opened about 503 ms after
+the last saved event. This does not isolate shadows as the cause; the changing
+stopping point leaves combined memory pressure as a working hypothesis.
+
+`diagnostics.html?test=scene-js-gzip&diagshadows=0&diagatlas=0` retains that test's
+decoder/shadow settings and disables only texture-atlas construction in the
+initial static batch. It calls the existing `batchStatic` implementation with
+its supported `atlasTextures: false` option. Original textures remain in use;
+draw calls/material count can increase. This is a diagnostic memory comparison,
+not a production performance setting or a confirmed phone fix.
+
+The support page's generated import map scopes main.js's finalization imports
+to `loading-finalize-diagnostics.js`. The adapter calls the original batching,
+instance splitting, fixture grouping, attribute compaction and outline-proxy
+builders, recording entry/return/error for each. Original modules imported by
+other builders and all ordinary area entry points remain unchanged. The adapter
+does not duplicate or modify the geometry algorithms or bypass bake validation.
+
+`buildPhase` identifies the latest finalization step, and `batch` records the
+atlas page count. `sceneBuffers` additionally counts unique reachable texture
+canvases and their pixel area, with an explicitly labelled RGBA8 byte estimate.
+That estimate excludes other references/caches and actual browser/driver storage.
+In the desktop no-atlas test, batching allocated zero atlas pages; the remaining
+scene still had one 4096-square original texture, 588,769,030 geometry-buffer
+bytes and 438,247,168 estimated canvas RGBA8 bytes. Disabling atlas creation
+does not by itself make this scene small enough for a phone.
+
+Run `node tools/loading-diagnostics-test.mjs --full --js-gzip --no-shadows
+--no-atlas` and the same command without `--no-atlas` for the controlled baseline.
+The harness checks every finalization checkpoint, the original batching stats,
+loaded/playing state and report/option recovery after reload. Screenshots and
+raw reports remain in the temporary evidence directory.
+Both desktop runs passed readiness/play and recovery, with screenshots reviewed.
+The baseline created three 4096-square atlas pages (192 MiB of raw RGBA8 pixels)
+from 293 source textures. Its reachable canvas estimate was 516,631,296 bytes,
+versus 438,247,168 without atlases; this difference is smaller than the avoided
+allocations because the no-atlas scene keeps more original textures directly
+reachable. Neither number measures total retained browser memory. All five
+finalization stages emitted start/end checkpoints in both runs. Closure and
+generated-page checks passed and all 16 live bakes remained fresh.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

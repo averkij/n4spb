@@ -3,6 +3,7 @@
 # is imported after all (or gone) fails too. One POSIX path per line; '#' starts a comment.
 # Standalone diagnostics.html recorder. No normal area/bake imports it.
 src/core/loading-diagnostics.js
+src/core/loading-finalize-diagnostics.js
 src/core/baked-worker-trace.js
 src/core/baked-gzip-js.js
 src/world/landmarksGavan/util.js

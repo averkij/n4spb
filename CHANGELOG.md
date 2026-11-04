@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.12.0** (2026-11-04, minor): Add lower-memory texture-atlas comparison and finalization checkpoints to phone diagnostics
 - **9.11.0** (2026-11-04, minor): Add first-render pass and buffer diagnostics with a sun-shadow comparison for iPhone loading
 - **9.10.1** (2026-11-04, patch): Clarify live and saved diagnostics, prevent showing an unstarted scene, and record page restarts and progress resets
 - **9.10.0** (2026-11-04, minor): Add JavaScript gzip workaround test and visible diagnostic version
