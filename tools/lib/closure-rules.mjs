@@ -39,10 +39,14 @@ export const DYNAMIC_IMPORTS = {
  * A row whose literal is gone from its file is a hard error; so is an asset-looking literal without a row.
  */
 export const RUNTIME_ASSETS = {
+  'src/core/handoff.js': {
+    'index.html': { path: null, hash: false, why: 'ordinary Palace arrival page, selected at runtime' },
+    'diagnostics.html': { path: null, hash: false, why: 'instrumented Palace arrival page; other diagnostic pages derive from registry filenames' },
+  },
   'src/core/loading-diagnostics.js': {
     'n4spb-loading-report.json': { path: null, hash: false, why: 'locally generated report download filename, not a fetched scene input' },
-    './assets/baked/palace/manifest.json': { path: null, hash: false, why: 'standalone support test reads the existing shipping manifest, never a bake input' },
-    './assets/baked/palace/': { path: null, hash: false, why: 'standalone support test reads products named by the shipping manifest, never a bake input' },
+    'manifest.json': { path: null, hash: false, why: 'support test reads the selected area shipping manifest, never a bake input' },
+    './assets/': { path: null, hash: false, why: 'support page metadata selects the area bake directory' },
   },
   'vendor/rapier/rapier.js': { 'rapier_wasm3d_bg.wasm': { path: null, hash: false, why: 'the default URL of the wasm in the compat bundle (new URL(..., "<deleted>")): the wasm is embedded in rapier.js, nothing is fetched' } },
   'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html', 'morskie-vorota.html', 'okrug65.html', 'kronverk.html', 'aptekarsky.html', 'islands.html', 'moskovskaya.html']
@@ -72,8 +76,8 @@ export function isAllowedServed(rel) {
  */
 export const RUNTIME_CALLS = {
   'src/core/loading-diagnostics.js': {
-    'new URL(': { count: 2, why: 'redacts request labels and selects the standalone traced worker relative to the support page; probe product URL has an asset prefix row' },
-    'fetch(': { count: 1, why: 'standalone assets-only test reads the shipping Palace manifest' },
+    'new URL(': { count: 3, why: 'redacts request labels, selects the traced worker, and resolves a probe product in the selected area bake directory' },
+    'fetch(': { count: 1, why: 'standalone assets-only test reads the selected area shipping manifest' },
   },
   'src/core/baked-world.js': {
     'fetch(': { count: 6, why: 'manifest, bake products and the dev-server endpoints (/__bake_inputs, /__bake/<name>, /__baked_revision)' },
@@ -82,7 +86,7 @@ export const RUNTIME_CALLS = {
   'src/core/baked-worker.js': { 'fetch(': { count: 1, why: 'fetches the product URL it is given' } },
   'src/core/baked-worker-trace.js': { 'fetch(': { count: 1, why: 'support-only traced worker fetches the same manifest product URLs as the shipping decoder' } },
   'src/core/gates.js': {
-    'new URL(': { count: 3, why: 'the page of the neighbour area (runtime-only file)' },
+    'new URL(': { count: 5, why: 'neighbour and return pages, including the diagnostic profile (runtime-only file)' },
     'fetch(': { count: 1, why: 'injectable fetch of the preflight (runtime-only file)' },
   },
   'src/main.js': { 'new URL(': { count: 1, why: 'new URL(location.href): the query of the page' } },

@@ -92,6 +92,12 @@ export function passThrough(search) {
   const out = []; for (const [k, v] of new URLSearchParams(search)) if (!DENIED_PARAMS.includes(k)) out.push([k, v]);
   return out;
 }
+/** Diagnostic visits need the destination's instrumented import map as well as
+ * its query flags. Normal visits keep the ordinary area entry point. */
+export function handoffPage(page, search = '') {
+  if (new URLSearchParams(search).get('diagscene') !== '1') return page;
+  return page === 'index.html' ? 'diagnostics.html' : 'diagnostics-' + page;
+}
 /** The URL (relative to the site root of the current page) of an arrival: page ('north.html'), pose, flight flag, time of day, weather look, the ho object and the page's current query string. */
 export function arrivalUrl({ page, pose, fly = false, tod = null, look = null, ho = null, search = '' }) {
   const q = new URLSearchParams();
@@ -101,7 +107,7 @@ export function arrivalUrl({ page, pose, fly = false, tod = null, look = null, h
   if (look) q.set('look', String(look));
   if (ho) q.set('ho', encodeHo(ho));
   for (const [k, v] of passThrough(search)) q.set(k, v);
-  return `${page}?${q}`;
+  return `${handoffPage(page, search)}?${q}`;
 }
 /** Parse ?cam= back into { x, y|null, z, yaw, pitch, fly: boolean } (4 numbers: walking / driving, 5: free camera), or null. The inverse of camParam. */
 export function parseCamParam(s) {

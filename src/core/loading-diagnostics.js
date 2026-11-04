@@ -170,7 +170,12 @@
       drainDiagnosticQueue() {
         clearTimeout(this.diagnosticTimer);
         if (this.diagnosticStopped || this.diagnosticBusy || !this.diagnosticQueue.length) return;
-        if (!window.__stats?.modules?.landmarksRiverfront && !window.__errors?.some(e => e.module === 'landmarksRiverfront')) {
+        // Palace builds riverfront before requesting the field. Other areas
+        // start with environment (which awaits that field), or build riverfront
+        // later: waiting for it there would deadlock the loader.
+        const list = window.__ctx?.buildList;
+        if ((!list || list[0] === 'landmarksRiverfront') &&
+          !window.__stats?.modules?.landmarksRiverfront && !window.__errors?.some(e => e.module === 'landmarksRiverfront')) {
           this.diagnosticTimer = setTimeout(() => this.drainDiagnosticQueue(), 50); return;
         }
         const { data, rest, item } = this.diagnosticQueue.shift();
@@ -393,8 +398,9 @@
     });
     try {
       await Promise.race([deadline, (async () => {
-        run.phase = 'Reading Palace manifest'; event('probe:manifest');
-        const response = await fetch('./assets/baked/palace/manifest.json', { signal: abort.signal, cache: 'no-cache' });
+        run.phase = `Reading ${run.area} manifest`; event('probe:manifest');
+        const bakeBase = './assets/' + document.querySelector('meta[name="diagnostics-bake"]').content;
+        const response = await fetch(bakeBase + 'manifest.json', { signal: abort.signal, cache: 'no-cache' });
         if (!response.ok) throw Error(`Manifest HTTP ${response.status}`);
         const manifest = await response.json(); run.probeRevision = manifest.revision;
         const names = ['field', 'street-textures', 'street-kerbs', 'street-surfaces', 'city-base', 'roof', 'nav-low'];
@@ -417,7 +423,7 @@
           if (typeof file !== 'string' || !/^[\w.-]+\.bin\.gz$/.test(file)) { reject(Error(`Missing or invalid asset: ${name}`)); return; }
           jobs.set(i, { name, resolve, reject });
           run.phase = `Waiting for ${name}`; event('probe:request', name);
-          worker.postMessage({ id: i, url: new URL('./assets/baked/palace/' + file, location.href).href, rawBytes: manifest.sizes?.[name]?.raw });
+          worker.postMessage({ id: i, url: new URL(bakeBase + file, location.href).href, rawBytes: manifest.sizes?.[name]?.raw });
         });
         if (run.test === 'assets-burst') await Promise.all(names.map(load));
         else for (const [i, name] of names.entries()) await load(name, i);
@@ -516,7 +522,7 @@
     panel.innerHTML = `<div class="diag-card"><h1>Loading diagnostics</h1><p id="diag-version"></p><p id="diag-notice"></p>
       <p>Reports stay on this device. No report is sent automatically.</p>
       <div id="diag-options"><label>Device / iOS version (optional)<input id="diag-device" type="text" maxlength="120" placeholder="iPhone 16 Pro Max, iOS 26.7"></label>
-      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="scene-staged">Full scene: staged decoding</option><option value="scene-js-gzip">Full scene: JS gzip decoder</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option><option value="riverfront">Riverfront geometry only</option></select></label>
+      <label>Test <select id="diag-test"><option value="scene">Full area scene</option><option value="scene-staged">Full scene: staged decoding</option><option value="scene-js-gzip">Full scene: JS gzip decoder</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option><option value="riverfront">Riverfront geometry only</option></select></label>
       <p id="diag-description"></p>
       <label>Decoder <select id="diag-worker"><option value="1">Worker (normal)</option><option value="0">Main thread (comparison)</option></select></label>
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
@@ -557,6 +563,8 @@
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
     };
     const requestedTest = new URLSearchParams(location.search).get('test');
+    $('compile').checked = new URLSearchParams(location.search).get('earlycompile') !== '0';
+    $('worker').value = new URLSearchParams(location.search).get('bakedworker') === '0' ? '0' : '1';
     if (['scene-staged', 'scene-js-gzip', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
     $('shadows').checked = new URLSearchParams(location.search).get('diagshadows') !== '0';
     $('atlas').checked = new URLSearchParams(location.search).get('diagatlas') !== '0';
@@ -597,10 +605,16 @@
       if (run) return;
       previous = saved || previous;
       const params = new URLSearchParams(location.search);
-      // The diagnostic is a normal full-scene load; never inherit bake/shot or
-      // arrival flags from a copied developer URL. Controls are explicit here.
+      // Never inherit bake/shot flags. A diagnostic hand-off retains the pose
+      // and state the normal arrival planner validates for this destination.
       const test = $('test').value;
       const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
+      if (['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) {
+        query.set('diagscene', '1');
+        if (params.get('diagscene') === '1' && params.has('ho') && params.has('cam')) {
+          for (const name of ['ho', 'cam', 'fly', 'tod', 'look']) if (params.has(name)) query.set(name, params.get(name));
+        }
+      }
       if (!$('shadows').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagshadows', '0');
       if (!$('atlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagatlas', '0');
       if ($('texture').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagtexture', '256');
@@ -634,6 +648,14 @@
       panel.hidden = true;
     };
     render();
+    const arrivalTicket = safe(() => {
+      const ticket = sessionStorage.getItem('n4spb.diagnostic-arrival');
+      sessionStorage.removeItem('n4spb.diagnostic-arrival');
+      return ticket === location.href;
+    });
+    const arrivalParams = new URLSearchParams(location.search);
+    if (arrivalTicket && arrivalParams.get('diagscene') === '1' && arrivalParams.has('ho') && arrivalParams.has('cam') &&
+      ['scene', 'scene-staged', 'scene-js-gzip'].includes($('test').value)) $('start').click();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();
 })();

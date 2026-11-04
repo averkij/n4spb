@@ -8,6 +8,7 @@ import os from 'node:os';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
+import { arrivalUrl, makeHo } from '../src/core/handoff.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const out = fs.mkdtempSync(path.join(os.tmpdir(), 'n4spb-diagnostics-test-'));
@@ -76,6 +77,31 @@ async function open({ full = false, block = false, storageDenied = false, probeT
 const read = page => page.evaluate(k => JSON.parse(localStorage.getItem(k)), key);
 const show = page => page.click('#diag-toggle');
 try {
+  // Arrival is deliberate and one-use: the next area's recorder starts with
+  // the same profile, but a reload after a crash cannot loop into the scene.
+  const hop = await open();
+  const ho = makeHo({ from: 'palace', to: 'smolny', via: 'gate', gate: 'e1' });
+  const hopSearch = 'diagscene=1&test=scene-js-gzip&diagshadows=0&diagatlas=0&diagtexture=256&diagground=plain&diagsignatlas=1024&diagcanvasupload=pixels&diagpack=1&diaguploader=staged&earlycompile=0';
+  const hopUrl = base + arrivalUrl({ page: 'smolny.html', pose: { x: 444, z: -1351, yaw: -90, pitch: 10 }, ho, search: hopSearch, tod: 1.25, look: 'overcast' });
+  await hop.page.evaluate(url => sessionStorage.setItem('n4spb.diagnostic-arrival', url), hopUrl);
+  await hop.page.goto(hopUrl, { waitUntil: 'domcontentloaded' });
+  await hop.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.loaded, {}, key);
+  const hopReport = (await read(hop.page)).current;
+  assert.equal(hopReport.area, 'smolny');
+  assert.equal(hopReport.options.cam, '444,-1351,-90,10');
+  assert.equal(hopReport.options.ho, new URL(hopUrl).searchParams.get('ho'));
+  assert.equal(hopReport.options.tod, '1.25'); assert.equal(hopReport.options.look, 'overcast');
+  for (const [name, value] of new URLSearchParams(hopSearch)) assert.equal(hopReport.options[name], value);
+  assert.equal(hopReport.options.nd, '0'); assert.equal(hopReport.options.supercells, '0');
+  assert.equal(hop.mainRequests(), 1);
+  await hop.page.reload({ waitUntil: 'domcontentloaded' });
+  assert.equal(hop.mainRequests(), 1); assert.equal(await hop.page.$eval('#load-diag', el => el.hidden), false);
+  assert.equal((await read(hop.page)).current.id, hopReport.id);
+  await hop.page.click('#diag-start');
+  await hop.page.waitForFunction(() => document.body.classList.contains('loaded'));
+  assert.equal(hop.mainRequests(), 2);
+  assert.equal(await hop.page.evaluate(() => new URLSearchParams(location.search).get('cam')), '444,-1351,-90,10');
+  assert.deepEqual(hop.errors, []); await hop.context.close();
   const t = await open(); const { page } = t;
   assert.equal(t.mainRequests(), 0, 'game waits for Start');
   assert.equal(await page.$eval('#load-diag', e => e.hidden), false);
@@ -265,12 +291,14 @@ try {
   await trace.page.evaluate(() => traceWorker.terminate());
   assert.equal(Object.keys((await read(trace.page)).current.pending).length, 0);
   await trace.page.evaluate(() => {
+    delete window.__stats.modules.landmarksRiverfront;
+    window.__ctx = { buildList: ['environment', 'landmarksRiverfront'] };
     window.traceWorker = new Worker('./src/core/baked-worker.js', { type: 'module' });
     traceWorker.onmessage = e => traceReplies.push(e.data);
     traceWorker.postMessage({ id: 502, url: new URL('./missing-probe-file', location.href).href, rawBytes: 8 });
   });
   await trace.page.waitForFunction(() => traceReplies.length === 1);
-  assert.equal(await trace.page.evaluate(() => traceReplies[0].error), 'HTTP 404');
+  assert.equal(await trace.page.evaluate(() => traceReplies[0].error), 'HTTP 404', 'environment-first areas decode without waiting for a later riverfront');
   assert.deepEqual(trace.errors, []);
   await trace.context.close();
 
@@ -675,6 +703,42 @@ try {
       await real.page.screenshot({ path: path.join(out, 'packed-palace-playing.png') });
       assert.deepEqual(real.errors, [], 'no errors after travelling to the other end of the scene');
     }
+    let expectedMainRequests = 1;
+    if (process.argv.includes('--area-hops')) {
+      assert(packedGeometry && stagedUploads && jsGzip, 'area hops exercise the working phone profile');
+      for (const to of ['smolny', 'palace']) {
+        console.log('Checking diagnostic arrival: ' + to);
+        const navigated = real.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 });
+        await real.page.evaluate(to => {
+          const gates = window.__gates, gate = gates.gates.find(g => g.to === to);
+          if (!gate) throw Error('Missing destination gate: ' + to);
+          const pose = to === 'smolny' ? { x: 444, z: -1351, yaw: -90, pitch: 10 } : { x: 560, z: 192, yaw: 0, pitch: 8 };
+          void gates.go(gate, 'place', pose);
+        }, to);
+        await navigated;
+        assert(new URL(real.page.url()).pathname.endsWith(to === 'palace' ? '/diagnostics.html' : '/diagnostics-smolny.html'));
+        try {
+          await real.page.waitForFunction(() => document.body.classList.contains('playing'), { timeout: 240000 });
+        } catch (error) {
+          fs.writeFileSync(path.join(out, 'arrival-failed-' + to + '.json'), JSON.stringify(await read(real.page), null, 2));
+          await real.page.screenshot({ path: path.join(out, 'arrival-failed-' + to + '.png') });
+          console.error('Arrival failure evidence: ' + out); throw error;
+        }
+        await real.page.waitForFunction((key, to) => JSON.parse(localStorage.getItem(key))?.current.area === to && JSON.parse(localStorage.getItem(key))?.current.playing, {}, key, to);
+        const arrival = (await read(real.page)).current;
+        assert.equal(arrival.geometryPack.state, 'end'); assert(arrival.geometryPack.savedAttributeBytes > 0);
+        assert.equal(arrival.geometryUpload.state, 'end'); assert.equal(arrival.baked.decoder.mode, 'worker');
+        assert.deepEqual(arrival.baked.failures, []);
+        for (const name of ['test', 'q', 'bakedworker', 'earlycompile', 'diagscene', 'diagshadows', 'diagatlas', 'diagtexture', 'diagground', 'diagsignatlas', 'diagcanvasupload', 'diaggeometry', 'nd', 'supercells', 'diaguploader', 'diagpack'])
+          assert.equal(arrival.options[name], data.current.options[name], name + ' survives the hop');
+        const state = await real.page.evaluate(() => ({ to: window.__ctx.handoff?.ho.to, applied: window.__ctx.handoff?.applied, shadows: window.__ctx.renderer.shadowMap.enabled, errors: window.__errors }));
+        assert.equal(state.to, to); assert.equal(state.applied, true); assert.equal(state.shadows, false); assert.deepEqual(state.errors, []);
+        assert.deepEqual(real.errors, []);
+        fs.writeFileSync(path.join(out, 'arrival-' + to + '.json'), JSON.stringify(arrival, null, 2));
+        await real.page.screenshot({ path: path.join(out, 'arrival-' + to + '.png') });
+        data = await read(real.page); expectedMainRequests++;
+      }
+    }
     await real.page.reload({ waitUntil: 'domcontentloaded' });
     assert.equal(await real.page.$eval('#diag-shadows', e => e.checked), !noShadows);
     assert.equal(await real.page.$eval('#diag-atlas', e => e.checked), !noAtlas);
@@ -686,7 +750,7 @@ try {
     assert.equal(await real.page.$eval('#diag-geometry', e => e.checked), leanGeometry);
     assert.equal(await real.page.$eval('#diag-uploader', e => e.checked), stagedUploads);
     assert.equal(await real.page.$eval('#diag-pack', e => e.checked), packedGeometry);
-    assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
+    assert.equal(real.mainRequests(), expectedMainRequests, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();
   }

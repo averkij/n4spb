@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.19.1** (2026-11-04, patch): Preserve the working phone loading profile across area transitions
 - **9.19.0** (2026-11-04, minor): Add compact static geometry phone comparison with exact vertex welding and bounded position precision
 - **9.18.0** (2026-11-04, minor): Add staged geometry uploads to phone diagnostics to release CPU arrays before the first frame
 - **9.17.0** (2026-11-04, minor): Add lower-memory geometry comparison and shader/buffer native checkpoints

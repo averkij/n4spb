@@ -375,6 +375,13 @@ console.log('boot-guard texts per area (the size, the card title and the way bac
     const html = fs.readFileSync(path.join(root, 'north.html'), 'utf8').replaceAll('\r\n', '\n'), n = phoneCardTitle(html);
     assert.equal(n.title, 'Прогулка по северу города · Before you start'); assert(n.paragraph.includes('около 36 МБ'), n.paragraph);
   });
+  check('diagnostic return link keeps packing, decoder and return pose', () => {
+    const ret = { x: 560, z: 192, yaw: 90, pitch: 8 };
+    const back = GT.backLink({ from: 'palace', to: 'smolny', ret, n: 1 }, { base: 'http://h/n4spb/diagnostics-smolny.html?diagscene=1&test=scene-js-gzip&diagpack=1&q=performance' });
+    const url = new URL(back.url);
+    assert.equal(url.pathname, '/n4spb/diagnostics.html'); assert.equal(url.searchParams.get('cam'), '560,192,90,8');
+    assert.equal(url.searchParams.get('diagpack'), '1'); assert.equal(url.searchParams.get('test'), 'scene-js-gzip');
+  });
   check('backLink: the origin page at the pose he left from, the quality tier kept; no origin, an unknown origin ("constructor") or no return pose gives none', () => {
     const ret = { x: 458, z: -1350, yaw: -90, pitch: 0 }, b = GT.backLink({ from: 'north', ret }, { qName: 'performance', base: 'http://h/index.html?x=1' });
     assert.equal(b.url, 'http://h/north.html?cam=458%2C-1350%2C-90%2C0&q=performance'); assert.equal(b.text, `Вернуться: ${REGISTRY.north.title} · Back to ${REGISTRY.north.titleEn}`);

@@ -40,6 +40,17 @@ check('corrupt input never throws', () => {
 check('an over-long hand-off cannot be encoded', () => assert.throws(() => H.encodeHo({ ...ho0, gate: 'x'.repeat(700) })));
 
 console.log('the URL:');
+check('diagnostic hops use instrumented destination pages and preserve the loading profile', () => {
+  const search = '?diagscene=1&test=scene-js-gzip&diagpack=1&diaguploader=staged&diagshadows=0&nd=0&supercells=0';
+  for (const [page, expected] of [['smolny.html', 'diagnostics-smolny.html'], ['index.html', 'diagnostics.html']]) {
+    const url = H.arrivalUrl({ page, pose: { x: 10, z: 20, yaw: 90 }, search, ho: ho0 });
+    assert.equal(url.split('?')[0], expected);
+    const q = new URLSearchParams(url.split('?')[1]);
+    for (const [key, value] of new URLSearchParams(search)) assert.equal(q.get(key), value);
+    assert.equal(q.get('cam'), '10,20,90,0'); assert.deepEqual(H.decodeHo(q.get('ho')).ho, ho0);
+    assert.equal(H.handoffPage(page, '?diagpack=1'), page, 'packing flag alone does not reroute ordinary pages');
+  }
+});
 check('walking pose: 4 numbers, no fly', () => { const u = H.arrivalUrl({ page: 'north.html', pose: { x: 1.234, z: -405.5, yaw: 12.34, pitch: 4 }, tod: 1.5, search: '' }); assert.equal(u.split('?')[0], 'north.html'); const q = new URLSearchParams(u.split('?')[1]); assert.equal(q.get('cam'), '1.23,-405.5,12.34,4'); assert(!q.has('fly')); assert.equal(q.get('tod'), '1.5'); });
 check('flying pose: 5 numbers (y = eye height) and fly=1', () => { const q = new URLSearchParams(H.arrivalUrl({ page: 'north.html', pose: { x: 1, y: 80, z: 2, yaw: 3, pitch: -10 }, fly: true }).split('?')[1]); assert.equal(q.get('cam'), '1,80,2,3,-10'); assert.equal(q.get('fly'), '1'); });
 check('parseCamParam inverts camParam in both forms', () => {

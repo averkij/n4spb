@@ -15,7 +15,7 @@
 //  question; the machine keeps running, so the gate re-arms the moment he steps out. The predicate is a dependency (deps.isIndoors), so the machine stays pure.
 // ============================================================================
 import { REGISTRY, GATES as ALL_GATES, GATES_ENABLED } from '../areas/registry.js';
-import { makeHo, arrivalUrl, decodeHo, parseCamParam, camParam, resolveArrival, makeProbe } from './handoff.js';
+import { makeHo, arrivalUrl, handoffPage, decodeHo, parseCamParam, camParam, resolveArrival, makeProbe } from './handoff.js';
 
 // ---------------------------------------------------------------- tuning (m, s, m/s); the registry's zone (walking depth) overrides DEPTH_WALK per gate
 export const DEFAULTS = {
@@ -207,6 +207,12 @@ export function planArrival({ L, A, params, gates = ALL_GATES }) {
 export function backLink(ho, { qName = 'medium', base = 'http://localhost/' } = {}) {
   const row = ho && typeof ho.from === 'string' && Object.hasOwn(REGISTRY, ho.from) ? REGISTRY[ho.from] : null;
   if (!row || !ho.ret) return null;
+  const current = new URL(base);
+  if (current.searchParams.get('diagscene') === '1') {
+    const url = arrivalUrl({ page: row.page, pose: ho.ret, search: current.search,
+      ho: makeHo({ from: ho.to, to: ho.from, via: 'return', mute: ho.mute, n: (ho.n || 0) + 1 }) });
+    return { text: `Back to ${row.titleEn}`, url: new URL(url, base).href };
+  }
   return { text: `Вернуться: ${row.title} · Back to ${row.titleEn}`, url: new URL(`${row.page}?${new URLSearchParams({ cam: camParam(ho.ret), q: qName })}`, base).href };
 }
 
@@ -404,7 +410,7 @@ export function createGates(deps) {
     if (params.has('baked') || params.has('only') || params.has('allcity')) return { ok: true, dev: true };      // development flags run without a bake
     const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
     try {
-      const head = await Promise.race([fetchImpl(new URL(row.page, win.location.href), { method: 'HEAD', cache: 'no-cache' }), timeout(4000)]);
+      const head = await Promise.race([fetchImpl(new URL(handoffPage(row.page, win.location.search), win.location.href), { method: 'HEAD', cache: 'no-cache' }), timeout(4000)]);
       if (!head.ok) return { ok: false, why: 'page', status: head.status };
       const peekManifest = deps.peekManifest || (await import('./baked-world.js')).peekManifest, REVS = deps.bakedRevisions ?? (await import('./baked-revision.js')).BAKED_REVISIONS;      // (injectable for tests) REVS: the bake revision of EVERY live area (generated map): the target's manifest is compared with the TARGET's own entry, not with the revision of this page's area
       const m = await Promise.race([peekManifest(row.bake), timeout(4000)]);
@@ -456,7 +462,15 @@ export function createGates(deps) {
     machine, gates, edges: gates.filter(isEdge), doors, places, prompt, offerPlace, go, preflight, mode, currentPose, tick, isIndoors, seam, promptMode: PROMPT,
     lastUrl: null,
     /** replaceable in tests: the navigation itself (location.replace keeps ONE history entry, so a page that holds a gigabyte cannot be restored from the back/forward cache) */
-    navigate: (url) => win.location.replace(new URL(url, win.location.href)),
+    navigate: (url) => {
+      const target = new URL(url, win.location.href);
+      // One-use ticket: a deliberate hop starts the next diagnostic scene,
+      // but reopening/reloading a crashed page must still show its saved report.
+      if (params.get('diagscene') === '1') {
+        try { win.sessionStorage.setItem('n4spb.diagnostic-arrival', target.href); } catch { /* manual Start remains available */ }
+      }
+      win.location.replace(target);
+    },
     get traveling() { return traveling; }, get chipGate() { return chipGate; },
     /** the player teleported (views, R, the hand-off): forget the speed */
     teleported: () => machine.teleported(),

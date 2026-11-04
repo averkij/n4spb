@@ -868,6 +868,40 @@ bake-manifest checks passed, with all 16 baked areas fresh.
 Phone success is still unverified; this is a controlled comparison, not a claimed
 fix or a universal mobile memory budget.
 
+#### v9.19.1: retain the phone profile on area changes
+
+The owner confirmed that v9.19 loaded and entered play on the iPhone. Visual
+quality remains reduced and some buildings appear distorted; that is outstanding
+work, not a reason to silently drop the settings that made startup possible.
+
+Area changes were copying the diagnostic query flags into ordinary area pages.
+Those pages had no diagnostic import-map adapter, so packing and staged uploads
+did not run. Every live area now has a generated diagnostic entry derived from its
+own normal page, with the same area remaps and bake metadata. A running diagnostic
+scene marks its URL with `diagscene=1`; gate preflight and navigation use the
+destination's diagnostic entry. Normal visits retain ordinary page routing.
+
+An intentional navigation writes a one-use, exact-destination session ticket.
+The destination consumes it before starting, retains the hand-off pose/state and
+all loading controls, and uses the existing seamless arrival path. Reloading or
+reopening a failed attempt does not auto-start again. If session storage is
+unavailable, manual Start retains the arrival. Fatal-card return links keep the
+profile too. The asset probe reads the destination's own manifest.
+
+The JS-gzip queue also respects the area's build order: it only waits for
+riverfront completion when riverfront is the first module. Waiting for that
+Palace-specific phase on Smolny, which starts with environment and never builds
+riverfront, would deadlock its field request.
+
+Verification: the full browser regression completed Palace -> Smolny -> Palace
+using the packed JS-gzip profile, real gate navigation/preflight and automatic
+arrival. Both destinations reached `loaded=true` and `playing=true`, retained all
+loading settings, and completed packing/staged uploads without browser or asset
+errors. Reloading the final arrival stayed paused with its saved report. Focused
+tests cover one-use start/retry, arrival-state retention and environment-first
+decoding; the hand-off, area, runtime-only and closure checks passed, and all 16
+bakes remain fresh. Phone transitions still need confirmation on the device.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion
