@@ -648,6 +648,49 @@ and `uDist` at 2112x4950 (41,817,600 bytes); all traced native calls returned on
 desktop. Playing screenshots were reviewed. Generated-page, closure and all
 16 live bake-manifest checks passed. This does not establish iPhone success.
 
+#### Shared road-sign atlas comparison (9.15.0)
+
+The phone's 9.14.0 plain-ground attempt also crashed after reaching 100%.
+All 29 baked files and finalization steps completed. Normal-depth returned in
+27 ms; the last colour submission was now draw 82, `pt-signpanel`, using the
+4096x4096 `pt-sign-atlas`. No return was persisted. This is further through the
+submission list, but the plain material changes draw ordering: an absent ground
+native-call checkpoint does not prove the ground was already drawn successfully.
+
+`diagatlas=0` disables final scene batching atlases, not the street builder's
+own sign atlas. The 256px static cap excluded this atlas because it is shared
+with dynamic/knockable signs. Inspection of `streets/furn.js` shows its pixels
+are immutable after `makePanels.finish`; night changes material colour, and
+knockable signs reuse its normalized atlas UVs. `diagsignatlas=1024` therefore
+resizes only maps named `pt-sign-atlas`, including shared dynamic references,
+in place before final batching. It preserves geometry, UV layout, texture
+filtering and mipmap settings. It makes small sign lettering blurrier and is
+an explicit comparison, not a shipping texture policy. One 4096-square RGBA8
+base level is 64 MiB; 1024-square is 4 MiB, before mipmaps or upload copies.
+
+Native entry/return tracing now covers every draw in the first colour pass,
+not only ground, and recovers `lastColourGL` alongside `lastColourDraw`.
+Each new draw clears the previous call so a missing call is not mistaken for
+one belonging to that draw. Method replacement failures are reported. These
+checkpoints locate synchronous API entry/return; they cannot confirm GPU
+completion or diagnose process termination on their own.
+
+Next phone link:
+`diagnostics.html?test=scene-js-gzip&diagshadows=0&diagatlas=0&diagtexture=256&diagdrawtrace=1&diagground=plain&diagsignatlas=1024`.
+The harness adds `--sign-atlas`; it checks shared static/dynamic atlas aliases,
+UV preservation and invalidation, reduced atlas dimensions, native sign draw
+completion, and recovery of a native upload checkpoint after reopening.
+
+The capped desktop run resized one atlas, avoiding 62,914,560 estimated RGBA8
+bytes and reducing the reachable canvas estimate to 163,616,512 bytes. Its
+`pt-signpanel` submission used the 1024-square texture and returned from native
+`drawElements` with 45,714 indices. The full scene reached loaded/playing and
+recovered its report after reload; the playing screenshot was reviewed.
+The original 4096-square comparison also passed with native sign-call tracing;
+its canvas estimate stayed at 226,531,072 bytes. Generated-page/closure checks
+passed and all 16 live bakes remained fresh. Neither desktop run establishes
+that the iPhone crash is fixed.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

@@ -37,6 +37,7 @@
     for (const r of [saved, previous]) if (r?.id === checkpoint.runId) {
       r.lastColourDraw = checkpoint.draw;
       if (checkpoint.groundGL) r.lastGroundGL = checkpoint.groundGL;
+      if ('colourGL' in checkpoint) r.lastColourGL = checkpoint.colourGL;
     }
   });
   const report = () => selected === 'previous' ? previous : (run || saved);
@@ -232,25 +233,27 @@
     }
     let renders = 0;
     const draw = renderer.renderBufferDirect;
-    let draws = 0, groundDraw = false, groundCalls = 0;
+    let draws = 0, groundDraw = false, colourDraw = false, colourCalls = 0;
     const checkpoint = () => safe(() => localStorage.setItem(key + ':draw', JSON.stringify({ runId: run.id,
-      draw: run.lastColourDraw, groundGL: run.lastGroundGL })));
+      draw: run.lastColourDraw, groundGL: run.lastGroundGL, colourGL: run.lastColourGL })));
     if (run?.options.diagdrawtrace === '1') {
       const gl = renderer.getContext();
       for (const name of ['useProgram', 'texImage2D', 'texSubImage2D', 'texStorage2D', 'generateMipmap', 'drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced']) {
         const original = gl[name];
         if (typeof original !== 'function') continue;
         const wrapped = function (...args) {
-          if (!groundDraw) return Reflect.apply(original, this, args);
+          if (!colourDraw) return Reflect.apply(original, this, args);
           const meta = args.map(v => v === null || ['number', 'string', 'boolean'].includes(typeof v) ? v
             : ArrayBuffer.isView(v) ? { type: v.constructor.name, bytes: v.byteLength }
               : v?.width !== undefined ? { width: v.width, height: v.height } : typeof v);
-          run.lastGroundGL = { number: ++groundCalls, draw: draws, call: name, status: 'entered', args: meta };
+          const call = { number: ++colourCalls, draw: draws, call: name, status: 'entered', args: meta };
+          run.lastColourGL = call;
+          if (groundDraw) run.lastGroundGL = call;
           checkpoint();
-          try { const result = Reflect.apply(original, this, args); run.lastGroundGL.status = 'returned'; checkpoint(); return result; }
-          catch (error) { run.lastGroundGL.status = 'failed'; checkpoint(); throw error; }
+          try { const result = Reflect.apply(original, this, args); call.status = 'returned'; checkpoint(); return result; }
+          catch (error) { call.status = 'failed'; checkpoint(); throw error; }
         };
-        try { gl[name] = wrapped; }
+        try { gl[name] = wrapped; if (gl[name] !== wrapped) event('gpu:trace-unavailable', name); }
         catch { event('gpu:trace-unavailable', name); }
       }
     }
@@ -270,11 +273,12 @@
       run.lastColourDraw = { number: ++draws, status: 'entered', object: short(object?.name || object?.parent?.name),
         material: short(material?.name || material?.type), vertices: geometry?.attributes?.position?.count,
         indices: geometry?.index?.count, instances: object?.isInstancedMesh ? object.count : undefined, textures: textures.slice(0, 12) };
-      checkpoint();
+      run.lastColourGL = null; checkpoint();
+      colourDraw = true;
       groundDraw = object?.name === 'env-ground' || material?.name === 'env-ground' || material?.name === 'diagnostic-ground-plain';
       try { const result = Reflect.apply(draw, this, args); run.lastColourDraw.status = 'returned'; checkpoint(); return result; }
       catch (error) { run.lastColourDraw.status = 'failed'; checkpoint(); throw error; }
-      finally { groundDraw = false; }
+      finally { groundDraw = colourDraw = false; }
     };
     const shadowRender = renderer.shadowMap?.render;
     if (typeof shadowRender === 'function') renderer.shadowMap.render = function (...args) {
@@ -333,6 +337,7 @@
     if (name === 'batch' && state === 'end') run.batch = detail;
     if (name === 'texture-cap' && state === 'end') run.textureCap = detail;
     if (name === 'plain-ground' && state === 'end') run.plainGround = detail;
+    if (name === 'sign-atlas-cap' && state === 'end') run.signAtlasCap = detail;
     sample(); event(`build:${name}:${state}`, JSON.stringify(detail));
   });
   addEventListener('pagehide', e => event('pagehide', `persisted=${e.persisted}`));
@@ -485,6 +490,7 @@
       <label><input type="checkbox" id="diag-texture"> Limit static canvas textures to 256px (comparison; blurry signs)</label>
       <label><input type="checkbox" id="diag-drawtrace"> Trace first colour draws (adds diagnostic overhead)</label>
       <label><input type="checkbox" id="diag-ground"> Plain ground material (comparison; removes procedural surface detail)</label>
+      <label><input type="checkbox" id="diag-signatlas"> Limit road-sign atlas to 1024px (comparison; blurrier signs)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -502,6 +508,7 @@
       $('atlas').disabled = !(scene || staged);
       $('texture').disabled = $('drawtrace').disabled = !(scene || staged);
       $('ground').disabled = !(scene || staged);
+      $('signatlas').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -513,6 +520,7 @@
     $('texture').checked = new URLSearchParams(location.search).get('diagtexture') === '256';
     $('drawtrace').checked = new URLSearchParams(location.search).get('diagdrawtrace') === '1';
     $('ground').checked = new URLSearchParams(location.search).get('diagground') === 'plain';
+    $('signatlas').checked = new URLSearchParams(location.search).get('diagsignatlas') === '1024';
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -547,6 +555,7 @@
       if ($('texture').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagtexture', '256');
       if ($('drawtrace').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagdrawtrace', '1');
       if ($('ground').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagground', 'plain');
+      if ($('signatlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagsignatlas', '1024');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

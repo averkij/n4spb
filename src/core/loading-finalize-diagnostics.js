@@ -46,6 +46,24 @@ export function reduceCanvasTextures(root, dynamicRoot, maxSide) {
     let refs = images.get(c); if (!refs) images.set(c, refs = new Set()); refs.add(t);
   });
   const stats = { maxSide, changed: 0, beforePixels: 0, afterPixels: 0, sharedWithDynamic: dynamicImages.size };
+  return resizeCanvases(images, maxSide, stats);
+}
+
+// Road-sign atlas pixels are immutable after makePanels.finish, even when
+// the same texture is used by knockable signs. Preserve their normalized UVs.
+export function reduceSignAtlases(root, dynamicRoot, maxSide) {
+  const images = new Map();
+  for (const tree of [root, dynamicRoot]) tree?.traverse(o => {
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      const t = m?.map, c = t?.image;
+      if (m?.name !== 'pt-sign-atlas' || !t?.isCanvasTexture || typeof c?.getContext !== 'function') continue;
+      let refs = images.get(c); if (!refs) images.set(c, refs = new Set()); refs.add(t);
+    }
+  });
+  return resizeCanvases(images, maxSide, { maxSide, changed: 0, beforePixels: 0, afterPixels: 0 });
+}
+
+function resizeCanvases(images, maxSide, stats) {
   const scratch = document.createElement('canvas');
   try {
     for (const [c, refs] of images) {
@@ -91,6 +109,10 @@ export function batchStatic(root, options) {
     phase('texture-cap', 'start');
     const stats = reduceCanvasTextures(root, window.__ctx?.dynamicRoot, 256);
     phase('texture-cap', 'end', stats);
+  }
+  if (new URLSearchParams(location.search).get('diagsignatlas') === '1024') {
+    phase('sign-atlas-cap', 'start');
+    phase('sign-atlas-cap', 'end', reduceSignAtlases(root, window.__ctx?.dynamicRoot, 1024));
   }
   return trace('batch', batch, [root, noAtlas ? { ...options, atlasTextures: false } : options], { atlasEnabled: !noAtlas });
 }

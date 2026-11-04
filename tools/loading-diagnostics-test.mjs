@@ -120,7 +120,8 @@ try {
   assert(!JSON.stringify(data).includes('redact-me'), 'request query redacted');
   await page.evaluate((key) => {
     const id = JSON.parse(localStorage.getItem(key)).current.id;
-    localStorage.setItem(key + ':draw', JSON.stringify({ runId: id, draw: { number: 7, status: 'entered', object: 'crash checkpoint fixture' } }));
+    localStorage.setItem(key + ':draw', JSON.stringify({ runId: id, draw: { number: 7, status: 'entered', object: 'crash checkpoint fixture' },
+      colourGL: { draw: 7, call: 'texSubImage2D', status: 'entered' } }));
   }, key);
   await page.reload({ waitUntil: 'domcontentloaded' });
   assert.equal(t.mainRequests(), 1, 'reload pauses before importing the game again');
@@ -144,6 +145,8 @@ try {
   assert.equal(recoveredExport.currentPage.navigationType, 'reload');
   assert.equal(recoveredExport.report.lastColourDraw.status, 'entered', 'recovers draw checkpoint newer than the full report');
   assert.equal(recoveredExport.report.lastColourDraw.number, 7);
+  assert.equal(recoveredExport.report.lastColourGL.call, 'texSubImage2D');
+  assert.equal(recoveredExport.report.lastColourGL.status, 'entered');
   await page.screenshot({ path: path.join(out, 'recovered-report.png') });
   await page.select('#diag-worker', '0');
   await page.click('#diag-compile');
@@ -261,7 +264,7 @@ try {
   const cap = await open();
   const capResult = await cap.page.evaluate(async () => {
     const THREE = await import('three');
-    const { reduceCanvasTextures, plainGround } = await import('./src/core/loading-finalize-diagnostics.js');
+    const { reduceCanvasTextures, plainGround, reduceSignAtlases } = await import('./src/core/loading-finalize-diagnostics.js');
     const root = new THREE.Group(), dynamicRoot = new THREE.Group();
     const make = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
     const c = make(512, 256), g = c.getContext('2d');
@@ -278,7 +281,14 @@ try {
     ground.name = other.name = 'env-ground'; ground.userData.noBatch = true; ground.position.set(1, 2, 3);
     root.add(ground, other);
     const plain = plainGround(root, THREE);
+    const signCanvas = make(2048, 2048), signTex = new THREE.CanvasTexture(signCanvas), signAlias = new THREE.CanvasTexture(signCanvas);
+    const sign = mesh(signTex), movingSign = mesh(signAlias); sign.material.name = movingSign.material.name = 'pt-sign-atlas';
+    root.add(sign); dynamicRoot.add(movingSign);
+    const signUV = Array.from(sign.geometry.attributes.uv.array), signVersion = signAlias.version;
+    const signs = reduceSignAtlases(root, dynamicRoot, 1024);
     return { stats, dimensions: [c.width, c.height], aliasSame: alias.image === c && texture.image === c,
+      signs, signDimensions: [signCanvas.width, signCanvas.height], signShared: signTex.image === signAlias.image,
+      signInvalidated: signAlias.version > signVersion, signUVUnchanged: JSON.stringify(signUV) === JSON.stringify(Array.from(sign.geometry.attributes.uv.array)),
       plain, geometrySame: ground.geometry === groundGeo && other.geometry === groundGeo,
       groundShared: ground.material === other.material, groundType: ground.material.type,
       flagsKept: ground.userData.noBatch && ground.material.polygonOffsetFactor === 2 && ground.position.x === 1,
@@ -290,6 +300,9 @@ try {
   assert.deepEqual(capResult.plain, { meshes: 2, materials: 1 });
   assert(capResult.geometrySame && capResult.groundShared && capResult.flagsKept);
   assert.equal(capResult.groundType, 'MeshBasicMaterial');
+  assert.equal(capResult.signs.changed, 1);
+  assert.deepEqual(capResult.signDimensions, [1024, 1024]);
+  assert(capResult.signShared && capResult.signInvalidated && capResult.signUVUnchanged);
   assert.deepEqual(capResult.dimensions, [256, 128]);
   assert(capResult.aliasSame && capResult.invalidated && capResult.uvUnchanged);
   assert.deepEqual(capResult.shared, [1024, 512]);
@@ -306,6 +319,7 @@ try {
     const noAtlas = process.argv.includes('--no-atlas');
     const textureCap = process.argv.includes('--texture-cap'), drawTrace = process.argv.includes('--draw-trace');
     const plainGround = process.argv.includes('--plain-ground');
+    const signAtlas = process.argv.includes('--sign-atlas');
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
@@ -313,17 +327,23 @@ try {
     if (textureCap) await real.page.click('#diag-texture');
     if (drawTrace) await real.page.click('#diag-drawtrace');
     if (plainGround) await real.page.click('#diag-ground');
+    if (signAtlas) await real.page.click('#diag-signatlas');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     const groundCheckpoints = [];
+    const signCheckpoints = [];
     await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
     await real.page.exposeFunction('recordGroundCheckpoint', entry => groundCheckpoints.push(entry));
+    await real.page.exposeFunction('recordSignCheckpoint', entry => signCheckpoints.push(entry));
     await real.page.evaluate(() => {
-      const persist = Storage.prototype.setItem; let last = '', gotGround = false;
+      const persist = Storage.prototype.setItem; let last = '', gotGround = false, gotSign = false;
       Storage.prototype.setItem = function (key, value) {
         if (key.startsWith('n4spb.loading-report.v1:')) {
           const payload = JSON.parse(value);
           if (!gotGround && payload.draw?.object === 'env-ground') { gotGround = true; void window.recordGroundCheckpoint(payload.draw); }
+          if (!gotSign && payload.draw?.material === 'pt-sign-atlas' && payload.colourGL?.status === 'returned' && payload.colourGL.call.startsWith('draw')) {
+            gotSign = true; void window.recordSignCheckpoint(payload);
+          }
           const entry = JSON.parse(value)?.current?.events?.at(-1), id = JSON.stringify(entry);
           if (entry && id !== last) { last = id; if (/^(worker|gpu|build):/.test(entry.kind)) void window.recordWorkerEvent(entry); }
         }
@@ -371,6 +391,18 @@ try {
       assert.equal(groundCheckpoints[0].textures.some(t => t.label === 'uCls'), !plainGround, 'includes injected ground shader textures');
       assert.equal(data.current.lastGroundGL.status, 'returned');
       assert(data.current.lastGroundGL.number > 0);
+      // Empty instance submissions (e.g. inactive jets) make no native draw.
+      if (data.current.lastColourGL) {
+        assert.equal(data.current.lastColourGL.status, 'returned');
+        assert.equal(data.current.lastColourGL.draw, data.current.lastColourDraw.number);
+      }
+      assert(signCheckpoints.length > 0, 'native calls traced for sign atlas, not only ground');
+      assert.equal(signCheckpoints[0].draw.textures.find(t => t.label === 'map').width, signAtlas ? 1024 : 4096);
+    }
+    if (signAtlas) {
+      assert.equal(data.current.options.diagsignatlas, '1024');
+      assert(data.current.signAtlasCap.changed > 0);
+      assert(data.current.signAtlasCap.rgba8BytesAvoidedEstimate >= 62914560);
     }
     if (plainGround) {
       assert(data.current.plainGround.meshes > 0);
@@ -387,6 +419,7 @@ try {
     } else assert(workerEvents.some(e => e.kind === 'gpu:shadow:end'));
     fs.writeFileSync(path.join(out, 'full-scene-events.json'), JSON.stringify(workerEvents, null, 2));
     fs.writeFileSync(path.join(out, 'ground-checkpoints.json'), JSON.stringify(groundCheckpoints, null, 2));
+    fs.writeFileSync(path.join(out, 'sign-checkpoints.json'), JSON.stringify(signCheckpoints, null, 2));
     if (staged) {
       for (const phase of ['fetch', 'headers', ...(jsGzip ? ['download-compressed', 'import-js-inflater', 'inflate-js'] : ['decompress']), 'decode', 'transfer', 'transferred'])
         assert(workerEvents.some(e => e.kind === 'worker:phase' && e.detail.startsWith(phase + ' ')), `traced worker reports ${phase}`);
@@ -411,6 +444,7 @@ try {
     assert.equal(await real.page.$eval('#diag-texture', e => e.checked), textureCap);
     assert.equal(await real.page.$eval('#diag-drawtrace', e => e.checked), drawTrace);
     assert.equal(await real.page.$eval('#diag-ground', e => e.checked), plainGround);
+    assert.equal(await real.page.$eval('#diag-signatlas', e => e.checked), signAtlas);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();
