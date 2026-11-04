@@ -256,8 +256,10 @@ try {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
     const jsGzip = process.argv.includes('--js-gzip');
+    const noShadows = process.argv.includes('--no-shadows');
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
+    if (noShadows) await real.page.click('#diag-shadows');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
@@ -286,6 +288,17 @@ try {
     assert.deepEqual(real.errors, []);
     assert(workerEvents.some(e => e.kind === 'gpu:compile:start'));
     assert(workerEvents.some(e => e.kind === 'gpu:render:end'));
+    assert(workerEvents.some(e => e.kind === 'gpu:render:start' && e.detail.includes('#1 normal-depth')));
+    assert(workerEvents.some(e => e.kind === 'gpu:render:start' && e.detail.includes('#2 colour')));
+    assert(data.current.sceneBuffers.geometryBytes > 1000000, 'captures reachable scene buffers before uploads');
+    assert(data.current.sceneBuffers.dataTextureBytes > 1000000);
+    assert(data.current.sceneBuffers.largestTextures.length <= 10);
+    assert.equal(await real.page.evaluate(() => window.__ctx.renderer.shadowMap.enabled), !noShadows);
+    assert.equal(workerEvents.some(e => e.kind === 'gpu:shadow:start'), !noShadows);
+    if (noShadows) {
+      assert.equal(data.current.options.diagshadows, '0');
+      assert(workerEvents.some(e => e.kind === 'gpu:comparison'));
+    } else assert(workerEvents.some(e => e.kind === 'gpu:shadow:end'));
     fs.writeFileSync(path.join(out, 'full-scene-events.json'), JSON.stringify(workerEvents, null, 2));
     if (staged) {
       for (const phase of ['fetch', 'headers', ...(jsGzip ? ['download-compressed', 'import-js-inflater', 'inflate-js'] : ['decompress']), 'decode', 'transfer', 'transferred'])
@@ -306,6 +319,7 @@ try {
     await real.page.click('#diag-hide');
     await real.page.screenshot({ path: path.join(out, 'full-scene-playing.png') });
     await real.page.reload({ waitUntil: 'domcontentloaded' });
+    assert.equal(await real.page.$eval('#diag-shadows', e => e.checked), !noShadows);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();

@@ -58,7 +58,7 @@
     const r = report();
     ui.version.textContent = `Diagnostics v${diagnosticsVersion}${r?.version ? ' · Report ' + r.version : ''}`;
     ui.status.textContent = r ? `${r === run ? 'Live attempt' : 'Saved attempt'} · ${r.status} · ${r.phase || 'waiting'}${r.elapsedMs ? ` · ${Math.round(r.elapsedMs / 1000)}s` : ''}` : 'No saved attempt. Tap Start test.';
-    ui.notice.textContent = storageError || (run ? 'Recording this page. A scene is ready only when the report says Loaded; 97% is still loading. If it freezes, reopen this link to recover the report.' : 'No test is running in this page. Press Start test to load the game. A saved report does not restore a running scene.');
+    ui.notice.textContent = storageError || (run ? 'Recording this page. Even at 100%, the first frame may still be loading. Wait for Loaded; monitoring. If it freezes, reopen this link to recover the report.' : 'No test is running in this page. Press Start test to load the game. A saved report does not restore a running scene.');
     ui.hide.disabled = !sceneTest();
     ui.hide.textContent = sceneTest() ? 'Show current game' : 'Start a scene test first';
     const entries = Object.values(r?.pending || {});
@@ -173,17 +173,78 @@
     };
   }
 
+  // One inventory after batching, before uploads can release CPU arrays. These
+  // are reachable backing buffers, not total process/GPU memory or a live heap.
+  function sceneInventory(scene) {
+    const geometry = new Set(), textureBuffers = new Set(), textures = new Set(), materials = new Set();
+    let meshes = 0, geometryBytes = 0, dataTextureBytes = 0;
+    const largestTextures = [];
+    const attribute = a => {
+      const b = (a?.isInterleavedBufferAttribute ? a.data.array : a?.array)?.buffer;
+      if (b && !geometry.has(b)) { geometry.add(b); geometryBytes += b.byteLength; }
+    };
+    const texture = (t, label) => {
+      if (!t?.isTexture || textures.has(t)) return;
+      textures.add(t);
+      const image = t.image, b = image?.data?.buffer;
+      if (b && !textureBuffers.has(b)) { textureBuffers.add(b); dataTextureBytes += b.byteLength; }
+      largestTextures.push({ label: short(t.name || label), width: image?.width, height: image?.height,
+        dataBytes: image?.data?.byteLength || 0 });
+    };
+    scene?.traverse(o => {
+      if (!o.isMesh && !o.isLine && !o.isPoints) return;
+      meshes++;
+      attribute(o.geometry?.index);
+      for (const a of Object.values(o.geometry?.attributes || {})) attribute(a);
+      for (const list of Object.values(o.geometry?.morphAttributes || {})) for (const a of list) attribute(a);
+      attribute(o.instanceMatrix); attribute(o.instanceColor);
+      for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+        if (!m || materials.has(m)) continue;
+        materials.add(m);
+        for (const [key, value] of Object.entries(m)) texture(value, key);
+        for (const [key, uniform] of Object.entries(m.uniforms || {})) texture(uniform?.value, key);
+      }
+    });
+    largestTextures.sort((a, b) => (b.width || 0) * (b.height || 0) - (a.width || 0) * (a.height || 0));
+    return { meshes, materials: materials.size, geometryBuffers: geometry.size, geometryBytes,
+      textures: textures.size, dataTextureBytes, largestTextures: largestTextures.slice(0, 10) };
+  }
   function watchRenderer(renderer) {
     if (!renderer || watchedRenderers.has(renderer)) return;
     watchedRenderers.add(renderer);
+    if (run?.options.diagshadows === '0') {
+      renderer.shadowMap.enabled = false;
+      event('gpu:comparison', 'Sun shadows disabled for this diagnostic run');
+    }
     let renders = 0;
+    const shadowRender = renderer.shadowMap?.render;
+    if (typeof shadowRender === 'function') renderer.shadowMap.render = function (...args) {
+      if (!run || document.body.classList.contains('loaded') || renders > 20 || !this.enabled || (!this.autoUpdate && !this.needsUpdate)) return Reflect.apply(shadowRender, this, args);
+      const t = performance.now(); run.graphicsPhase = 'shadow:entered'; event('gpu:shadow:start', `render #${renders}`);
+      try {
+        const result = Reflect.apply(shadowRender, this, args);
+        run.graphicsPhase = 'render:entered'; event('gpu:shadow:end', `${Math.round(performance.now() - t)}ms`);
+        return result;
+      } catch (error) { run.graphicsPhase = 'shadow:failed'; event('gpu:shadow:error', error.message); throw error; }
+    };
     for (const method of ['compile', 'compileAsync', 'render']) {
       const original = renderer[method];
       if (typeof original !== 'function') continue;
       renderer[method] = function (...args) {
         if (!run || document.body.classList.contains('loaded') || method === 'render' && ++renders > 20) return Reflect.apply(original, this, args);
         const t = performance.now();
-        run.graphicsPhase = method + ':entered'; sample(); event('gpu:' + method + ':start');
+        if (!run.sceneBuffers && (method === 'compileAsync' || method === 'render')) run.sceneBuffers = safe(() => sceneInventory(args[0]));
+        let detail = '';
+        if (method === 'render') {
+          const target = renderer.getRenderTarget(), pipeline = window.__pipeline;
+          run.renderPass = { number: renders, target: target === pipeline?.targets?.rtND ? 'normal-depth' : target === pipeline?.targets?.rtColor ? 'colour' : target ? 'postprocess' : 'screen',
+            width: target?.width ?? renderer.domElement.width, height: target?.height ?? renderer.domElement.height,
+            samples: target?.samples ?? 0, cameraMask: args[1]?.layers?.mask,
+            shadowsEnabled: renderer.shadowMap.enabled, shadowsNeedUpdate: renderer.shadowMap.needsUpdate,
+            geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures };
+          detail = `#${renders} ${run.renderPass.target}; layers=${run.renderPass.cameraMask}; shadows=${run.renderPass.shadowsEnabled}`;
+        }
+        run.graphicsPhase = method + ':entered'; sample(); event('gpu:' + method + ':start', detail);
         const done = () => { run.graphicsPhase = method + ':returned'; event('gpu:' + method + ':end', `${Math.round(performance.now() - t)}ms`); };
         const failed = error => { run.graphicsPhase = method + ':failed'; event('gpu:' + method + ':error', error.message); };
         try {
@@ -351,6 +412,7 @@
       <p id="diag-description"></p>
       <label>Decoder <select id="diag-worker"><option value="1">Worker (normal)</option><option value="0">Main thread (comparison)</option></select></label>
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
+      <label><input type="checkbox" id="diag-shadows" checked> Sun shadows (uncheck for comparison)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -364,12 +426,14 @@
     const changeTest = () => {
       const scene = $('test').value === 'scene', staged = ['scene-staged', 'scene-js-gzip'].includes($('test').value);
       $('worker').disabled = !scene; $('compile').disabled = !(scene || staged);
+      $('shadows').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
     };
     const requestedTest = new URLSearchParams(location.search).get('test');
     if (['scene-staged', 'scene-js-gzip', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
+    $('shadows').checked = new URLSearchParams(location.search).get('diagshadows') !== '0';
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -399,6 +463,7 @@
       // arrival flags from a copied developer URL. Controls are explicit here.
       const test = $('test').value;
       const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
+      if (!$('shadows').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagshadows', '0');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

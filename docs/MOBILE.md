@@ -471,6 +471,51 @@ The focused browser regression covers live Show current game preserving 100%,
 a simulated same-document progress drop, saved-report recovery after reload,
 and disabling game display for unstarted/completed asset-only tests.
 
+### First colour-frame investigation (9.11.0)
+
+The next iPhone report reached 100% at 17.553 s. Batching/finalization and final
+`compileAsync` completed; the first `renderer.render` returned in 18 ms, then
+the second render entered at 18.005 s without a recorded return. `loaded` and
+`playing` remained false. In the current pipeline these are the normal/depth
+pass followed by the colour pass, including its sun-shadow rendering. This is
+still the first warm-up frame, not the later all-proxy upload frame.
+
+The recovered document had a different page ID and `navigationType: back_forward`,
+opening about 234 ms after the last saved event. This establishes a new document
+displaying a saved attempt, rather than a same-document percentage reset. It
+does not establish whether navigation, browser recovery or process termination
+caused the replacement, nor prove that memory was the reason.
+
+`diagnostics.html?test=scene-js-gzip&diagshadows=0` selects the same staged JS
+decoder with only sun shadows disabled, before shader compilation. The normal
+game is unaffected. The panel's Sun shadows checkbox can restore the baseline.
+All full-scene tests now record the first 20 render calls' target (normal/depth,
+colour, postprocess or screen), layer mask, target dimensions/sample count,
+shadow state and Three.js resource counts. Shadow generation has separate
+entry/return markers. These distinguish a shadow-stage failure from subsequent
+colour work, although GPU execution can be asynchronous.
+
+`sceneBuffers` records a single post-batching, pre-upload inventory: unique
+reachable geometry backing buffers, material/texture counts, data-texture
+backing buffers and the ten largest texture dimensions. It does not retain
+scene references, expand field storage or include canvas backing stores,
+unreachable allocations awaiting collection, all CPU services, driver memory
+or total GPU memory. Do not equate it with the cumulative baked decoder bytes.
+In the desktop no-shadow run, reachable geometry buffers were 588,882,076 bytes
+and data-texture buffers 41,833,520 bytes; four canvas textures were 4096 square.
+This is substantial combined load, but it is not an iPhone memory measurement.
+
+The browser regression supports `--full --js-gzip --no-shadows` and the baseline
+`--full --js-gzip`, checking render-pass identification, shadow state, scene
+inventory, real-scene readiness/play and report recovery. The comparison is
+diagnostic, not yet a validated phone fix.
+Both runs passed in desktop Chromium: readiness, entering play and recovery
+worked, normal/depth was render #1 and colour was #2, and shadow entry/return
+events appeared only in the baseline. The baseline's first colour call included
+112 ms in the shadow wrapper; its full colour call took 2437 ms on that desktop.
+Screenshots of both playable scenes were reviewed. Closure, generated-page and
+all 16 live bake-manifest checks passed; no normal game or bake changes.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion
