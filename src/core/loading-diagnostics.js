@@ -29,6 +29,13 @@
       saved = data.current; previous = data.previous;
     }
   } catch { storageError = 'Saved reports could not be read. Copy the report before leaving this page.'; }
+  safe(() => {
+    const raw = localStorage.getItem(key + ':draw');
+    if (!raw || raw.length > 12000) return;
+    const checkpoint = JSON.parse(raw);
+    if (!Number.isInteger(checkpoint?.draw?.number)) return;
+    for (const r of [saved, previous]) if (r?.id === checkpoint.runId) r.lastColourDraw = checkpoint.draw;
+  });
   const report = () => selected === 'previous' ? previous : (run || saved);
   const text = () => {
     sample();
@@ -221,6 +228,25 @@
       event('gpu:comparison', 'Sun shadows disabled for this diagnostic run');
     }
     let renders = 0;
+    const draw = renderer.renderBufferDirect;
+    let draws = 0;
+    if (typeof draw === 'function' && run?.options.diagdrawtrace === '1') renderer.renderBufferDirect = function (...args) {
+      // Only the first colour render. Keep a compact independent checkpoint to
+      // avoid rewriting the whole report for every draw or filling its journal.
+      if (run?.renderPass?.number !== 2 || run.renderPass.target !== 'colour' || document.body.classList.contains('loaded')) return Reflect.apply(draw, this, args);
+      const [, , geometry, material, object] = args;
+      const textures = [];
+      const note = (t, label) => { if (t?.isTexture) textures.push({ label, width: t.image?.width, height: t.image?.height, dataBytes: t.image?.data?.byteLength || 0 }); };
+      for (const [label, t] of Object.entries(material || {})) note(t, label);
+      for (const [label, u] of Object.entries(material?.uniforms || {})) note(u?.value, label);
+      run.lastColourDraw = { number: ++draws, status: 'entered', object: short(object?.name || object?.parent?.name),
+        material: short(material?.name || material?.type), vertices: geometry?.attributes?.position?.count,
+        indices: geometry?.index?.count, instances: object?.isInstancedMesh ? object.count : undefined, textures: textures.slice(0, 12) };
+      const checkpoint = () => safe(() => localStorage.setItem(key + ':draw', JSON.stringify({ runId: run.id, draw: run.lastColourDraw })));
+      checkpoint();
+      try { const result = Reflect.apply(draw, this, args); run.lastColourDraw.status = 'returned'; checkpoint(); return result; }
+      catch (error) { run.lastColourDraw.status = 'failed'; checkpoint(); throw error; }
+    };
     const shadowRender = renderer.shadowMap?.render;
     if (typeof shadowRender === 'function') renderer.shadowMap.render = function (...args) {
       if (!run || document.body.classList.contains('loaded') || renders > 20 || !this.enabled || (!this.autoUpdate && !this.needsUpdate)) return Reflect.apply(shadowRender, this, args);
@@ -276,6 +302,7 @@
     const { name, state, ...detail } = e.detail;
     run.buildPhase = `${name}:${state}`;
     if (name === 'batch' && state === 'end') run.batch = detail;
+    if (name === 'texture-cap' && state === 'end') run.textureCap = detail;
     sample(); event(`build:${name}:${state}`, JSON.stringify(detail));
   });
   addEventListener('pagehide', e => event('pagehide', `persisted=${e.persisted}`));
@@ -425,6 +452,8 @@
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
       <label><input type="checkbox" id="diag-shadows" checked> Sun shadows (uncheck for comparison)</label>
       <label><input type="checkbox" id="diag-atlas" checked> Texture atlases (uncheck to reduce batching memory; may run slower)</label>
+      <label><input type="checkbox" id="diag-texture"> Limit static canvas textures to 256px (comparison; blurry signs)</label>
+      <label><input type="checkbox" id="diag-drawtrace"> Trace first colour draws (adds diagnostic overhead)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -440,6 +469,7 @@
       $('worker').disabled = !scene; $('compile').disabled = !(scene || staged);
       $('shadows').disabled = !(scene || staged);
       $('atlas').disabled = !(scene || staged);
+      $('texture').disabled = $('drawtrace').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -448,6 +478,8 @@
     if (['scene-staged', 'scene-js-gzip', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
     $('shadows').checked = new URLSearchParams(location.search).get('diagshadows') !== '0';
     $('atlas').checked = new URLSearchParams(location.search).get('diagatlas') !== '0';
+    $('texture').checked = new URLSearchParams(location.search).get('diagtexture') === '256';
+    $('drawtrace').checked = new URLSearchParams(location.search).get('diagdrawtrace') === '1';
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -479,6 +511,8 @@
       const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
       if (!$('shadows').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagshadows', '0');
       if (!$('atlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagatlas', '0');
+      if ($('texture').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagtexture', '256');
+      if ($('drawtrace').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagdrawtrace', '1');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

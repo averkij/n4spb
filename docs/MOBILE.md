@@ -561,6 +561,51 @@ reachable. Neither number measures total retained browser memory. All five
 finalization stages emitted start/end checkpoints in both runs. Closure and
 generated-page checks passed and all 16 live bakes remained fresh.
 
+### Static texture memory and first-colour draw checkpoints (9.13.0)
+
+The phone's next two no-atlas attempts still failed, one at 97% and one at 100%.
+The latter completed batching, splitting, fixtures, compaction and outline setup,
+then final shader compilation. Normal/depth render #1 returned; colour render #2
+entered with shadows disabled and did not record a return. Its pre-upload
+inventory was 588,769,446 geometry bytes, 41,833,520 data-texture bytes and an
+estimated 438,247,168 canvas RGBA8 bytes. This excludes many additional process
+allocations and GPU copies. It demonstrates a substantial retained load but is
+not proof of an OS memory kill or a particular failing GPU command.
+
+`diagtexture=256` on the diagnostic page reduces static CanvasTexture images in
+place immediately before batching, preserving aspect ratio and normalized UVs.
+It uses a small scratch canvas, resizes the original backing and invalidates
+texture aliases. Data textures, canvases referenced from the dynamic root, and
+canvases on meshes marked dynamic/using dynamic instance matrices are excluded.
+The comparison is deliberately lossy: signs and surface detail may be blurry.
+It is not a production visual policy and cannot guarantee correctness for a
+custom animated canvas on an unmarked static mesh. The normal game is unchanged.
+
+`diagdrawtrace=1` records entry/return around each `renderBufferDirect` call in
+the first colour pass, including object/material labels and texture dimensions.
+A separate small localStorage checkpoint avoids rewriting the full event journal
+for each draw. Recovery merges it only into the matching attempt ID. The trace
+adds overhead; a returned submission does not mean the GPU completed it, and
+the last entered draw is a location clue, not automatically the root cause.
+
+The next controlled phone link is
+`diagnostics.html?test=scene-js-gzip&diagshadows=0&diagatlas=0&diagtexture=256&diagdrawtrace=1`.
+In the desktop capped run, 362 canvases were resized with 216,729,600 estimated
+RGBA8 bytes avoided among those candidates. The post-batch reachable canvas
+estimate fell from 438,247,168 to 226,531,072 bytes; geometry and data-texture
+inventories were unchanged. It loaded and entered play; all 705 first-colour
+draw submissions returned. This remains to be tested on the affected phone.
+
+The browser harness adds `--texture-cap --draw-trace` to the previous full test.
+It checks shared texture aliases, dirty versions, aspect ratio, colour placement,
+unchanged UVs, dynamic/shared and data-texture exclusions, materially reduced
+canvas storage, first-colour tracing and recovery of a newer draw checkpoint
+after reload. Screenshots show the playable scene; inspect close-up text before
+considering any similar tradeoff for production.
+Both the capped and uncapped no-shadow/no-atlas runs passed in desktop Chromium
+with draw tracing enabled. Generated-page/closure checks passed and all 16 live
+bakes remained fresh. No production game or bake changes were made.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

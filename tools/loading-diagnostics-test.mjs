@@ -118,6 +118,10 @@ try {
   data = await read(page);
   assert(data.current.events.length <= 140);
   assert(!JSON.stringify(data).includes('redact-me'), 'request query redacted');
+  await page.evaluate((key) => {
+    const id = JSON.parse(localStorage.getItem(key)).current.id;
+    localStorage.setItem(key + ':draw', JSON.stringify({ runId: id, draw: { number: 7, status: 'entered', object: 'crash checkpoint fixture' } }));
+  }, key);
   await page.reload({ waitUntil: 'domcontentloaded' });
   assert.equal(t.mainRequests(), 1, 'reload pauses before importing the game again');
   assert.equal((await read(page)).current.id, id, 'last report not overwritten by page open');
@@ -138,6 +142,8 @@ try {
   assert.equal(recoveredExport.currentPage.reportSource, 'saved');
   assert.equal(recoveredExport.currentPage.reportFromCurrentPage, false);
   assert.equal(recoveredExport.currentPage.navigationType, 'reload');
+  assert.equal(recoveredExport.report.lastColourDraw.status, 'entered', 'recovers draw checkpoint newer than the full report');
+  assert.equal(recoveredExport.report.lastColourDraw.number, 7);
   await page.screenshot({ path: path.join(out, 'recovered-report.png') });
   await page.select('#diag-worker', '0');
   await page.click('#diag-compile');
@@ -252,16 +258,48 @@ try {
   assert.deepEqual(trace.errors, []);
   await trace.context.close();
 
+  const cap = await open();
+  const capResult = await cap.page.evaluate(async () => {
+    const THREE = await import('three');
+    const { reduceCanvasTextures } = await import('./src/core/loading-finalize-diagnostics.js');
+    const root = new THREE.Group(), dynamicRoot = new THREE.Group();
+    const make = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+    const c = make(512, 256), g = c.getContext('2d');
+    g.fillStyle = '#ff0000'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#0000ff'; g.fillRect(256, 0, 256, 256);
+    const texture = new THREE.CanvasTexture(c), alias = texture.clone();
+    const mesh = t => new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial({ map: t }));
+    root.add(mesh(texture), mesh(alias));
+    const shared = new THREE.CanvasTexture(make(1024, 512)); root.add(mesh(shared)); dynamicRoot.add(mesh(shared));
+    const data = new THREE.DataTexture(new Uint8Array(512 * 512 * 4), 512, 512); root.add(mesh(data));
+    const uv = Array.from(root.children[0].geometry.attributes.uv.array), version = texture.version;
+    const stats = reduceCanvasTextures(root, dynamicRoot, 256);
+    return { stats, dimensions: [c.width, c.height], aliasSame: alias.image === c && texture.image === c,
+      invalidated: texture.version > version, shared: [shared.image.width, shared.image.height], dataWidth: data.image.width,
+      red: Array.from(g.getImageData(10, 10, 1, 1).data), blue: Array.from(g.getImageData(240, 10, 1, 1).data),
+      uvUnchanged: JSON.stringify(uv) === JSON.stringify(Array.from(root.children[0].geometry.attributes.uv.array)) };
+  });
+  assert.equal(capResult.stats.changed, 1);
+  assert.deepEqual(capResult.dimensions, [256, 128]);
+  assert(capResult.aliasSame && capResult.invalidated && capResult.uvUnchanged);
+  assert.deepEqual(capResult.shared, [1024, 512]);
+  assert.equal(capResult.dataWidth, 512);
+  assert.deepEqual(capResult.red, [255, 0, 0, 255]); assert.deepEqual(capResult.blue, [0, 0, 255, 255]);
+  assert.deepEqual(cap.errors, []);
+  await cap.context.close();
+
   if (process.argv.includes('--full')) {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
     const jsGzip = process.argv.includes('--js-gzip');
     const noShadows = process.argv.includes('--no-shadows');
     const noAtlas = process.argv.includes('--no-atlas');
+    const textureCap = process.argv.includes('--texture-cap'), drawTrace = process.argv.includes('--draw-trace');
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
     if (noAtlas) await real.page.click('#diag-atlas');
+    if (textureCap) await real.page.click('#diag-texture');
+    if (drawTrace) await real.page.click('#diag-drawtrace');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
@@ -303,6 +341,16 @@ try {
     assert.equal(data.current.batch.atlasPages === 0, noAtlas);
     assert.equal(await real.page.evaluate(() => window.__stats.batch.atlasPages === 0), noAtlas);
     if (noAtlas) assert.equal(data.current.options.diagatlas, '0');
+    if (textureCap) {
+      assert.equal(data.current.options.diagtexture, '256');
+      assert(data.current.textureCap.changed > 0);
+      assert(data.current.textureCap.rgba8BytesAvoidedEstimate > 100000000, 'comparison materially reduces static canvas pixels');
+    }
+    if (drawTrace) {
+      assert(data.current.lastColourDraw.number > 0);
+      assert.equal(data.current.lastColourDraw.status, 'returned');
+      assert(data.current.lastColourDraw.textures.length <= 12);
+    }
     assert.equal(await real.page.evaluate(() => window.__ctx.renderer.shadowMap.enabled), !noShadows);
     assert.equal(workerEvents.some(e => e.kind === 'gpu:shadow:start'), !noShadows);
     if (noShadows) {
@@ -331,6 +379,8 @@ try {
     await real.page.reload({ waitUntil: 'domcontentloaded' });
     assert.equal(await real.page.$eval('#diag-shadows', e => e.checked), !noShadows);
     assert.equal(await real.page.$eval('#diag-atlas', e => e.checked), !noAtlas);
+    assert.equal(await real.page.$eval('#diag-texture', e => e.checked), textureCap);
+    assert.equal(await real.page.$eval('#diag-drawtrace', e => e.checked), drawTrace);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();
