@@ -261,7 +261,7 @@ try {
   const cap = await open();
   const capResult = await cap.page.evaluate(async () => {
     const THREE = await import('three');
-    const { reduceCanvasTextures } = await import('./src/core/loading-finalize-diagnostics.js');
+    const { reduceCanvasTextures, plainGround } = await import('./src/core/loading-finalize-diagnostics.js');
     const root = new THREE.Group(), dynamicRoot = new THREE.Group();
     const make = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
     const c = make(512, 256), g = c.getContext('2d');
@@ -273,12 +273,23 @@ try {
     const data = new THREE.DataTexture(new Uint8Array(512 * 512 * 4), 512, 512); root.add(mesh(data));
     const uv = Array.from(root.children[0].geometry.attributes.uv.array), version = texture.version;
     const stats = reduceCanvasTextures(root, dynamicRoot, 256);
+    const groundMat = new THREE.MeshToonMaterial({ polygonOffset: true, polygonOffsetFactor: 2 }); groundMat.name = 'env-ground';
+    const groundGeo = new THREE.PlaneGeometry(), ground = new THREE.Mesh(groundGeo, groundMat), other = new THREE.Mesh(groundGeo, groundMat);
+    ground.name = other.name = 'env-ground'; ground.userData.noBatch = true; ground.position.set(1, 2, 3);
+    root.add(ground, other);
+    const plain = plainGround(root, THREE);
     return { stats, dimensions: [c.width, c.height], aliasSame: alias.image === c && texture.image === c,
+      plain, geometrySame: ground.geometry === groundGeo && other.geometry === groundGeo,
+      groundShared: ground.material === other.material, groundType: ground.material.type,
+      flagsKept: ground.userData.noBatch && ground.material.polygonOffsetFactor === 2 && ground.position.x === 1,
       invalidated: texture.version > version, shared: [shared.image.width, shared.image.height], dataWidth: data.image.width,
       red: Array.from(g.getImageData(10, 10, 1, 1).data), blue: Array.from(g.getImageData(240, 10, 1, 1).data),
       uvUnchanged: JSON.stringify(uv) === JSON.stringify(Array.from(root.children[0].geometry.attributes.uv.array)) };
   });
   assert.equal(capResult.stats.changed, 1);
+  assert.deepEqual(capResult.plain, { meshes: 2, materials: 1 });
+  assert(capResult.geometrySame && capResult.groundShared && capResult.flagsKept);
+  assert.equal(capResult.groundType, 'MeshBasicMaterial');
   assert.deepEqual(capResult.dimensions, [256, 128]);
   assert(capResult.aliasSame && capResult.invalidated && capResult.uvUnchanged);
   assert.deepEqual(capResult.shared, [1024, 512]);
@@ -294,19 +305,25 @@ try {
     const noShadows = process.argv.includes('--no-shadows');
     const noAtlas = process.argv.includes('--no-atlas');
     const textureCap = process.argv.includes('--texture-cap'), drawTrace = process.argv.includes('--draw-trace');
+    const plainGround = process.argv.includes('--plain-ground');
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
     if (noAtlas) await real.page.click('#diag-atlas');
     if (textureCap) await real.page.click('#diag-texture');
     if (drawTrace) await real.page.click('#diag-drawtrace');
+    if (plainGround) await real.page.click('#diag-ground');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
+    const groundCheckpoints = [];
     await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
+    await real.page.exposeFunction('recordGroundCheckpoint', entry => groundCheckpoints.push(entry));
     await real.page.evaluate(() => {
-      const persist = Storage.prototype.setItem; let last = '';
+      const persist = Storage.prototype.setItem; let last = '', gotGround = false;
       Storage.prototype.setItem = function (key, value) {
         if (key.startsWith('n4spb.loading-report.v1:')) {
+          const payload = JSON.parse(value);
+          if (!gotGround && payload.draw?.object === 'env-ground') { gotGround = true; void window.recordGroundCheckpoint(payload.draw); }
           const entry = JSON.parse(value)?.current?.events?.at(-1), id = JSON.stringify(entry);
           if (entry && id !== last) { last = id; if (/^(worker|gpu|build):/.test(entry.kind)) void window.recordWorkerEvent(entry); }
         }
@@ -350,6 +367,17 @@ try {
       assert(data.current.lastColourDraw.number > 0);
       assert.equal(data.current.lastColourDraw.status, 'returned');
       assert(data.current.lastColourDraw.textures.length <= 12);
+      assert(groundCheckpoints.length > 0, 'records first ground submission');
+      assert.equal(groundCheckpoints[0].textures.some(t => t.label === 'uCls'), !plainGround, 'includes injected ground shader textures');
+      assert.equal(data.current.lastGroundGL.status, 'returned');
+      assert(data.current.lastGroundGL.number > 0);
+    }
+    if (plainGround) {
+      assert(data.current.plainGround.meshes > 0);
+      assert.equal(data.current.options.diagground, 'plain');
+      assert.equal(await real.page.evaluate(() => {
+        let original = 0; window.__ctx.scene.traverse(o => { if (o.material?.name === 'env-ground') original++; }); return original;
+      }), 0);
     }
     assert.equal(await real.page.evaluate(() => window.__ctx.renderer.shadowMap.enabled), !noShadows);
     assert.equal(workerEvents.some(e => e.kind === 'gpu:shadow:start'), !noShadows);
@@ -358,6 +386,7 @@ try {
       assert(workerEvents.some(e => e.kind === 'gpu:comparison'));
     } else assert(workerEvents.some(e => e.kind === 'gpu:shadow:end'));
     fs.writeFileSync(path.join(out, 'full-scene-events.json'), JSON.stringify(workerEvents, null, 2));
+    fs.writeFileSync(path.join(out, 'ground-checkpoints.json'), JSON.stringify(groundCheckpoints, null, 2));
     if (staged) {
       for (const phase of ['fetch', 'headers', ...(jsGzip ? ['download-compressed', 'import-js-inflater', 'inflate-js'] : ['decompress']), 'decode', 'transfer', 'transferred'])
         assert(workerEvents.some(e => e.kind === 'worker:phase' && e.detail.startsWith(phase + ' ')), `traced worker reports ${phase}`);
@@ -381,6 +410,7 @@ try {
     assert.equal(await real.page.$eval('#diag-atlas', e => e.checked), !noAtlas);
     assert.equal(await real.page.$eval('#diag-texture', e => e.checked), textureCap);
     assert.equal(await real.page.$eval('#diag-drawtrace', e => e.checked), drawTrace);
+    assert.equal(await real.page.$eval('#diag-ground', e => e.checked), plainGround);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();

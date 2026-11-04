@@ -34,7 +34,10 @@
     if (!raw || raw.length > 12000) return;
     const checkpoint = JSON.parse(raw);
     if (!Number.isInteger(checkpoint?.draw?.number)) return;
-    for (const r of [saved, previous]) if (r?.id === checkpoint.runId) r.lastColourDraw = checkpoint.draw;
+    for (const r of [saved, previous]) if (r?.id === checkpoint.runId) {
+      r.lastColourDraw = checkpoint.draw;
+      if (checkpoint.groundGL) r.lastGroundGL = checkpoint.groundGL;
+    }
   });
   const report = () => selected === 'previous' ? previous : (run || saved);
   const text = () => {
@@ -229,7 +232,28 @@
     }
     let renders = 0;
     const draw = renderer.renderBufferDirect;
-    let draws = 0;
+    let draws = 0, groundDraw = false, groundCalls = 0;
+    const checkpoint = () => safe(() => localStorage.setItem(key + ':draw', JSON.stringify({ runId: run.id,
+      draw: run.lastColourDraw, groundGL: run.lastGroundGL })));
+    if (run?.options.diagdrawtrace === '1') {
+      const gl = renderer.getContext();
+      for (const name of ['useProgram', 'texImage2D', 'texSubImage2D', 'texStorage2D', 'generateMipmap', 'drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced']) {
+        const original = gl[name];
+        if (typeof original !== 'function') continue;
+        const wrapped = function (...args) {
+          if (!groundDraw) return Reflect.apply(original, this, args);
+          const meta = args.map(v => v === null || ['number', 'string', 'boolean'].includes(typeof v) ? v
+            : ArrayBuffer.isView(v) ? { type: v.constructor.name, bytes: v.byteLength }
+              : v?.width !== undefined ? { width: v.width, height: v.height } : typeof v);
+          run.lastGroundGL = { number: ++groundCalls, draw: draws, call: name, status: 'entered', args: meta };
+          checkpoint();
+          try { const result = Reflect.apply(original, this, args); run.lastGroundGL.status = 'returned'; checkpoint(); return result; }
+          catch (error) { run.lastGroundGL.status = 'failed'; checkpoint(); throw error; }
+        };
+        try { gl[name] = wrapped; }
+        catch { event('gpu:trace-unavailable', name); }
+      }
+    }
     if (typeof draw === 'function' && run?.options.diagdrawtrace === '1') renderer.renderBufferDirect = function (...args) {
       // Only the first colour render. Keep a compact independent checkpoint to
       // avoid rewriting the whole report for every draw or filling its journal.
@@ -239,13 +263,18 @@
       const note = (t, label) => { if (t?.isTexture) textures.push({ label, width: t.image?.width, height: t.image?.height, dataBytes: t.image?.data?.byteLength || 0 }); };
       for (const [label, t] of Object.entries(material || {})) note(t, label);
       for (const [label, u] of Object.entries(material?.uniforms || {})) note(u?.value, label);
+      // Three r170 stores onBeforeCompile-injected uniforms here, rather than
+      // on a MeshToonMaterial. These include the ground's class/distance fields.
+      for (const [label, u] of Object.entries(renderer.properties.get(material).uniforms || {}))
+        if (!textures.some(t => t.label === label)) note(u?.value, label);
       run.lastColourDraw = { number: ++draws, status: 'entered', object: short(object?.name || object?.parent?.name),
         material: short(material?.name || material?.type), vertices: geometry?.attributes?.position?.count,
         indices: geometry?.index?.count, instances: object?.isInstancedMesh ? object.count : undefined, textures: textures.slice(0, 12) };
-      const checkpoint = () => safe(() => localStorage.setItem(key + ':draw', JSON.stringify({ runId: run.id, draw: run.lastColourDraw })));
       checkpoint();
+      groundDraw = object?.name === 'env-ground' || material?.name === 'env-ground' || material?.name === 'diagnostic-ground-plain';
       try { const result = Reflect.apply(draw, this, args); run.lastColourDraw.status = 'returned'; checkpoint(); return result; }
       catch (error) { run.lastColourDraw.status = 'failed'; checkpoint(); throw error; }
+      finally { groundDraw = false; }
     };
     const shadowRender = renderer.shadowMap?.render;
     if (typeof shadowRender === 'function') renderer.shadowMap.render = function (...args) {
@@ -303,6 +332,7 @@
     run.buildPhase = `${name}:${state}`;
     if (name === 'batch' && state === 'end') run.batch = detail;
     if (name === 'texture-cap' && state === 'end') run.textureCap = detail;
+    if (name === 'plain-ground' && state === 'end') run.plainGround = detail;
     sample(); event(`build:${name}:${state}`, JSON.stringify(detail));
   });
   addEventListener('pagehide', e => event('pagehide', `persisted=${e.persisted}`));
@@ -454,6 +484,7 @@
       <label><input type="checkbox" id="diag-atlas" checked> Texture atlases (uncheck to reduce batching memory; may run slower)</label>
       <label><input type="checkbox" id="diag-texture"> Limit static canvas textures to 256px (comparison; blurry signs)</label>
       <label><input type="checkbox" id="diag-drawtrace"> Trace first colour draws (adds diagnostic overhead)</label>
+      <label><input type="checkbox" id="diag-ground"> Plain ground material (comparison; removes procedural surface detail)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -470,6 +501,7 @@
       $('shadows').disabled = !(scene || staged);
       $('atlas').disabled = !(scene || staged);
       $('texture').disabled = $('drawtrace').disabled = !(scene || staged);
+      $('ground').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -480,6 +512,7 @@
     $('atlas').checked = new URLSearchParams(location.search).get('diagatlas') !== '0';
     $('texture').checked = new URLSearchParams(location.search).get('diagtexture') === '256';
     $('drawtrace').checked = new URLSearchParams(location.search).get('diagdrawtrace') === '1';
+    $('ground').checked = new URLSearchParams(location.search).get('diagground') === 'plain';
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -513,6 +546,7 @@
       if (!$('atlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagatlas', '0');
       if ($('texture').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagtexture', '256');
       if ($('drawtrace').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagdrawtrace', '1');
+      if ($('ground').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagground', 'plain');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

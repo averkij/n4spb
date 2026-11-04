@@ -594,7 +594,7 @@ In the desktop capped run, 362 canvases were resized with 216,729,600 estimated
 RGBA8 bytes avoided among those candidates. The post-batch reachable canvas
 estimate fell from 438,247,168 to 226,531,072 bytes; geometry and data-texture
 inventories were unchanged. It loaded and entered play; all 705 first-colour
-draw submissions returned. This remains to be tested on the affected phone.
+draw submissions returned. The subsequent phone result is recorded below.
 
 The browser harness adds `--texture-cap --draw-trace` to the previous full test.
 It checks shared texture aliases, dirty versions, aspect ratio, colour placement,
@@ -605,6 +605,48 @@ considering any similar tradeoff for production.
 Both the capped and uncapped no-shadow/no-atlas runs passed in desktop Chromium
 with draw tracing enabled. Generated-page/closure checks passed and all 16 live
 bakes remained fresh. No production game or bake changes were made.
+
+#### Ground draw isolation (9.14.0)
+
+The phone's 9.13.0 capped run still failed: one attempt stopped at 97%, another
+at 100%. Its canvas estimate fell to 226,531,072 bytes as intended, while the
+geometry inventory remained 588,769,446 bytes. The last persisted submission
+was colour draw 3, `env-ground`, entered with 3,198 vertices/indices and no
+return. The normal-depth pass had returned; shadows and atlases were disabled.
+This narrows the investigation but does not prove ground is the root cause:
+native GPU work is asynchronous and resource pressure can surface later.
+
+The ground's MeshToonMaterial injects class/palette/distance/noise uniforms in
+`onBeforeCompile`. The old per-draw inventory only saw its 16x1 gradient map.
+The trace now also reads the compiled uniforms stored by the pinned Three r170
+renderer, and saves compact entry/return checkpoints for ground texture uploads,
+program binding and draw calls as `lastGroundGL`. It records sizes and scalar
+arguments, never array contents. The existing scene-wide memory inventory does
+not include all injected uniforms and is not a measurement of process/GPU RAM.
+A native call returning still does not prove GPU completion.
+
+`diagground=plain` replaces only materials named `env-ground` with a shared
+plain grey MeshBasicMaterial before final batching. Geometry, transforms, field
+construction, collisions and navigation stay intact; procedural ground shading
+and its texture bindings are omitted. This is a diagnostic comparison, not a
+production appearance change or a confirmed iPhone fix. Early compilation can
+still have processed the original ground shader before this replacement.
+
+The next phone comparison is
+`diagnostics.html?test=scene-js-gzip&diagshadows=0&diagatlas=0&diagtexture=256&diagdrawtrace=1&diagground=plain`.
+Confirm 9.14.0, press Start test once, and copy the saved report after reopening
+if it crashes. A successful run should reach the actual playable scene, not just
+100%. The browser harness adds `--plain-ground` to the capped full-scene test,
+checks retained geometry/material sharing, compiled-uniform tracing and native
+call returns, then enters play and verifies recovery without restarting.
+
+Both original-ground and plain-ground runs passed the full desktop Edge harness
+at touch-sized portrait/landscape viewports, including loaded/playing markers
+and report recovery. The plain comparison replaced 639 meshes sharing one
+material. The original draw trace captured `uCls` at 3920x3780 (14,817,600 bytes)
+and `uDist` at 2112x4950 (41,817,600 bytes); all traced native calls returned on
+desktop. Playing screenshots were reviewed. Generated-page, closure and all
+16 live bake-manifest checks passed. This does not establish iPhone success.
 
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context

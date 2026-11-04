@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.14.0** (2026-11-04, minor): Isolate the iPhone ground draw with plain material and native WebGL checkpoints
 - **9.13.0** (2026-11-04, minor): Add static texture memory reduction and recoverable first-colour draw tracing to phone diagnostics
 - **9.12.0** (2026-11-04, minor): Add lower-memory texture-atlas comparison and finalization checkpoints to phone diagnostics
 - **9.11.0** (2026-11-04, minor): Add first-render pass and buffer diagnostics with a sun-shadow comparison for iPhone loading

@@ -8,6 +8,24 @@ import { buildNDProxy as outline } from './ndproxy.js';
 export { releasedStats } from './spatial.js';
 export { NDLazy } from './ndproxy.js';
 
+export function plainGround(root, THREE) {
+  const replacements = new Map(); let meshes = 0;
+  root.traverse(o => {
+    if (!o.isMesh || o.material?.name !== 'env-ground') return;
+    const original = o.material;
+    let material = replacements.get(original);
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({ color: '#6f7377', side: original.side,
+        depthTest: original.depthTest, depthWrite: original.depthWrite, depthFunc: original.depthFunc,
+        polygonOffset: original.polygonOffset, polygonOffsetFactor: original.polygonOffsetFactor,
+        polygonOffsetUnits: original.polygonOffsetUnits, fog: original.fog });
+      material.name = 'diagnostic-ground-plain'; replacements.set(original, material);
+    }
+    o.material = material; meshes++;
+  });
+  return { meshes, materials: replacements.size };
+}
+
 // Deliberately lossy diagnostic: reduce static canvas pixel storage in place,
 // so cached texture aliases do not retain the original full-sized backing.
 // Data textures and canvases shared with dynamic scene objects are excluded.
@@ -65,6 +83,10 @@ function trace(name, fn, args, detail = {}) {
 }
 export function batchStatic(root, options) {
   const noAtlas = new URLSearchParams(location.search).get('diagatlas') === '0';
+  if (new URLSearchParams(location.search).get('diagground') === 'plain') {
+    phase('plain-ground', 'start');
+    phase('plain-ground', 'end', plainGround(root, window.__ctx.THREE));
+  }
   if (new URLSearchParams(location.search).get('diagtexture') === '256') {
     phase('texture-cap', 'start');
     const stats = reduceCanvasTextures(root, window.__ctx?.dynamicRoot, 256);
