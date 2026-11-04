@@ -320,6 +320,9 @@
       const original = renderer[method];
       if (typeof original !== 'function') continue;
       renderer[method] = function (...args) {
+        // Preparation uploads have their own batch checkpoints. They must not
+        // consume the first depth/colour pass numbers or per-draw trace budget.
+        if (method === 'render' && args[0]?.userData?.diagnosticGeometryUpload) return Reflect.apply(original, this, args);
         if (!run || document.body.classList.contains('loaded') || method === 'render' && ++renders > 20) return Reflect.apply(original, this, args);
         const t = performance.now();
         if (!run.sceneBuffers && (method === 'compileAsync' || method === 'render')) run.sceneBuffers = safe(() => sceneInventory(args[0]));
@@ -368,6 +371,7 @@
     if (name === 'texture-cap' && state === 'end') run.textureCap = detail;
     if (name === 'plain-ground' && state === 'end') run.plainGround = detail;
     if (name === 'sign-atlas-cap' && state === 'end') run.signAtlasCap = detail;
+    if (name === 'geometry-upload') run.geometryUpload = { state, ...detail };
     sample(); event(`build:${name}:${state}`, JSON.stringify(detail));
   });
   addEventListener('pagehide', e => event('pagehide', `persisted=${e.persisted}`));
@@ -523,6 +527,7 @@
       <label><input type="checkbox" id="diag-signatlas"> Limit road-sign atlas to 1024px (comparison; blurrier signs)</label>
       <label><input type="checkbox" id="diag-canvasupload"> Upload canvas pixels through ImageData (comparison; extra CPU copying)</label>
       <label><input type="checkbox" id="diag-geometry"> Lower geometry memory (more draw calls; keep source meshes and outlines)</label>
+      <label><input type="checkbox" id="diag-uploader"> Upload geometry in small batches before the first frame (also enables lower geometry memory)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -543,6 +548,7 @@
       $('signatlas').disabled = !(scene || staged);
       $('canvasupload').disabled = !(scene || staged);
       $('geometry').disabled = !(scene || staged);
+      $('uploader').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -557,6 +563,9 @@
     $('signatlas').checked = new URLSearchParams(location.search).get('diagsignatlas') === '1024';
     $('canvasupload').checked = new URLSearchParams(location.search).get('diagcanvasupload') === 'pixels';
     $('geometry').checked = new URLSearchParams(location.search).get('diaggeometry') === 'lean';
+    $('uploader').checked = new URLSearchParams(location.search).get('diaguploader') === 'staged';
+    if ($('uploader').checked) $('geometry').checked = true;
+    $('uploader').onchange = () => { if ($('uploader').checked) $('geometry').checked = true; };
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -593,9 +602,10 @@
       if ($('ground').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagground', 'plain');
       if ($('signatlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagsignatlas', '1024');
       if ($('canvasupload').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagcanvasupload', 'pixels');
-      if ($('geometry').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) {
+      if (($('geometry').checked || $('uploader').checked) && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) {
         query.set('diaggeometry', 'lean'); query.set('supercells', '0'); query.set('nd', '0');
       }
+      if ($('uploader').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diaguploader', 'staged');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

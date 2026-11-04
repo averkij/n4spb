@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.18.0** (2026-11-04, minor): Add staged geometry uploads to phone diagnostics to release CPU arrays before the first frame
 - **9.17.0** (2026-11-04, minor): Add lower-memory geometry comparison and shader/buffer native checkpoints
 - **9.16.0** (2026-11-04, minor): Add canvas pixel upload comparison with readback and native-call recovery
 - **9.15.0** (2026-11-04, minor): Add shared sign-atlas size comparison and native tracing for all first-colour draws

@@ -787,6 +787,45 @@ observed working-set difference at colour entry was about 75 MB. Both playing
 screenshots were reviewed; no iPhone success is claimed. Recovery tests include
 a depth-pass shader-query checkpoint with no preceding colour draw.
 
+#### v9.18: staged immutable geometry uploads
+
+The v9.17 phone report still died in the first colour pass, this time at
+`bindBuffer` on a small `city-roofs` mesh. Its 64x64 canvas upload had returned.
+The lean configuration took effect (519,295,452 retained geometry bytes), but
+did not fix the crash. The changing last draw/native operation does not identify
+a single defective texture, mesh or shader, nor prove an out-of-memory kill.
+
+`diaguploader=staged` adds a comparison that uploads immutable geometry before
+final compilation and the first full scene render. The control also enables
+`diaggeometry=lean`, `nd=0` and `supercells=0`: lazy outline builders must not read
+arrays after their upload callbacks release them. Only static, non-interleaved,
+non-morph geometry with existing upload callbacks is queued. It uses the same
+Three r170 geometry/attribute cache, a texture-free material, a 1x1 target and
+zero draw count. Attributes and indices upload without drawing triangles;
+existing callbacks release CPU arrays. Geometry, materials, LOD registrations,
+dynamic buffers and source textures remain owned by the real scene.
+
+Each batch ends after 4 MiB or 64 geometries (one larger geometry is indivisible),
+drains GPU work with a one-pixel readback, and yields to the event loop. The report
+keeps batch progress and `geometryUpload` totals, including unique backing-buffer
+bytes before and after. These are reachable CPU geometry bytes, not process RAM
+or GPU memory. GPU allocations occur earlier; this does not reduce their final
+size or guarantee garbage collection. Preparation renders do not consume the
+first depth/colour trace slots. Renderer state and draw ranges restore on success
+or failure, and preparation never disposes scene-owned geometry.
+
+Desktop touch-mode verification uploaded 1,873 geometries in 53 batches, releasing
+370,178,710 CPU bytes before the first frame: 519,295,036 -> 149,116,326 bytes.
+The complete Palace scene reached loaded/playing, with the playing screenshot
+reviewed. Focused real-WebGL tests compare pixels after CPU release, ensure no
+second vertex/index upload on the real render, cover shared geometry and dynamic
+exclusion, and check state restoration after an injected failure. Full draw tracing
+also passed. A second full run on v9.18 with draw tracing disabled reached play
+with the same 149,116,326 pre-depth bytes; its screenshot was reviewed. Phone
+success remains unverified. The next phone comparison can omit
+`diagdrawtrace=1` to avoid thousands of synchronous storage writes; batch and
+render-pass checkpoints remain available without that extra instrumentation.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

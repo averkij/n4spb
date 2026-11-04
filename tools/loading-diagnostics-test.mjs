@@ -324,6 +324,62 @@ try {
   assert.deepEqual(cap.errors, []);
   await cap.context.close();
 
+  // Staged uploads must reuse Three's buffers, preserve draw ranges/render
+  // state, and leave dynamic data alone. Compare real rendered pixels after
+  // the static CPU arrays have been released, including a shared geometry.
+  const uploadTest = await open();
+  const stagedResult = await uploadTest.page.evaluate(async () => {
+    const THREE = await import('three');
+    const { stageGeometryUploads } = await import('./src/core/loading-finalize-diagnostics.js');
+    const { releaseOnUpload } = await import('./src/core/spatial.js');
+    const renderer = new THREE.WebGLRenderer(); renderer.setSize(16, 16);
+    const target = new THREE.WebGLRenderTarget(16, 16);
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10); camera.position.z = 2;
+    const scene = new THREE.Scene(), material = new THREE.MeshBasicMaterial({ color: '#ff8080' });
+    const g = new THREE.PlaneGeometry(1.5, 1.5); g.setDrawRange(3, 3);
+    g.computeBoundingSphere(); g.computeBoundingBox(); releaseOnUpload(g);
+    const baseline = new THREE.Mesh(g.clone(), material); scene.add(baseline);
+    renderer.setRenderTarget(target); renderer.setViewport(0, 0, 16, 16);
+    const readPixels = () => { const pixels = new Uint8Array(16 * 16 * 4); renderer.readRenderTargetPixels(target, 0, 0, 16, 16, pixels); return Array.from(pixels); };
+    renderer.render(scene, camera); const before = readPixels(); scene.remove(baseline);
+    const mesh = new THREE.Mesh(g, material), shared = new THREE.Mesh(g, material); shared.visible = false;
+    const dynamic = new THREE.PlaneGeometry(1, 1); let dynamicUploads = 0;
+    dynamic.attributes.position.setUsage(THREE.DynamicDrawUsage).onUpload(() => dynamicUploads++);
+    const dynamicMesh = new THREE.Mesh(dynamic, material); dynamicMesh.visible = false;
+    scene.add(mesh, shared, dynamicMesh);
+    renderer.shadowMap.enabled = true; renderer.setScissor(1, 2, 13, 12); renderer.setScissorTest(true);
+    const records = [];
+    const stats = await stageGeometryUploads(renderer, scene, THREE, (state, detail) => records.push({ state, ...detail }));
+    const stateKept = renderer.getRenderTarget() === target && renderer.shadowMap.enabled && renderer.getScissorTest() &&
+      renderer.getScissor(new THREE.Vector4()).toArray().join() === '1,2,13,12';
+    const gl = renderer.getContext(), bufferData = gl.bufferData; let repeatedUploads = 0;
+    gl.bufferData = function (...args) { repeatedUploads++; return bufferData.apply(this, args); };
+    renderer.setScissorTest(false); renderer.render(scene, camera); const after = readPixels();
+    gl.bufferData = bufferData;
+    const result = { stats, stateKept, repeatedUploads, pixelsSame: JSON.stringify(before) === JSON.stringify(after),
+      released: Object.values(g.attributes).every(a => a.array.byteLength === 0) && g.index.array.byteLength === 0,
+      drawRange: { ...g.drawRange }, shared: shared.geometry === mesh.geometry, dynamicUploads,
+      dynamicBytes: dynamic.attributes.position.array.byteLength, states: records.map(r => r.state) };
+    // Also restore renderer/geometry state when an upload fails midway.
+    const failGeo = new THREE.PlaneGeometry(); releaseOnUpload(failGeo); scene.add(new THREE.Mesh(failGeo, material));
+    const render = renderer.render; renderer.render = () => { throw Error('injected upload failure'); };
+    try { await stageGeometryUploads(renderer, scene, THREE); } catch (e) { result.failure = e.message; }
+    renderer.render = render;
+    result.failureRestored = renderer.getRenderTarget() === target && renderer.shadowMap.enabled && failGeo.drawRange.count === Infinity;
+    baseline.geometry.dispose(); g.dispose(); dynamic.dispose(); failGeo.dispose(); material.dispose(); target.dispose(); renderer.dispose();
+    return result;
+  });
+  assert.equal(stagedResult.stats.total, 1, 'shared static geometry queued once; dynamic geometry excluded');
+  assert(stagedResult.stats.releasedBytes > 0 && stagedResult.released);
+  assert(stagedResult.stateKept && stagedResult.pixelsSame && stagedResult.shared && stagedResult.failureRestored);
+  assert.equal(stagedResult.failure, 'injected upload failure');
+  assert.deepEqual(stagedResult.drawRange, { start: 3, count: 3 });
+  assert.equal(stagedResult.repeatedUploads, 0, 'first real render reuses preuploaded vertex AND index buffers');
+  assert.equal(stagedResult.dynamicUploads, 0); assert(stagedResult.dynamicBytes > 0);
+  assert.deepEqual(stagedResult.states, ['start', 'batch', 'progress', 'end']);
+  assert.deepEqual(uploadTest.errors, []);
+  await uploadTest.context.close();
+
   // Verify the changed TexImageSource path against native canvas upload,
   // including orientation, alpha, subimage offsets and live canvas updates.
   const pixelTest = await open();
@@ -387,7 +443,8 @@ try {
     const plainGround = process.argv.includes('--plain-ground');
     const signAtlas = process.argv.includes('--sign-atlas');
     const canvasPixels = process.argv.includes('--canvas-pixels');
-    const leanGeometry = process.argv.includes('--lean-geometry');
+    const stagedUploads = process.argv.includes('--staged-uploads');
+    const leanGeometry = process.argv.includes('--lean-geometry') || stagedUploads;
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
@@ -398,6 +455,7 @@ try {
     if (signAtlas) await real.page.click('#diag-signatlas');
     if (canvasPixels) await real.page.click('#diag-canvasupload');
     if (leanGeometry) await real.page.click('#diag-geometry');
+    if (stagedUploads) await real.page.click('#diag-uploader');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     const groundCheckpoints = [];
@@ -491,6 +549,14 @@ try {
     }
     assert(data.current.sceneBuffers.geometryFirstOwners.length <= 15);
     assert(data.current.sceneBuffers.largestGeometryBuffers.length <= 10);
+    if (stagedUploads) {
+      assert.equal(data.current.options.diaguploader, 'staged');
+      assert.equal(data.current.geometryUpload.state, 'end');
+      assert.equal(data.current.geometryUpload.completed, data.current.geometryUpload.total);
+      assert(data.current.geometryUpload.batches > 10);
+      assert(data.current.geometryUpload.releasedBytes > 300000000, 'substantial CPU array release before first full frame');
+      assert(data.current.geometryBeforeDepthBytes < 200000000, 'first frame starts with much lower retained geometry');
+    }
     if (leanGeometry) {
       assert.equal(data.current.options.supercells, '0');
       assert.equal(data.current.options.nd, '0');
@@ -548,6 +614,7 @@ try {
     assert.equal(await real.page.$eval('#diag-signatlas', e => e.checked), signAtlas);
     assert.equal(await real.page.$eval('#diag-canvasupload', e => e.checked), canvasPixels);
     assert.equal(await real.page.$eval('#diag-geometry', e => e.checked), leanGeometry);
+    assert.equal(await real.page.$eval('#diag-uploader', e => e.checked), stagedUploads);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();

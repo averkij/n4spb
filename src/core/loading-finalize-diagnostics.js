@@ -8,6 +8,91 @@ import { buildNDProxy as outline } from './ndproxy.js';
 export { releasedStats } from './spatial.js';
 export { NDLazy } from './ndproxy.js';
 
+// Upload only immutable geometry that already opts into an onUpload callback.
+// Three r170 uploads attributes while projecting a mesh, and its index during
+// binding-state setup even with a zero draw count. This uses those normal cache
+// paths: no private renderer API, duplicate GPU buffers, or replacement arrays.
+// Requires nd=0: lazy outline builders must never read already-released arrays.
+export async function stageGeometryUploads(renderer, root, THREE, notify = () => {}) {
+  const bytesInScene = () => {
+    const buffers = new Set(); let bytes = 0;
+    const add = a => { const b = (a?.isInterleavedBufferAttribute ? a.data.array : a?.array)?.buffer;
+      if (b && !buffers.has(b)) { buffers.add(b); bytes += b.byteLength; } };
+    root.traverse(o => {
+      add(o.geometry?.index);
+      for (const a of Object.values(o.geometry?.attributes || {})) add(a);
+      for (const list of Object.values(o.geometry?.morphAttributes || {})) for (const a of list) add(a);
+      add(o.instanceMatrix); add(o.instanceColor);
+    });
+    return bytes;
+  };
+  const seen = new Set(), queue = [];
+  root.traverse(o => {
+    const g = o.geometry;
+    if (!g || seen.has(g)) return;
+    seen.add(g);
+    const attrs = [...Object.values(g.attributes), ...(g.index ? [g.index] : [])];
+    if (!g.attributes.position || Object.keys(g.morphAttributes).length ||
+      attrs.some(a => a.isInterleavedBufferAttribute || a.usage !== THREE.StaticDrawUsage) ||
+      !attrs.some(a => a.array?.byteLength && a.onUploadCallback !== THREE.BufferAttribute.prototype.onUploadCallback)) return;
+    queue.push({ g, bytes: attrs.reduce((n, a) => n + a.array.byteLength, 0) });
+  });
+  const stats = { total: queue.length, completed: 0, batches: 0, submittedBytes: 0,
+    beforeBytes: bytesInScene(), afterBytes: 0, releasedBytes: 0 };
+  notify('start', { ...stats });
+  if (!queue.length) { stats.afterBytes = stats.beforeBytes; notify('end', stats); return stats; }
+  const scene = new THREE.Scene(); scene.userData.diagnosticGeometryUpload = true;
+  const camera = new THREE.Camera();
+  const material = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false });
+  const mesh = new THREE.Mesh(queue[0].g, material); mesh.frustumCulled = false; scene.add(mesh);
+  const target = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, stencilBuffer: false });
+  const oldTarget = renderer.getRenderTarget(), face = renderer.getActiveCubeFace(), mip = renderer.getActiveMipmapLevel();
+  const viewport = renderer.getViewport(new THREE.Vector4()), scissor = renderer.getScissor(new THREE.Vector4());
+  const scissorTest = renderer.getScissorTest(), shadows = renderer.shadowMap.enabled;
+  const pixels = new Uint8Array(4);
+  try {
+    renderer.shadowMap.enabled = false; renderer.setRenderTarget(target); renderer.setScissorTest(false);
+    let batchBytes = 0, batchCount = 0;
+    for (const { g, bytes } of queue) {
+      if (!batchCount) notify('batch', { ...stats, nextGeometryBytes: bytes });
+      mesh.geometry = g;
+      const { start, count } = g.drawRange;
+      try { g.setDrawRange(0, 0); renderer.render(scene, camera); }
+      finally { g.setDrawRange(start, count); }
+      stats.completed++; stats.submittedBytes += bytes; batchBytes += bytes; batchCount++;
+      if (batchBytes >= 4 * 1024 * 1024 || batchCount >= 64 || stats.completed === stats.total) {
+        if (renderer.getContext().isContextLost()) throw Error('Context lost during staged geometry upload');
+        // Drain queued work before yielding, instead of queuing an entire city
+        // in one task. The existing onUpload callbacks release CPU ownership.
+        renderer.readRenderTargetPixels(target, 0, 0, 1, 1, pixels);
+        stats.batches++; notify('progress', { ...stats });
+        batchBytes = batchCount = 0;
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+    stats.afterBytes = bytesInScene(); stats.releasedBytes = stats.beforeBytes - stats.afterBytes;
+    notify('end', { ...stats }); return stats;
+  } catch (error) { notify('error', { ...stats, message: String(error.message) }); throw error; }
+  finally {
+    renderer.setRenderTarget(oldTarget, face, mip); renderer.setViewport(viewport);
+    renderer.setScissor(scissor); renderer.setScissorTest(scissorTest); renderer.shadowMap.enabled = shadows;
+    scene.remove(mesh); material.dispose(); target.dispose();
+    // Geometry belongs to the real scene; disposing it would erase the upload.
+  }
+}
+
+function installStagedGeometryUpload() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('diaguploader') !== 'staged') return;
+  if (params.get('nd') !== '0' || params.get('supercells') !== '0') throw Error('Staged uploads require lower geometry memory mode');
+  const { renderer, THREE } = window.__ctx, compile = renderer.compileAsync;
+  renderer.compileAsync = async function (...args) {
+    renderer.compileAsync = compile;
+    await stageGeometryUploads(renderer, args[0], THREE, (state, detail) => phase('geometry-upload', state, detail));
+    return Reflect.apply(compile, this, args);
+  };
+}
+
 // Diagnostic only: keep TexImageSource overloads and pixel-store state intact,
 // but avoid direct canvas-source uploads. Read fresh pixels on EVERY update;
 // dynamic canvas painters and their original backing stores remain untouched.
@@ -131,6 +216,7 @@ function trace(name, fn, args, detail = {}) {
   } catch (error) { phase(name, 'error', { message: String(error.message).slice(0, 200) }); throw error; }
 }
 export function batchStatic(root, options) {
+  installStagedGeometryUpload();
   const noAtlas = new URLSearchParams(location.search).get('diagatlas') === '0';
   if (new URLSearchParams(location.search).get('diagcanvasupload') === 'pixels') {
     installCanvasPixelUploads(window.__ctx.renderer.getContext(), detail => {
