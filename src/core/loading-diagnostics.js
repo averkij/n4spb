@@ -127,11 +127,61 @@
     for (const entry of list.getEntries()) if (entry.duration >= 500) event('long-task', `${Math.round(entry.duration)}ms`);
   }).observe({ type: 'longtask', buffered: false }));
 
+  // Isolate the shipping decoder from scene imports, geometry and WebGL. Use
+  // the real worker protocol, discard replies immediately, and never retry.
+  async function probeAssets() {
+    let worker, timeout;
+    const jobs = new Map(), abort = new AbortController();
+    const deadline = new Promise((_, reject) => {
+      timeout = setTimeout(() => reject(Error('Assets-only test exceeded 90 seconds')), 90000);
+    });
+    try {
+      await Promise.race([deadline, (async () => {
+        run.phase = 'Reading Palace manifest'; event('probe:manifest');
+        const response = await fetch('./assets/baked/palace/manifest.json', { signal: abort.signal, cache: 'no-cache' });
+        if (!response.ok) throw Error(`Manifest HTTP ${response.status}`);
+        const manifest = await response.json(); run.probeRevision = manifest.revision;
+        const names = ['field', 'street-textures', 'street-kerbs', 'street-surfaces', 'city-base', 'roof', 'nav-low'];
+        run.probe = { completed: [], total: names.length, bytes: 0 };
+        worker = new Worker('./src/core/baked-worker.js', { type: 'module' });
+        worker.onmessage = ({ data }) => {
+          const job = jobs.get(data.id); if (!job) return;
+          jobs.delete(data.id);
+          if (data.error) { job.reject(Error(`${job.name}: ${data.error}`)); return; }
+          // The decoded value is deliberately not retained in the probe.
+          run.probe.completed.push(job.name); run.probe.bytes += data.bytes;
+          run.phase = `Decoded ${run.probe.completed.length}/${names.length}: ${job.name}`;
+          event('probe:decoded', job.name); job.resolve();
+        };
+        const fail = error => { for (const job of jobs.values()) job.reject(error); jobs.clear(); };
+        worker.onerror = e => fail(Error(e.message || 'Worker failed'));
+        worker.onmessageerror = () => fail(Error('Worker reply could not be read'));
+        const load = (name, i) => new Promise((resolve, reject) => {
+          const file = manifest.files?.[name];
+          if (typeof file !== 'string' || !/^[\w.-]+\.bin\.gz$/.test(file)) { reject(Error(`Missing or invalid asset: ${name}`)); return; }
+          jobs.set(i, { name, resolve, reject });
+          run.phase = `Waiting for ${name}`; event('probe:request', name);
+          worker.postMessage({ id: i, url: new URL('./assets/baked/palace/' + file, location.href).href, rawBytes: manifest.sizes?.[name]?.raw });
+        });
+        if (run.test === 'assets-burst') await Promise.all(names.map(load));
+        else for (const [i, name] of names.entries()) await load(name, i);
+        run.status = 'Assets test passed'; run.phase = '7/7 assets decoded; no scene built'; event('probe:complete');
+      })()]);
+    } catch (error) {
+      run.status = 'Assets test failed'; event('probe:error', error.message);
+    } finally {
+      clearTimeout(timeout); abort.abort(); worker?.terminate();
+      for (const job of jobs.values()) job.reject(Error('Assets test ended'));
+      jobs.clear(); sample();
+    }
+  }
+
   function sample() {
     if (!run) return;
     const now = performance.now(), ctx = window.__ctx, env = ctx?.services?.environment;
     run.elapsedMs = Math.round(now - run.startMs);
     run.maxHeartbeatGapMs = Math.max(run.maxHeartbeatGapMs, Math.round(now - lastTick)); lastTick = now;
+    if (run.test !== 'scene') { persist(); render(); return; }
     run.version = document.getElementById('ver')?.textContent || null;
     run.phase = `${document.getElementById('loadpct')?.textContent || '0%'} ${document.getElementById('loadlabel')?.textContent || ''}`.trim();
     run.mainStarted = !!window.__mainStarted;
@@ -159,7 +209,7 @@
       #load-diag { position:fixed; z-index:2147483646; inset:0; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); box-sizing:border-box; overflow:auto; background:#0b1230; color:#eef2ff; font:16px/1.45 system-ui,sans-serif; touch-action:pan-y; }
       #load-diag[hidden] { display:none; } #load-diag * { box-sizing:border-box; }
       #load-diag .diag-card { max-width:700px; margin:auto; } #load-diag h1 { font-size:22px; margin:0 0 10px; }
-      #load-diag button,#load-diag select,#load-diag input { font:inherit; min-height:44px; border-radius:6px; border:1px solid #8193c2; padding:9px; }
+      #load-diag button,#load-diag select,#load-diag input { font:inherit; min-height:44px; max-width:100%; border-radius:6px; border:1px solid #8193c2; padding:9px; }
       #load-diag button { background:#f2c14e; color:#0b1230; cursor:pointer; } #load-diag button:disabled { opacity:.45; }
       #load-diag .diag-row { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; } #load-diag label { display:block; margin:10px 0; }
       #load-diag input[type=text] { width:100%; } #load-diag input[type=checkbox] { min-height:24px; width:24px; vertical-align:middle; }
@@ -170,8 +220,10 @@
     document.head.append(css);
     const panel = document.createElement('section'); panel.id = 'load-diag'; panel.setAttribute('aria-label', 'Loading diagnostics');
     panel.innerHTML = `<div class="diag-card"><h1>Loading diagnostics</h1><p id="diag-notice"></p>
-      <p>This test uses the full Palace scene. Reports stay on this device. No report is sent automatically.</p>
+      <p>Reports stay on this device. No report is sent automatically.</p>
       <div id="diag-options"><label>Device / iOS version (optional)<input id="diag-device" type="text" maxlength="120" placeholder="iPhone 16 Pro Max, iOS 26.7"></label>
+      <label>Test <select id="diag-test"><option value="scene">Full Palace scene</option><option value="assets-sequential">Assets only: one at a time</option><option value="assets-burst">Assets only: seven together</option></select></label>
+      <p id="diag-description"></p>
       <label>Decoder <select id="diag-worker"><option value="1">Worker (normal)</option><option value="0">Main thread (comparison)</option></select></label>
       <label><input type="checkbox" id="diag-compile" checked> Early shader compilation (normal)</label>
       <button id="diag-start" type="button">Start test</button></div>
@@ -184,6 +236,14 @@
     const toggle = document.createElement('button'); toggle.id = 'diag-toggle'; toggle.type = 'button'; document.body.append(toggle);
     ui = { panel, toggle, status: $('status'), notice: $('notice'), pending: $('pending'), tail: $('tail'), previous: $('previous'), output: $('output') };
     const showText = () => { ui.output.hidden = false; ui.output.value = text(); ui.output.focus(); ui.output.select(); };
+    const changeTest = () => {
+      const scene = $('test').value === 'scene';
+      $('worker').disabled = $('compile').disabled = !scene;
+      $('description').textContent = scene ? 'Build and render the full scene.' : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
+    };
+    const requestedTest = new URLSearchParams(location.search).get('test');
+    if (['assets-sequential', 'assets-burst'].includes(requestedTest)) $('test').value = requestedTest;
+    $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => { panel.hidden = true; };
     $('current').onclick = () => { selected = 'current'; if (!ui.output.hidden) ui.output.value = text(); render(); };
@@ -206,20 +266,23 @@
       const params = new URLSearchParams(location.search);
       // The diagnostic is a normal full-scene load; never inherit bake/shot or
       // arrival flags from a copied developer URL. Controls are explicit here.
-      const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: $('worker').value, earlycompile: $('compile').checked ? '1' : '0' });
+      const test = $('test').value;
+      const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
       history.replaceState(null, '', location.pathname + '?' + query);
-      run = { id: Date.now().toString(36), started: new Date().toISOString(), startMs: performance.now(), status: 'Loading',
+      run = { id: Date.now().toString(36), started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,
         hardwareConcurrency: navigator.hardwareConcurrency, deviceMemoryGiB: navigator.deviceMemory,
         screen: { width: screen.width, height: screen.height, dpr: devicePixelRatio },
         viewport: { width: innerWidth, height: innerHeight }, path: location.pathname, options: Object.fromEntries(query),
         area: document.documentElement.dataset.area, pending: {}, events: [], droppedPending: 0, maxHeartbeatGapMs: 0 };
       selected = 'current'; lastTick = performance.now();
-      $('options').hidden = true; event('start', 'Full scene; waiting for main module');
+      $('options').hidden = true;
+      setInterval(sample, 1000);
+      if (test !== 'scene') { event('start', test); void probeAssets(); return; }
+      event('start', 'Full scene; waiting for main module');
       const script = document.createElement('script'); script.type = 'module'; script.src = document.getElementById('diagnostic-main').dataset.src;
       script.onerror = () => { run.status = 'Main module failed'; event('module:error', 'Main module or an import could not load'); };
       document.body.append(script);
-      setInterval(sample, 1000);
       // The observer persists module progress before the module starts its work.
       const observer = new MutationObserver(sample);
       for (const id of ['loadpct', 'loadlabel', 'ver']) { const el = document.getElementById(id); if (el) observer.observe(el, { childList: true, subtree: true, characterData: true }); }

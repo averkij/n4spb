@@ -45,12 +45,17 @@ const base = `http://127.0.0.1:${server.address().port}/n4spb/`;
 const executablePath = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find(fs.existsSync);
 const browser = await puppeteer.launch({ executablePath, headless: true, protocolTimeout: 180000,
   args: ['--use-angle=d3d11', '--enable-gpu', '--no-first-run', '--disable-extensions'] });
-async function open({ full = false, block = false, storageDenied = false } = {}) {
+async function open({ full = false, block = false, storageDenied = false, probeTimeout = false } = {}) {
   const context = await browser.createBrowserContext(), page = await context.newPage();
   await page.setViewport({ width: 440, height: 956, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   const errors = []; page.on('pageerror', e => errors.push(String(e)));
   let mainRequests = 0;
   if (storageDenied) await page.evaluateOnNewDocument(() => { Storage.prototype.setItem = () => { throw Error('Storage blocked'); }; });
+  if (probeTimeout) await page.evaluateOnNewDocument(() => {
+    Worker.prototype.postMessage = () => {}; // Reproduce a worker that never replies.
+    const schedule = window.setTimeout;
+    window.setTimeout = (fn, ms, ...args) => schedule(fn, ms === 90000 ? 300 : ms, ...args);
+  });
   await page.setRequestInterception(true);
   page.on('request', request => {
     const url = request.url();
@@ -133,6 +138,44 @@ try {
   assert.deepEqual(denied.errors, []);
   await denied.context.close();
 
+  // Real gzip data and the shipping module worker, with no game bootstrap or
+  // WebGL context. Cover both serial requests and the original startup burst.
+  for (const mode of ['assets-sequential', 'assets-burst']) {
+    const isolated = await open();
+    await isolated.page.select('#diag-test', mode);
+    await isolated.page.screenshot({ path: path.join(out, mode + '-options.png') });
+    await isolated.page.click('#diag-start');
+    await isolated.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.status === 'Assets test passed', { timeout: 100000 }, key);
+    const result = (await read(isolated.page)).current;
+    assert.equal(result.probe.completed.length, 7);
+    assert(result.probe.bytes > 100000000);
+    assert.equal(result.test, mode);
+    assert.equal(Object.keys(result.pending).length, 0);
+    assert.equal(result.events.filter(e => e.kind === 'worker:decoded').length, 7);
+    assert.equal(isolated.mainRequests(), 0, 'asset test never imports main');
+    assert.equal(await isolated.page.evaluate(() => !!window.__ctx), false, 'asset test creates no renderer/scene');
+    assert.deepEqual(isolated.errors, []);
+    fs.writeFileSync(path.join(out, mode + '-report.json'), JSON.stringify(result, null, 2));
+    await isolated.page.screenshot({ path: path.join(out, mode + '-passed.png') });
+    await isolated.page.reload({ waitUntil: 'domcontentloaded' });
+    assert.equal((await read(isolated.page)).current.id, result.id);
+    assert.equal(isolated.mainRequests(), 0);
+    assert.equal(await isolated.page.$eval('#diag-test', e => e.value), mode);
+    await isolated.context.close();
+  }
+
+  const hung = await open({ probeTimeout: true });
+  await hung.page.select('#diag-test', 'assets-burst');
+  await hung.page.click('#diag-start');
+  await hung.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.status === 'Assets test failed', {}, key);
+  const timeoutReport = (await read(hung.page)).current;
+  assert(timeoutReport.events.some(e => e.kind === 'probe:error' && e.detail.includes('90 seconds')));
+  assert.equal(Object.keys(timeoutReport.pending).length, 0, 'timed out worker requests are terminated');
+  assert.equal(hung.mainRequests(), 0, 'timeout never falls back to building the scene');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.deepEqual(hung.errors, [], 'cancelling the probe does not create unhandled rejections');
+  await hung.context.close();
+
   if (process.argv.includes('--full')) {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
@@ -157,7 +200,7 @@ try {
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();
   }
-  console.log('RESULT: OK (paused recovery, worker transfer, import failure, bounded reports, comparison, clipboard/storage fallback' + (process.argv.includes('--full') ? ', real scene + reload' : '') + ')');
+  console.log('RESULT: OK (paused recovery, worker transfer, import failure, bounded reports, comparison, clipboard/storage fallback, isolated real assets serial/burst, worker timeout' + (process.argv.includes('--full') ? ', real scene + reload' : '') + ')');
   console.log(`Evidence: ${out}`);
 } finally {
   await browser.close();

@@ -290,6 +290,36 @@ report**, **Download report**, or **Show report text**. Keep the first report
 before trying **Main thread (comparison)** or disabling early compilation.
 The latest two attempts are retained; starting a third replaces the oldest.
 
+### Isolate decoding from the scene (9.7.0)
+
+The first recovered iPhone report (Chrome on iOS 26.7, default settings) stopped
+at 5.401 s, `0% landmarksRiverfront`, with no completed modules. It had queued
+all seven prefetch requests but recorded no worker replies. The manifest loaded,
+the revision endpoint's 404 was handled, and a WebGL 2 context existed. The
+heartbeat stopped too, so this does not establish that a worker request alone
+was hung: synchronous work or a process failure can also prevent delivery of
+worker messages and recording. Early compilation had no recorded elapsed time;
+the snapshot does not locate the exact instruction that stalled.
+
+Select **Assets only: one at a time**, or open
+`diagnostics.html?test=assets-sequential`, then press **Start test**. This uses
+the shipping worker to decode the seven actual startup assets without importing
+the game or creating a renderer. It drops decoded values after each response.
+If that succeeds, **Assets only: seven together** (`?test=assets-burst`) exercises
+the original concurrent request burst. Both tests stop after 90 seconds while
+the event loop is responsive, terminate the worker, and never retry or build a
+procedural scene. A frozen/killed process still requires reopening the page.
+
+Passing these tests narrows the investigation to work absent from the probe
+(scene construction/rendering, retained scene data and combined peak memory);
+it does not establish that worker loading is safe alongside a full scene.
+The test does not hydrate field planes or build geometry from decoded data.
+The user subsequently confirmed that both one-at-a-time and seven-together
+tests passed on the affected iPhone. Worker decoding in isolation therefore
+works there; combined scene loading remains the failing case.
+Both real-data modes passed in desktop Chromium, including saved-report
+recovery; an injected nonresponding worker verified bounded failure and cleanup.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

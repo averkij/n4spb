@@ -41,6 +41,8 @@ export const DYNAMIC_IMPORTS = {
 export const RUNTIME_ASSETS = {
   'src/core/loading-diagnostics.js': {
     'n4spb-loading-report.json': { path: null, hash: false, why: 'locally generated report download filename, not a fetched scene input' },
+    './assets/baked/palace/manifest.json': { path: null, hash: false, why: 'standalone support test reads the existing shipping manifest, never a bake input' },
+    './assets/baked/palace/': { path: null, hash: false, why: 'standalone support test reads products named by the shipping manifest, never a bake input' },
   },
   'vendor/rapier/rapier.js': { 'rapier_wasm3d_bg.wasm': { path: null, hash: false, why: 'the default URL of the wasm in the compat bundle (new URL(..., "<deleted>")): the wasm is embedded in rapier.js, nothing is fetched' } },
   'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html', 'morskie-vorota.html', 'okrug65.html', 'kronverk.html', 'aptekarsky.html', 'islands.html', 'moskovskaya.html']
@@ -70,7 +72,8 @@ export function isAllowedServed(rel) {
  */
 export const RUNTIME_CALLS = {
   'src/core/loading-diagnostics.js': {
-    'new URL(': { count: 1, why: 'redacts query strings from diagnostic request labels; standalone diagnostics page only' },
+    'new URL(': { count: 1, why: 'redacts request labels; the probe product URL is covered by its RUNTIME_ASSETS prefix' },
+    'fetch(': { count: 1, why: 'standalone assets-only test reads the shipping Palace manifest' },
   },
   'src/core/baked-world.js': {
     'fetch(': { count: 6, why: 'manifest, bake products and the dev-server endpoints (/__bake_inputs, /__bake/<name>, /__baked_revision)' },
