@@ -439,7 +439,17 @@ explicitly into the Pages site by the deployment workflow.
 The full-scene JS-gzip run passed in desktop Chromium, entered play, and recovered
 its report after reload. Screenshots confirmed the visible version in the paused
 panel and running-game badge. All live bakes remained fresh, and closure,
-deployment-asset and generated-page checks passed. iPhone validation is pending.
+deployment-asset and generated-page checks passed.
+
+The next iPhone JS-gzip report reached 97% at 14.167 s: all 29 scene modules
+built, all 29 requested baked products decoded, no pending requests and no bake
+failures. This demonstrates passage through the earlier 20% worker stall with
+the alternative decoder. The user reported that it appeared loaded, but this
+snapshot still has `loaded: false` and `playing: false`. First-frame readiness
+and sustained interaction need separate confirmation; do not treat this snapshot
+as proof that the complete phone load or the later memory/GPU workload is fixed.
+At 97%, the remaining path includes batching, render-proxy construction, final
+shader compilation, first-frame uploads and the readiness marker.
 
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
