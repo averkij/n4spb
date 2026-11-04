@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.10.1** (2026-11-04, patch): Clarify live and saved diagnostics, prevent showing an unstarted scene, and record page restarts and progress resets
 - **9.10.0** (2026-11-04, minor): Add JavaScript gzip workaround test and visible diagnostic version
 - **9.9.1** (2026-11-04, patch): Trace worker fetch, decompression, decode and transfer phases during phone loading
 - **9.9.0** (2026-11-04, minor): Add staged full-scene phone loading test and shader/render checkpoints

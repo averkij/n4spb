@@ -79,6 +79,7 @@ try {
   const t = await open(); const { page } = t;
   assert.equal(t.mainRequests(), 0, 'game waits for Start');
   assert.equal(await page.$eval('#load-diag', e => e.hidden), false);
+  assert.equal(await page.$eval('#diag-hide', e => e.disabled), true, 'cannot expose an unstarted 0% scene');
   assert((await page.$eval('#diag-version', e => e.textContent)).includes(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version));
   await page.screenshot({ path: path.join(out, 'portrait-paused.png') });
   await page.type('#diag-device', 'iPhone 16 Pro Max, iOS 26.7');
@@ -91,6 +92,25 @@ try {
   assert(data.current.events.some(e => e.kind === 'fetch:headers'));
   assert.equal(data.current.deviceNote, 'iPhone 16 Pro Max, iOS 26.7');
   const id = data.current.id;
+  const originalPageId = data.current.page.id;
+  await show(page);
+  assert.equal(await page.$eval('#diag-hide', e => e.disabled), false);
+  assert.match(await page.$eval('#diag-status', e => e.textContent), /^Live attempt/);
+  await page.click('#diag-hide');
+  assert.equal(await page.$eval('#load-diag', e => e.hidden), true);
+  assert.equal(await page.$eval('#loadpct', e => e.textContent), '100%', 'showing the game does not reset progress');
+  assert((await read(page)).current.events.some(e => e.kind === 'ui:show-game' && e.detail.includes('loaded=true')));
+  // Capture a real DOM regression immediately, rather than waiting for the
+  // heartbeat; distinguish this from reopening a document with a saved report.
+  await show(page);
+  await page.evaluate(() => { document.getElementById('loadpct').textContent = '0%'; });
+  await page.click('#diag-show');
+  const liveExport = JSON.parse(await page.$eval('#diag-output', e => e.value));
+  assert.equal(liveExport.currentPage.reportSource, 'live');
+  assert.equal(liveExport.currentPage.reportFromCurrentPage, true);
+  assert.equal(liveExport.currentPage.visibleProgress, '0%');
+  assert(liveExport.report.events.some(e => e.kind === 'progress:regressed'));
+  await page.evaluate(() => { document.getElementById('loadpct').textContent = '100%'; });
   await page.evaluate(() => {
     fixtureWorker.postMessage({ id: 2, url: './fixture.bin?secret=redact-me', rawBytes: 8 });
     for (let i = 0; i < 170; i++) console.warn('bounded log', i);
@@ -101,12 +121,23 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded' });
   assert.equal(t.mainRequests(), 1, 'reload pauses before importing the game again');
   assert.equal((await read(page)).current.id, id, 'last report not overwritten by page open');
+  assert.equal(await page.$eval('#diag-hide', e => e.disabled), true);
+  assert.match(await page.$eval('#diag-status', e => e.textContent), /^Saved attempt/);
+  await page.click('#diag-hide');
+  assert.equal(await page.$eval('#load-diag', e => e.hidden), false);
   await page.click('#diag-copy');
   // Clipboard may work on localhost; force the fallback as on an insecure LAN URL.
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));
   await page.click('#diag-copy');
   assert.equal(await page.$eval('#diag-output', e => e.hidden), false);
-  assert(JSON.parse(await page.$eval('#diag-output', e => e.value)).report.id === id);
+  const recoveredExport = JSON.parse(await page.$eval('#diag-output', e => e.value));
+  assert.equal(recoveredExport.report.id, id);
+  assert.equal(recoveredExport.report.page.id, originalPageId);
+  assert.notEqual(recoveredExport.currentPage.id, originalPageId);
+  assert.equal(recoveredExport.currentPage.testStarted, false);
+  assert.equal(recoveredExport.currentPage.reportSource, 'saved');
+  assert.equal(recoveredExport.currentPage.reportFromCurrentPage, false);
+  assert.equal(recoveredExport.currentPage.navigationType, 'reload');
   await page.screenshot({ path: path.join(out, 'recovered-report.png') });
   await page.select('#diag-worker', '0');
   await page.click('#diag-compile');
@@ -155,6 +186,7 @@ try {
     assert.equal(Object.keys(result.pending).length, 0);
     assert.equal(result.events.filter(e => e.kind === 'worker:decoded').length, 7);
     assert.equal(isolated.mainRequests(), 0, 'asset test never imports main');
+    assert.equal(await isolated.page.$eval('#diag-hide', e => e.disabled), true, 'completed asset test has no game to show');
     assert.equal(await isolated.page.evaluate(() => !!window.__ctx), false, 'asset test creates no renderer/scene');
     assert.deepEqual(isolated.errors, []);
     fs.writeFileSync(path.join(out, mode + '-report.json'), JSON.stringify(result, null, 2));

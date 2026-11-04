@@ -451,6 +451,26 @@ as proof that the complete phone load or the later memory/GPU workload is fixed.
 At 97%, the remaining path includes batching, render-proxy construction, final
 shader compilation, first-frame uploads and the readiness marker.
 
+The user subsequently saw a 0% loading screen after choosing Show game, both
+after reopening diagnostics and reportedly in the same page after the test.
+Reopening deliberately pauses the game but previously left Show game enabled;
+that exposed the initial, unstarted loader. Version 9.10.1 disables that button
+until a scene test starts and labels reports Live attempt or Saved attempt.
+This UI correction does not establish the cause of the reported same-page reset
+or prove that the phone completed the work after 97%.
+
+Exports now include `currentPage` (identity, opening time, navigation type,
+whether a test/scene was started, current visible progress and readiness) and
+each new attempt records its originating `page`. `reportFromCurrentPage` is
+null for older reports without an identity. Export samples the live attempt
+immediately; selecting old reports does not rewrite their state. Show current
+game records its progress/readiness before hiding the panel, and a decreasing
+percentage in one document records `progress:regressed`. A different page ID
+establishes a new document, not why it was created or whether iOS killed it.
+The focused browser regression covers live Show current game preserving 100%,
+a simulated same-document progress drop, saved-report recovery after reload,
+and disabling game display for unstarted/completed asset-only tests.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

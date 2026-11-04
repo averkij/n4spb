@@ -9,6 +9,9 @@
   let ui, lastSample = '', lastTick = 0, requestId = 0;
   const watchedRenderers = new WeakSet();
   const diagnosticsVersion = document.querySelector('meta[name="diagnostics-version"]')?.content || 'unknown';
+  const pageIdentity = { id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+    opened: new Date().toISOString(), timeOrigin: performance.timeOrigin,
+    navigationType: performance.getEntriesByType('navigation')[0]?.type || 'unknown' };
   const sceneTest = () => ['scene', 'scene-staged', 'scene-js-gzip'].includes(run?.test);
   const short = value => String(value ?? '').slice(0, 500);
   const safe = fn => { try { return fn(); } catch { return undefined; } };
@@ -27,7 +30,17 @@
     }
   } catch { storageError = 'Saved reports could not be read. Copy the report before leaving this page.'; }
   const report = () => selected === 'previous' ? previous : (run || saved);
-  const text = () => JSON.stringify({ diagnosticSchema: 1, storageWarning: storageError || undefined, report: report() }, null, 2);
+  const text = () => {
+    sample();
+    const current = report();
+    return JSON.stringify({ diagnosticSchema: 1, storageWarning: storageError || undefined,
+      currentPage: { ...pageIdentity, testStarted: !!run, sceneStarted: sceneTest(),
+        reportSource: current && current === run ? 'live' : 'saved',
+        reportFromCurrentPage: current?.page?.id ? current.page.id === pageIdentity.id : null,
+        visibleProgress: document.getElementById('loadpct')?.textContent,
+        loaded: document.body.classList.contains('loaded'), playing: document.body.classList.contains('playing') },
+      report: current }, null, 2);
+  };
   function persist() {
     if (!run) return;
     run.lastSeen = new Date().toISOString();
@@ -44,8 +57,10 @@
     if (!ui) return;
     const r = report();
     ui.version.textContent = `Diagnostics v${diagnosticsVersion}${r?.version ? ' · Report ' + r.version : ''}`;
-    ui.status.textContent = r ? `${r.status} · ${r.phase || 'waiting'}${r.elapsedMs ? ` · ${Math.round(r.elapsedMs / 1000)}s` : ''}` : 'No saved attempt. Tap Start test.';
-    ui.notice.textContent = storageError || (run ? 'Recording locally. If the page freezes, reopen this same link to recover the last saved report.' : 'The game is paused. A reload will return here without starting another load.');
+    ui.status.textContent = r ? `${r === run ? 'Live attempt' : 'Saved attempt'} · ${r.status} · ${r.phase || 'waiting'}${r.elapsedMs ? ` · ${Math.round(r.elapsedMs / 1000)}s` : ''}` : 'No saved attempt. Tap Start test.';
+    ui.notice.textContent = storageError || (run ? 'Recording this page. A scene is ready only when the report says Loaded; 97% is still loading. If it freezes, reopen this link to recover the report.' : 'No test is running in this page. Press Start test to load the game. A saved report does not restore a running scene.');
+    ui.hide.disabled = !sceneTest();
+    ui.hide.textContent = sceneTest() ? 'Show current game' : 'Start a scene test first';
     const entries = Object.values(r?.pending || {});
     ui.pending.textContent = entries.length ? 'Waiting: ' + entries.slice(-4).map(p => p.asset).join('\n') : 'No recorded pending requests.';
     ui.tail.textContent = (r?.events || []).slice(-6).map(e => `${(e.ms / 1000).toFixed(1)}s ${e.kind}: ${e.detail}`).join('\n');
@@ -287,6 +302,12 @@
     if (!sceneTest()) { persist(); render(); return; }
     watchRenderer(ctx?.renderer);
     run.version = document.getElementById('ver')?.textContent || null;
+    const percent = parseInt(document.getElementById('loadpct')?.textContent, 10);
+    if (Number.isFinite(percent)) {
+      const prior = run.lastProgressPercent;
+      run.lastProgressPercent = percent;
+      if (Number.isFinite(prior) && percent < prior) event('progress:regressed', `${prior}% -> ${percent}% in the same page`);
+    }
     run.phase = `${document.getElementById('loadpct')?.textContent || '0%'} ${document.getElementById('loadlabel')?.textContent || ''}`.trim();
     run.mainStarted = !!window.__mainStarted;
     run.loaded = document.body.classList.contains('loaded');
@@ -338,7 +359,7 @@
     document.body.append(panel);
     const $ = id => document.getElementById('diag-' + id);
     const toggle = document.createElement('button'); toggle.id = 'diag-toggle'; toggle.type = 'button'; document.body.append(toggle);
-    ui = { panel, toggle, version: $('version'), status: $('status'), notice: $('notice'), pending: $('pending'), tail: $('tail'), previous: $('previous'), output: $('output') };
+    ui = { panel, toggle, hide: $('hide'), version: $('version'), status: $('status'), notice: $('notice'), pending: $('pending'), tail: $('tail'), previous: $('previous'), output: $('output') };
     const showText = () => { ui.output.hidden = false; ui.output.value = text(); ui.output.focus(); ui.output.select(); };
     const changeTest = () => {
       const scene = $('test').value === 'scene', staged = ['scene-staged', 'scene-js-gzip'].includes($('test').value);
@@ -351,7 +372,11 @@
     if (['scene-staged', 'scene-js-gzip', 'assets-sequential', 'assets-burst', 'riverfront'].includes(requestedTest)) $('test').value = requestedTest;
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
-    $('hide').onclick = () => { panel.hidden = true; };
+    $('hide').onclick = () => {
+      if (!sceneTest()) return;
+      sample(); event('ui:show-game', `${run.phase}; loaded=${run.loaded}; playing=${run.playing}`);
+      panel.hidden = true;
+    };
     $('current').onclick = () => { selected = 'current'; if (!ui.output.hidden) ui.output.value = text(); render(); };
     $('previous').onclick = () => { selected = 'previous'; if (!ui.output.hidden) ui.output.value = text(); render(); };
     $('show').onclick = showText;
@@ -375,7 +400,7 @@
       const test = $('test').value;
       const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
       history.replaceState(null, '', location.pathname + '?' + query);
-      run = { id: Date.now().toString(36), started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
+      run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,
         hardwareConcurrency: navigator.hardwareConcurrency, deviceMemoryGiB: navigator.deviceMemory,
         screen: { width: screen.width, height: screen.height, dpr: devicePixelRatio },
