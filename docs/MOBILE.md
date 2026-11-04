@@ -3,7 +3,7 @@
 Phones and tablets get their own control layer (`src/core/touch.js`), a lighter default tier and a boot that fails *honestly*. Desktop is untouched: everything below keys off one class, `<html class="tc">`,
 which the inline script of `index.html` sets for a coarse pointer (`(pointer: coarse)`) or `?touch=1`; `?touch=0` forces it off. Without the class `createTouchControls()` returns `null`, creates nothing, listens to nothing.
 
-Nothing here has run on a real phone yet: the checklist at the end is what has to be done on devices. Everything else is covered by `npm run touch` (pure node) and `npm run touchbrowser` (Edge, emulated touch, real multi-touch).
+The owner reports that the hosted full scene freezes on an iPhone 16 Pro Max in both Safari and Chrome, on Wi-Fi and cellular (2026-11-04; investigation below). The real-device checklist is still incomplete. `npm run touch` (pure node) and `npm run touchbrowser` (Edge, emulated touch, real multi-touch) do not establish full-scene iPhone compatibility.
 
 ## 1. What is where
 
@@ -139,3 +139,139 @@ the rotate banner, the settings panel and persistence across a reload, left-hand
 - [ ] haptics on Android (impact, nitro), none expected on iOS
 - [ ] audio against the iOS ringer switch (the page is silent when the switch is on silent), after a phone call (the AudioContext resumes)
 - [ ] frame rate and heat on the performance tier; WebGL extensions (half-float MSAA targets)
+
+## 10. Hosted loading investigation (2026-11-04, 9.5.2)
+
+The owner's iPhone 16 Pro Max freezes in Safari and Chrome on both Wi-Fi and
+cellular. Initial reports were 0% or 17-20%. The controlled URL
+`?q=performance&earlycompile=0` still froze at 3%. Adding `&bakedworker=0`
+advanced to 100%, restarted at 0%, reached 100% again and crashed. These are
+real-device observations, not a successful mobile validation. Disabling the
+worker changes concurrency, memory ownership and scheduling; it implicates
+that path but does not prove a particular WebKit worker defect.
+
+The landing page is Palace-Liteyny. Its progress counts modules, not bytes:
+
+| Display | Work about to run / still running |
+| --- | --- |
+| 0% | Static imports, phone confirmation, manifest/revision, fonts, riverfront |
+| 3% | Environment: field planes, ground, quays, vegetation, water, boats |
+| 17% | Streets: textures, road graph, nearby surface regions, furniture |
+| 20% | City: colliders, materials/textures, nearby building regions |
+| 97% | Batching, outline setup and final shader compilation |
+| 100% | `build()` ended; roof setup, simulation, first render and proxy uploads can still be pending |
+
+Only `document.body.classList.contains('loaded')` means normal startup finished.
+The 100% label is set earlier. No automatic reload at this point was found in
+the normal entry path. OS/browser termination is a leading explanation for the
+reported restart, but requires device logs to distinguish memory, GPU and other
+process failures.
+
+### Reproduce on the actual host
+
+```powershell
+node tools/hosted-load-probe.mjs --mobile
+node tools/hosted-load-probe.mjs
+node tools/hosted-load-probe.mjs --block __baked_revision --seconds 30
+node tools/hosted-load-probe.mjs --block cdn.jsdelivr.net --seconds 52
+```
+
+Run browser jobs serially. This uses the existing Puppeteer/Edge harness stack
+in a fresh browser profile, real HTTPS assets and real CDN/font requests. It
+does not replace Three.js with local files or use `shot`, `only`, `baked=force`
+or `ensureAll`. `--mobile` emulates 956 x 440 CSS pixels, DPR 3 and touch; it is
+still desktop Chromium with desktop memory/GPU, not iOS. `CHROME_PATH` can select
+another Chromium executable. `--url`, `--seconds` and `--out` are supported;
+artifacts default to a unique directory under the OS temporary directory.
+
+`report.json` records progress, completed modules, bake diagnostics, CDP heap
+and backing storage separately, long tasks, errors and page/worker network
+events. It saves incrementally so a hung/crashed page leaves evidence. Worker
+network attachment is best effort; incomplete entries alone are not proof of
+a stuck request. Screenshots show readiness/start or the failure. A successful
+run clicks the start button and verifies `playing`; failures exit nonzero.
+The two `--block` commands deliberately fail and should exit 1.
+
+Normal hosted runs passed: desktop in 43.4 s, touch emulation in 64.3 s, with
+no module failures. Both start-button interactions entered `playing`, and
+screenshots were reviewed. These are independent cold-profile diagnostic runs,
+not a mobile-vs-desktop performance comparison. See PERFORMANCE.md for memory.
+
+### Confirmed weaknesses and next fixes
+
+* `__baked_revision` is a development-server endpoint. Its normal hosted 404
+  falls back to `BAKED_REVISION` and did not prevent either successful run.
+  However, `openBakedWorld()` awaits it in the manifest's `Promise.all`:
+  deliberately failing the request produces a fatal `Failed to fetch` at 0%.
+  A hanging probe has no application timeout. Remove the deployed probe or
+  make the optional request bounded and independent, preserving dev stale-bake
+  checks and their tests.
+* Main-module imports require `cdn.jsdelivr.net`. Blocking it reproduces 0%
+  with `__mainStarted === false`; the inline watchdog appears after 45 s.
+  The boot guard cannot catch a static import failure before it is installed.
+  Consider shipping the pinned Three.js dependency with the site and validate
+  import-map/closure/deployment contracts.
+* Asset fetches and worker requests have no deadline/progress heartbeat.
+  An unresolved fetch, decompression or worker reply can keep a module pending
+  indefinitely. `onerror` fallback covers explicit worker failures only.
+  Report the last phase/asset and elapsed time; use bounded failure handling
+  that does not leave concurrent retries allocating large buffers.
+* Required bake currently guards the manifest, not all products. `bakedData()`
+  returns null after a product error; `loadFieldBake()` can then invoke the
+  expensive field generator even on a required-bake phone load. Required
+  production assets should fail explicitly, while preserving deliberate
+  development generator fallback. This is a source finding, not an observed
+  failed field request in the successful hosted runs.
+* Field planes expand to 169.6 MiB, alongside early prefetch of the 67.5 MiB
+  roof, 15.0 MiB nav and 35.0 MiB city-base payloads. Field hydration then
+  constructs its compact representations synchronously on the main thread.
+  Prioritize peak memory/lifetimes, deferring roof/nav work until needed,
+  bounded worker work, and ground hydration. At the later 100% stage, inspect
+  first-frame/proxy GPU uploads. The Performance tier already was selected;
+  the current touch overrides mainly reduce GPU settings, not these payloads.
+* Add real phase milestones through the first rendered frame, a persistent
+  bounded diagnostic journal, and an export action available during stalls.
+  The existing watchdog requires the main event loop and cannot run during a
+  synchronous stall or after the OS kills the process. The crash-loop guard
+  only counts unfinished boots within 60 seconds and marks a boot successful
+  at `body.loaded`; it can miss slower failures and post-load termination.
+
+No runtime fix or bake change was made in this investigation. Changing shared
+loading code requires the normal version/revision, all stale-area bakes and
+integration validation; do not relabel the current bake to bypass those checks.
+
+### Capture the actual iPhone failure
+
+Enable Safari's Advanced > Web Inspector setting on the phone, connect it to
+a Mac, enable Safari's developer features, then select the phone's game tab
+from Develop. Record Network and Timelines while reloading; when stuck, pause
+JavaScript to locate synchronous work or examine outstanding fetches/worker
+messages. See [WebKit's remote inspection instructions](https://webkit.org/web-inspector/enabling-web-inspector/).
+
+For a restart/crash, open Settings > Privacy & Security > Analytics &
+Improvements > Analytics Data and inspect a `JetsamEvent` or WebKit/Safari
+crash log matching the attempt's timestamp. A matching WebContent/GPU process
+termination and its reason matter; an unrelated JetsamEvent is not proof.
+[Apple's log collection guide](https://developer.apple.com/documentation/xcode/acquiring-crash-reports-and-diagnostic-logs)
+and [jetsam interpretation](https://developer.apple.com/documentation/xcode/identifying-high-memory-use-with-jetsam-event-reports)
+describe how to distinguish memory termination. Total phone RAM alone does not
+establish the available browser-process budget.
+
+In the remote console, collect this small state snapshot (avoid dumping the
+entire scene or expanding field `.data`, which itself allocates):
+
+```javascript
+JSON.stringify({
+  url: location.href,
+  percent: document.getElementById('loadpct')?.textContent,
+  label: document.getElementById('loadlabel')?.textContent,
+  mainStarted: !!window.__mainStarted,
+  loaded: document.body.classList.contains('loaded'),
+  modules: window.__stats?.modules,
+  timing: window.__stats?.timing,
+  baked: window.__ctx?.services?.baked,
+  fieldReady: !!window.__ctx?.services?.environment?.field,
+  environmentPhases: window.__ctx?.services?.environment?.buildPhases,
+  errors: window.__errors
+}, null, 2)
+```

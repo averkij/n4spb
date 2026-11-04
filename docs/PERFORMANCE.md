@@ -2771,3 +2771,57 @@ node tools/area.mjs islands tools/water-reachable-test.mjs
 node tools/drive-bench.mjs --area islands --q medium --seconds 20 --start "-5161.6,-4248.2,4.9" --params "gates=0" --json --diagnostics --out shots/yelagin-bridges/after-road-islands
 node tools/drive-bench.mjs --area vladimirsky --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --params "gates=0" --json --diagnostics --out shots/yelagin-bridges/after-road-centre
 ```
+
+## 2026-11-04 — Hosted iPhone loading investigation (9.5.2, no runtime change)
+
+Tested https://averkij.github.io/n4spb/ directly, Palace-Liteyny bake
+`d907bcaa0ac385d6e309`, with Edge 156.0.4314.58 and the Performance tier.
+The deployed version and generated revision agree with the deployed manifest.
+The new `tools/hosted-load-probe.mjs` uses real CDN/fonts/HTTPS assets in a
+fresh browser profile and records CDP network, phase and memory evidence.
+GPU jobs were serial; no offline CDN replacements, shot mode, forced bake or
+whole-city loading. These are diagnostic samples, not before/after optimization
+results or FPS measurements.
+
+| Run | Ready | Sample | JS used heap MiB | Backing storage MiB |
+| --- | ---: | --- | ---: | ---: |
+| Touch emulation, 956 x 440 CSS px, DPR 3 | 64.3 s | 17%, streets | 371 | 328 |
+| Same run | | 20%, city | 442 | 339 |
+| Same run | | Ready; largest sampled heap + backing sum | 406 | 981 |
+| Desktop, 1280 x 720, DPR 1 | 43.4 s | 97%; largest sampled heap + backing sum | 447 | 1279 |
+
+These values are not retained-memory measurements or process RSS. They exclude
+GPU/native allocations and other processes/workers; sampling can miss peaks.
+Do not add `performance.memory.usedJSHeapSize` again: use the separate CDP
+fields. The cold-profile runs differ in viewport, touch GPU settings, network
+timing and GC, so their times do not establish mobile-vs-desktop speed.
+
+The touch run recorded 736 request events (679 Script events), about 44.6 MiB
+of encoded network bytes including early post-ready streaming. Its largest
+recorded main-thread tasks were 4.37 s, 4.10 s and 3.13 s. There were no module,
+baked asset or worker failures in either normal run. The expected optional
+`__baked_revision` 404, duplicate `st_floor` texture-painter warning and
+ground-shader compiler warnings remain. Start-button interactions entered
+`playing` in both runs and screenshots were opened and reviewed.
+
+Fault injection established two distinct 0% failures: aborting the optional
+revision request causes a fatal `Failed to fetch`, while blocking jsDelivr
+prevents main-module execution and eventually shows the 45-second watchdog.
+Both probes exited 1 as expected. A normal revision 404 is handled successfully.
+
+The real iPhone 16 Pro Max remains failing on Safari/Chrome and both Wi-Fi and
+cellular. Owner A/B evidence: disabling early compile still freezes at 3%;
+also disabling the baked worker reaches 100%, restarts from 0%, reaches 100%
+again and crashes. This implicates worker/scheduling/peak-memory behavior,
+but does not prove a worker implementation defect. The 100% label precedes
+first render and proxy GPU uploads. Browser/OS termination under memory
+pressure is a leading hypothesis, requiring matching device logs.
+
+Reproduce with `node tools/hosted-load-probe.mjs --mobile` and the fault
+commands in [MOBILE.md](MOBILE.md#10-hosted-loading-investigation-2026-11-04-952).
+Full evidence for this session is in the OS temp directories
+`n4spb-hosted-mobile`, `n4spb-hosted-desktop`,
+`n4spb-hosted-revision-failure`, and `n4spb-hosted-cdn-failure`.
+Next work: bounded worker/fetch diagnostics, required-product failure handling,
+field hydration and concurrent prefetch memory, then first-frame GPU upload
+peaks. Real-device loading, smooth FPS and mobile stability are not solved.
