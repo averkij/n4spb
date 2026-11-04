@@ -32,6 +32,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://test'), rel = decodeURIComponent(url.pathname).replace(/^\/n4spb\//, '');
   if (rel === 'fixture-worker.js') { res.setHeader('Content-Type', 'text/javascript'); return res.end(`onmessage = ({data}) => { const value = new Uint8Array(8); value[0] = 42; setTimeout(() => postMessage({id: data.id, value, bytes: 8, readMs: 5, decodeMs: 1}, [value.buffer]), 50); };`); }
   if (rel === 'fixture-data') { res.setHeader('Content-Type', 'application/json'); return res.end('{"ok":true}'); }
+  if (rel === 'fixture-hold') return; // Deliberate pending fetch; closed with the test worker/server.
   const file = path.resolve(root, rel);
   if (!file.startsWith(path.resolve(root) + path.sep)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (error, body) => {
@@ -191,6 +192,33 @@ try {
   fs.writeFileSync(path.join(out, 'riverfront-report.json'), JSON.stringify(riverReport, null, 2));
   await riverfront.context.close();
 
+  const trace = await open();
+  await trace.page.select('#diag-test', 'scene-staged');
+  await trace.page.click('#diag-start');
+  await trace.page.waitForFunction(() => document.body.classList.contains('loaded'));
+  await trace.page.evaluate(() => {
+    window.__stats.modules.landmarksRiverfront = { ms: 1 };
+    window.traceReplies = [];
+    window.traceWorker = new Worker('./src/core/baked-worker.js', { type: 'module' });
+    traceWorker.onmessage = e => traceReplies.push(e.data);
+    traceWorker.postMessage({ id: 501, url: new URL('./fixture-hold', location.href).href, rawBytes: 8 });
+  });
+  await trace.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.workerTrace?.heartbeatMs > 0, {}, key);
+  const waiting = (await read(trace.page)).current;
+  assert(Object.values(waiting.pending).some(p => p.workerPhase === 'fetch'));
+  assert.equal(await trace.page.evaluate(() => traceReplies.length), 0, 'phase messages never reach the asset consumer');
+  await trace.page.evaluate(() => traceWorker.terminate());
+  assert.equal(Object.keys((await read(trace.page)).current.pending).length, 0);
+  await trace.page.evaluate(() => {
+    window.traceWorker = new Worker('./src/core/baked-worker.js', { type: 'module' });
+    traceWorker.onmessage = e => traceReplies.push(e.data);
+    traceWorker.postMessage({ id: 502, url: new URL('./missing-probe-file', location.href).href, rawBytes: 8 });
+  });
+  await trace.page.waitForFunction(() => traceReplies.length === 1);
+  assert.equal(await trace.page.evaluate(() => traceReplies[0].error), 'HTTP 404');
+  assert.deepEqual(trace.errors, []);
+  await trace.context.close();
+
   if (process.argv.includes('--full')) {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
@@ -226,6 +254,8 @@ try {
     assert(workerEvents.some(e => e.kind === 'gpu:render:end'));
     fs.writeFileSync(path.join(out, 'full-scene-events.json'), JSON.stringify(workerEvents, null, 2));
     if (staged) {
+      for (const phase of ['fetch', 'headers', 'decompress', 'decode', 'transfer', 'transferred'])
+        assert(workerEvents.some(e => e.kind === 'worker:phase' && e.detail.startsWith(phase + ' ')), `traced worker reports ${phase}`);
       let active = 0, sent = 0;
       for (const e of workerEvents) {
         if (e.kind === 'worker:sent') { active++; sent++; assert.equal(active, 1, 'at most one active decode'); }

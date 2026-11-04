@@ -72,7 +72,7 @@ export function isAllowedServed(rel) {
  */
 export const RUNTIME_CALLS = {
   'src/core/loading-diagnostics.js': {
-    'new URL(': { count: 1, why: 'redacts request labels; the probe product URL is covered by its RUNTIME_ASSETS prefix' },
+    'new URL(': { count: 2, why: 'redacts request labels and selects the standalone traced worker relative to the support page; probe product URL has an asset prefix row' },
     'fetch(': { count: 1, why: 'standalone assets-only test reads the shipping Palace manifest' },
   },
   'src/core/baked-world.js': {
@@ -80,6 +80,7 @@ export const RUNTIME_CALLS = {
     'new URL(': { count: 2, why: 'new URL(file, assetBase): a product of the manifest under assets/baked/ (the literal URLs are rows of RUNTIME_ASSETS, the worker is a followed JS edge)' },
   },
   'src/core/baked-worker.js': { 'fetch(': { count: 1, why: 'fetches the product URL it is given' } },
+  'src/core/baked-worker-trace.js': { 'fetch(': { count: 1, why: 'support-only traced worker fetches the same manifest product URLs as the shipping decoder' } },
   'src/core/gates.js': {
     'new URL(': { count: 3, why: 'the page of the neighbour area (runtime-only file)' },
     'fetch(': { count: 1, why: 'injectable fetch of the preflight (runtime-only file)' },

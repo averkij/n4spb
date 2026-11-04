@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.9.1** (2026-11-04, patch): Trace worker fetch, decompression, decode and transfer phases during phone loading
 - **9.9.0** (2026-11-04, minor): Add staged full-scene phone loading test and shader/render checkpoints
 - **9.8.0** (2026-11-04, minor): Add isolated riverfront geometry test for iPhone startup stalls
 - **9.7.0** (2026-11-04, minor): Add isolated phone tests for sequential and concurrent baked-worker decoding

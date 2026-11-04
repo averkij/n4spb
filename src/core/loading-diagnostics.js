@@ -79,12 +79,29 @@
     const NativeWorker = window.Worker;
     window.Worker = class extends NativeWorker {
       constructor(url, options) {
-        super(url, options);
+        const traced = run?.test === 'scene-staged' && labelURL(url).endsWith('/src/core/baked-worker.js');
+        super(traced ? new URL('./src/core/baked-worker-trace.js', location.href) : url, options);
         this.diagnosticRequests = new Map();
         this.diagnosticQueue = []; this.diagnosticBusy = false; this.diagnosticStopped = false;
-        this.diagnosticStaged = run?.test === 'scene-staged' && labelURL(url).endsWith('/src/core/baked-worker.js');
+        this.diagnosticStaged = traced;
         event('worker:created', labelURL(url));
         this.addEventListener('message', e => {
+          if (traced && e.data?.loadingDiagnostic === true) {
+            // Phase/heartbeat messages are support metadata, never asset replies.
+            // Consume them before the original loader sees the matching id.
+            e.stopImmediatePropagation();
+            const data = e.data;
+            run.workerTrace = { ...run.workerTrace, lastMessageMs: Math.round(performance.now() - run.startMs) };
+            if (data.kind === 'heartbeat') {
+              run.workerTrace.heartbeatMs = run.workerTrace.lastMessageMs;
+              run.workerTrace.active = data.active; persist(); return;
+            }
+            const item = this.diagnosticRequests.get(data.id);
+            if (item && run.pending[item.id]) run.pending[item.id].workerPhase = data.phase;
+            run.workerTrace.lastPhase = { id: data.id, phase: data.phase || data.kind, asset: item?.asset };
+            event('worker:phase', `${data.phase || data.kind} ${item?.asset || ''} ${data.detail || ''}`);
+            return;
+          }
           const data = e.data, item = this.diagnosticRequests.get(data?.id);
           if (!item) return;
           this.diagnosticRequests.delete(data.id);

@@ -366,7 +366,43 @@ of one outstanding decode and the initial riverfront gate, and enters play.
 This passed in desktop Chromium with touch-sized viewports; report recovery
 after reload also passed and screenshots were reviewed. Nearby-region streaming
 can legitimately have one request in flight after play starts. All 16 live
-area manifests remain fresh. The affected iPhone's staged result is pending.
+area manifests remain fresh.
+
+The affected iPhone's staged test reached 20% and waited for more than a minute
+with a responsive main thread (largest recorded heartbeat gap 1.929 s). It had
+decoded 22 products, including all field planes and the first city region, and
+was awaiting `city-base-0_-1` (10,996,296 raw bytes). All recorded early shader
+compiles returned. The 322,649,123 decoded bytes are a cumulative counter, not
+live memory usage. This report isolates an outstanding worker request; it does
+not establish whether the worker is waiting on the network, decompressor,
+decoder, transfer, or has stopped responding.
+
+### Worker-side phase trace (9.9.1)
+
+The staged full-scene test now selects `baked-worker-trace.js`, a support-only
+worker using the same shipping codec and transfer reply contract. It journals
+fetch, response headers, body decompression, metadata/object decoding, transfer
+entry and transfer return. While a request is active it sends a small heartbeat
+once per second. The diagnostic wrapper consumes these trace messages before
+the game's loader receives them, so a phase message cannot complete an asset
+request. The ordinary game still uses its original worker.
+
+Use the same `?test=scene-staged` link, reload the support page, and start a new
+test. If progress stops but the UI responds, wait about 20 seconds and use the
+Diagnostics button to copy the report directly. A pending request's
+`workerPhase`, `workerTrace.heartbeatMs` and the main `elapsedMs` distinguish a
+responsive worker waiting on asynchronous work from an unresponsive worker.
+Decompression includes reading the response body, so that phase alone does not
+distinguish a network-body stall from a decompression-stream stall. A missing
+heartbeat is not by itself proof of a process crash. This trace does not add
+timeouts/retries or change memory limits.
+
+Validation: the traced staged scene loaded and entered play in desktop Chromium;
+all six phase markers appeared, worker scheduling stayed serial, and saved-report
+recovery passed. A deliberately unanswered fetch kept emitting worker heartbeats
+without delivering a false asset reply; a 404 produced the original error reply.
+Closure lint, manifest checks and generated-page checks passed. No area bake or
+normal game-loader code changed.
 
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
