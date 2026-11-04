@@ -8,6 +8,131 @@ import { buildNDProxy as outline } from './ndproxy.js';
 export { releasedStats } from './spatial.js';
 export { NDLazy } from './ndproxy.js';
 
+// Exact full-attribute welding. Hash collisions are resolved by comparing every
+// component's raw bits; UV seams, hard normals, colour and paint remain distinct.
+// Temporary tables are bounded to one geometry, never a whole-city string map.
+export function weldGeometry(g, THREE) {
+  const count = g.attributes.position.count, entries = Object.entries(g.attributes);
+  if (count < 3 || count > 1000000 || entries.some(([, a]) => a.count !== count || a.isInterleavedBufferAttribute || a.array.BYTES_PER_ELEMENT > 4)) return 0;
+  const words = entries.map(([, a]) => ({ stride: a.itemSize, data: a.array instanceof Float32Array ?
+    new Uint32Array(a.array.buffer, a.array.byteOffset, a.array.length) : a.array }));
+  let size = 1; while (size < count * 2) size *= 2;
+  const table = new Uint32Array(size), representatives = new Uint32Array(count), remap = new Uint32Array(count);
+  let unique = 0;
+  const same = (a, b) => {
+    for (const { data, stride } of words) for (let c = 0; c < stride; c++) if (data[a * stride + c] !== data[b * stride + c]) return false;
+    return true;
+  };
+  for (let i = 0; i < count; i++) {
+    let hash = 2166136261;
+    for (const { data, stride } of words) for (let c = 0; c < stride; c++) hash = Math.imul(hash ^ data[i * stride + c], 16777619);
+    let slot = hash & (size - 1);
+    while (table[slot] && !same(i, representatives[table[slot] - 1])) slot = (slot + 1) & (size - 1);
+    if (!table[slot]) { representatives[unique] = i; table[slot] = ++unique; }
+    remap[i] = table[slot] - 1;
+  }
+  const Index = unique > 65535 ? Uint32Array : Uint16Array;
+  const indexCount = g.index?.count ?? count;
+  const strideBytes = entries.reduce((n, [, a]) => n + a.itemSize * a.array.BYTES_PER_ELEMENT, 0);
+  const saved = (count - unique) * strideBytes + (g.index?.array.byteLength || 0) - indexCount * Index.BYTES_PER_ELEMENT;
+  if (saved <= 0) return 0;
+  const index = new Index(indexCount);
+  for (let i = 0; i < indexCount; i++) index[i] = remap[g.index ? g.index.array[i] : i];
+  const indexAttribute = new THREE.BufferAttribute(index, 1);
+  indexAttribute.onUpload(g.index?.onUploadCallback ?? g.attributes.position.onUploadCallback);
+  g.setIndex(indexAttribute);
+  for (const [key, a] of entries) {
+    const data = new a.array.constructor(unique * a.itemSize);
+    for (let i = 0; i < unique; i++) for (let c = 0; c < a.itemSize; c++) data[i * a.itemSize + c] = a.array[representatives[i] * a.itemSize + c];
+    const next = new THREE.BufferAttribute(data, a.itemSize, a.normalized);
+    next.name = a.name; next.gpuType = a.gpuType; next.onUpload(a.onUploadCallback); g.setAttribute(key, next);
+  }
+  return saved;
+}
+
+// Lossy diagnostic, restricted to immutable outputs and the stock basic/toon
+// material paths. Uniform local decoding keeps normal directions unchanged and
+// the toon factory's world-space paint coordinates follow the model matrix.
+export async function packGeometry(root, THREE, notify = () => {}) {
+  const refs = new Map(); root.updateMatrixWorld(true);
+  root.traverse(o => { if (o.geometry) { let list = refs.get(o.geometry); if (!list) refs.set(o.geometry, list = []); list.push(o); } });
+  const stats = { geometries: 0, positionGeometries: 0, savedAttributeBytes: 0, weldedBytes: 0, maxWorldPositionError: 0 };
+  const stockMaterial = m => m && !Array.isArray(m) &&
+    ((m.isMeshToonMaterial && m.userData.toon?.obc === m.onBeforeCompile) ||
+     (m.isMeshBasicMaterial && m.onBeforeCompile === THREE.Material.prototype.onBeforeCompile));
+  const replace = (g, key, a, array, normalized) => {
+    const next = new THREE.BufferAttribute(array, a.itemSize, normalized);
+    next.name = a.name; next.gpuType = a.gpuType; next.onUpload(a.onUploadCallback);
+    stats.savedAttributeBytes += a.array.byteLength - array.byteLength; g.setAttribute(key, next);
+  };
+  notify('start', { ...stats }); let workBytes = 0;
+  for (const [g, objects] of refs) {
+    let p = g.attributes.position;
+    if (!p || p.itemSize !== 3 || p.normalized || !(p.array instanceof Float32Array) ||
+      p.onUploadCallback === THREE.BufferAttribute.prototype.onUploadCallback || Object.keys(g.morphAttributes).length ||
+      Object.values(g.attributes).some(a => a.isInterleavedBufferAttribute || a.usage !== THREE.StaticDrawUsage) ||
+      objects.some(o => !o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || o.children.length || o.userData.dynamic || !stockMaterial(o.material))) continue;
+    const before = stats.savedAttributeBytes;
+    const welded = weldGeometry(g, THREE); stats.weldedBytes += welded; stats.savedAttributeBytes += welded;
+    p = g.attributes.position;
+    if (!g.boundingBox) g.computeBoundingBox();
+    const box = g.boundingBox, span = new THREE.Vector3(); box.getSize(span);
+    const scale = Math.max(span.x, span.y, span.z);
+    // Frobenius norm bounds world-space error even under sheared parents.
+    const worldScale = Math.max(...objects.map(o => Math.hypot(...[0,1,2,4,5,6,8,9,10].map(i => o.matrixWorld.elements[i]))));
+    const decomposable = objects.every(o => {
+      const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(); o.matrix.decompose(p, q, s);
+      const m = new THREE.Matrix4().compose(p, q, s);
+      return m.elements.every((v, i) => Math.abs(v - o.matrix.elements[i]) < 1e-7);
+    });
+    // Do not quantize thin paving/decal surfaces, or allow more than 2 cm
+    // world-space Euclidean error. Normals/UVs can still be packed separately.
+    if (decomposable && Number.isFinite(scale) && scale > 0 && span.y >= 1 && scale * Math.sqrt(3) / 131070 * worldScale <= 0.02) {
+      const data = new Uint16Array(p.array.length), min = box.min;
+      let maxError = 0;
+      for (let i = 0; i < p.count; i++) {
+        let error = 0;
+        for (let c = 0; c < 3; c++) {
+          const origin = c === 0 ? min.x : c === 1 ? min.y : min.z, value = p.array[i * 3 + c];
+          const q = Math.round((value - origin) / scale * 65535); data[i * 3 + c] = q;
+          error += (origin + q / 65535 * scale - value) ** 2;
+        }
+        maxError = Math.max(maxError, Math.sqrt(error) * worldScale);
+      }
+      const decode = new THREE.Matrix4().makeScale(scale, scale, scale).setPosition(min);
+      for (const o of objects) {
+        o.matrix.multiply(decode); o.matrix.decompose(o.position, o.quaternion, o.scale);
+        o.matrixWorldNeedsUpdate = true;
+      }
+      replace(g, 'position', p, data, true);
+      // Preserve conservative authored bounds, including any extra margins.
+      const inverse = decode.clone().invert();
+      g.boundingBox.applyMatrix4(inverse).expandByScalar(1 / 65535);
+      if (g.boundingSphere) { g.boundingSphere.applyMatrix4(inverse); g.boundingSphere.radius += Math.sqrt(3) / 65535; }
+      stats.positionGeometries++; stats.maxWorldPositionError = Math.max(stats.maxWorldPositionError, maxError);
+    }
+    for (const [key, Type, multiplier, lo, hi] of [
+      ['normal', Int8Array, 127, -1, 1], ['color', Uint8Array, 255, 0, 1], ['uv', Uint16Array, 65535, 0, 1]
+    ]) {
+      const a = g.attributes[key]; if (!a || a.array.BYTES_PER_ELEMENT <= Type.BYTES_PER_ELEMENT) continue;
+      const get = (i, c) => THREE.MathUtils.denormalize(a.array[i * a.itemSize + c], a.array);
+      const value = (i, c) => a.normalized ? get(i, c) : a.array[i * a.itemSize + c];
+      let safe = true;
+      for (let i = 0; i < a.count && safe; i++) for (let c = 0; c < a.itemSize; c++) {
+        const v = value(i, c); if (!Number.isFinite(v) || v < lo || v > hi) { safe = false; break; }
+      }
+      if (!safe) continue;
+      const data = new Type(a.array.length);
+      for (let i = 0; i < a.count; i++) for (let c = 0; c < a.itemSize; c++) data[i * a.itemSize + c] = Math.round(value(i, c) * multiplier);
+      replace(g, key, a, data, true);
+    }
+    if (stats.savedAttributeBytes > before) stats.geometries++;
+    workBytes += p.array.byteLength;
+    if (workBytes >= 4 * 1024 * 1024) { notify('progress', { ...stats }); workBytes = 0; await new Promise(resolve => setTimeout(resolve, 0)); }
+  }
+  root.updateMatrixWorld(true); notify('end', { ...stats }); return stats;
+}
+
 // Upload only immutable geometry that already opts into an onUpload callback.
 // Three r170 uploads attributes while projecting a mesh, and its index during
 // binding-state setup even with a zero draw count. This uses those normal cache
@@ -39,6 +164,7 @@ export async function stageGeometryUploads(renderer, root, THREE, notify = () =>
   });
   const stats = { total: queue.length, completed: 0, batches: 0, submittedBytes: 0,
     beforeBytes: bytesInScene(), afterBytes: 0, releasedBytes: 0 };
+  stats.afterBytes = stats.beforeBytes;
   notify('start', { ...stats });
   if (!queue.length) { stats.afterBytes = stats.beforeBytes; notify('end', stats); return stats; }
   const scene = new THREE.Scene(); scene.userData.diagnosticGeometryUpload = true;
@@ -65,6 +191,7 @@ export async function stageGeometryUploads(renderer, root, THREE, notify = () =>
         // Drain queued work before yielding, instead of queuing an entire city
         // in one task. The existing onUpload callbacks release CPU ownership.
         renderer.readRenderTargetPixels(target, 0, 0, 1, 1, pixels);
+        stats.afterBytes = bytesInScene(); stats.releasedBytes = stats.beforeBytes - stats.afterBytes;
         stats.batches++; notify('progress', { ...stats });
         batchBytes = batchCount = 0;
         await new Promise(resolve => setTimeout(resolve, 0));
@@ -83,12 +210,14 @@ export async function stageGeometryUploads(renderer, root, THREE, notify = () =>
 
 function installStagedGeometryUpload() {
   const params = new URLSearchParams(location.search);
-  if (params.get('diaguploader') !== 'staged') return;
+  const packed = params.get('diagpack') === '1';
+  if (params.get('diaguploader') !== 'staged' && !packed) return;
   if (params.get('nd') !== '0' || params.get('supercells') !== '0') throw Error('Staged uploads require lower geometry memory mode');
   const { renderer, THREE } = window.__ctx, compile = renderer.compileAsync;
   renderer.compileAsync = async function (...args) {
     renderer.compileAsync = compile;
-    await stageGeometryUploads(renderer, args[0], THREE, (state, detail) => phase('geometry-upload', state, detail));
+    if (packed) await packGeometry(args[0], THREE, (state, detail) => phase('geometry-pack', state, detail));
+    if (params.get('diaguploader') === 'staged') await stageGeometryUploads(renderer, args[0], THREE, (state, detail) => phase('geometry-upload', state, detail));
     return Reflect.apply(compile, this, args);
   };
 }

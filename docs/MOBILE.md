@@ -826,6 +826,48 @@ success remains unverified. The next phone comparison can omit
 `diagdrawtrace=1` to avoid thousands of synchronous storage writes; batch and
 render-pass checkpoints remain available without that extra instrumentation.
 
+#### v9.19: smaller immutable geometry buffers
+
+The v9.18 phone attempt died during preparation, before the first full frame:
+1,399/1,873 geometries and 239,892,953 submitted bytes, after batch 38. Staging did
+not solve the failure. Its zero `afterBytes`/`releasedBytes` fields were placeholders
+until completion, not evidence that callbacks freed nothing. These values are now
+measured at every batch boundary. The submitted-byte count is not a demonstrated
+device memory limit, and a saved checkpoint cannot identify the termination cause.
+
+`diagpack=1` enables an explicitly lossy, diagnostic-only packing comparison before
+the final compile/upload. It also enables the lean geometry configuration. It
+retains the full scene, physics, triangle/draw order and LOD registrations, and
+does not change production pages or bakes. Eligibility is limited to immutable
+geometry with existing release callbacks and standard basic/toon materials; custom
+shaders, morphs, instanced/skinned objects, child-bearing meshes and dynamic buffers
+are excluded. Geometry shared with an excluded object is excluded as a whole.
+
+First, an exact hash-and-compare pass merges vertices only when every attribute's
+raw components match. UV seams, hard normals, colours and paint stay distinct.
+Index order, groups and draw ranges remain equivalent. Temporary typed hash tables
+are per geometry, with a one-million-vertex cap, and the pass yields periodically.
+Then eligible positions become normalized unsigned 16-bit values with a uniform
+decode transform in the mesh matrix. The world-position error bound is at most
+2 cm, including parent scaling/shear; thin paving/decal geometry and meshes with
+non-decomposable local matrices keep float positions. Conservative bounds transform
+with the geometry. Normals/colours use normalized 8-bit components, and UVs use
+normalized 16-bit values only when all coordinates lie in [0,1]. HDR colours and
+repeating UVs retain their existing representation. All upload callbacks survive.
+
+Desktop measurement: retained geometry before uploads fell from 519,295,036 to
+366,874,325 bytes. Preparation submitted 217,757,999 bytes instead of 370,178,710
+(about 41% less). The combined saving was 152,420,711 bytes; exact welding accounted
+for 69,663,769 bytes before subsequent packing. The measured conservative world
+position-error bound was 0.01828 m. The full scene reached play. Focused tests cover
+exact expanded vertex streams and UV seams after welding, transformed/shared
+meshes, bounds, excluded geometry, repeated UVs and upload callback preservation.
+The final v9.19 desktop run also checked the station and Palace Square views;
+both rendered without obvious visual regressions or browser errors. Closure and
+bake-manifest checks passed, with all 16 baked areas fresh.
+Phone success is still unverified; this is a controlled comparison, not a claimed
+fix or a universal mobile memory budget.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

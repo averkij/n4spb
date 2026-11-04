@@ -372,6 +372,7 @@
     if (name === 'plain-ground' && state === 'end') run.plainGround = detail;
     if (name === 'sign-atlas-cap' && state === 'end') run.signAtlasCap = detail;
     if (name === 'geometry-upload') run.geometryUpload = { state, ...detail };
+    if (name === 'geometry-pack') run.geometryPack = { state, ...detail };
     sample(); event(`build:${name}:${state}`, JSON.stringify(detail));
   });
   addEventListener('pagehide', e => event('pagehide', `persisted=${e.persisted}`));
@@ -528,6 +529,7 @@
       <label><input type="checkbox" id="diag-canvasupload"> Upload canvas pixels through ImageData (comparison; extra CPU copying)</label>
       <label><input type="checkbox" id="diag-geometry"> Lower geometry memory (more draw calls; keep source meshes and outlines)</label>
       <label><input type="checkbox" id="diag-uploader"> Upload geometry in small batches before the first frame (also enables lower geometry memory)</label>
+      <label><input type="checkbox" id="diag-pack"> Pack static geometry into smaller buffers (comparison; slightly reduced precision; enables lower geometry memory)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -549,6 +551,7 @@
       $('canvasupload').disabled = !(scene || staged);
       $('geometry').disabled = !(scene || staged);
       $('uploader').disabled = !(scene || staged);
+      $('pack').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -566,6 +569,9 @@
     $('uploader').checked = new URLSearchParams(location.search).get('diaguploader') === 'staged';
     if ($('uploader').checked) $('geometry').checked = true;
     $('uploader').onchange = () => { if ($('uploader').checked) $('geometry').checked = true; };
+    $('pack').checked = new URLSearchParams(location.search).get('diagpack') === '1';
+    if ($('pack').checked) $('geometry').checked = true;
+    $('pack').onchange = () => { if ($('pack').checked) $('geometry').checked = true; };
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -602,10 +608,11 @@
       if ($('ground').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagground', 'plain');
       if ($('signatlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagsignatlas', '1024');
       if ($('canvasupload').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagcanvasupload', 'pixels');
-      if (($('geometry').checked || $('uploader').checked) && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) {
+      if (($('geometry').checked || $('uploader').checked || $('pack').checked) && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) {
         query.set('diaggeometry', 'lean'); query.set('supercells', '0'); query.set('nd', '0');
       }
       if ($('uploader').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diaguploader', 'staged');
+      if ($('pack').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagpack', '1');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

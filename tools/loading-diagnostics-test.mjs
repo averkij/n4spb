@@ -324,6 +324,57 @@ try {
   assert.deepEqual(cap.errors, []);
   await cap.context.close();
 
+  const packTest = await open();
+  const packing = await packTest.page.evaluate(async () => {
+    const THREE = await import('three');
+    const { packGeometry, stageGeometryUploads, weldGeometry } = await import('./src/core/loading-finalize-diagnostics.js');
+    const { releaseOnUpload } = await import('./src/core/spatial.js');
+    const root = new THREE.Scene(), mat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+    const weld = new THREE.BufferGeometry();
+    weld.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0, 1,0,0, 0,1,0, 0,0,0, 1,0,0, 0,1,0, 0,0,0, 1,0,0, 0,1,0], 3));
+    weld.setAttribute('uv', new THREE.Float32BufferAttribute([0,0, 1,0, 0,1, 0,0, 1,0, 0,1, 0.5,0, 1,0, 0,1], 2));
+    weld.setIndex(new THREE.BufferAttribute(new Uint32Array([0,1,2,3,4,5,6,7,8]), 1)); weld.addGroup(0, 6, 0); weld.setDrawRange(3, 6);
+    const expanded = () => Object.values(weld.attributes).map(a => Array.from(weld.index.array).flatMap(i => Array.from(a.array.slice(i * a.itemSize, (i + 1) * a.itemSize))));
+    const expandedBefore = JSON.stringify(expanded()), weldedBytes = weldGeometry(weld, THREE);
+    const weldingExact = JSON.stringify(expanded()) === expandedBefore && weld.attributes.position.count === 4 &&
+      weld.groups[0].count === 6 && weld.drawRange.start === 3 && weld.drawRange.count === 6 && weldGeometry(weld, THREE) === 0;
+    const g = new THREE.BoxGeometry(13.7, 7.3, 5.9); releaseOnUpload(g);
+    const a = new THREE.Mesh(g, mat), b = new THREE.Mesh(g, mat);
+    a.position.set(5, 1, -2); a.rotation.y = 0.3; b.position.x = -15; b.scale.set(2, 1, 3);
+    root.add(a, b); root.updateMatrixWorld(true);
+    const points = o => Array.from({ length: o.geometry.attributes.position.count }, (_, i) =>
+      new THREE.Vector3().fromBufferAttribute(o.geometry.attributes.position, i).applyMatrix4(o.matrixWorld));
+    const originals = [points(a), points(b)], normal = Array.from(g.attributes.normal.array), index = Array.from(g.index.array);
+    const dynamic = new THREE.BoxGeometry(); releaseOnUpload(dynamic); dynamic.attributes.position.setUsage(THREE.DynamicDrawUsage);
+    const dm = new THREE.Mesh(dynamic, mat); root.add(dm);
+    const custom = new THREE.BoxGeometry(); releaseOnUpload(custom); const cm = mat.clone(); cm.onBeforeCompile = () => {};
+    root.add(new THREE.Mesh(custom, cm));
+    const flat = new THREE.PlaneGeometry(500, 500); flat.rotateX(-Math.PI / 2); releaseOnUpload(flat); root.add(new THREE.Mesh(flat, mat));
+    const repeat = new THREE.BoxGeometry(); repeat.attributes.uv.array[0] = 2; releaseOnUpload(repeat); root.add(new THREE.Mesh(repeat, mat));
+    const stats = await packGeometry(root, THREE);
+    const after = [points(a), points(b)]; let error = 0;
+    for (let k = 0; k < 2; k++) for (let i = 0; i < after[k].length; i++) error = Math.max(error, after[k][i].distanceTo(originals[k][i]));
+    const boundsContain = Array.from({ length: g.attributes.position.count }, (_, i) => new THREE.Vector3().fromBufferAttribute(g.attributes.position, i))
+      .every(p => g.boundingBox.containsPoint(p));
+    const result = { stats, error, boundsContain, weldingExact, weldedBytes, shared: a.geometry === b.geometry, positions: g.attributes.position.array.constructor.name,
+      normals: g.attributes.normal.array.constructor.name, uv: g.attributes.uv.array.constructor.name,
+      indexSame: JSON.stringify(index) === JSON.stringify(Array.from(g.index.array)),
+      dynamicSame: dynamic.attributes.position.array instanceof Float32Array,
+      customSame: custom.attributes.position.array instanceof Float32Array,
+      flatSame: flat.attributes.position.array instanceof Float32Array, repeatSame: repeat.attributes.uv.array[0] === 2 };
+    const renderer = new THREE.WebGLRenderer();
+    await stageGeometryUploads(renderer, root, THREE);
+    result.callbackPreserved = g.attributes.position.array.length === 0 && g.attributes.normal.array.length === 0 && g.attributes.uv.array.length === 0;
+    for (const geometry of [g, dynamic, custom, flat, repeat, weld]) geometry.dispose(); mat.dispose(); cm.dispose(); renderer.dispose();
+    return result;
+  });
+  assert(packing.error <= 0.02 && packing.stats.maxWorldPositionError <= 0.02);
+  assert(packing.boundsContain && packing.shared && packing.indexSame && packing.callbackPreserved);
+  assert(packing.weldingExact && packing.weldedBytes > 0);
+  assert(packing.dynamicSame && packing.customSame && packing.flatSame && packing.repeatSame);
+  assert.equal(packing.positions, 'Uint16Array'); assert.equal(packing.normals, 'Int8Array'); assert.equal(packing.uv, 'Uint16Array');
+  assert.deepEqual(packTest.errors, []); await packTest.context.close();
+
   // Staged uploads must reuse Three's buffers, preserve draw ranges/render
   // state, and leave dynamic data alone. Compare real rendered pixels after
   // the static CPU arrays have been released, including a shared geometry.
@@ -444,7 +495,8 @@ try {
     const signAtlas = process.argv.includes('--sign-atlas');
     const canvasPixels = process.argv.includes('--canvas-pixels');
     const stagedUploads = process.argv.includes('--staged-uploads');
-    const leanGeometry = process.argv.includes('--lean-geometry') || stagedUploads;
+    const packedGeometry = process.argv.includes('--packed-geometry');
+    const leanGeometry = process.argv.includes('--lean-geometry') || stagedUploads || packedGeometry;
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
@@ -456,6 +508,7 @@ try {
     if (canvasPixels) await real.page.click('#diag-canvasupload');
     if (leanGeometry) await real.page.click('#diag-geometry');
     if (stagedUploads) await real.page.click('#diag-uploader');
+    if (packedGeometry) await real.page.click('#diag-pack');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     const groundCheckpoints = [];
@@ -489,6 +542,7 @@ try {
     await real.page.waitForFunction(() => document.body.classList.contains('loaded'), { timeout: 240000 });
     await real.page.click('#go');
     await real.page.waitForFunction(() => document.body.classList.contains('playing'));
+    await real.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.playing, {}, key);
     await show(real.page);
     await real.page.screenshot({ path: path.join(out, 'full-scene-diagnostics.png') });
     data = await read(real.page);
@@ -554,8 +608,13 @@ try {
       assert.equal(data.current.geometryUpload.state, 'end');
       assert.equal(data.current.geometryUpload.completed, data.current.geometryUpload.total);
       assert(data.current.geometryUpload.batches > 10);
-      assert(data.current.geometryUpload.releasedBytes > 300000000, 'substantial CPU array release before first full frame');
+      assert(data.current.geometryUpload.releasedBytes > (packedGeometry ? 100000000 : 300000000), 'substantial CPU array release before first full frame');
       assert(data.current.geometryBeforeDepthBytes < 200000000, 'first frame starts with much lower retained geometry');
+    }
+    if (packedGeometry) {
+      assert.equal(data.current.options.diagpack, '1'); assert.equal(data.current.geometryPack.state, 'end');
+      assert(data.current.geometryPack.savedAttributeBytes > 100000000);
+      assert(data.current.geometryPack.maxWorldPositionError <= 0.02);
     }
     if (leanGeometry) {
       assert.equal(data.current.options.supercells, '0');
@@ -605,6 +664,17 @@ try {
     fs.writeFileSync(path.join(out, 'full-scene-report.json'), JSON.stringify(data, null, 2));
     await real.page.click('#diag-hide');
     await real.page.screenshot({ path: path.join(out, 'full-scene-playing.png') });
+    if (packedGeometry) {
+      await real.page.evaluate(async () => {
+        const ctx = window.__ctx, view = ctx.L.VIEWS.find(v => v.key === 'Digit0');
+        if (!view) throw Error('Palace Square verification view missing');
+        await ctx.regions?.ensureAt(view.x, view.z);
+        window.__setCam(view.x, null, view.z, view.yaw, view.pitch);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      });
+      await real.page.screenshot({ path: path.join(out, 'packed-palace-playing.png') });
+      assert.deepEqual(real.errors, [], 'no errors after travelling to the other end of the scene');
+    }
     await real.page.reload({ waitUntil: 'domcontentloaded' });
     assert.equal(await real.page.$eval('#diag-shadows', e => e.checked), !noShadows);
     assert.equal(await real.page.$eval('#diag-atlas', e => e.checked), !noAtlas);
@@ -615,6 +685,7 @@ try {
     assert.equal(await real.page.$eval('#diag-canvasupload', e => e.checked), canvasPixels);
     assert.equal(await real.page.$eval('#diag-geometry', e => e.checked), leanGeometry);
     assert.equal(await real.page.$eval('#diag-uploader', e => e.checked), stagedUploads);
+    assert.equal(await real.page.$eval('#diag-pack', e => e.checked), packedGeometry);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();
