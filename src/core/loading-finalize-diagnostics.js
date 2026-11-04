@@ -8,6 +8,37 @@ import { buildNDProxy as outline } from './ndproxy.js';
 export { releasedStats } from './spatial.js';
 export { NDLazy } from './ndproxy.js';
 
+// Diagnostic only: keep TexImageSource overloads and pixel-store state intact,
+// but avoid direct canvas-source uploads. Read fresh pixels on EVERY update;
+// dynamic canvas painters and their original backing stores remain untouched.
+export function installCanvasPixelUploads(gl, notify = () => {}) {
+  const originals = new Map(); let uploads = 0, bytesRead = 0;
+  for (const name of ['texImage2D', 'texSubImage2D']) {
+    const original = gl[name];
+    const wrapped = function (...args) {
+      const source = args.at(-1);
+      if (!(source instanceof HTMLCanvasElement)) return Reflect.apply(original, this, args);
+      const ctx = source.getContext('2d');
+      if (!ctx || !source.width || !source.height) return Reflect.apply(original, this, args);
+      const record = { number: ++uploads, call: name, width: source.width, height: source.height,
+        bytes: source.width * source.height * 4, bytesRead, phase: 'read:entered' };
+      notify({ ...record });
+      try {
+        args[args.length - 1] = ctx.getImageData(0, 0, source.width, source.height);
+        bytesRead += record.bytes; record.bytesRead = bytesRead; record.phase = 'upload:entered'; notify({ ...record });
+        const result = Reflect.apply(original, this, args);
+        record.phase = 'upload:returned'; notify({ ...record }); return result;
+      } catch (error) {
+        record.phase += ':failed'; record.error = String(error.message).slice(0, 200); notify({ ...record }); throw error;
+      }
+    };
+    gl[name] = wrapped;
+    if (gl[name] !== wrapped) throw Error(`Cannot install canvas upload comparison: ${name}`);
+    originals.set(name, original);
+  }
+  return () => { for (const [name, original] of originals) gl[name] = original; };
+}
+
 export function plainGround(root, THREE) {
   const replacements = new Map(); let meshes = 0;
   root.traverse(o => {
@@ -101,6 +132,12 @@ function trace(name, fn, args, detail = {}) {
 }
 export function batchStatic(root, options) {
   const noAtlas = new URLSearchParams(location.search).get('diagatlas') === '0';
+  if (new URLSearchParams(location.search).get('diagcanvasupload') === 'pixels') {
+    installCanvasPixelUploads(window.__ctx.renderer.getContext(), detail => {
+      if (!document.body.classList.contains('loaded')) dispatchEvent(new CustomEvent('piter-diagnostic-canvas-upload', { detail }));
+    });
+    phase('canvas-upload-mode', 'end', { mode: 'ImageData' });
+  }
   if (new URLSearchParams(location.search).get('diagground') === 'plain') {
     phase('plain-ground', 'start');
     phase('plain-ground', 'end', plainGround(root, window.__ctx.THREE));

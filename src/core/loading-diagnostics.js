@@ -33,11 +33,11 @@
     const raw = localStorage.getItem(key + ':draw');
     if (!raw || raw.length > 12000) return;
     const checkpoint = JSON.parse(raw);
-    if (!Number.isInteger(checkpoint?.draw?.number)) return;
     for (const r of [saved, previous]) if (r?.id === checkpoint.runId) {
-      r.lastColourDraw = checkpoint.draw;
+      if (Number.isInteger(checkpoint?.draw?.number)) r.lastColourDraw = checkpoint.draw;
       if (checkpoint.groundGL) r.lastGroundGL = checkpoint.groundGL;
       if ('colourGL' in checkpoint) r.lastColourGL = checkpoint.colourGL;
+      if (checkpoint.canvasUpload) r.canvasUpload = checkpoint.canvasUpload;
     }
   });
   const report = () => selected === 'previous' ? previous : (run || saved);
@@ -58,6 +58,14 @@
     try { localStorage.setItem(key, JSON.stringify({ schema: 1, current: run, previous })); }
     catch { storageError = 'Storage is unavailable or full. This report cannot survive a reload; copy it now.'; }
   }
+  function persistDrawCheckpoint() {
+    if (run) safe(() => localStorage.setItem(key + ':draw', JSON.stringify({ runId: run.id,
+      draw: run.lastColourDraw, groundGL: run.lastGroundGL, colourGL: run.lastColourGL, canvasUpload: run.canvasUpload })));
+  }
+  addEventListener('piter-diagnostic-canvas-upload', e => {
+    if (!run) return;
+    run.canvasUpload = e.detail; persistDrawCheckpoint();
+  });
   function event(kind, detail = '') {
     if (!run) return;
     run.events.push({ ms: Math.round(performance.now() - run.startMs), kind, detail: short(detail) });
@@ -234,8 +242,7 @@
     let renders = 0;
     const draw = renderer.renderBufferDirect;
     let draws = 0, groundDraw = false, colourDraw = false, colourCalls = 0;
-    const checkpoint = () => safe(() => localStorage.setItem(key + ':draw', JSON.stringify({ runId: run.id,
-      draw: run.lastColourDraw, groundGL: run.lastGroundGL, colourGL: run.lastColourGL })));
+    const checkpoint = persistDrawCheckpoint;
     if (run?.options.diagdrawtrace === '1') {
       const gl = renderer.getContext();
       for (const name of ['useProgram', 'texImage2D', 'texSubImage2D', 'texStorage2D', 'generateMipmap', 'drawElements', 'drawArrays', 'drawElementsInstanced', 'drawArraysInstanced']) {
@@ -245,7 +252,7 @@
           if (!colourDraw) return Reflect.apply(original, this, args);
           const meta = args.map(v => v === null || ['number', 'string', 'boolean'].includes(typeof v) ? v
             : ArrayBuffer.isView(v) ? { type: v.constructor.name, bytes: v.byteLength }
-              : v?.width !== undefined ? { width: v.width, height: v.height } : typeof v);
+              : v?.width !== undefined ? { width: v.width, height: v.height, sourceType: v.constructor?.name, dataBytes: v.data?.byteLength } : typeof v);
           const call = { number: ++colourCalls, draw: draws, call: name, status: 'entered', args: meta };
           run.lastColourGL = call;
           if (groundDraw) run.lastGroundGL = call;
@@ -491,6 +498,7 @@
       <label><input type="checkbox" id="diag-drawtrace"> Trace first colour draws (adds diagnostic overhead)</label>
       <label><input type="checkbox" id="diag-ground"> Plain ground material (comparison; removes procedural surface detail)</label>
       <label><input type="checkbox" id="diag-signatlas"> Limit road-sign atlas to 1024px (comparison; blurrier signs)</label>
+      <label><input type="checkbox" id="diag-canvasupload"> Upload canvas pixels through ImageData (comparison; extra CPU copying)</label>
       <button id="diag-start" type="button">Start test</button></div>
       <h2 id="diag-status" style="font-size:17px"></h2>
       <div class="diag-row"><button id="diag-current" type="button">Latest report</button><button id="diag-previous" type="button">Previous report</button><button id="diag-copy" type="button">Copy report</button><button id="diag-download" type="button">Download report</button><button id="diag-show" type="button">Show report text</button><button id="diag-hide" type="button">Show game</button></div>
@@ -509,6 +517,7 @@
       $('texture').disabled = $('drawtrace').disabled = !(scene || staged);
       $('ground').disabled = !(scene || staged);
       $('signatlas').disabled = !(scene || staged);
+      $('canvasupload').disabled = !(scene || staged);
       $('description').textContent = $('test').value === 'scene-js-gzip' ? 'Full scene with staged decoding. Download each compressed file, then inflate with JavaScript in the worker, bypassing native DecompressionStream.' : staged ? 'Full scene: defer baked requests until riverfront construction and its early compilation finish, then decode one file at a time.' : scene ? 'Build and render the full scene.' : $('test').value === 'riverfront'
         ? 'Import and build the first riverfront module without WebGL or baked-asset workers. If it freezes, reopen this link for the last phase.'
         : 'Test the real worker and seven startup assets without building the scene or using WebGL. Stops after 90 seconds if no result.';
@@ -521,6 +530,7 @@
     $('drawtrace').checked = new URLSearchParams(location.search).get('diagdrawtrace') === '1';
     $('ground').checked = new URLSearchParams(location.search).get('diagground') === 'plain';
     $('signatlas').checked = new URLSearchParams(location.search).get('diagsignatlas') === '1024';
+    $('canvasupload').checked = new URLSearchParams(location.search).get('diagcanvasupload') === 'pixels';
     $('test').onchange = changeTest; changeTest();
     toggle.onclick = () => { panel.hidden = false; render(); };
     $('hide').onclick = () => {
@@ -556,6 +566,7 @@
       if ($('drawtrace').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagdrawtrace', '1');
       if ($('ground').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagground', 'plain');
       if ($('signatlas').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagsignatlas', '1024');
+      if ($('canvasupload').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagcanvasupload', 'pixels');
       history.replaceState(null, '', location.pathname + '?' + query);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,

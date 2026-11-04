@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.16.0** (2026-11-04, minor): Add canvas pixel upload comparison with readback and native-call recovery
 - **9.15.0** (2026-11-04, minor): Add shared sign-atlas size comparison and native tracing for all first-colour draws
 - **9.14.0** (2026-11-04, minor): Isolate the iPhone ground draw with plain material and native WebGL checkpoints
 - **9.13.0** (2026-11-04, minor): Add static texture memory reduction and recoverable first-colour draw tracing to phone diagnostics

@@ -121,7 +121,8 @@ try {
   await page.evaluate((key) => {
     const id = JSON.parse(localStorage.getItem(key)).current.id;
     localStorage.setItem(key + ':draw', JSON.stringify({ runId: id, draw: { number: 7, status: 'entered', object: 'crash checkpoint fixture' },
-      colourGL: { draw: 7, call: 'texSubImage2D', status: 'entered' } }));
+      colourGL: { draw: 7, call: 'texSubImage2D', status: 'entered' },
+      canvasUpload: { number: 5, phase: 'upload:entered', width: 512, height: 96 } }));
   }, key);
   await page.reload({ waitUntil: 'domcontentloaded' });
   assert.equal(t.mainRequests(), 1, 'reload pauses before importing the game again');
@@ -147,6 +148,7 @@ try {
   assert.equal(recoveredExport.report.lastColourDraw.number, 7);
   assert.equal(recoveredExport.report.lastColourGL.call, 'texSubImage2D');
   assert.equal(recoveredExport.report.lastColourGL.status, 'entered');
+  assert.equal(recoveredExport.report.canvasUpload.phase, 'upload:entered');
   await page.screenshot({ path: path.join(out, 'recovered-report.png') });
   await page.select('#diag-worker', '0');
   await page.click('#diag-compile');
@@ -311,6 +313,59 @@ try {
   assert.deepEqual(cap.errors, []);
   await cap.context.close();
 
+  // Verify the changed TexImageSource path against native canvas upload,
+  // including orientation, alpha, subimage offsets and live canvas updates.
+  const pixelTest = await open();
+  const pixels = await pixelTest.page.evaluate(async () => {
+    const { installCanvasPixelUploads } = await import('./src/core/loading-finalize-diagnostics.js');
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 2;
+    const ctx = canvas.getContext('2d');
+    const paint = () => ctx.putImageData(new ImageData(new Uint8ClampedArray([
+      255,0,0,255, 0,255,0,128, 0,0,255,255, 255,255,255,0
+    ]), 2, 2), 0, 0);
+    paint();
+    const output = document.createElement('canvas'), gl = output.getContext('webgl2');
+    const texture = gl.createTexture(), fb = gl.createFramebuffer();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    const records = [];
+    const upload = (sub, source) => {
+      if (sub) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4, 4, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      } else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      const data = new Uint8Array(16); gl.readPixels(sub ? 1 : 0, sub ? 1 : 0, 2, 2, gl.RGBA, gl.UNSIGNED_BYTE, data);
+      return Array.from(data);
+    };
+    let matches = 0;
+    for (const flip of [false, true]) for (const premultiply of [false, true]) for (const sub of [false, true]) {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flip); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, premultiply);
+      const direct = upload(sub, canvas);
+      const restore = installCanvasPixelUploads(gl, r => records.push(r));
+      const compared = upload(sub, canvas); restore();
+      if (JSON.stringify(direct) === JSON.stringify(compared)) matches++;
+    }
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    const restore = installCanvasPixelUploads(gl, r => records.push(r));
+    ctx.fillStyle = '#00ffff'; ctx.fillRect(0, 0, 2, 2);
+    const updated = upload(true, canvas);
+    const count = records.length; upload(false, ctx.getImageData(0, 0, 2, 2));
+    const passThrough = count === records.length;
+    restore();
+    const error = gl.getError(); gl.deleteFramebuffer(fb); gl.deleteTexture(texture); gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return { matches, updated, passThrough, error, phases: [...new Set(records.map(r => r.phase))], width: canvas.width };
+  });
+  assert.equal(pixels.matches, 8, 'pixel conversion preserves native orientation, alpha and subimage results');
+  assert.deepEqual(pixels.updated, Array(4).fill([0,255,255,255]).flat());
+  assert(pixels.passThrough);
+  assert.equal(pixels.error, 0);
+  assert.equal(pixels.width, 2, 'source canvas retained for live painters');
+  assert.deepEqual(pixels.phases, ['read:entered', 'upload:entered', 'upload:returned']);
+  await pixelTest.context.close();
+
   if (process.argv.includes('--full')) {
     const real = await open({ full: true });
     await real.page.setViewport({ width: 956, height: 440, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
@@ -320,6 +375,7 @@ try {
     const textureCap = process.argv.includes('--texture-cap'), drawTrace = process.argv.includes('--draw-trace');
     const plainGround = process.argv.includes('--plain-ground');
     const signAtlas = process.argv.includes('--sign-atlas');
+    const canvasPixels = process.argv.includes('--canvas-pixels');
     const staged = process.argv.includes('--staged') || jsGzip;
     if (staged) await real.page.select('#diag-test', jsGzip ? 'scene-js-gzip' : 'scene-staged');
     if (noShadows) await real.page.click('#diag-shadows');
@@ -328,21 +384,27 @@ try {
     if (drawTrace) await real.page.click('#diag-drawtrace');
     if (plainGround) await real.page.click('#diag-ground');
     if (signAtlas) await real.page.click('#diag-signatlas');
+    if (canvasPixels) await real.page.click('#diag-canvasupload');
     // Capture all worker events before the bounded on-phone journal rolls over.
     const workerEvents = [];
     const groundCheckpoints = [];
     const signCheckpoints = [];
+    const canvasCheckpoints = [];
     await real.page.exposeFunction('recordWorkerEvent', entry => workerEvents.push(entry));
     await real.page.exposeFunction('recordGroundCheckpoint', entry => groundCheckpoints.push(entry));
     await real.page.exposeFunction('recordSignCheckpoint', entry => signCheckpoints.push(entry));
+    await real.page.exposeFunction('recordCanvasCheckpoint', entry => canvasCheckpoints.push(entry));
     await real.page.evaluate(() => {
-      const persist = Storage.prototype.setItem; let last = '', gotGround = false, gotSign = false;
+      const persist = Storage.prototype.setItem; let last = '', gotGround = false, gotSign = false, gotCanvas = false;
       Storage.prototype.setItem = function (key, value) {
         if (key.startsWith('n4spb.loading-report.v1:')) {
           const payload = JSON.parse(value);
           if (!gotGround && payload.draw?.object === 'env-ground') { gotGround = true; void window.recordGroundCheckpoint(payload.draw); }
           if (!gotSign && payload.draw?.material === 'pt-sign-atlas' && payload.colourGL?.status === 'returned' && payload.colourGL.call.startsWith('draw')) {
             gotSign = true; void window.recordSignCheckpoint(payload);
+          }
+          if (!gotCanvas && payload.colourGL?.call === 'texSubImage2D' && payload.colourGL.status === 'returned' && payload.colourGL.args.at(-1)?.sourceType === 'ImageData') {
+            gotCanvas = true; void window.recordCanvasCheckpoint(payload);
           }
           const entry = JSON.parse(value)?.current?.events?.at(-1), id = JSON.stringify(entry);
           if (entry && id !== last) { last = id; if (/^(worker|gpu|build):/.test(entry.kind)) void window.recordWorkerEvent(entry); }
@@ -404,6 +466,12 @@ try {
       assert(data.current.signAtlasCap.changed > 0);
       assert(data.current.signAtlasCap.rgba8BytesAvoidedEstimate >= 62914560);
     }
+    if (canvasPixels) {
+      assert.equal(data.current.options.diagcanvasupload, 'pixels');
+      assert.equal(data.current.canvasUpload.phase, 'upload:returned');
+      assert(data.current.canvasUpload.number > 100, 'conversion covers full-scene canvas uploads');
+      if (drawTrace) assert(canvasCheckpoints.length > 0, 'native upload received ImageData');
+    }
     if (plainGround) {
       assert(data.current.plainGround.meshes > 0);
       assert.equal(data.current.options.diagground, 'plain');
@@ -420,6 +488,7 @@ try {
     fs.writeFileSync(path.join(out, 'full-scene-events.json'), JSON.stringify(workerEvents, null, 2));
     fs.writeFileSync(path.join(out, 'ground-checkpoints.json'), JSON.stringify(groundCheckpoints, null, 2));
     fs.writeFileSync(path.join(out, 'sign-checkpoints.json'), JSON.stringify(signCheckpoints, null, 2));
+    fs.writeFileSync(path.join(out, 'canvas-checkpoints.json'), JSON.stringify(canvasCheckpoints, null, 2));
     if (staged) {
       for (const phase of ['fetch', 'headers', ...(jsGzip ? ['download-compressed', 'import-js-inflater', 'inflate-js'] : ['decompress']), 'decode', 'transfer', 'transferred'])
         assert(workerEvents.some(e => e.kind === 'worker:phase' && e.detail.startsWith(phase + ' ')), `traced worker reports ${phase}`);
@@ -445,6 +514,7 @@ try {
     assert.equal(await real.page.$eval('#diag-drawtrace', e => e.checked), drawTrace);
     assert.equal(await real.page.$eval('#diag-ground', e => e.checked), plainGround);
     assert.equal(await real.page.$eval('#diag-signatlas', e => e.checked), signAtlas);
+    assert.equal(await real.page.$eval('#diag-canvasupload', e => e.checked), canvasPixels);
     assert.equal(real.mainRequests(), 1, 'full-scene report survives reload without auto-start');
     assert.equal((await read(real.page)).current.id, data.current.id);
     await real.context.close();

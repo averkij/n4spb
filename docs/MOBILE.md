@@ -691,6 +691,52 @@ its canvas estimate stayed at 226,531,072 bytes. Generated-page/closure checks
 passed and all 16 live bakes remained fresh. Neither desktop run establishes
 that the iPhone crash is fixed.
 
+#### Canvas-source upload isolation (9.16.0)
+
+The 9.15.0 phone run still failed after 100%, but the last colour draw moved to
+166, `rail-strela-decal` / `rail-decal-strela`. The native checkpoint now records
+`texSubImage2D` entered, without a return, for a 512x96 RGBA/UNSIGNED_BYTE canvas
+source (196,608 base pixel bytes). The sign cap was applied and the reachable
+canvas estimate was 163,616,512 bytes. Geometry stayed about 589 MB; that is not
+total process memory, and cumulative decoded bytes are not a resident heap
+measurement. All asset replies and finalization steps had completed. A small
+texture failing later after reducing a large one supports investigating total
+resource pressure and the canvas upload path; it does not establish a defective
+train decal, a specific browser bug, or a measured iOS memory limit.
+
+`diagcanvasupload=pixels` wraps this diagnostic renderer's `texImage2D` and
+`texSubImage2D` after module construction, before the warm-up frame. For 2D
+HTMLCanvasElement sources only, it reads fresh `ImageData` and passes that to
+the same native overload. WebGL accepts both source types (see the
+[Khronos WebGL 2 reference](https://www.khronos.org/files/webgl20-reference-guide.pdf)).
+Dimensions, pixel-store flags, offsets, filtering, mipmaps, texture objects and
+geometry remain unchanged. Typed-array/DataTexture and other source types pass
+through. Original canvases stay intact and every update reads their current
+pixels, so animated painters are not frozen. This adds CPU work and transient
+pixel copies; it is not a claim of lower overall memory usage. Read failures are
+recorded and propagated, not silently replaced with the original upload path.
+
+The compact recoverable `canvasUpload` checkpoint separates `read:entered`,
+`upload:entered` and `upload:returned`, records dimensions and cumulative bytes
+read (not resident bytes), and stores no pixel payloads. Native call metadata
+now identifies the source type and byte length. The checkpoint can be recovered
+even if no colour draw was recorded yet. Existing first-colour call tracing
+still records whether the native function returned; GPU completion remains
+asynchronous.
+
+Phone comparison:
+`diagnostics.html?test=scene-js-gzip&diagshadows=0&diagatlas=0&diagtexture=256&diagdrawtrace=1&diagground=plain&diagsignatlas=1024&diagcanvasupload=pixels`.
+The harness adds `--canvas-pixels`. Eight real WebGL tests compare native canvas
+and ImageData uploads with flip-Y/premultiplication both on/off and both full
+and offset subimage uploads. It also checks live repainting, ImageData
+pass-through and recovered upload phases. All passed in desktop Edge. The full
+scene reached loaded/playing with 176 converted uploads and 27,294,720 cumulative
+pixel bytes read; geometry and canvas inventory matched the previous comparison.
+The playing screenshot was reviewed. Actual iPhone success remains unverified.
+The original canvas-source full-scene comparison also passed with the new
+recorder. Generated-page and closure checks passed; all 16 live bakes stayed
+fresh. The ordinary game entry and its bake products are unchanged.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion
