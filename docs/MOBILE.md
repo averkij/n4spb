@@ -983,7 +983,45 @@ evidence of where execution stopped, not proof of the cause. Storage can be
 unavailable or lost, and Safari does not expose the Chromium heap measurements.
 The recorder reports storage failures and still allows an in-memory export.
 Logging adds some overhead, so diagnostic timings are not benchmark results.
-Area transitions navigate to the ordinary game pages and end this recording.
+Area transitions in this profile navigate to the destination diagnostic page;
+each page starts its own recording and retains the loading profile.
+
+### Device checkpoint — 2026-11-05
+
+The owner's iPhone screenshots confirm walking at Vosstaniya Square, entering
+the purple Zhiguli and driving along Nevsky Prospekt (v9.19.2). Startup and an
+area transition succeeded with the following local diagnostic query:
+
+```text
+?test=scene-js-gzip&diagshadows=0&diagatlas=0&diagtexture=256&diagground=plain&diagsignatlas=1024&diagcanvasupload=pixels&diaguploader=staged&diagpack=1
+```
+
+v9.19.3 deployed this profile automatically for mobile visitors to GitHub Pages.
+Both GitHub verification jobs and deployment passed. The live normal entry was
+checked with an iPhone user agent: one main-module load, automatic profile
+selection, hidden diagnostic panel and a Report button. Local integrated testing
+covered play, streamed geometry and Palace → Smolny → Palace. Browser emulation
+does not establish iPhone stability.
+
+Outstanding work, deliberately separate from the HUD redesign:
+
+- A crash during walking remains unresolved. Capture the next phone report;
+  compare the latest region attachment, pending asset and released-byte counters.
+  The last saved operation alone does not identify the cause of termination.
+- Geometry distortion and reduced texture/ground quality remain visible. Restore
+  quality incrementally against actual device memory and walking stability.
+- Regions currently release eligible CPU arrays but have no hard GPU residency
+  limit. Long-distance travel needs a bounded, tested eviction strategy.
+- Actual-device touch ergonomics, thermal behavior, frame pacing and long trips
+  still need verification in Safari/Chrome on iPhone and on Android.
+
+The supplied HUD references expose a separate usability problem: the large
+central speedometer covers the vehicle; map, street label and vehicle toast form
+an oversized left stack; controls have equal visual weight; and the diagnostic
+badge covers top-right actions. The next UI pass should keep the road and car
+clear, consolidate navigation information, anchor controls within safe areas,
+and move occasional actions into the existing menu. Keep the confirmed memory
+profile unchanged while testing that redesign.
 
 ### Test from a phone on the local network, without pushing
 
