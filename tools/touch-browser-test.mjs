@@ -20,7 +20,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const BASE = `http://127.0.0.1:${server.address().port}/index.html`;
-const FAST = 'baked=0&only=drive&noroof=1&gate=0&guard=0';
+const FAST = 'baked=0&only=drive&noroof=1&gate=0&guard=0&teleports=1'; // explicit development mode: fixtures exercise the otherwise disabled Places menu
 const EDGE = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find((p) => fs.existsSync(p));
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-sandbox', '--no-first-run', '--disable-extensions'] });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -69,7 +69,19 @@ const snap = (page) => page.evaluate(() => {
 const centre = (page, id) => page.evaluate((id) => { const b = __tc.btns[id].getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, w: b.width, h: b.height, hidden: __tc.btns[id].hidden }; }, id);
 const fwd = (yaw) => [-Math.sin(yaw), -Math.cos(yaw)];
 const wrapPi = (d) => ((d + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-async function tapBtn(page, id) { const c = await centre(page, id); await page.touchscreen.tap(c.x, c.y); return c; }
+async function tapBtn(page, id) {
+  const secondary = { horn: 'Horn', auto: 'Auto gas:', repair: 'Repair car' };
+  if (secondary[id]) {
+    await tapBtn(page, 'menu'); await sleep(450);
+    const c = await page.evaluate((text) => {
+      const b = [...document.querySelectorAll('.tc-menu button')].find(b => b.textContent.includes(text));
+      if (!b) throw new Error('Missing menu action: ' + text);
+      b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }, secondary[id]);
+    await page.touchscreen.tap(c.x, c.y); await sleep(100); return c;
+  }
+  const c = await centre(page, id); await page.touchscreen.tap(c.x, c.y); return c;
+}
 async function holdBtn(page, id) { const c = await centre(page, id); return page.touchscreen.touchStart(c.x, c.y); }
 
 /** the geometry audit of the visible touch buttons against each other and the HUD (page coordinates) */
@@ -151,7 +163,7 @@ SCENARIOS.mobile = async () => {
     check('manifest: fullscreen + landscape, icons 192 / 512 / maskable', !!man && man.display === 'fullscreen' && man.orientation === 'landscape' && man.icons.some((i) => i.sizes === '192x192') && man.icons.some((i) => i.sizes === '512x512') && man.icons.some((i) => i.purpose === 'maskable'), man);
     const iconsOk = await page.evaluate(async () => { const r = []; for (const u of ['assets/icons/icon-192.png', 'assets/icons/icon-512.png', 'assets/icons/icon-maskable-512.png', 'assets/icons/apple-touch-icon.png']) r.push((await fetch(u)).ok); return r; });
     check('icons: all four PNGs are served', iconsOk.every(Boolean), iconsOk);
-    check('walk layout: only the walk buttons are visible (jump run fly menu sound), no drive buttons', await page.evaluate(() => Object.entries(__tc.btns).filter(([, b]) => !b.hidden).map(([k]) => k).sort().join(',') === 'fly,jump,menu,mute,run'), await page.evaluate(() => Object.entries(__tc.btns).filter(([, b]) => !b.hidden).map(([k]) => k).sort().join(',')));
+    check('walk layout: jump run fly menu; sound lives in Menu', await page.evaluate(() => Object.entries(__tc.btns).filter(([, b]) => !b.hidden).map(([k]) => k).sort().join(',') === 'fly,jump,menu,run'), await page.evaluate(() => Object.entries(__tc.btns).filter(([, b]) => !b.hidden).map(([k]) => k).sort().join(',')));
     await sleep(6800);      // the coach mark fades
     await shot(page, 'walk-844x390');
     auditChecks('walk 844x390', await layoutAudit(page));
@@ -219,7 +231,7 @@ SCENARIOS.mobile = async () => {
     check('RUN latch: off again, ShiftLeft released', !st.keys.includes('ShiftLeft'), st.keys);
     await sleep(500);
     await tapBtn(page, 'fly'); await sleep(1600); st = await snap(page);
-    check('FLY: the walker takes off, the layout switches to the flight buttons (up down boost fly)', st.fly && st.mode === 'fly' && await page.evaluate(() => Object.entries(__tc.btns).filter(([, b]) => !b.hidden).map(([k]) => k).sort().join(',') === 'boost,down,fly,menu,mute,up'), { fly: st.fly, mode: st.mode });
+    check('FLY: the walker takes off, the layout switches to the flight buttons (up down boost fly)', st.fly && st.mode === 'fly' && await page.evaluate(() => Object.entries(__tc.btns).filter(([, b]) => !b.hidden).map(([k]) => k).sort().join(',') === 'boost,down,fly,menu,up'), { fly: st.fly, mode: st.mode });
     await shot(page, 'fly-844x390');
     auditChecks('fly 844x390', await layoutAudit(page));
     a0 = await snap(page); const hu = await holdBtn(page, 'up'); await sleep(250); const mid = await snap(page); await sleep(750); a1 = await snap(page); await hu.end(); await sleep(150); const after = await snap(page);
@@ -240,7 +252,7 @@ SCENARIOS.mobile = async () => {
     check('USE: tap -> driving the car, drive layout', st.drive && st.mode === 'drive', st);
     // walk away from the car: USE disappears when nothing is in reach
     const driveBtns = await page.evaluate(() => Object.entries(__tc.btns).filter(([, b]) => !b.hidden).map(([k]) => k).sort().join(','));
-    check('drive layout: gas brake nitro hand + cam horn auto + exit menu mute (no hop for the coupe, no repair when pristine, no jump)', driveBtns === 'auto,brake,cam,exit,gas,hand,horn,menu,mute,nitro', driveBtns);
+    check('drive layout: compact pedals and actions; occasional controls live in Menu', driveBtns === 'brake,cam,exit,gas,hand,menu,nitro', driveBtns);
     await sleep(6500);
     await shot(page, 'drive-844x390');
     auditChecks('drive 844x390', await layoutAudit(page));
@@ -307,11 +319,11 @@ SCENARIOS.mobile = async () => {
     st = await snap(page); check('HOP / FLIP are presses, not holds: no KeyX / KeyC left in player.keys, nothing held', !st.keys.includes('KeyX') && !st.keys.includes('KeyC') && st.held.length === 0, { keys: st.keys, held: st.held });
     await page.evaluate(() => { delete __drive.vehicle.def.hop; });
     await page.evaluate(() => { const d = __drive; d.teleport(d.car.x, d.car.z, d.car.yaw); d.damage.hit({ type: 'hit', v: 14, localX: 0, localZ: 2, localNX: 0, localNZ: -1 }); }); await sleep(400);
-    check('REPAIR (FIX) appears when the car is damaged and stopped', (await centre(page, 'repair')).hidden === false);
+    check('damaged car keeps repair in the menu, away from driving controls', await page.evaluate(() => !__tc.btns.repair && __drive.car.damage > 0));
     await shot(page, 'drive-repair-844x390');
     auditChecks('drive + FIX 844x390', await layoutAudit(page));
     await tapBtn(page, 'repair'); await sleep(250); st = await snap(page);
-    check('REPAIR: the car is repaired and the button goes away', st.car.damage === 0 && (await page.evaluate(() => __drive.damage.amount)) === 0 && (await centre(page, 'repair')).hidden === true, st.car.damage);
+    check('menu REPAIR: the car is repaired and returns to play', st.car.damage === 0 && (await page.evaluate(() => __drive.damage.amount === 0 && !__ctx.ui.open)), st.car.damage);
     await tapBtn(page, 'auto'); await sleep(1300); st = await snap(page);
     check(`AUTO gas: the car pulls away without the pedal (${st.car.speed.toFixed(0)} km/h), setting saved`, st.car.speed > 20 && await page.evaluate(() => JSON.parse(localStorage.getItem('piter.touch')).autoGas === true), st.car);
     // ---- EXIT is refused at speed, works at a standstill
@@ -330,7 +342,7 @@ SCENARIOS.mobile = async () => {
         check('Roadster drive layout: HOP and FLIP both appear (no def hack)', vis.join() === 'false,false', vis);
         await shot(page, 'drive-roadster-844x390'); auditChecks('drive Roadster 844x390 (HOP + FLIP)', await layoutAudit(page));
         const hc = await centre(page, 'hop'), fc = await centre(page, 'flip');
-        check(`HOP (${hc.w.toFixed(0)} px) and FLIP (${fc.w.toFixed(0)} px) are at least 44 px, FLIP the bigger one`, hc.w >= 44 && fc.w >= hc.w + 4, { hop: hc.w, flip: fc.w });
+        check(`HOP (${hc.w.toFixed(0)} px) and FLIP (${fc.w.toFixed(0)} px) keep fingertip-sized targets`, hc.w >= 44 && fc.w >= 44, { hop: hc.w, flip: fc.w });
         await page.evaluate(() => { __drive.car.boost = 1; });
         const gas = await holdBtn(page, 'gas'); await sleep(900);                           // finger 1: the GAS pedal stays down
         const K = () => page.evaluate(() => { const c = __drive.car; return { air: !!c.air, h: +c.h.toFixed(2), vy: +c.vy.toFixed(1), barrel: !!c.barrel, flipOn: !!c.flipOn, flip: c.flip, boost: +c.boost.toFixed(3), held: __tc.held.size, keys: [...__ctx.playerObj.keys].filter((x) => x === 'KeyX' || x === 'KeyC'), dimH: __tc.btns.hop.classList.contains('dim'), dimF: __tc.btns.flip.classList.contains('dim') }; });
@@ -410,7 +422,7 @@ SCENARIOS.layout = async () => {
   try {
     await load(page, FAST + '&cam=560,219.9,-90,0');
     await start(page); await sleep(6800);
-    for (const [w, h] of [[915, 412], [667, 375], [1180, 820], [820, 1180], [360, 640]]) {
+    for (const [w, h] of [[915, 412], [667, 375], [568, 320], [1180, 820], [820, 1180], [360, 640]]) {
       await page.setViewport({ width: w, height: h, deviceScaleFactor: 1, isMobile: true, hasTouch: true, isLandscape: w > h }); await sleep(450);
       auditChecks(`walk ${w}x${h}`, await layoutAudit(page));
       await page.evaluate(() => { __drive.enter('coupe'); }); await sleep(900);

@@ -88,7 +88,7 @@
     ui.pending.textContent = entries.length ? 'Waiting: ' + entries.slice(-4).map(p => p.asset).join('\n') : 'No recorded pending requests.';
     ui.tail.textContent = (r?.events || []).slice(-6).map(e => `${(e.ms / 1000).toFixed(1)}s ${e.kind}: ${e.detail}`).join('\n');
     ui.previous.disabled = !previous;
-    ui.toggle.textContent = mobileEntry ? 'Report' : `Diagnostics v${diagnosticsVersion} · ${run ? run.phase || run.status : 'saved reports'}`;
+    ui.toggle.textContent = mobileEntry || document.documentElement.classList.contains('tc') ? 'Report' : `Diagnostics v${diagnosticsVersion} · ${run ? run.phase || run.status : 'saved reports'}`;
   }
   function request(kind, asset, rawBytes) {
     if (!run) return null;

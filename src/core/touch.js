@@ -17,68 +17,85 @@ html.tc canvas#scene { touch-action: none; }
 html.tc select, html.tc input, html.tc button { font-size: 16px; }
 html.tc .chip, html.tc #quality, html.tc #places { min-height: 44px; font-size: 16px; }      /* (the chips are replaced by the menu below, but a select under 16 px zooms iOS on focus) */
 html.tc #places, html.tc #fly, html.tc #quality, html.tc #mute, html.tc #interact, html.tc #help, html.tc #coords { display: none !important; }
-html.tc #corner { left: 50%; right: auto; flex-wrap: nowrap; transform: translateX(-50%); top: max(20px, calc(var(--tc-t, 0px) + 8px)); }
-html.tc #toast { left: max(16px, var(--tc-l, 0px)); top: max(12px, var(--tc-t, 0px)); max-width: calc(50vw - 64px - max(16px, var(--tc-l, 0px))); }
-html.tc #toast .sign { min-width: 0; padding: 8px 14px 8px 12px; }
-html.tc #toast .t-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-html.tc { --mm: calc(132px * var(--tc-u, 1)); }
-html.tc body.driving { --mm: calc(108px * var(--tc-u, 1)); }
-html.tc #minimap { left: max(16px, var(--tc-l, 0px)); top: calc(max(12px, var(--tc-t, 0px)) + 52px * var(--tc-u, 1)); bottom: auto; }
-html.tc #minimap .mm-street { bottom: auto; top: calc(100% + 8px); max-width: min(240px, 40vw); }
+html.tc { --hud-surface: rgba(17,30,48,.82); --hud-ink: #f4f0e5; --hud-line: rgba(244,240,229,.32); --hud-accent: #efc76a; --hud-radius: 12px; --hud-x: max(16px, var(--tc-l, 0px)); --hud-y: max(12px, var(--tc-t, 0px)); --mm: 92px; }
+html.tc #corner { left: 50%; right: auto; flex-wrap: nowrap; transform: translateX(-50%); top: var(--hud-y); }
+html.tc #clock { min-height: 32px; height: 32px; box-sizing: border-box; padding: 6px 12px; border: 1px solid var(--hud-line); border-radius: 20px; background: var(--hud-surface); color: var(--hud-ink); font-size: 14px; line-height: 18px; box-shadow: none; }
+html.tc #toast { left: var(--hud-x); top: calc(var(--hud-y) + 112px); max-width: min(310px, calc(100vw - 210px)); transform: none; }
+html.tc #toast .sign { min-width: 0; padding: 8px 12px; border-radius: var(--hud-radius); background: var(--hud-surface); color: var(--hud-ink); border-left: 3px solid var(--hud-accent); box-shadow: none; }
+html.tc #toast .t-name { font-size: 12px; color: var(--hud-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+html.tc #toast .t-en { display: none; }
+html.tc.tc-short #toast { left: 50%; transform: translateX(-50%); top: calc(var(--hud-y) + 100px); max-width: min(260px, calc(100vw - 330px)); }
+html.tc #minimap { left: var(--hud-x); top: var(--hud-y); bottom: auto; }
+html.tc #minimap canvas { box-shadow: 0 0 0 2px rgba(244,240,229,.75), 0 2px 8px rgba(0,0,0,.2); }
+html.tc #minimap .mm-street { bottom: auto; left: calc(100% + 10px); top: 0; width: max-content; max-width: min(190px, calc(50vw - var(--hud-x) - 146px)); border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface); color: var(--hud-ink); padding: 8px 10px; box-shadow: none; }
+html.tc #minimap .mm-street b { display: block; font-size: 12px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; }
+html.tc #minimap .mm-street i { display: block; margin: 3px 0 0; font-size: 10px; color: #ccd3dc; }
+html.tc #minimap .mm-n { width: 18px; height: 18px; margin: -9px 0 0 -9px; font-size: 10px; line-height: 18px; box-shadow: 0 0 0 1px var(--hud-ink); }
 html.tc #stats { bottom: auto; right: auto; left: 50%; top: calc(max(20px, var(--tc-t, 0px) + 8px) + 40px); transform: translateX(-50%); }
 html.tc .panel-x { min-height: 44px; padding: 0 22px; font-size: 14px; }
 html.tc #panel .panel-body { touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; -webkit-user-select: none; user-select: none; }
 html.tc #panel { padding: max(12px, var(--tc-t, 0px)) max(12px, var(--tc-r, 0px)) max(12px, var(--tc-b, 0px)) max(12px, var(--tc-l, 0px)); }
 html.tc #panel .panel-card { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
-/* the driving HUD (drive/hud.js) on a phone: speedometer small at the bottom centre, no nitro bar (the NITRO button has the ring), no key hints, none of the old corner buttons */
+/* Compact speed and gear beside navigation; the NITRO button carries its own fuel bar. */
 html.tc #drive .d-touch, html.tc #drive .d-keys, html.tc #drive .d-nitro, html.tc #drive .d-nlab, html.tc #drive .d-condition { display: none !important; }
-html.tc body.driving #drive .d-speedo { left: 50%; right: auto; bottom: max(8px, var(--tc-b, 0px)); transform: translateX(-50%) scale(.5); transform-origin: center bottom; }
+html.tc body.driving #drive .d-speedo { left: calc(var(--hud-x) + var(--mm) + 10px); right: auto; top: calc(var(--hud-y) + 54px); bottom: auto; width: 146px; height: 38px; transform: none; filter: none; display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface); }
+html.tc #drive .d-speedo svg { display: none; }
+html.tc #drive .d-speedo { box-sizing: border-box; }
+html.tc #drive .d-num { position: static; font: 700 24px/1 "Rubik", sans-serif; letter-spacing: -.03em; transform: none; text-shadow: none; color: var(--hud-ink); }
+html.tc #drive .d-unit { position: static; font: 500 10px/1 "Rubik", sans-serif; letter-spacing: 0; color: #ccd3dc; }
+html.tc #drive .d-gear { position: static; margin-left: auto; width: 26px; height: 26px; border: 1px solid var(--hud-line); border-radius: 6px; font: 700 15px/24px "Rubik", sans-serif; transform: none; color: var(--hud-accent); }
+html.tc #drive .d-drift { top: calc(var(--hud-y) + 55px); font-size: 22px; }
+html.tc #drive .d-drift small { font-size: 9px; letter-spacing: .12em; }
+html.tc body.playing #diag-toggle { top: max(12px, var(--tc-t, 0px)); right: calc(max(16px, var(--tc-r, 0px)) + max(44px, 44px * var(--tc-u, 1)) + 12px * var(--tc-u, 1)); width: 64px; height: 44px; padding: 0; border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface); color: var(--hud-ink); font: 600 11px/1 "Rubik", sans-serif; }
 @media (orientation: portrait) {
   html.tc #tc-coach, #tc-coach { top: 24vh !important; }
-  html.tc #toast { top: 33vh; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); }      /* the middle of a portrait screen is the one place no control uses */
-  html.tc #minimap { top: calc(max(12px, var(--tc-t, 0px)) + 104px * var(--tc-u, 1)); }
-  html.tc body.driving #drive .d-speedo { bottom: calc(max(8px, var(--tc-b, 0px)) + 252px); }      /* above the pedals: a portrait phone has no room beside them */
+  html.tc #corner { left: auto; right: max(16px, var(--tc-r, 0px)); top: calc(var(--hud-y) + 120px * var(--tc-u, 1)); transform: none; }
+  html.tc #minimap .mm-street { top: calc(100% + 12px); left: 0; max-width: calc(100vw - 128px); }
+  html.tc body.driving #drive .d-speedo { top: calc(var(--hud-y) + 64px); width: 120px; left: var(--hud-x); }
+  html.tc body.driving { --mm: 56px; }
+  html.tc body.driving #minimap .mm-street { top: calc(100% + 54px); }
+  html.tc #toast { top: calc(var(--hud-y) + 174px); max-width: calc(100vw - 32px); }
 }
 body.noui #tc .tc-b:not([data-id="menu"]), body.noui #tc .tc-ghost, body.noui #tc-label, body.noui #tc-coach { display: none !important; }
 
-#tc { position: fixed; inset: 0; z-index: 4; display: none; pointer-events: none; font-family: "Rubik", "Noto Sans", "Segoe UI", sans-serif; color: #fff; --tc-u: 1; touch-action: none; }
+#tc { position: fixed; inset: 0; z-index: 4; display: none; pointer-events: none; font-family: "Rubik", "Noto Sans", "Segoe UI", sans-serif; color: var(--hud-ink); --tc-u: 1; touch-action: none; }
 body.playing #tc { display: block; }
 #tc * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 #tc .tc-zone { position: absolute; pointer-events: auto; touch-action: none; }
 #tc-look { inset: 0; }
-#tc .tc-b { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; margin: 0; padding: 0; border: 2px solid rgba(255,255,255,.78); border-radius: 50%; background: rgba(12,18,44,.5);
-  color: #fff; font: 700 calc(12px * var(--tc-u)) / 1 "Rubik", "Noto Sans", sans-serif; letter-spacing: .05em; text-shadow: 0 1px 2px rgba(0,0,0,.55); pointer-events: auto; touch-action: none; cursor: pointer; backdrop-filter: blur(2px);
-  box-shadow: 0 3px 12px rgba(0,0,0,.28); transition: background .1s, transform .06s, opacity .15s; overflow: visible; }
+#tc .tc-b { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; margin: 0; padding: 0; border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface);
+  color: var(--hud-ink); font: 700 calc(11px * var(--tc-u)) / 1 "Rubik", "Noto Sans", sans-serif; letter-spacing: .025em; text-shadow: none; pointer-events: auto; touch-action: none; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15); transition: background .1s, opacity .15s; overflow: visible; }
 #tc .tc-b[hidden] { display: none !important; }
-#tc .tc-b.down { background: rgba(242,193,78,.62); transform: scale(.94); }
-#tc .tc-b.on { background: rgba(242,193,78,.7); color: #0f1a44; text-shadow: none; }
-#tc .tc-b.pedal { border-radius: calc(26px * var(--tc-u)); font-size: calc(15px * var(--tc-u)); }
-#tc .tc-b.small { font-size: calc(10.5px * var(--tc-u)); border-width: 1.5px; }
-#tc .tc-b.gas { background: rgba(60,170,90,.52); }
-#tc .tc-b.brake { background: rgba(200,60,60,.5); }
+#tc .tc-b.down, #tc .tc-b.on { background: var(--hud-accent); color: #111e30; border-color: var(--hud-accent); }
+#tc .tc-b.pedal { font-size: calc(12px * var(--tc-u)); }
+#tc .tc-b.small { font-size: calc(10px * var(--tc-u)); }
+#tc .tc-b.gas, #tc .tc-b[data-id="jump"], #tc .tc-b[data-id="up"] { background: var(--hud-accent); color: #111e30; border-color: #f5d991; }
+#tc .tc-b.brake { border-bottom: 3px solid #d8958f; }
 #tc .tc-b.flip { background: rgba(53,150,255,.5); border-color: rgba(190,235,255,.95); } #tc .tc-b.flip.down { background: rgba(120,200,255,.72); }
-#tc .tc-b.gas.down { background: rgba(110,220,130,.7); } #tc .tc-b.brake.down { background: rgba(255,110,110,.7); }
+#tc .tc-b.gas.down { background: #ffe5a4; } #tc .tc-b.brake.down { background: #d8958f; color: #111e30; }
+#tc .tc-b:focus-visible { outline: 3px solid var(--hud-accent); outline-offset: 3px; }
 #tc .tc-b.dim { opacity: .55; }
 #tc .tc-b svg { width: 38%; height: 38%; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 #tc .tc-b.arrow svg { width: 52%; height: 52%; }
 #tc .tc-b span { pointer-events: none; }
-#tc .tc-ring { position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#35b8ff calc(var(--p, 1) * 1turn), rgba(255,255,255,.18) 0); -webkit-mask: radial-gradient(circle, transparent 66%, #000 68%); mask: radial-gradient(circle, transparent 66%, #000 68%); }
-#tc .tc-ring.low { background: conic-gradient(#ff5560 calc(var(--p, 1) * 1turn), rgba(255,255,255,.18) 0); }
+#tc .tc-ring { position: absolute; left: 10px; right: 10px; bottom: 8px; height: 3px; border-radius: 3px; pointer-events: none; background: linear-gradient(to right, #8ccee3 calc(var(--p, 1) * 100%), rgba(255,255,255,.18) 0); }
+#tc .tc-ring.low { background: linear-gradient(to right, #d8958f calc(var(--p, 1) * 100%), rgba(255,255,255,.18) 0); }
 #tc .tc-ghost { position: absolute; width: calc(112px * var(--tc-u)); height: calc(112px * var(--tc-u)); margin: calc(-56px * var(--tc-u)) 0 0 calc(-56px * var(--tc-u)); border-radius: 50%; pointer-events: none; opacity: .0; transition: opacity .2s; }
 #tc .tc-ghost.show { opacity: .9; }
 #tc .tc-ghost .base { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,.7); background: rgba(12,18,44,.28); }
-#tc .tc-ghost.idle { opacity: .28; }
+#tc .tc-ghost.idle { opacity: .45; }
 #tc .tc-ghost.run .base { border-color: #f2c14e; background: rgba(242,193,78,.2); }
 #tc .tc-ghost .knob { position: absolute; left: 50%; top: 50%; width: calc(48px * var(--tc-u)); height: calc(48px * var(--tc-u)); margin: calc(-24px * var(--tc-u)) 0 0 calc(-24px * var(--tc-u)); border-radius: 50%; background: rgba(255,255,255,.75); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
-#tc .tc-ghost.wheel { width: calc(132px * var(--tc-u)); height: calc(132px * var(--tc-u)); margin: calc(-66px * var(--tc-u)) 0 0 calc(-66px * var(--tc-u)); }
+#tc .tc-ghost.wheel { width: calc(112px * var(--tc-u)); height: calc(112px * var(--tc-u)); margin: calc(-56px * var(--tc-u)) 0 0 calc(-56px * var(--tc-u)); }
 #tc .tc-ghost.wheel svg { position: absolute; inset: 0; width: 100%; height: 100%; stroke: #fff; fill: none; stroke-width: 6; filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
 #tc .tc-ghost.wheel .base { background: transparent; border: 0; }
 #tc-label { position: absolute; display: none; max-width: 230px; padding: 7px 12px; border-radius: 10px; background: rgba(247,240,225,.92); color: #1c2a5a; text-align: right; pointer-events: none; font: 700 calc(14px * var(--tc-u)) / 1.2 "Rubik", sans-serif; }
 #tc-label small { display: block; margin-top: 2px; font: 500 calc(11px * var(--tc-u)) / 1.2 "Noto Sans", sans-serif; color: #5b6694; }
-#tc-coach { position: absolute; left: 50%; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); padding: 9px 16px; border-radius: 12px; background: rgba(12,18,44,.78); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s;
+#tc-coach { position: absolute; left: 50%; transform: translateX(-50%); max-width: min(320px, calc(100vw - 32px)); padding: 8px 12px; border-radius: 12px; background: var(--hud-surface); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s;
   font: 500 calc(13px * var(--tc-u)) / 1.35 "Noto Sans", sans-serif; }
 #tc-coach.show { opacity: 1; }
-#tc-rotate { position: absolute; top: 42vh; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 10px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 14px; border-radius: 14px; background: rgba(12,18,44,.86); font: 600 13px/1.3 "Noto Sans", sans-serif; pointer-events: auto; }
+#tc-rotate { position: absolute; top: 32vh; left: 50%; width: min(320px, calc(100vw - 32px)); transform: translateX(-50%); display: none; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 14px; background: var(--hud-surface); font: 500 12px/1.3 "Noto Sans", sans-serif; pointer-events: auto; }
 #tc-rotate.show { display: flex; }
 #tc-rotate button { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; font-size: 20px; cursor: pointer; }
 #tc-rotate svg { flex: 0 0 auto; width: 28px; height: 28px; stroke: #f2c14e; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -95,9 +112,11 @@ body.playing #tc { display: block; }
 .tc-row input[type=checkbox] { width: 28px; height: 28px; justify-self: end; accent-color: #9a6f1f; }
 .tc-places { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
 .tc-places button { font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { #tc *, html.tc #minimap, html.tc #drive .d-drift { transition: none !important; } }
 `;
 
 const SVG = {
+  menu: '<svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/></svg>',
   left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>', right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V6M6 11l6-6 6 6"/></svg>', down: '<svg viewBox="0 0 24 24"><path d="M12 5v13M6 13l6 6 6-6"/></svg>',
   hand: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8.5"/></svg>',
@@ -106,7 +125,7 @@ const SVG = {
 };
 // id -> { label, cls, fire ('down' = at once | 'up' = on release inside the button), aria }
 const BTN = {
-  menu: { label: 'MENU', cls: 'small', fire: 'up', aria: 'Меню · Menu' }, mute: { label: 'SOUND', cls: 'small', fire: 'down', aria: 'Звук · Sound' },
+  menu: { label: '', svg: SVG.menu, cls: 'small', fire: 'up', aria: 'Меню · Menu' }, mute: { label: 'SOUND', cls: 'small', fire: 'down', aria: 'Звук · Sound' },
   jump: { label: 'JUMP', fire: 'down', aria: 'Прыжок · Jump' }, run: { label: 'RUN', fire: 'down', aria: 'Бег · Run' }, fly: { label: 'FLY', fire: 'down', aria: 'Полёт · Fly' },
   interact: { label: '', fire: 'down', aria: 'Действие · Use' },
   up: { label: 'UP', fire: 'hold', aria: 'Вверх · Up' }, down: { label: 'DOWN', fire: 'hold', aria: 'Вниз · Down' }, boost: { label: 'BOOST', fire: 'hold', aria: 'Ускорение · Boost' },
@@ -190,11 +209,12 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
     root.style.setProperty('--tc-u', String(u)); tc.style.setProperty('--tc-u', String(u));
     root.style.setProperty('--tc-l', ins.l + 'px'); root.style.setProperty('--tc-r', ins.r + 'px'); root.style.setProperty('--tc-t', ins.t + 'px'); root.style.setProperty('--tc-b', ins.b + 'px');
     root.classList.toggle('tc-lh', !!settings.leftHanded);
+    root.classList.toggle('tc-short', W > H && (H - ins.t - ins.b) / u < 370);
   }
-  const rectOf = (id, m = mode) => { const a = T.anchors(m, W)[id]; return a ? T.placeRect(a, W, H, u, settings.leftHanded, ins) : null; };
+  const rectOf = (id, m = mode) => { const a = T.anchors(m, W, H - ins.t - ins.b, u)[id]; return a ? T.placeRect(a, W, H, u, settings.leftHanded, ins) : null; };
   function layout() {
     measure();
-    const anc = T.anchors(mode, W), z = T.zones(mode, W, H, settings.leftHanded);
+    const anc = T.anchors(mode, W, H - ins.t - ins.b, u), z = T.zones(mode, W, H, settings.leftHanded);
     Object.assign(look.style, { left: '0px', top: '0px', width: W + 'px', height: H + 'px' });
     Object.assign(stickZone.style, { left: z.stick.x + 'px', top: z.stick.y + 'px', width: z.stick.w + 'px', height: z.stick.h + 'px' });
     for (const id in btns) {
@@ -205,12 +225,14 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
       el.dataset.inMode = '1';
     }
     // ghosts (the faint hint of where the thumb goes) and the wheel gauge
-    const gx = z.stick.x + z.stick.w / 2, gy = z.stick.y + z.stick.h * (mode === 'drive' ? 0.62 : 0.6);
+    const inset = settings.leftHanded ? ins.r : ins.l;
+    const thumbX = Math.max(16, inset) + 60 * u;
+    const gx = settings.leftHanded ? W - thumbX : thumbX, gy = H - Math.max(16, ins.b) - 60 * u;
     for (const g of [stickGhost, wheelGhost]) { g.style.left = gx + 'px'; g.style.top = gy + 'px'; g.dataset.hx = gx; g.dataset.hy = gy; }
     const ay = (n) => `calc(max(12px, ${ins.t}px) + ${n * u}px)`;
-    coach.style.top = ay(52);
-    const lr = rectOf('interact', 'walk');
-    if (lr) { label.style.right = Math.round(W - lr.x + 8) + 'px'; label.style.top = Math.round(lr.y + lr.h / 2 - 22) + 'px'; label.style.left = 'auto'; if (settings.leftHanded) { label.style.right = 'auto'; label.style.left = Math.round(lr.right + 8) + 'px'; label.style.textAlign = 'left'; } else label.style.textAlign = 'right'; }
+    coach.style.top = ay(154);
+    const lr = rectOf('interact', mode === 'ride' ? 'ride' : 'walk');
+    if (lr) { label.style.right = Math.round(W - lr.x) + 'px'; label.style.top = Math.round(lr.y - 56) + 'px'; label.style.left = 'auto'; label.style.maxWidth = Math.min(200, W * .42) + 'px'; if (settings.leftHanded) { label.style.right = 'auto'; label.style.left = Math.round(lr.right - lr.w) + 'px'; label.style.textAlign = 'left'; } else label.style.textAlign = 'right'; }
     refresh(true);
   }
   let rafLayout = 0;
@@ -288,7 +310,9 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
 
   // ---------------------------------------------------------------- pointer roles
   const inRect = (e, el) => { const b = el.getBoundingClientRect(); return e.clientX >= b.left - 6 && e.clientX <= b.right + 6 && e.clientY >= b.top - 6 && e.clientY <= b.bottom + 6; };
-  const active = () => started && !(ctx.ui && ctx.ui.open);
+  const reportPanel = doc.getElementById('load-diag');
+  const inputBlocked = () => !!(ctx.ui && ctx.ui.open) || !!(reportPanel && !reportPanel.hidden);
+  const active = () => started && !inputBlocked();
   function capture(e, el) { try { el.setPointerCapture(e.pointerId); } catch (err) { /* the pointer is already gone */ } }
   tc.addEventListener('pointerdown', (e) => {
     if (!active() || ptrs.has(e.pointerId)) return;
@@ -381,11 +405,13 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
 
   // ---------------------------------------------------------------- per-frame work
   let lastT = performance.now();
+  let blockedLastFrame = false;
   function tick(now) {
     win.requestAnimationFrame(tick);
     const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
     if (!started) { if (body.classList.contains('playing')) { started = true; layout(); showCoach('walk'); } else return; }
-    if (ctx.ui && ctx.ui.open) { if (ptrs.size || held.size) releaseAll(); return; }
+    if (inputBlocked()) { if (!blockedLastFrame || ptrs.size || held.size) releaseAll(); blockedLastFrame = true; return; }
+    blockedLastFrame = false;
     updateMode();
     portraitBanner();
     if (mode === 'drive') driveFrame(dt, now);
@@ -470,6 +496,10 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
     const stats = doc.getElementById('stats');
     const muted = (doc.getElementById('mute') || {}).getAttribute && doc.getElementById('mute').getAttribute('aria-pressed') === 'true';
     const el = h('div', { class: 'tc-menu' },
+      mode === 'drive' ? h('div', { class: 'tc-grid' },
+        act('Сигнал · Horn', () => closePanelThen(() => fire('horn'))),
+        act(settings.autoGas ? 'Автогаз: вкл · Auto gas: on' : 'Автогаз: выкл · Auto gas: off', () => closePanelThen(() => fire('auto'))),
+        act('Починить автомобиль · Repair car', () => closePanelThen(() => fire('repair')))) : null,
       h('div', { class: 'tc-grid' },
         act('Время суток · Time of day', () => closePanelThen(() => tap('KeyT'))),
         act(muted ? 'Звук: выкл · Sound: off' : 'Звук: вкл · Sound: on', () => closePanelThen(() => tap('KeyM'))),
@@ -480,7 +510,7 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
         act('Управление · Controls settings', () => openSettings())),
       isIPhone && !standalone ? h('div', { class: 'tc-row' }, h('label', { html: 'На весь экран: «Поделиться» → «На экран Домой»<small>Full screen on iPhone: Share → Add to Home Screen</small>' })) : null,
       q ? h('h3', { text: 'Качество · Quality' }) : null, q ? qsel : null,
-      h('h3', { text: 'Места · Places' }), list);
+      list.childElementCount ? h('h3', { text: 'Места · Places' }) : null, list);
     ctx.ui.panel(el, { title: 'Меню · Menu', closeLabel: 'Закрыть · Close' }); swallowGhostClick();
   }
   const SPEC_AUTO = { uiScale: 1 };

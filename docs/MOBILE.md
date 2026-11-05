@@ -3,7 +3,13 @@
 Phones and tablets get their own control layer (`src/core/touch.js`), a lighter default tier and a boot that fails *honestly*. Desktop is untouched: everything below keys off one class, `<html class="tc">`,
 which the inline script of `index.html` sets for a coarse pointer (`(pointer: coarse)`) or `?touch=1`; `?touch=0` forces it off. Without the class `createTouchControls()` returns `null`, creates nothing, listens to nothing.
 
-The owner reports that the hosted full scene freezes on an iPhone 16 Pro Max in both Safari and Chrome, on Wi-Fi and cellular (2026-11-04; investigation below). The real-device checklist is still incomplete. `npm run touch` (pure node) and `npm run touchbrowser` (Edge, emulated touch, real multi-touch) do not establish full-scene iPhone compatibility.
+The initial hosted scene froze on an iPhone 16 Pro Max in Safari and Chrome
+(2026-11-04). The owner confirmed startup, walking, driving and an area change
+with the v9.19.2 memory profile; v9.19.3 made it automatic on GitHub Pages. A later
+walking crash and reduced visual quality remain open (device checkpoint below).
+The real-device checklist is still incomplete. `npm run touch` (pure node) and
+`npm run touchbrowser` (Edge, emulated touch, real multi-touch) do not establish
+full-scene iPhone compatibility.
 
 ## 1. What is where
 
@@ -17,7 +23,86 @@ The owner reports that the hosted full scene freezes on an iPhone 16 Pro Max in 
 | `src/main.js` | the wiring (list in section 8) |
 | `tools/touch-logic-test.mjs`, `tools/touch-browser-test.mjs` | the tests |
 
-## 2. Layouts (landscape first; CSS px at UI scale 1, centres / gaps scale with the scale)
+## 2. Current mobile HUD (v9.20.0)
+
+The scene is the primary surface. Keep the vehicle, road ahead and lower centre
+clear. The interface uses translucent navy (`#111e30`), ivory (`#f4f0e5`), warm
+amber (`#efc76a`) for primary movement actions, thin borders and 12 px corners.
+The existing Rubik/Noto Sans fonts remain; no extra font, texture or rendering
+pass is introduced. Controls use solid translucent fills rather than backdrop
+blur. Nonessential transitions respect reduced-motion preferences.
+
+At the default landscape scale:
+
+| Surface | Placement and behavior |
+|---|---|
+| Navigation | 92 px map at the safe top-left edge; street name beside it |
+| Speed and gear | Compact 146 × 38 px readout below the street name; existing live speed/gear values; no central dial |
+| Time | Small top-centre chip; moves below the utility controls in portrait |
+| Utilities | 44 px Menu and separate 64 × 44 px Report button; diagnostics version/progress stays inside the report panel |
+| Walking | 112 px floating stick bottom left; amber JUMP, RUN and FLY bottom right; contextual use action near the right thumb |
+| Flying | UP, DOWN, BOOST and LAND in the same thumb area |
+| Driving | 112 px steering hint bottom left; 68 × 86 px GAS/BRAKE, NITRO/DRIFT above; boost level shown within the NITRO button |
+| Occasional actions | Sound, horn, auto-gas, repair and control settings in Menu; camera and exit remain directly accessible at top right |
+| Special cars | HOP/FLIP remain direct actions; on short landscape screens they move above the steering thumb |
+
+All controls retain at least 44 px targets. Safe-area insets, portrait layout,
+left-handed mirroring, wheel/arrows/tilt, multi-touch, and configurable scale
+remain supported. Opening Menu or Report releases held touch input and suspends
+auto-gas; gameplay input resumes after closing the panel. The confirmed loading/quality
+profile is unchanged by this UI work.
+
+The generated walking/driving concept guided the spacing and hierarchy. Deliberate
+implementation refinements: Report uses the secondary navy treatment (amber is
+reserved for movement), NITRO stays above GAS for thumb continuity, and the
+existing Cyrillic/English location labels and contextual car actions remain.
+The game world stays real WebGL content, never a flattened concept image.
+
+### HUD verification — 2026-11-05
+
+- Pure input/layout checks: 17 groups pass, including eight viewport sizes,
+  safe-area insets and both handedness settings.
+- Browser multi-touch checks pass for walking, looking, flying, vehicle entry,
+  simultaneous steering/gas/nitro, braking, special-car hops, menu actions and
+  release on interruption. The final layout-only run passes 58 checks, including
+  568 × 320 landscape, portrait tablets and simulated 47 px notch insets.
+- The complete published mobile profile loads and renders the actual scene.
+  Report/Menu targets stay separate; the compact speed readout stays above the
+  vehicle; opening Report suspends auto-gas. Palace → Smolny → Palace and report
+  recovery after reload pass, with no recorded page errors.
+- All 16 live areas were genuinely rebaked after the shared touch-code change.
+  Manifest verification passes for all 1,869 products. Version, generated HTML,
+  import/dependency and runtime-only checks pass.
+
+Visual review against the generated concept and the owner's screenshots:
+
+| Design point | Implemented result |
+|---|---|
+| Playfield | Central circular speedometer removed; vehicle and road remain visible |
+| Navigation | Small map, adjacent bilingual street chip and compact speed/gear block |
+| Thumb controls | Two lower-corner groups; amber primary action and quieter secondary actions |
+| Utilities | Separate Report/Menu targets; camera and exit below, occasional actions in Menu |
+| Styling | Consistent navy/ivory palette, thin borders, rounded rectangles and restrained type sizes |
+
+The browser harness uses Edge with emulated mobile viewports and actual
+multi-touch events; fonts use its offline fallback. This establishes DOM layout
+and input behavior, not real-device ergonomics, iPhone frame pacing or a fix for
+the previously reported walking crash. Verify the new controls on the phone
+before deciding whether their size and reach need further adjustment.
+
+Reproduce with `node tools/touch-logic-test.mjs`,
+`node tools/touch-browser-test.mjs --only mobile,layout,portrait,settings,desktop`
+and the integrated profile command:
+
+```sh
+node tools/loading-diagnostics-test.mjs --full --js-gzip --no-shadows --no-atlas --texture-cap --plain-ground --sign-atlas --canvas-pixels --staged-uploads --packed-geometry --area-hops --published-mobile
+```
+
+Screenshots and reports are written to the OS temporary directory printed by
+the harness. This HUD checkpoint is v9.20.0; the documented deployed mobile
+loading checkpoint below remains v9.19.3 until the redesign is published.
+
+### Previous layout (before v9.20; historical implementation notes)
 
 `u` = UI scale = shorter screen side / 390 kept in 0.9-1.25 (tablets 1.25; the settings can override). Every button is at least 44 px, primaries 56-124 px, gaps >= 8 px, offsets
 `max(16 px, env(safe-area-inset-*))` (left / right insets included: a notched phone in landscape has 47 px). Positions come from `touch-logic.js LAYOUT` and are checked in node and in the browser.
@@ -1015,13 +1100,12 @@ Outstanding work, deliberately separate from the HUD redesign:
 - Actual-device touch ergonomics, thermal behavior, frame pacing and long trips
   still need verification in Safari/Chrome on iPhone and on Android.
 
-The supplied HUD references expose a separate usability problem: the large
+The supplied HUD references exposed a separate usability problem: the large
 central speedometer covers the vehicle; map, street label and vehicle toast form
 an oversized left stack; controls have equal visual weight; and the diagnostic
-badge covers top-right actions. The next UI pass should keep the road and car
-clear, consolidate navigation information, anchor controls within safe areas,
-and move occasional actions into the existing menu. Keep the confirmed memory
-profile unchanged while testing that redesign.
+badge covers top-right actions. The v9.20 HUD in section 2 addresses this layout
+with compact navigation, clear road/car space, safe-area anchors and occasional
+actions in Menu. The confirmed memory profile remains unchanged.
 
 ### Test from a phone on the local network, without pushing
 

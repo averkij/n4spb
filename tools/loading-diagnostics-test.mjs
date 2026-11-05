@@ -813,6 +813,45 @@ try {
       fs.writeFileSync(path.join(out, 'streamed-regions-report.json'), JSON.stringify(streamed, null, 2));
       assert.deepEqual(real.errors, [], 'no errors after travelling to the other end of the scene');
     }
+    // Verify the phone HUD with the actual recorder and complete scene. This
+    // catches collisions that a drive-only fixture without Report cannot see.
+    await real.page.setViewport({ width: 844, height: 390, deviceScaleFactor: 2, isMobile: true, hasTouch: true, isLandscape: true });
+    await real.page.evaluate(async () => {
+      const view = __ctx.L.VIEWS.find(v => v.key === 'Digit1');
+      await __ctx.regions?.ensureAt(view.x, view.z);
+      __setCam(view.x, null, view.z, view.yaw, view.pitch);
+    });
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    const hudCheck = () => {
+      const rect = selector => {
+        const e = document.querySelector(selector), r = e.getBoundingClientRect();
+        return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+      };
+      const report = rect('#diag-toggle'), menu = rect('[data-id="menu"]');
+      return { report, menu, label: document.getElementById('diag-toggle').textContent };
+    };
+    const phoneHUD = await real.page.evaluate(hudCheck);
+    assert.equal(phoneHUD.label, 'Report');
+    assert(phoneHUD.report.width >= 44 && phoneHUD.report.height >= 44);
+    assert(phoneHUD.report.right + 8 <= phoneHUD.menu.x, 'Report and Menu have separate touch targets');
+    await real.page.screenshot({ path: path.join(out, 'hud-walk-landscape.png') });
+    await real.page.evaluate(() => __drive.enter('coupe'));
+    await new Promise(resolve => setTimeout(resolve, 6800)); // Let the transient driving coach fade before visual review.
+    assert.equal(await real.page.evaluate(() => __drive.active), true);
+    const speedRect = await real.page.$eval('#drive .d-speedo', e => {
+      const r = e.getBoundingClientRect(); return { bottom: r.bottom, width: r.width };
+    });
+    assert(speedRect.bottom < 130 && speedRect.width < 170, 'speed readout leaves the car unobstructed');
+    await real.page.screenshot({ path: path.join(out, 'hud-drive-landscape.png') });
+    await real.page.evaluate(() => { __tc.settings.autoGas = true; });
+    await real.page.waitForFunction(() => __tc.state.thr > 0);
+    await real.page.tap('#diag-toggle');
+    await real.page.waitForFunction(() => __tc.state.thr === 0 && __tc.held.size === 0);
+    assert.equal(await real.page.$eval('#load-diag', e => e.hidden), false);
+    await real.page.evaluate(() => { __tc.settings.autoGas = false; });
+    await real.page.tap('#diag-hide');
+    await real.page.evaluate(() => { __drive.exit(true); });
+    assert.deepEqual(real.errors, [], 'phone HUD and Report actions introduce no runtime errors');
     let expectedMainRequests = 1;
     if (process.argv.includes('--area-hops')) {
       assert(packedGeometry && stagedUploads && jsGzip, 'area hops exercise the working phone profile');

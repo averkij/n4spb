@@ -160,28 +160,32 @@ export function uiScale(w, h, setting = 0) {
 const A = (side, v, gx, gy, w, h = w) => ({ side, v, gx, gy, w, h });
 export const LAYOUT = {
   common: {                                                      // always (all modes)
-    menu: A('r', 't', 16, 12, 48), mute: A('r', 't', 76, 12, 48),
+    menu: A('r', 't', 16, 12, 44),
   },
   walk: {
-    jump: A('r', 'b', 16, 16, 72), run: A('r', 'b', 106, 16, 56), fly: A('r', 'b', 24, 108, 56), interact: A('r', 'b', 98, 88, 80),
+    jump: A('r', 'b', 16, 16, 68), run: A('r', 'b', 96, 16, 56), fly: A('r', 'b', 16, 96, 56), interact: A('r', 'b', 96, 88, 64),
   },
   fly: {
-    up: A('r', 'b', 16, 16, 72), boost: A('r', 'b', 106, 16, 56), fly: A('r', 'b', 24, 108, 56), down: A('r', 'b', 24, 176, 56),
+    up: A('r', 'b', 16, 16, 68), boost: A('r', 'b', 96, 16, 56), fly: A('r', 'b', 16, 96, 56), down: A('r', 'b', 96, 88, 64),
   },
   ride: {
-    interact: A('r', 'b', 98, 88, 80),
+    interact: A('r', 'b', 16, 16, 68),
   },
   drive: {
-    gas: A('r', 'b', 16, 16, 100, 124), brake: A('r', 'b', 128, 16, 80), nitro: A('r', 'b', 28, 152, 76), hand: A('r', 'b', 136, 108, 64), hop: A('r', 'b', 126, 184, 60), flip: A('r', 'b', 200, 184, 68),
-    cam: A('r', 't', 16, 72, 48), horn: A('r', 't', 76, 72, 48), auto: A('r', 't', 136, 72, 48), repair: A('r', 't', 196, 72, 48),
-    exit: A('l', 't', 132, 72, 52),                                // beside the 108 px map in the far top-left corner (no accidents)
-    arrowL: A('l', 'b', 16, 16, 96), arrowR: A('l', 'b', 124, 16, 96), recentre: A('l', 'b', 16, 124, 48),
+    gas: A('r', 'b', 16, 16, 68, 86), brake: A('r', 'b', 96, 16, 68, 86), nitro: A('r', 'b', 16, 114, 68, 56), hand: A('r', 'b', 96, 114, 68, 56), hop: A('r', 'b', 96, 182, 56), flip: A('r', 'b', 16, 182, 56),
+    cam: A('r', 't', 16, 72, 60, 44), exit: A('r', 't', 88, 72, 60, 44),
+    arrowL: A('l', 'b', 16, 16, 64), arrowR: A('l', 'b', 92, 16, 64), recentre: A('l', 'b', 16, 92, 48),
   },
 };
 /** the anchors of a mode (plus the always-there ones) for a w x h screen; a narrow (portrait phone) screen gets smaller steering arrows so that they clear the pedals */
-export function anchors(mode, w) {
+export function anchors(mode, w, h = Infinity, u = 1) {
   const a = { ...LAYOUT.common, ...LAYOUT[mode] };
-  if (mode === 'drive' && w < 480) { a.arrowL = A('l', 'b', 12, 16, 72); a.arrowR = A('l', 'b', 96, 16, 72); a.recentre = A('l', 'b', 12, 100, 48); a.repair = A('r', 't', 16, 132, 48); }
+  if (mode === 'drive' && w < 480) { a.arrowL = A('l', 'b', 12, 16, 50); a.arrowR = A('l', 'b', 74, 16, 50); }
+  // On short landscape screens (or enlarged controls), optional car tricks sit
+  // above the steering thumb instead of colliding with camera / exit.
+  if (mode === 'drive' && w > h && h / u < 370) {
+    a.hop = A('l', 'b', 16, 152, 56); a.flip = A('l', 'b', 84, 152, 56);
+  }
   return a;
 }
 /** the rect of an anchor on a w x h screen: u = UI scale, lh = left-handed, ins = the safe-area insets { l, r, t, b } in px. The gap from the screen edge is the anchor gap x u plus whatever the inset exceeds the 16 px base by. */

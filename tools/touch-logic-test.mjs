@@ -150,13 +150,13 @@ ok('actions: hold -> key, tap -> synthetic key, latch, call; mode filter', () =>
 });
 
 // ------------------------------------------------------------------ 6. layout
-const VIEWPORTS = [[844, 390], [915, 412], [667, 375], [1180, 820], [390, 844], [820, 1180], [320, 568]];
+const VIEWPORTS = [[844, 390], [915, 412], [667, 375], [568, 320], [1180, 820], [390, 844], [820, 1180], [320, 568]];
 const rectsFor = (mode, w, h, lh = false, ins = { l: 0, r: 0, t: 0, b: 0 }, hopOn = true, extra = true) => {
   const u = T.uiScale(w, h), out = {};
-  for (const [id, a] of Object.entries(T.anchors(mode, w))) { if (!hopOn && (id === 'hop' || id === 'flip')) continue; out[id] = T.placeRect(a, w, h, u, lh, ins); }
+  for (const [id, a] of Object.entries(T.anchors(mode, w, h - ins.t - ins.b, u))) { if (!hopOn && (id === 'hop' || id === 'flip')) continue; out[id] = T.placeRect(a, w, h, u, lh, ins); }
   return out;
 };
-ok('layout: every button >= 44 px, primaries >= 50 (56 x the 0.9 minimum scale), inside the screen, no overlaps (gap >= 8), all modes x 7 viewports x insets x handedness', () => {
+ok('layout: every button >= 44 px, primaries >= 50 (56 x the 0.9 minimum scale), inside the screen, no overlaps (gap >= 8), all modes x 8 viewports x insets x handedness', () => {
   const PRIMARY = new Set(['jump', 'run', 'fly', 'interact', 'up', 'boost', 'down', 'gas', 'brake', 'nitro', 'hand', 'hop', 'flip']);
   for (const [w, h] of VIEWPORTS) for (const lh of [false, true]) for (const ins of [{ l: 0, r: 0, t: 0, b: 0 }, w > h ? { l: 47, r: 47, t: 0, b: 21 } : { l: 0, r: 0, t: 47, b: 34 }]) for (const mode of ['walk', 'fly', 'ride', 'drive']) {
     const r = rectsFor(mode, w, h, lh, ins), ids = Object.keys(r), tag = `${mode} ${w}x${h} lh=${lh} ins=${ins.l}`;
@@ -182,7 +182,7 @@ ok('layout: arrows + recentre do not overlap each other nor the pedals; portrait
 ok('layout: left-handed mirrors the bottom clusters and keeps the top corners', () => {
   const w = 844, h = 390, a = rectsFor('drive', w, h, false), b = rectsFor('drive', w, h, true);
   for (const id of ['gas', 'brake', 'nitro', 'hand', 'hop', 'flip', 'arrowL', 'arrowR']) { near(a[id].x, w - b[id].right, 1e-9, id + ' mirrored x'); near(a[id].y, b[id].y, 1e-9, id + ' same y'); }
-  for (const id of ['menu', 'mute', 'cam', 'horn', 'auto', 'repair', 'exit']) { near(a[id].x, b[id].x, 1e-9, id + ' stays'); }
+  for (const id of ['menu', 'cam', 'exit']) { near(a[id].x, b[id].x, 1e-9, id + ' stays'); }
   const wz = T.zones('drive', w, h, false), wl = T.zones('drive', w, h, true);
   near(wz.stick.x, 0, 1e-9); near(wl.stick.x + wl.stick.w, w, 1e-9); assert.equal(T.zones('walk', w, h).stick.w, w * 0.45);
 });
