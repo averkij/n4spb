@@ -11,6 +11,7 @@ const rings=[rect(-10,-15,0,10),rect(0,-10,10,10),
 const hole=rect(0,20,5,25),source={RIVER:[{id:'fixture',key:'moat',polys:rings.map(o=>({o,h:[]}))}],
  WATER:[{id:'island',polys:[{o:rect(-10,15,10,35),h:[hole]}]}],EXTENT_RECTS:[{x0:0,x1:100,z0:-100,z1:100}]};
 const tables={farCenter:[0,0],farRadius:1000,farSources:[],dataRings:[],keyByName:{},riverKeys:{},plugs:[],ownerRings:[],keepOut:[],bankRings:[],bridgeZones:[],bridgeShades:[],clipLines:[],forcedBanks:[],openMouths:[],channels:[],skipRiverNames:[],skipRiverKeys:[],dataWater:[],riverRings:{},slopeReaches:[]};
+Object.assign(tables,{isolatedKeys:{},isolatedLevels:{},keyById:{}});
 const dataUrl=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const urls={
  [pathToFileURL(process.cwd()+'/src/world/data/city.js').href]:dataUrl(Object.entries(source).map(([k,v])=>`export const ${k}=${JSON.stringify(v)};`).join('\n')),
