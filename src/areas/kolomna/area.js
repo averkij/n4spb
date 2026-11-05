@@ -158,6 +158,8 @@ export const WATER = {
   // Tarakanovka and Olkhovka; their centre lines intersect these OSM relations.
   dataWater: [{ id: 'r1648982', key: 'nh-inner' }, { id: 'r3082004', key: 'neva' }, { id: 'r3298255', key: 'neva' }],
   dataRings: [...YEKATERINGOFKA_RINGS, ...PARK_POND_RINGS],
+  isolatedKeys: { moat: true },
+  isolatedLevels: { moat: { water: -1.2, bed: -2.4 } },
   // The isolated ponds have a shallow datum; the connected canal shares the
   // river datum. Both have open grass banks, accessible on foot and by car.
   slopeReaches: [

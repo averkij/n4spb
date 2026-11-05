@@ -78,6 +78,7 @@ export const WATER = {
   farCenter: [-1700, 6100], farRadius: 6500, farSources: [], bridgeZones: COASTAL_BRIDGE_ZONES,
   riverKeys: Object.fromEntries(RIVER.map(r => [r.name, r.key || 'neva'])),
   isolatedKeys: { moat: 'Mapped inland garden ponds of Moskovskaya Zastava and Victory Park; separate basins have no navigable river outlet.' },
+  isolatedLevels: { moat: { water: -1.2, bed: -2.4 } },
   // The photographs show mown grass to the ponds, with no canal embankment.
   // A low banquette and a gentle slope stay open to walkers, cars and boats.
   slopeReaches: [{ id: 'victory-park-natural-banks', key: 'moat', test: (x, z) => z > 6500 && z < 7600 && x > -1800, run: 2, kerb: .1, lip: .04, rail: () => null }],

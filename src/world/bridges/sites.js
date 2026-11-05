@@ -13,11 +13,14 @@ import { SOUTH_SITES } from './sites-south.js';      // computed from the facade
 import { PAL_SITES } from './sites-pal.js';      // the Prachechny, Upper Swan and 2nd Engineer bridges of Palace-Liteyny (docs/AREAS.md 15.z): built where the area lists them in GROUPS.bridges
 import { BLAG_ZONE, VO_SITES } from './sites-vo.js';      // BLAG_ZONE: the quay-zone record of the Blagoveshchensky Bridge (kind 'zone': no geometry of its own; siteInArea drops it for every area that does not list the bridge); VO_SITES: the Uralsky and Smolensky bridges of the Smolenka (generic arch.js sites + styles4.js; built only where the area claims them)
 import { VO2_SITES } from './sites-vo2.js';      // Nalichny (arch.js + styles5.js + the corner stairs); the other sites of the file lie outside Vasilyevsky-Okrug 7 and are filtered out by the claims
-import { BRIDGE_GROUP_KEYS, BRIDGE_SITES_OFF } from '../lib/area-tables.js';      // pure data too (the area module's tables)
+import { BRIDGE_GROUP_KEYS, BRIDGE_SITES_OFF, WATER as AREA_WATER } from '../lib/area-tables.js';      // pure data too (the area module's tables)
 import { EXTENT_RECTS } from '../data/city.js';
 export const EXT = 0.8;                                   // the deck runs this far over the land beyond the bank line (no sliver of water at the corners; the street asphalt ends at the bank, a small overlap)
 /** water surface level per waterway key (dossier section 2.5; environment may publish its own: see bridges.js) */
-export { NAVIGABLE_WATER_LEVELS as WATER_Y } from '../environment/water-level.js';
+import { NAVIGABLE_WATER_LEVELS } from '../environment/water-level.js';
+export const WATER_Y = Object.freeze({ ...NAVIGABLE_WATER_LEVELS,
+  ...Object.fromEntries(Object.entries(AREA_WATER.isolatedLevels).map(([key, level]) => [key, level.water])),
+});
 
 const BASE_SITES = [
   { id: 'belinsky', name: 'Мост Белинского', nameEn: 'Belinsky Bridge', kind: 'road', style: 'belinsky', water: 'r1201709', ww: 'fontanka',

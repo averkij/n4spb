@@ -51,7 +51,7 @@ const FAR_SOURCES = [
   // the Gulf of Finland (vo-sea.js; Vasilyevsky-Okrug 7 lists it in WATER.dataRings, so it is DATA water inside the data region and the scenery starts beyond it, as with the Malaya Neva)
   { name: 'vo-sea', rings: [VO_SEA], box: null, inData: !AREA_WATER.dataRings.some((d) => d.source === 'vo-sea') },
 ].filter((s) => AREA_WATER.farSources.includes(s.name));
-const keyOf = (r) => r.key || AREA_WATER.keyByName[r.name] || AREA_WATER.riverKeys[r.name] || null;      // (WATER.keyByName / WATER.riverKeys of the area: a keyless RIVER record by its name: the canals of the south-west, the Obvodny canal of Vladimirsky-Ligovka; none in the other areas)
+const keyOf = (r) => AREA_WATER.keyById[r.id] || r.key || AREA_WATER.keyByName[r.name] || AREA_WATER.riverKeys[r.name] || null;
 
 /** Cross-section / look parameters per waterway key. water / bed: y of the surface and of the bed (street level = 0). */
 export const WATERWAYS = {
@@ -81,6 +81,13 @@ for (const [key, name, width] of [['park-pond','Чухонка',80],['malaya-nev
   WATERWAYS[key] = { ...WATERWAYS.neva, key, name, width };
 }
 const SEAM_TOL = 0.8;
+// A style key does not imply a hydraulic connection. Park ponds can reuse
+// the moat cross-section while retaining their independent authored datum.
+for (const [key, level] of Object.entries(AREA_WATER.isolatedLevels)) {
+  if (!AREA_WATER.isolatedKeys[key] || !WATERWAYS[key] || !Number.isFinite(level.water) || !Number.isFinite(level.bed) || level.bed >= level.water)
+    throw new Error('Invalid isolated water datum: ' + key);
+  Object.assign(WATERWAYS[key], { water: level.water, bed: level.bed });
+}
 
 /** strips that OSM leaves out of the water polygons: the WATER.plugs of the area (the strip: under the Palace Bridge, between the west polygon edge and the east polygon edge of the Neva) */
 const PLUGS = AREA_WATER.plugs;

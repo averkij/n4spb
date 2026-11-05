@@ -86,6 +86,9 @@ export const WATER = {
   ownerRings: arr(W.ownerRings),
   bankRings: [...arr(W.bankRings),...arr(W.quayOpenings)], // owned shores and explicit mapped channel mouths
   isolatedKeys: obj(W.isolatedKeys),
+  /** Explicit water/bed datums for documented isolated basins that reuse a waterway style. */
+  isolatedLevels: obj(W.isolatedLevels),
+  keyById: obj(W.keyById),
   skipRiverNames: arr(W.skipRiverNames),
   skipRiverKeys: arr(W.skipRiverKeys),
   /** [{ id, c: [x, z], r } | { id, c, ax: [ux, uz], hl, hw }]: no generated descent, landing stage or boat here (a sight's own pier / berth; environment/waterways.js keepOut) */

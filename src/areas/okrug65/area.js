@@ -61,6 +61,11 @@ export const TEST = {
   extentSlack: { 'okrug65-lakhta': 22.7 },
 };
 export const WATER = { farCenter: [-8100, -5300], farRadius: 6500, farSources: [], ownerRings: WATERFRONT_OWNER_WATER_RINGS, bankRings: [...WATERFRONT_BANK_RINGS, ...BEACH_BANK_RINGS], bridgeZones: [...COASTAL_BRIDGE_ZONES, ...YACHTNY_BRIDGE_ZONES],
+  // Yelagin ponds share the Islands mapping; Lower Buffer Pond retains its
+  // independent shallow basin. Source style aliases do not set water levels.
+  keyById: Object.fromEntries(['r1567031', 'r1567613', 'r9176724', 'r9176723', 'r18509887', 'r8613894'].map(id => [id, 'neva'])),
+  isolatedKeys: { moat: true },
+  isolatedLevels: { moat: { water: -1.2, bed: -2.4 } },
   riverKeys: Object.fromEntries(RIVER.map(r => [r.name, r.key || 'neva'])) };
 export const ZONES = { peopleDensity: { west: { scale: 1, platforms: 1, off: true }, mars: { scale: 1, zones: [], off: true } }, peopleHot: [[-8370, -5465, 1, 40]], crowHaunts: [], farCentres: [{ x: -7000, z: -6500, bias: 500 }] };
 export const GARAGE = { poses: { lada: { x: -7991, z: -5488, yaw: -.25 } }, spawn: { x: -7991, z: -5488, yaw: -.25 }, boats: [{ id: 'boat-okrug65', dock: 'park300-beach', x: -8500, z: -5100, yaw: Math.PI / 2 }] };
