@@ -1,7 +1,7 @@
 // diagnostics.html scopes ONLY main.js imports here. Production imports and
 // baking use the original modules. No geometry/material algorithm is copied.
 import { batchStatic as batch } from './batch2.js';
-import { splitInstanced as split } from './spatial.js';
+import { splitInstanced as split, releaseOnUpload } from './spatial.js';
 import { batchFixtureCells as fixtures } from './fixture-cells.js';
 import { compactStaticAttributes as compact } from './compact-static.js';
 import { buildNDProxy as outline } from './ndproxy.js';
@@ -54,6 +54,18 @@ export function weldGeometry(g, THREE) {
 // material paths. Uniform local decoding keeps normal directions unchanged and
 // the toon factory's world-space paint coordinates follow the model matrix.
 export async function packGeometry(root, THREE, notify = () => {}) {
+  return runSteps(packGeometrySteps(root, THREE, notify));
+}
+async function runSteps(steps) {
+  let next;
+  while (!(next = steps.next()).done) await new Promise(resolve => setTimeout(resolve, 0));
+  return next.value;
+}
+function runStepsSync(steps) {
+  let next; while (!(next = steps.next()).done) { /* One already-decoded region, before attachment returns. */ }
+  return next.value;
+}
+function* packGeometrySteps(root, THREE, notify = () => {}) {
   const refs = new Map(); root.updateMatrixWorld(true);
   root.traverse(o => { if (o.geometry) { let list = refs.get(o.geometry); if (!list) refs.set(o.geometry, list = []); list.push(o); } });
   const stats = { geometries: 0, positionGeometries: 0, savedAttributeBytes: 0, weldedBytes: 0, maxWorldPositionError: 0 };
@@ -128,7 +140,7 @@ export async function packGeometry(root, THREE, notify = () => {}) {
     }
     if (stats.savedAttributeBytes > before) stats.geometries++;
     workBytes += p.array.byteLength;
-    if (workBytes >= 4 * 1024 * 1024) { notify('progress', { ...stats }); workBytes = 0; await new Promise(resolve => setTimeout(resolve, 0)); }
+    if (workBytes >= 4 * 1024 * 1024) { notify('progress', { ...stats }); workBytes = 0; yield; }
   }
   root.updateMatrixWorld(true); notify('end', { ...stats }); return stats;
 }
@@ -139,6 +151,9 @@ export async function packGeometry(root, THREE, notify = () => {}) {
 // paths: no private renderer API, duplicate GPU buffers, or replacement arrays.
 // Requires nd=0: lazy outline builders must never read already-released arrays.
 export async function stageGeometryUploads(renderer, root, THREE, notify = () => {}) {
+  return runSteps(stageGeometryUploadSteps(renderer, root, THREE, notify));
+}
+function* stageGeometryUploadSteps(renderer, root, THREE, notify = () => {}) {
   const bytesInScene = () => {
     const buffers = new Set(); let bytes = 0;
     const add = a => { const b = (a?.isInterleavedBufferAttribute ? a.data.array : a?.array)?.buffer;
@@ -194,7 +209,7 @@ export async function stageGeometryUploads(renderer, root, THREE, notify = () =>
         stats.afterBytes = bytesInScene(); stats.releasedBytes = stats.beforeBytes - stats.afterBytes;
         stats.batches++; notify('progress', { ...stats });
         batchBytes = batchCount = 0;
-        await new Promise(resolve => setTimeout(resolve, 0));
+        yield;
       }
     }
     stats.afterBytes = bytesInScene(); stats.releasedBytes = stats.beforeBytes - stats.afterBytes;
@@ -208,6 +223,71 @@ export async function stageGeometryUploads(renderer, root, THREE, notify = () =>
   }
 }
 
+// Baked region geometry is immutable and physics uses the separate field/roof
+// products. With ND/super-cells disabled no late builder reads these arrays.
+// Enrol only these known owners: arbitrary scene geometry can have CPU users.
+export function releaseRegionGeometry(root, THREE) {
+  let geometries = 0; const seen = new Set();
+  root?.traverse(o => {
+    const g = o.geometry;
+    if (!g || seen.has(g) || o.userData.dynamic || o.isSkinnedMesh || Object.keys(g.morphAttributes).length) return;
+    seen.add(g);
+    const attrs = [...Object.values(g.attributes), ...(g.index ? [g.index] : [])];
+    if (attrs.some(a => a.isInterleavedBufferAttribute || a.usage !== THREE.StaticDrawUsage ||
+      a.onUploadCallback !== THREE.BufferAttribute.prototype.onUploadCallback)) return;
+    if (!g.boundingBox) g.computeBoundingBox();
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    releaseOnUpload(g); geometries++;
+  });
+  return geometries;
+}
+
+export function installRegionMemoryProfile(ctx, THREE, notify = () => {}, isPlaying = () => document.body.classList.contains('playing')) {
+  const regions = ctx.regions; if (!regions) return;
+  let enrolled = 0;
+  for (const r of regions.regions) {
+    enrolled += releaseRegionGeometry(r.group, THREE);
+    enrolled += releaseRegionGeometry(r.silhouette, THREE);
+  }
+  // All builders have finished. Regions own hydrated materials/metadata and
+  // services own the road/collider data they need; resolved loader promises
+  // must not keep the original silhouette/PNG backing buffers alive as well.
+  for (const name of ['city-base', 'street-surfaces', 'street-textures', 'street-kerbs']) ctx.baked?.release?.(name);
+  notify('initial', { enrolled });
+  const attach = ctx.onRegionAttach;
+  ctx.onRegionAttach = group => {
+    // Finish all CPU readers first. No frame may interleave packing/uploading:
+    // the attachment callback is synchronous, and renderer state is restored
+    // before control returns to the normal frame loop.
+    attach?.(group);
+    const start = performance.now();
+    notify('start', { asset: group.name });
+    const enrolled = releaseRegionGeometry(group, THREE);
+    const packed = runStepsSync(packGeometrySteps(group, THREE));
+    const uploaded = runStepsSync(stageGeometryUploadSteps(ctx.renderer, group, THREE));
+    notify('end', { asset: group.name, enrolled, packed, uploaded, ms: Math.round(performance.now() - start) });
+  };
+  // The normal 1400 m speculative ring permanently accumulates more geometry
+  // immediately behind the Play screen. Keep the same 700 m startup/teleport
+  // coverage, and extend it as the player moves. Roads' 450 m lead is included;
+  // distant silhouettes stay present and explicit teleports still await data.
+  const ensure = regions.ensureAt.bind(regions), update = regions.update.bind(regions);
+  let tail = Promise.resolve(), busy = false, started = false, last = null;
+  regions.ensureAt = (...args) => {
+    const next = tail.then(() => ensure(...args)); tail = next.catch(() => {}); return next;
+  };
+  regions.start = () => { started = true; notify('waiting', { radius: 700 }); };
+  regions.update = (x, z) => {
+    update(x, z); // Original pump remains unstarted; retain its position state.
+    if (!started || busy || !isPlaying() || (last && Math.hypot(x - last.x, z - last.z) < 100)) return;
+    busy = true; last = { x, z };
+    notify('request', { x, z, radius: 700 });
+    regions.ensureAt(x, z, 700).catch(error => {
+      last = null; notify('error', { message: String(error.message) });
+    }).finally(() => { busy = false; });
+  };
+}
+
 function installStagedGeometryUpload() {
   const params = new URLSearchParams(location.search);
   const packed = params.get('diagpack') === '1';
@@ -216,6 +296,9 @@ function installStagedGeometryUpload() {
   const { renderer, THREE } = window.__ctx, compile = renderer.compileAsync;
   renderer.compileAsync = async function (...args) {
     renderer.compileAsync = compile;
+    if (packed) installRegionMemoryProfile(window.__ctx, THREE, (state, detail) => {
+      dispatchEvent(new CustomEvent('piter-diagnostic-build', { detail: { name: 'region-memory', state, ...detail } }));
+    });
     if (packed) await packGeometry(args[0], THREE, (state, detail) => phase('geometry-pack', state, detail));
     if (params.get('diaguploader') === 'staged') await stageGeometryUploads(renderer, args[0], THREE, (state, detail) => phase('geometry-upload', state, detail));
     return Reflect.apply(compile, this, args);

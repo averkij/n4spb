@@ -378,6 +378,12 @@
     if (name === 'sign-atlas-cap' && state === 'end') run.signAtlasCap = detail;
     if (name === 'geometry-upload') run.geometryUpload = { state, ...detail };
     if (name === 'geometry-pack') run.geometryPack = { state, ...detail };
+    if (name === 'region-memory') {
+      const previous = run.regionMemory || {};
+      run.regionMemory = { ...previous, state, ...detail,
+        completed: (previous.completed || 0) + (state === 'end' ? 1 : 0),
+        releasedBytes: (previous.releasedBytes || 0) + (state === 'end' ? detail.uploaded.releasedBytes : 0) };
+    }
     sample(); event(`build:${name}:${state}`, JSON.stringify(detail));
   });
   addEventListener('pagehide', e => event('pagehide', `persisted=${e.persisted}`));

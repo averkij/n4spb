@@ -902,6 +902,41 @@ tests cover one-use start/retry, arrival-state retention and environment-first
 decoding; the hand-off, area, runtime-only and closure checks passed, and all 16
 bakes remain fresh. Phone transitions still need confirmation on the device.
 
+#### v9.19.2: continue memory management during region streaming
+
+The next v9.19.1 phone report completed packing, every staged upload and both
+initial frames (`loaded=true`, `playing=false`). Its last checkpoint was JS
+inflation of `city-base-0_-2`, after a background street-region load. This moves
+the investigation past startup; it does not prove an inflater defect or an OS
+memory kill.
+
+The packed diagnostic profile now enrols hydrated, immutable region geometry
+and individual distant silhouettes for CPU-array release. It drops the consumed
+city/street loader cache entries after all builders finish; physics fields,
+roof data, material references and road services remain owned by their consumers.
+Custom city shaders retain their attribute representation, while standard
+basic/toon geometry uses the existing bounded packing pass. Newly attached
+regions follow the same path after the normal attachment callback's CPU readers.
+Their packing/upload is synchronous within that attachment, restoring renderer
+state before any game frame can run. Startup continues to yield between batches.
+
+The diagnostic scheduler retains the ordinary 700 m startup/teleport coverage
+and refreshes it after 100 m of movement during play, instead of immediately
+filling the 1400 m speculative ring behind the Play screen. Explicit travel
+requests remain awaited and serialized. Distant silhouettes and reachable
+territory remain; there is no region eviction yet, so this is not a hard cap on
+GPU residency during arbitrarily long trips. `regionMemory` checkpoints record
+the latest attachment and cumulative released bytes after startup.
+
+Desktop retained geometry before the first frame fell from 149,116,742 to
+72,301,494 bytes. Focused browser checks cover paused streaming, serialized
+requests, preserved custom-shader rendering, renderer-state restoration and
+dynamic-buffer exclusions. Integrated checks cover the exact phone checkpoint
+chunk, travel to Palace Square and Palace -> Smolny -> Palace with the profile
+retained. Phone stability and the previously reported visual distortions still
+need device verification; this remains a diagnostic profile, not the normal
+production quality preset.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion

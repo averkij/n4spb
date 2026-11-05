@@ -459,6 +459,50 @@ try {
   assert.deepEqual(uploadTest.errors, []);
   await uploadTest.context.close();
 
+  const regionTest = await open();
+  const regionResult = await regionTest.page.evaluate(async () => {
+    const THREE = await import('three');
+    const { installRegionMemoryProfile } = await import('./src/core/loading-finalize-diagnostics.js');
+    const renderer = new THREE.WebGLRenderer(); renderer.setSize(16, 16);
+    const target = new THREE.WebGLRenderTarget(16, 16);
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10); camera.position.z = 2;
+    const scene = new THREE.Scene(), material = new THREE.MeshBasicMaterial({ color: '#ff8080' });
+    // Custom shader stays unquantized, but its immutable buffers can be freed.
+    material.onBeforeCompile = () => {};
+    const group = new THREE.Group(), geometry = new THREE.PlaneGeometry(1.5, 1.5);
+    const mesh = new THREE.Mesh(geometry, material); group.add(mesh); scene.add(group);
+    const baseline = geometry.clone(); mesh.geometry = baseline;
+    renderer.setRenderTarget(target); renderer.render(scene, camera);
+    const read = () => { const p = new Uint8Array(16 * 16 * 4); renderer.readRenderTargetPixels(target, 0, 0, 16, 16, p); return [...p]; };
+    const before = read(); mesh.geometry = geometry;
+    let playing = false, originalStarts = 0, calls = 0, active = 0, peak = 0, readerWorked = false;
+    const records = [], ctx = { renderer, onRegionAttach: root => {
+      readerWorked = root.children[0].geometry.attributes.position.array.length > 0;
+    }, regions: { regions: [], start() { originalStarts++; }, update() {}, async ensureAt() {
+      calls++; peak = Math.max(peak, ++active); await new Promise(r => setTimeout(r, 5)); active--;
+    } } };
+    installRegionMemoryProfile(ctx, THREE, (state, detail) => records.push({ state, ...detail }), () => playing);
+    ctx.regions.start(); ctx.regions.update(0, 0); await new Promise(r => setTimeout(r, 10));
+    const pausedCalls = calls; playing = true; ctx.regions.update(0, 0);
+    await Promise.all([ctx.regions.ensureAt(600, 0), ctx.regions.ensureAt(800, 0)]);
+    ctx.onRegionAttach(group);
+    const stateKept = renderer.getRenderTarget() === target;
+    renderer.render(scene, camera); const after = read();
+    const released = Object.values(geometry.attributes).every(a => !a.array.byteLength) && !geometry.index.array.byteLength;
+    const dynamic = new THREE.BoxGeometry(); dynamic.attributes.position.setUsage(THREE.DynamicDrawUsage);
+    const dynamicGroup = new THREE.Group(); dynamicGroup.add(new THREE.Mesh(dynamic, material)); ctx.onRegionAttach(dynamicGroup);
+    const result = { pausedCalls, originalStarts, calls, peak, released, readerWorked, stateKept,
+      pixelsSame: JSON.stringify(before) === JSON.stringify(after), dynamicKept: dynamic.attributes.position.array.byteLength > 0,
+      uploaded: records.find(r => r.state === 'end').uploaded };
+    baseline.dispose(); geometry.dispose(); dynamic.dispose(); material.dispose(); target.dispose(); renderer.dispose();
+    return result;
+  });
+  assert.equal(regionResult.pausedCalls, 0); assert.equal(regionResult.originalStarts, 0);
+  assert.equal(regionResult.calls, 3); assert.equal(regionResult.peak, 1);
+  assert(regionResult.released && regionResult.readerWorked && regionResult.stateKept && regionResult.pixelsSame && regionResult.dynamicKept);
+  assert(regionResult.uploaded.releasedBytes > 0);
+  assert.deepEqual(regionTest.errors, []); await regionTest.context.close();
+
   // Verify the changed TexImageSource path against native canvas upload,
   // including orientation, alpha, subimage offsets and live canvas updates.
   const pixelTest = await open();
@@ -568,6 +612,12 @@ try {
     await real.page.waitForSelector('#fatal button', { timeout: 60000 });
     await real.page.click('#fatal button');
     await real.page.waitForFunction(() => document.body.classList.contains('loaded'), { timeout: 240000 });
+    if (packedGeometry) {
+      const initialRegions = await real.page.evaluate(() => window.__ctx.regions.stats.loaded);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      assert.equal(await real.page.evaluate(() => window.__ctx.regions.stats.loaded), initialRegions, 'no speculative regions load behind Play screen');
+      assert.equal(await real.page.evaluate(() => window.__ctx.regions.pending.size), 0);
+    }
     await real.page.click('#go');
     await real.page.waitForFunction(() => document.body.classList.contains('playing'));
     await real.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.playing, {}, key);
@@ -643,6 +693,7 @@ try {
       assert.equal(data.current.options.diagpack, '1'); assert.equal(data.current.geometryPack.state, 'end');
       assert(data.current.geometryPack.savedAttributeBytes > 100000000);
       assert(data.current.geometryPack.maxWorldPositionError <= 0.02);
+      assert(data.current.geometryBeforeDepthBytes < 100000000, 'baked signs and silhouettes no longer pin whole decoded files');
     }
     if (leanGeometry) {
       assert.equal(data.current.options.supercells, '0');
@@ -693,6 +744,20 @@ try {
     await real.page.click('#diag-hide');
     await real.page.screenshot({ path: path.join(out, 'full-scene-playing.png') });
     if (packedGeometry) {
+      const offendingChunk = await real.page.evaluate(async () => {
+        const ctx = window.__ctx, r = ctx.regions.regions.find(r => r.asset === 'city-base-0_-2');
+        if (!r) throw Error('Phone checkpoint region missing');
+        await ctx.regions.ensureAt((r.bounds[0] + r.bounds[2]) / 2, (r.bounds[1] + r.bounds[3]) / 2, 0);
+        let retainedBytes = 0, vertices = 0;
+        r.group.traverse(o => {
+          if (!o.geometry) return;
+          vertices += o.geometry.attributes.position.count;
+          for (const a of [...Object.values(o.geometry.attributes), o.geometry.index].filter(Boolean)) retainedBytes += a.array.byteLength;
+        });
+        return { state: r.state, retainedBytes, vertices };
+      });
+      assert.equal(offendingChunk.state, 'ready'); assert(offendingChunk.vertices > 0);
+      assert.equal(offendingChunk.retainedBytes, 0, 'the exact phone checkpoint chunk uploads and releases all immutable geometry');
       await real.page.evaluate(async () => {
         const ctx = window.__ctx, view = ctx.L.VIEWS.find(v => v.key === 'Digit0');
         if (!view) throw Error('Palace Square verification view missing');
@@ -701,6 +766,11 @@ try {
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       });
       await real.page.screenshot({ path: path.join(out, 'packed-palace-playing.png') });
+      const streamed = await read(real.page);
+      assert(streamed.current.regionMemory.completed > 0, 'actual travel processes new baked regions');
+      assert(streamed.current.regionMemory.releasedBytes > 0, 'streamed regions release CPU geometry after upload');
+      assert.equal(streamed.current.regionMemory.uploaded.completed, streamed.current.regionMemory.uploaded.total);
+      fs.writeFileSync(path.join(out, 'streamed-regions-report.json'), JSON.stringify(streamed, null, 2));
       assert.deepEqual(real.errors, [], 'no errors after travelling to the other end of the scene');
     }
     let expectedMainRequests = 1;
