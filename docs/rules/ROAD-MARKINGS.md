@@ -16,6 +16,14 @@ command for `smolny` to check the real claimed ways and raised paint vertices.
 
 ## The rules
 
+2026-11-05 (9.20.1): a fork can have two same-direction OSM branches facing
+one opposite carriageway. `partnerDraws` gives that opposite carriageway
+ownership throughout its valid median/lane range even when its preferred
+branch changes. Requiring reciprocal partner identity painted extra double
+lines on Obvodny Embankment near `-879,1993`. The existing range checks still
+allow the other carriageway to draw where the first has a junction gap.
+Regression: `node tools/area.mjs vladimirsky tools/obvodny-crossing-test.mjs`.
+
 | marking | rule |
 |---|---|
 | nothing on | rank-0 ways (courtyards, service), living streets, pedestrian ways (`pedestrianOnly`), `skipDraw` ways, bridge decks drawn by the bridges module (`decks.js deckAt`) |

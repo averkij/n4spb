@@ -52,15 +52,15 @@ export function buildCatenary(ctx, G, bk, canopy) {
         q.side = sd; q.mx = mx; q.mz = mz;
         if (!mastNear(mx, mz, 3.0)) {
           addMast(mx, mz);
-          const B = Bv(mx, mz), top = RAIL_TOP + MESSENGER + 1.0;
-          B.box(mx, 0.25, mz, 0.28, 0.25, 0.28, 0, CONC);
-          B.prism(mx, 0.5, mz, 0.2, 0.13, top, 8, GREY, true);
+          const B = Bv(mx, mz), base=t.dy, top = base + RAIL_TOP + MESSENGER + 1.0;
+          B.box(mx, base+0.25, mz, 0.28, 0.25, 0.28, 0, CONC);
+          B.prism(mx, base+0.5, mz, 0.2, 0.13, top, 8, GREY, true);
           // cantilever: upper tube to the messenger, lower brace to the contact wire arm
           const ax = t.x, az = t.z;
-          B.bar([mx, top - 0.35, mz], [ax, RAIL_TOP + MESSENGER + 0.05, az], 0.1, 0.1, GREY);
-          B.bar([mx, top - 1.5, mz], [ax, RAIL_TOP + MESSENGER - 0.05, az], 0.07, 0.07, GREY);
-          B.box(mx + (ax - mx) * 0.5, RAIL_TOP + MESSENGER + 0.2, mz + (az - mz) * 0.5, 0.05, 0.05, 0.05, 0, INS);
-          ctx.physics.addCylinder(mx, mz, 0.3, 0, top);
+          B.bar([mx, top - 0.35, mz], [ax, base + RAIL_TOP + MESSENGER + 0.05, az], 0.1, 0.1, GREY);
+          B.bar([mx, top - 1.5, mz], [ax, base + RAIL_TOP + MESSENGER - 0.05, az], 0.07, 0.07, GREY);
+          B.box(mx + (ax - mx) * 0.5, base + RAIL_TOP + MESSENGER + 0.2, mz + (az - mz) * 0.5, 0.05, 0.05, 0.05, 0, INS);
+          ctx.physics.addCylinder(mx, mz, 0.3, base, top);
           out.masts++;
         }
       } else if (q.hw) {
@@ -83,8 +83,8 @@ export function buildCatenary(ctx, G, bk, canopy) {
       for (let k = 0; k <= nseg; k++) {
         const u = k / nseg, t = p.at(A.s + span * u), zz = zA + (zB - zA) * u;
         const lat = zz;
-        cp.push([t.x + t.tz * lat, RAIL_TOP + CONTACT, t.z - t.tx * lat]);
-        mp.push([t.x, RAIL_TOP + MESSENGER - sag * 4 * u * (1 - u), t.z]);
+        cp.push([t.x + t.tz * lat, t.dy + RAIL_TOP + CONTACT, t.z - t.tx * lat]);
+        mp.push([t.x, t.dy + RAIL_TOP + MESSENGER - sag * 4 * u * (1 - u), t.z]);
         if (k > 0 && k < nseg || span > 14) { /* droppers handled below */ }
       }
       ctx.wires.add(mp, { width: 0.025, color: WIRE });
@@ -93,7 +93,7 @@ export function buildCatenary(ctx, G, bk, canopy) {
       const nd = Math.max(0, Math.round(span / 9) - 1);
       for (let d = 1; d <= nd; d++) {
         const u = d / (nd + 1), t = p.at(A.s + span * u), zz = zA + (zB - zA) * u;
-        ctx.wires.add([[t.x, RAIL_TOP + MESSENGER - sag * 4 * u * (1 - u), t.z], [t.x + t.tz * zz, RAIL_TOP + CONTACT, t.z - t.tx * zz]], { width: 0.014, color: WIRE });
+        ctx.wires.add([[t.x, t.dy + RAIL_TOP + MESSENGER - sag * 4 * u * (1 - u), t.z], [t.x + t.tz * zz, t.dy + RAIL_TOP + CONTACT, t.z - t.tx * zz]], { width: 0.014, color: WIRE });
       }
     }
   }

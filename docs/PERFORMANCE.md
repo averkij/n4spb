@@ -2825,3 +2825,61 @@ Full evidence for this session is in the OS temp directories
 Next work: bounded worker/fetch diagnostics, required-product failure handling,
 field hydration and concurrent prefetch memory, then first-frame GPU upload
 peaks. Real-device loading, smooth FPS and mobile stability are not solved.
+
+## 2026-11-05 — Obvodny divider and railway clearance (9.20.1)
+
+The road-marking owner now handles a fork without painting an extra divider
+for each same-direction branch. The Tsarskoselsky railway uses the two mapped
+deck footprints (`r11704745`), a 6.4 m scene deck datum, 0.8 m slabs, and 180 m
+rail approaches. The datum provides road clearance; it is not a surveyed bridge
+elevation. Sleepers, switch equipment and overhead wires follow the same
+profile. `electrified=no` no longer creates catenary. Static geometry remains
+spatially bucketed; there is no new per-frame scene scan.
+
+Visual evidence: `shots/obvodny/integrated_{0,1,2}.png` covers the reported
+road pose, aerial crossing pose and road beneath the deck. The integrated
+aerial diagnostic changed from 696 calls / 1,061,138 triangles to 705 calls /
+1,095,762 triangles on the same RTX 3090 Ti / Edge D3D11, medium, 1280×720.
+This is a rendering diagnostic, not a driving-performance comparison.
+
+Focused checks pass: `obvodny-crossing-test.mjs` under Vladimirsky (single
+divider, continuous rail height, correct electrification, walkable deck and
+under-slab clearance), `physics-triangle-test.mjs`, `street-rendering-test.mjs`,
+the rail module check, closure lint, and the strip road/marking audits.
+All 16 live-area marking audits were run; Palace, Smolny and Dekabristov each
+retain one missing signalised stop bar, reproduced in an unmodified HEAD
+archive. The Vladimirsky road audit also matches HEAD exactly: 100 furniture
+findings and 228 residual surface samples in 70 clusters against a budget of
+120; the ribbon audit passes. These unrelated failures were not waived.
+The Vladimirsky quick water-access regression passes 16 checks, including
+walking/driving into water and connected water bodies, and retains one fence
+record without a collider; the unmodified HEAD archive reproduces that result.
+
+Driving comparison commands (normal baked loading, no forced bake, 8 s,
+medium, 1280×720, RTX 3090 Ti / Edge D3D11, separate serial GPU runs):
+
+```powershell
+node tools/drive-bench.mjs --area vladimirsky --seconds 8 --start "-878.8,1993.4,128.6" --json --diagnostics --out shots/obvodny/drive-after
+node tools/drive-bench.mjs --area palace --seconds 8 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/obvodny/centre-after
+```
+
+| Route / build | Load s | Mean / p50 / p95 ms | >40 / >80 ms frames | Mean draws | Distance m | CDP heap / backing MiB |
+|---|---:|---|---|---:|---:|---|
+| Obvodny before | 34.9 | 33.1 / 33.3 / 50.0 | 15 / 2 | 702 | 147.6 | 485.3 / 1034.8 |
+| Obvodny final bake | 35.6 | 32.3 / 33.3 / 50.0 | 16 / 1 | 700 | 149.8 | 489.1 / 1057.1 |
+| Nevsky before | 44.9 | 50.6 / 50.0 / 66.8 | 133 / 4 | 1286 | 269.0 | 460.4 / 1247.5 |
+| Nevsky final bake | 44.1 | 50.5 / 50.0 / 66.7 | 137 / 2 | 1286 | 269.0 | 454.0 / 1203.9 |
+
+The Obvodny runs both encounter traffic, explaining the small distance/damage
+variation; they pass beneath the repaired crossing. Frame times are essentially
+unchanged. A roughly 350 ms streaming hitch remains there, and the centre is
+still around 20 FPS, below the 30 FPS goal. This change does not claim to solve
+citywide performance. The larger centre draw workload remains the measured
+next performance target.
+
+Final normal-loading screenshots are `shots/obvodny/final_{0,1,2}.png`;
+`drive-test.mjs --area vladimirsky --nofuzz --out shots/obvodny/controls`
+passes its entry, acceleration, camera, braking and exit checks. No page/module
+errors were reported; existing shader/texture warnings remain. Manifest check
+passes all 16 live areas: 1,869 complete products, 759.2 MiB gzip. All source and
+bakes are included in the same version checkpoint.

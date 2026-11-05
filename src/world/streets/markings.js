@@ -82,7 +82,9 @@ function partnerDraws(w, v, x, z) {
     const dx = v.x[i + 1] - v.x[i], dz = v.z[i + 1] - v.z[i], l2 = dx * dx + dz * dz || 1e-12, t = Math.max(0, Math.min(1, ((x - v.x[i]) * dx + (z - v.z[i]) * dz) / l2));
     const d = Math.hypot(x - v.x[i] - dx * t, z - v.z[i] - dz * t); if (!best || d < best.d) best = { d, i, t, s: v.s[i] + (v.s[i + 1] - v.s[i]) * t };
   }
-  if (!best || !v.med[best.i] || !v.med[best.i + 1] || v.medPartner[best.i] !== w) return false;
+  // At a fork, two same-direction branches can face one opposite carriageway.
+  // Its chosen partner changes, but it still owns the shared divider here.
+  if (!best || !v.med[best.i] || !v.med[best.i + 1]) return false;
   return edgesOf(v).some((e) => e.f && best.s >= e.f.lo - 0.2 && best.s <= e.f.hi + 0.2);
 }
 

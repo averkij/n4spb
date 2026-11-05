@@ -21,6 +21,7 @@ import { buildCanopies, soffitTexture, fasciaTexture } from './rail/canopy.js';
 import { buildCatenary } from './rail/catenary.js';
 import { buildTrains } from './rail/trains.js';
 import { buildYard } from './rail/yard.js';
+import { buildObvodnyDecks } from './rail/obvodny.js';
 import { buildFurniture, buildHeads, lettersTexture, trackSignTexture, clockTexture } from './rail/furniture.js';
 
 export async function build(ctx) {
@@ -65,6 +66,7 @@ export async function build(ctx) {
   bk.useColor('vc');
 
   const stats = buildTracks(ctx, root, G, bk, M);
+  buildObvodnyDecks(ctx, bk);
   const furn = buildTrackFurniture(ctx, root, G, bk);
   const plat = buildPlatforms(ctx, G, bk, ctx.physics);
   const canopy = buildCanopies(ctx, G, bk, ctx.physics);

@@ -8,6 +8,7 @@
 //   every track keeps the loading-gauge clearance (1.92 m axis -> edge); a platform ends where it would be cut by a track.
 // Coordinates: world metres, +X east, +Z south; tracks run from the buffer stops in the north (z ~ 420-490) to the SSE.
 import { RAILS, RAIL_NODES, PLATFORMS } from '../data/city.js';
+import { railLift } from './obvodny.js';
 
 export const RAIL_TOP = 0.28;                 // top of the rail head above the street (y = 0 is the ballast / ground level)
 export const PLAT_H = 1.1;                    // platform surface above the rail head (docs/research/station.md)
@@ -55,6 +56,7 @@ export class Path {
     const dx = this.xs[i + 1] - this.xs[i], dz = this.zs[i + 1] - this.zs[i], l = Math.hypot(dx, dz) || 1;
     const u = (s - ss[i]);                                  // may be < 0 or > segment length: straight extrapolation
     out.x = this.xs[i] + dx / l * u; out.z = this.zs[i] + dz / l * u; out.tx = dx / l; out.tz = dz / l; out.s = s;
+    out.dy = railLift(out.x,out.z);
     return out;
   }
   /** Arc length of the point of the path closest to (x,z) (clamped to the path). */
@@ -187,7 +189,7 @@ export function buildGeometry() {
   for (const w of RAILS) {
     if (used.has(w.id)) continue;
     const kind = w.service === 'yard' ? 'yard' : w.service === 'siding' ? 'siding' : 'throat';
-    paths.push(new Path(w.id, southward(pairs(w.pts)), { kind, electrified: !!w.electrified }));
+    paths.push(new Path(w.id, southward(pairs(w.pts)), { kind, electrified: !!w.electrified && w.electrified !== 'no' }));
   }
   const all = paths;
   // routes that end where they merge into another track (T3 into T2): continue along that one
