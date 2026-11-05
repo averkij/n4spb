@@ -404,6 +404,27 @@ const TERR = { A: [{ x0: 0, x1: 1000, z0: 0, z1: 1000 }], B: [{ x0: 800, x1: 200
 const EAB = { id: 'e1', kind: 'edge', from: 'A', to: 'B', reverse: 'e2' }, EAC = { id: 'e2', kind: 'edge', from: 'A', to: 'C', zone: 40, reverse: null };
 const rectsOf = (id) => TERR[id];
 const edgeM = (gates = [EAB], cfg = {}) => createGateMachine({ gates, config: { graceS: 0, ...cfg }, rectsOf });
+check('area warning precedes the actual edge trigger by 25 m in walking and vehicle modes', () => {
+  for (const mode of ['walk', 'car', 'fly']) {
+    const m = edgeM(), speed = mode === 'walk' ? 2 : 12;
+    let first = null, trigger = null;
+    for (let x = 800; x < 1000; x += speed * DT) {
+      const r = m.update({ dt: DT, x, z: 500, mode });
+      if (r.warning && first === null) first = x;
+      if (r.offer) { trigger = x; break; }
+    }
+    assert(first !== null && trigger !== null, mode + ': missing notice or trigger');
+    assert(Math.abs(trigger - first - 25) < speed * DT + .1, mode + ': notice distance ' + (trigger - first));
+  }
+});
+check('area warning stays hidden along the boundary, indoors and during arrival grace', () => {
+  for (const override of [{}, { indoors: true }, { blocked: true }]) {
+    const m = edgeM();
+    for (let z = 300; z < 500; z += 2 * DT) assert.equal(m.update({ dt: DT, x: 940, z, mode: 'walk', ...override }).warning, null);
+  }
+  const m = edgeM([EAB], { graceS: 6 });
+  for (let x = 934; x < 942; x += 2 * DT) assert.equal(m.update({ dt: DT, x, z: 500, mode: 'walk' }).warning, null);
+});
 /** walk (x0, z0) -> (x1, z1) at `speed` in `mode`, after standing still for `settle` s; returns the first step that offers: { x, z, offer, dir } or null */
 function walkTo(m, x0, z0, x1, z1, { speed = 1.5, mode = 'walk', settle = 2, blocked = false } = {}) {
   for (let i = 0; i < settle / DT; i++) m.update({ dt: DT, x: x0, z: z0, mode, blocked });

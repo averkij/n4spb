@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.21.0** (2026-11-05, minor): Add advance district-loading notice and quieter birds; remove construction clanks
 - **9.20.1** (2026-11-05, patch): Fix duplicate Obvodny road dividers and raise the railway crossing above the canal roads
 - **9.20.0** (2026-11-05, minor): Redesign mobile walking and driving HUD with compact navigation, clear playfield and thumb controls
 - **9.19.3** (2026-11-05, patch): Apply the working phone loading profile automatically on GitHub Pages

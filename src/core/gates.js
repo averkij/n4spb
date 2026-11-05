@@ -35,6 +35,7 @@ export const DEFAULTS = {
   edgeZone: 40,           // an EDGE gate: how far ahead of a walker the probe point lies (a vehicle uses depthFor)
   edgeIn: 60,             // ... and how deep inside the destination's territory that point must be (the arrival is never at the destination's edge)
   edgeAlign: 0.92,        // ... a moving player probes only the direction he heads in (cos 22.5 degrees: his octant): walking ALONG an edge triggers nothing
+  warningLead: 25,        // advance notice, metres before the actual loading trigger
 };
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
@@ -125,7 +126,7 @@ export function createGateMachine({ gates, config = {}, rectsOf = (id) => (Objec
         lastX = x; lastZ = z;
       }
       const held = clock < holdUntil, v = held ? 0 : Math.sqrt(vx * vx + vz * vz);
-      let chip = null, offer = null, dir = -1, offerPriority = 0;
+      let chip = null, offer = null, warning = null, dir = -1, offerPriority = 0;
       const walk = mode === 'walk', vehDepth = walk ? 0 : depthFor(mode, v, C), tol = mode === 'fly' ? C.flyTol : C.lateralTol;      // (depthFor / chipFor of a vehicle do not read the zone)
       for (let gi = 0; gi < gates.length; gi++) {
         const g = gates[gi], q = geo[gi], s = st.get(g.id);
@@ -139,6 +140,7 @@ export function createGateMachine({ gates, config = {}, rectsOf = (id) => (Objec
           // edge/heading/arrival test; elsewhere registry precedence applies.
           const p = g.preferWithin, priority = p && x>=p[0] && z>=p[1] && x<=p[2] && z<=p[3] ? 1 : 0;
           if (blocked || s.open || clock < graceUntil || (offer && priority<=offerPriority) || clock < s.until || s.needExit) continue;
+          if (!warning && edgeDir(g, q, x, z, eDepth + C.warningLead, true, held ? 0 : vx, held ? 0 : vz, v) >= 0) warning = g;
           const k = edgeDir(g, q, x, z, eDepth, true, held ? 0 : vx, held ? 0 : vz, v); if (k >= 0) { offer = g; dir = k; offerPriority = priority; }
           continue;
         }
@@ -150,9 +152,10 @@ export function createGateMachine({ gates, config = {}, rectsOf = (id) => (Objec
         if (!chip || cd < chip.d) chip = { gate: g, d: cd, depth };
         if (s.open || clock < graceUntil) continue;
         const vIn = held ? 0 : vx * g.inward[0] + vz * g.inward[1];
+        if (!warning && cd <= depth + C.warningLead && (vIn <= -C.approachV || cd <= C.nearD) && clock >= s.until && !s.needExit) warning = g;
         if (cd <= depth && (vIn <= -C.approachV || cd <= C.nearD) && clock >= s.until && !s.needExit && !offer) offer = g;
       }
-      return { chip, offer, v, dir };
+      return { chip, offer, warning, v, dir };
     },
     /** the question is on screen for gate g / the travel has begun (a gate the machine does not run, a door, is ignored by these three) */
     markOpen(g) { const s = st.get(g.id); if (s) s.open = true; },
@@ -354,6 +357,10 @@ export function createGates(deps) {
   const inFrom = deps.inPlay ? (g, x, z) => deps.inPlay(x, z) : null;
   const machine = createGateMachine({ gates, inFrom, ...(deps.rectsOf ? { rectsOf: deps.rectsOf } : {}) });
   const chipEl = doc.getElementById('gatechip'), seam = deps.seam || createSeam({ doc, win });
+  if (chipEl && !PROMPT) {
+    chipEl.setAttribute?.('role', 'status');
+    if (chipEl.style) { chipEl.style.pointerEvents = 'none'; chipEl.style.cursor = 'default'; }
+  }
   let traveling = false, chipGate = null, watchdog = null;
   const DEG = 180 / Math.PI;
 
@@ -381,6 +388,11 @@ export function createGates(deps) {
     if (!gates.length) return;      // doors and places only: nothing to arm
     const p = xz(), r = machine.update({ dt, x: p.x, z: p.z, mode: mode(), blocked: isBlocked(), indoors: isIndoors() });
     if (PROMPT) setChip(r.chip);      // (the passive chip exists only with ?gateprompt=1)
+    else if (chipEl) {
+      const text = r.warning || r.offer ? 'Входим в соседний район' : '';
+      if (chipEl.textContent !== text) chipEl.textContent = text;
+      chipEl.classList.toggle('show', !!text);
+    }
     if (r.offer && !ui.open && !traveling) prompt(r.offer, 'gate');
   }
   /**

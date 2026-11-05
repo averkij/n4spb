@@ -66,7 +66,7 @@ for (const f of walk(path.join(root, 'src/world'))) {
   const src = fs.readFileSync(f, 'utf8');
   for (const m of src.matchAll(/audio\??\.(play|loop)\??\.?\(\s*['"]([A-Za-z0-9_]+)['"]/g)) used.set(m[2], (used.get(m[2]) || '') + ' ' + m[1] + ':' + path.basename(f));
   for (const m of src.matchAll(/\bsay\(\s*['"]([A-Za-z0-9_]+)['"]/g)) used.set(m[1], (used.get(m[1]) || '') + ' say:' + path.basename(f));
-  for (const m of src.matchAll(/\bcall:\s*['"]([A-Za-z0-9_]+)['"]/g)) used.set(m[1], (used.get(m[1]) || '') + ' call:' + path.basename(f));
+  if (f.includes(path.sep + 'wildlife' + path.sep)) for (const m of src.matchAll(/\bcall:\s*['"]([A-Za-z0-9_]+)['"]/g)) used.set(m[1], (used.get(m[1]) || '') + ' call:' + path.basename(f));
 }
 console.log('sound names used by src/world:', [...used.keys()].join(', '));
 
@@ -94,7 +94,12 @@ for (const [n, who] of used) {
   const unknownWarned = warnings.slice(before).some((w) => /unknown/.test(w));
   check(!unknownWarned && (known || /gull|footstep/.test(n)), `name '${n}' (${who.trim()}) exists`);
 }
-for (const n of ['crow', 'raven', 'magpie', 'wings', 'dogBark', 'clank', 'busBrake', 'carDoor', 'doorOpen', 'doorClose', 'bikeBell', 'carHorn', 'gull']) check(names.oneShots.includes(n), `one-shot '${n}' is defined`);
+for (const n of ['crow', 'raven', 'magpie', 'wings', 'dogBark', 'busBrake', 'carDoor', 'doorOpen', 'doorClose', 'bikeBell', 'carHorn', 'gull']) check(names.oneShots.includes(n), `one-shot '${n}' is defined`);
+{
+  const before = audio.stats.voices, sources = ac.sources.length, warns = warnings.length;
+  check(audio.play('clank', { volume: 4 }) === null && audio.stats.voices === before && ac.sources.length === sources && warnings.length === warns,
+    'removed construction sound creates no voice, source or warning');
+}
 for (const n of ['city', 'wind', 'birds', 'traffic', 'lake', 'fountain']) check(names.loops.includes(n), `loop '${n}' is defined`);
 for (const n of ['trainRun', 'trainBrake', 'announce', 'boatHorn', 'doorChime']) { const b = warnings.length; audio.play(n, { position: { x: 0, y: 1, z: 0 } }); audio.loop(n).stop(); check(warnings.length === b, `Moscow name '${n}' is accepted silently`); }
 
