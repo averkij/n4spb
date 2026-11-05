@@ -9,9 +9,17 @@ import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { arrivalUrl, makeHo } from '../src/core/handoff.js';
+import { REGISTRY } from '../src/areas/registry.js';
+import { prepareMobileEntries } from './pages-assets.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const out = fs.mkdtempSync(path.join(os.tmpdir(), 'n4spb-diagnostics-test-'));
+const published = path.join(out, 'published'); fs.mkdirSync(published);
+for (const row of Object.values(REGISTRY).filter(r => !r.parked && r.status !== 'planned')) {
+  for (const name of [row.page, row.page === 'index.html' ? 'diagnostics.html' : 'diagnostics-' + row.page])
+    fs.copyFileSync(path.join(root, name), path.join(published, name));
+}
+prepareMobileEntries(published);
 const key = 'n4spb.loading-report.v1:/n4spb/';
 const fixture = `
 window.__mainStarted = true; window.__stats = { modules: {}, timing: {} };
@@ -36,7 +44,8 @@ const server = http.createServer((req, res) => {
   if (rel === 'fixture-hold') return; // Deliberate pending fetch; closed with the test worker/server.
   const file = path.resolve(root, rel);
   if (!file.startsWith(path.resolve(root) + path.sep)) { res.writeHead(403); return res.end(); }
-  fs.readFile(file, (error, body) => {
+  const deployedPage = !rel.includes('/') && fs.existsSync(path.join(published, rel)) ? path.join(published, rel) : file;
+  fs.readFile(deployedPage, (error, body) => {
     if (error) { res.writeHead(404); return res.end(); }
     res.setHeader('Content-Type', ({ '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg' })[path.extname(file)] || 'application/octet-stream');
     res.end(body);
@@ -77,6 +86,32 @@ async function open({ full = false, block = false, storageDenied = false, probeT
 const read = page => page.evaluate(k => JSON.parse(localStorage.getItem(k)), key);
 const show = page => page.click('#diag-toggle');
 try {
+  const desktopEntry = await open();
+  await desktopEntry.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36');
+  await desktopEntry.page.goto(base + 'index.html?q=high', { waitUntil: 'domcontentloaded' });
+  await desktopEntry.page.waitForFunction(() => document.body.classList.contains('loaded'));
+  assert.equal(desktopEntry.page.url(), base + 'index.html?q=high');
+  assert.equal(desktopEntry.mainRequests(), 1);
+  assert.equal(await desktopEntry.page.$('#load-diag'), null, 'desktop retains its ordinary loader');
+  assert.deepEqual(desktopEntry.errors, []); await desktopEntry.context.close();
+  // Normal published phone visits automatically select the working profile,
+  // load exactly one scene, retain view state, and recover quietly on reload.
+  for (const storageDenied of [false, true]) {
+    const mobile = await open({ storageDenied });
+    await mobile.page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148');
+    await mobile.page.goto(base + 'index.html?cam=1,2,3,4&tod=1.2', { waitUntil: 'domcontentloaded' });
+    await mobile.page.waitForFunction(() => document.body.classList.contains('loaded'));
+    assert.equal(mobile.mainRequests(), 1, 'mobile entry never starts the ordinary scene');
+    const url = new URL(mobile.page.url());
+    assert.equal(url.searchParams.get('mobileprofile'), '1'); assert.equal(url.searchParams.get('diagpack'), '1');
+    assert.equal(url.searchParams.get('cam'), '1,2,3,4'); assert.equal(url.searchParams.get('tod'), '1.2');
+    assert.equal(await mobile.page.$eval('#load-diag', e => e.hidden), true);
+    assert.equal(await mobile.page.$eval('#diag-toggle', e => e.textContent), 'Report');
+    await mobile.page.reload({ waitUntil: 'domcontentloaded' });
+    await mobile.page.waitForSelector('#diag-start');
+    assert.equal(mobile.mainRequests(), 1, 'reload after a possible crash stays paused');
+    assert.deepEqual(mobile.errors, []); await mobile.context.close();
+  }
   // Arrival is deliberate and one-use: the next area's recorder starts with
   // the same profile, but a reload after a crash cannot loop into the scene.
   const hop = await open();
@@ -590,7 +625,7 @@ try {
     await real.page.exposeFunction('recordGroundCheckpoint', entry => groundCheckpoints.push(entry));
     await real.page.exposeFunction('recordSignCheckpoint', entry => signCheckpoints.push(entry));
     await real.page.exposeFunction('recordCanvasCheckpoint', entry => canvasCheckpoints.push(entry));
-    await real.page.evaluate(() => {
+    const wireRecords = () => {
       const persist = Storage.prototype.setItem; let last = '', gotGround = false, gotSign = false, gotCanvas = false;
       Storage.prototype.setItem = function (key, value) {
         if (key.startsWith('n4spb.loading-report.v1:')) {
@@ -607,8 +642,13 @@ try {
         }
         return persist.call(this, key, value);
       };
-    });
-    await real.page.click('#diag-start');
+    };
+    await real.page.evaluate(wireRecords);
+    if (process.argv.includes('--published-mobile')) {
+      await real.page.evaluateOnNewDocument(wireRecords);
+      await real.page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148');
+      await real.page.goto(base + 'index.html', { waitUntil: 'domcontentloaded' });
+    } else await real.page.click('#diag-start');
     await real.page.waitForSelector('#fatal button', { timeout: 60000 });
     await real.page.click('#fatal button');
     await real.page.waitForFunction(() => document.body.classList.contains('loaded'), { timeout: 240000 });
@@ -801,6 +841,7 @@ try {
         assert.deepEqual(arrival.baked.failures, []);
         for (const name of ['test', 'q', 'bakedworker', 'earlycompile', 'diagscene', 'diagshadows', 'diagatlas', 'diagtexture', 'diagground', 'diagsignatlas', 'diagcanvasupload', 'diaggeometry', 'nd', 'supercells', 'diaguploader', 'diagpack'])
           assert.equal(arrival.options[name], data.current.options[name], name + ' survives the hop');
+        if (process.argv.includes('--published-mobile')) assert.equal(arrival.options.mobileprofile, '1');
         const state = await real.page.evaluate(() => ({ to: window.__ctx.handoff?.ho.to, applied: window.__ctx.handoff?.applied, shadows: window.__ctx.renderer.shadowMap.enabled, errors: window.__errors }));
         assert.equal(state.to, to); assert.equal(state.applied, true); assert.equal(state.shadows, false); assert.deepEqual(state.errors, []);
         assert.deepEqual(real.errors, []);

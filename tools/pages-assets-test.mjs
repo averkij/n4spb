@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert/strict';
-import { copyLiveAssets, checkSiteSize, sizeOf } from './pages-assets.mjs';
+import vm from 'node:vm';
+import { copyLiveAssets, checkSiteSize, sizeOf, prepareMobileEntries } from './pages-assets.mjs';
+import { publishedEntry } from './lib/pages-entry.mjs';
+import { REGISTRY } from '../src/areas/registry.js';
 
 const tempRoot = fs.realpathSync(os.tmpdir());
 const tmp = fs.mkdtempSync(path.join(tempRoot, 'n4spb-pages-assets-'));
@@ -38,6 +41,41 @@ try {
   assert.equal(size.files, 7);
   assert.deepEqual(checkSiteSize(path.join(tmp, 'dist'), size.bytes), size);
   assert.throws(() => checkSiteSize(path.join(tmp, 'dist'), size.bytes - 1), /over the/);
+  // Exercise the exact deployment transform, including every live area and
+  // project-subdirectory URLs. A mobile redirect must not also start main.js.
+  const main = '<script type="module" src="./src/main.js"></script>';
+  const entries = path.join(tmp, 'entries'); fs.mkdirSync(entries);
+  for (const row of Object.values(REGISTRY).filter(r => !r.parked && r.status !== 'planned')) {
+    fs.writeFileSync(path.join(entries, row.page), main);
+    fs.writeFileSync(path.join(entries, row.page === 'index.html' ? 'diagnostics.html' : 'diagnostics-' + row.page), 'diagnostic');
+  }
+  prepareMobileEntries(entries);
+  for (const row of Object.values(REGISTRY).filter(r => !r.parked && r.status !== 'planned')) {
+    const source = fs.readFileSync(path.join(entries, row.page), 'utf8');
+    const code = /<script data-pages-entry>([^]*?)<\/script>/.exec(source)[1];
+    for (const [ua, touches, expectedMobile, search] of [
+      ['iPhone', 5, true, '?cam=1,2,3,4&tod=1.2'], ['Android', 5, true, ''], ['Macintosh', 5, true, ''],
+      ['Macintosh', 0, false, ''], ['Windows NT', 5, false, ''], ['iPhone', 5, false, '?mobileprofile=0'],
+      ['iPhone', 5, false, '?bake=1'], ['iPhone', 5, false, '?shot=1'], ['iPhone', 5, false, '?only=city']
+    ]) {
+      let redirect, loaded, ticket;
+      const href = 'https://example.test/n4spb/' + row.page + search;
+      vm.runInNewContext(code, { URL, URLSearchParams, navigator: { userAgent: ua, maxTouchPoints: touches },
+        location: { href, search, hash: '', replace: url => { redirect = url; } },
+        sessionStorage: { setItem: (_, value) => { ticket = value; } },
+        document: { createElement: () => ({}), body: { append: node => { loaded = node; } } } });
+      if (expectedMobile) {
+        assert.equal(loaded, undefined); assert.equal(ticket, redirect);
+        const url = new URL(redirect);
+        assert.equal(url.pathname, '/n4spb/' + (row.page === 'index.html' ? 'diagnostics.html' : 'diagnostics-' + row.page));
+        for (const [key, value] of Object.entries({ test: 'scene-js-gzip', diagshadows: '0', diagatlas: '0', diagtexture: '256',
+          diagground: 'plain', diagsignatlas: '1024', diagcanvasupload: 'pixels', diaguploader: 'staged', diagpack: '1', mobileprofile: '1', nd: '0', supercells: '0' }))
+          assert.equal(url.searchParams.get(key), value);
+        if (search) assert.equal(url.searchParams.get('cam'), '1,2,3,4');
+      } else { assert.equal(redirect, undefined); assert.equal(loaded.src, './src/main.js'); assert.equal(loaded.type, 'module'); }
+    }
+  }
+  assert.throws(() => publishedEntry(main + main, 'diagnostics.html'), /exactly one/);
   console.log('PASS Pages assets: live products and static art intact, parked bakes excluded, bad manifests and oversize uploads rejected');
 } finally {
   const resolved = fs.realpathSync(tmp);

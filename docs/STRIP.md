@@ -119,7 +119,8 @@ The full city bake was 450 MiB in 538 files.
 
 ## 7. Deployment
 
-There is no build step: deploying is copying files. The whitelist:
+Deployment copies the scene files and selects the phone entry during Pages
+assembly (the authored scene and bake inputs stay unchanged). The whitelist:
 
 ```
 index.html
@@ -134,7 +135,15 @@ Not needed at run time: `tools/`, `docs/`, `node_modules/`, `shots/`, `package*.
 The Pages workflow copies static artwork plus only the **live** registry areas' bake directories with `node tools/pages-assets.mjs`, after assembling the other files in `dist/`. Parked strip/North bakes remain in the repository for development, but are not uploaded. The tool checks every live manifest's area and refuses a complete site over 1,000,000,000 bytes. The old all-assets copy produced a 1.06 GB site; excluding parked bakes brings the same 16 live areas to about 977 MB. `node tools/pages-assets-test.mjs` checks the selection, intact live products and artwork, manifest failures and size limit.
 
 ```sh
-mkdir dist && cp -r index.html src manifest.webmanifest dist/ && mkdir -p dist/vendor/rapier && cp vendor/rapier/rapier.js vendor/rapier/LICENSE dist/vendor/rapier/ && node tools/pages-assets.mjs
+mkdir dist
+cp -r src manifest.webmanifest dist/
+for f in *.html; do
+  if grep -q '<html[^>]* data-area=' "$f"; then cp "$f" dist/; fi
+done
+mkdir -p dist/vendor/rapier dist/vendor/fflate
+cp vendor/rapier/rapier.js vendor/rapier/LICENSE dist/vendor/rapier/
+cp vendor/fflate/fflate.module.js vendor/fflate/LICENSE dist/vendor/fflate/
+node tools/pages-assets.mjs
 ```
 
 Required static-host behaviour:

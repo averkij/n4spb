@@ -4,6 +4,7 @@
 (() => {
   'use strict';
   const LIMIT = 140, PENDING_LIMIT = 64;
+  const mobileEntry = new URLSearchParams(location.search).get('mobileprofile') === '1';
   const key = 'n4spb.loading-report.v1:' + location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1);
   let run = null, previous = null, saved = null, storageError = '', selected = 'current';
   let ui, lastSample = '', lastTick = 0, requestId = 0;
@@ -87,7 +88,7 @@
     ui.pending.textContent = entries.length ? 'Waiting: ' + entries.slice(-4).map(p => p.asset).join('\n') : 'No recorded pending requests.';
     ui.tail.textContent = (r?.events || []).slice(-6).map(e => `${(e.ms / 1000).toFixed(1)}s ${e.kind}: ${e.detail}`).join('\n');
     ui.previous.disabled = !previous;
-    ui.toggle.textContent = `Diagnostics v${diagnosticsVersion} · ${run ? run.phase || run.status : 'saved reports'}`;
+    ui.toggle.textContent = mobileEntry ? 'Report' : `Diagnostics v${diagnosticsVersion} · ${run ? run.phase || run.status : 'saved reports'}`;
   }
   function request(kind, asset, rawBytes) {
     if (!run) return null;
@@ -510,6 +511,7 @@
   }
 
   function mount() {
+    if (mobileEntry) document.title = 'Saint Petersburg';
     const css = document.createElement('style');
     css.textContent = `
       #load-diag { position:fixed; z-index:2147483646; inset:0; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); box-sizing:border-box; overflow:auto; background:#0b1230; color:#eef2ff; font:16px/1.45 system-ui,sans-serif; touch-action:pan-y; }
@@ -617,7 +619,8 @@
       const query = new URLSearchParams({ q: params.get('q') === 'medium' ? 'medium' : 'performance', bakedworker: test === 'scene' ? $('worker').value : '1', earlycompile: $('compile').checked ? '1' : '0', test });
       if (['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) {
         query.set('diagscene', '1');
-        if (params.get('diagscene') === '1' && params.has('ho') && params.has('cam')) {
+        if (mobileEntry) query.set('mobileprofile', '1');
+        if (mobileEntry || (params.get('diagscene') === '1' && params.has('ho') && params.has('cam'))) {
           for (const name of ['ho', 'cam', 'fly', 'tod', 'look']) if (params.has(name)) query.set(name, params.get(name));
         }
       }
@@ -660,7 +663,8 @@
       return ticket === location.href;
     });
     const arrivalParams = new URLSearchParams(location.search);
-    if (arrivalTicket && arrivalParams.get('diagscene') === '1' && arrivalParams.has('ho') && arrivalParams.has('cam') &&
+    const freshMobile = mobileEntry && (arrivalTicket || pageIdentity.navigationType === 'navigate');
+    if ((freshMobile || (arrivalTicket && arrivalParams.has('ho') && arrivalParams.has('cam'))) && arrivalParams.get('diagscene') === '1' &&
       ['scene', 'scene-staged', 'scene-js-gzip'].includes($('test').value)) $('start').click();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();

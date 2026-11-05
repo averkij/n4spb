@@ -4,6 +4,17 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { REGISTRY } from '../src/areas/registry.js';
+import { handoffPage } from '../src/core/handoff.js';
+import { publishedEntry } from './lib/pages-entry.mjs';
+
+export function prepareMobileEntries(site, registry = REGISTRY) {
+  for (const row of Object.values(registry).filter(r => !r.parked && r.status !== 'planned')) {
+    const destination = handoffPage(row.page, 'diagscene=1');
+    assert(fs.existsSync(path.join(site, destination)), `missing mobile entry ${destination}`);
+    const page = path.join(site, row.page);
+    fs.writeFileSync(page, publishedEntry(fs.readFileSync(page, 'utf8'), destination));
+  }
+}
 
 export function copyLiveAssets(root, target, registry = REGISTRY) {
   const source = path.resolve(root, 'assets');
@@ -46,6 +57,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const site = path.join(root, 'dist');
   const live = copyLiveAssets(root, path.join(site, 'assets'));
+  prepareMobileEntries(site);
   const size = checkSiteSize(site);
   console.log(`Pages: ${live.length} live bakes, ${size.files} files, ${size.bytes} bytes (limit 1000000000)`);
 }

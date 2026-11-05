@@ -937,6 +937,37 @@ retained. Phone stability and the previously reported visual distortions still
 need device verification; this remains a diagnostic profile, not the normal
 production quality preset.
 
+#### v9.19.3: automatic phone profile on GitHub Pages
+
+The owner confirmed v9.19.2 startup and an area change on the iPhone using the
+packed JS-gzip profile. A later walking crash remains unresolved; its report is
+still needed. Successful loading is not evidence of unlimited walking stability.
+
+Pages assembly now replaces the ordinary main-script entry in each live area's
+published HTML with a small device selector. iPhone/iPad (including desktop-style
+iPad user agents) and Android visits go to that area's existing instrumented
+loader with the confirmed settings: JS gzip, shadows/texture atlasing off,
+256 px static texture cap, plain ground, 1024 px sign atlas, pixel canvas uploads,
+staged uploads and packed geometry. Performance quality, worker decoding, early
+compilation, `nd=0` and `supercells=0` accompany that profile. The authored pages
+and bake inputs remain unchanged. Desktop visits load the ordinary main module;
+`mobileprofile=0` is an explicit comparison opt-out.
+
+A normal published mobile visit starts loading automatically, retains the regular
+splash and Play button, and offers a small Report button. It never loads the
+ordinary scene before redirecting. View/arrival/time/weather parameters survive,
+as does the mobile profile across area changes. A reload of the mobile loader
+stays paused for report recovery instead of automatically repeating a possible
+crash. Fresh navigation also works when session storage is blocked. Explicit
+diagnostic links keep their existing manual test controls.
+
+Verification: the published-HTML browser run started from `index.html` with an
+iPhone user agent, reached play, loaded the previously reported region, and
+completed Palace -> Smolny -> Palace retaining `mobileprofile=1`. Focused browser
+checks cover desktop entry, automatic phone entry with/without storage, and
+paused reload recovery. Deployment tests cover all 16 destinations, Android,
+iPad desktop-style detection, desktop/explicit opt-out and view-state retention.
+
 The report records module progress, environment milestones, pending fetches and
 worker asset replies, decoder failures, errors, heartbeat gaps, graphics context
 loss and whether the first-frame/loaded marker was reached. Fetch completion
