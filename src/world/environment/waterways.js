@@ -17,7 +17,7 @@
 // strip does not hold at all, joins the Neva inside the data region: its ring is a third scenery source that is drawn there too (FAR_SOURCES inData), and the mouth edge that it shares with the data polygon of the Neva is an open join.
 // The dead-end walls make the two banks of a canal ONE chain: bank.caps lists the arclengths of those walls, so that quay.js can still tell the banks apart (one descent per site and bank). The seam x = -2670 of the removed
 // southern rectangles is a clip line too (_clipLines), since the clipped data still holds the Griboedov Canal pieces that meet there.
-// Water levels (street = 0): docs/research/west-canals-bridges.md section 2.5 (Fontanka -3.2, Griboedov -2.9, Moika -3.0, Winter Canal -3.1, Neva -3.4).
+// Connected waterways share NAVIGABLE_WATER_Y (street = 0); canal appearance never changes the hydraulic datum.
 // THE AREA TABLES (docs/AREAS.md section 3, src/world/area.js WATER): the plugs, the bridge zones and shades, the extra clip lines, the scenery sources an area draws, the centre and the radius of the far
 // window, the forced banks, the open mouths, the data records that form a waterway and the grass-slope reaches are the area's, not this file's. An area that leaves one out gets an empty / inert value.
 import { RIVER, WATER, EXTENT_RECTS } from '../data/city.js';
@@ -26,6 +26,7 @@ import { WATER as AREA_WATER } from '../lib/area-tables.js';
 import { naturalBankSurfaces, bankHeightQuery, fitNaturalBankWidths } from './shore-profile.js';
 import { exposedShoreChains } from './shore-chains.js';
 import { shoreTerrain } from './shore-terrain.js';
+import { NAVIGABLE_WATER_Y } from './water-level.js';
 
 import { NEVA_DOWNSTREAM } from './neva-downstream.js';
 import { NEVA_MALAYA } from './neva-malaya.js';
@@ -54,25 +55,25 @@ const keyOf = (r) => r.key || AREA_WATER.keyByName[r.name] || AREA_WATER.riverKe
 
 /** Cross-section / look parameters per waterway key. water / bed: y of the surface and of the bed (street level = 0). */
 export const WATERWAYS = {
-  fontanka: { key: 'fontanka', name: 'Фонтанка', water: -3.2, bed: -4.6, wall: 'fontanka', rail: ['lattice', 'clover', 'bars'], post: 'pyramid', postW: 0.45, postH: 1.0, bay: 3.2, width: 61, shadeH: 3.4 },   // 53.5 m NE of Obukhovsky, 60-62 m from there on (the polygon rules)
-  griboedov: { key: 'griboedov', name: 'канал Грибоедова', water: -2.9, bed: -4.3, wall: 'pink', rail: ['bars', 'loops'], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 19, shadeH: 3.0 },
-  moika: { key: 'moika', name: 'Мойка', water: -3.0, bed: -4.5, wall: 'pink', rail: ['moika'], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.4, width: 26, shadeH: 3.1 },
-  'winter-canal': { key: 'winter-canal', name: 'Зимняя канавка', water: -3.1, bed: -4.3, wall: 'pink', rail: ['lancet'], post: 'pylon', postW: 0.45, postH: 0.95, bay: 2.3, width: 12.8, shadeH: 3.2 },
+  fontanka: { key: 'fontanka', name: 'Фонтанка', water: NAVIGABLE_WATER_Y, bed: -4.8, wall: 'fontanka', rail: ['lattice', 'clover', 'bars'], post: 'pyramid', postW: 0.45, postH: 1.0, bay: 3.2, width: 61, shadeH: 3.4 },   // 53.5 m NE of Obukhovsky, 60-62 m from there on (the polygon rules)
+  griboedov: { key: 'griboedov', name: 'канал Грибоедова', water: NAVIGABLE_WATER_Y, bed: -4.8, wall: 'pink', rail: ['bars', 'loops'], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 19, shadeH: 3.0 },
+  moika: { key: 'moika', name: 'Мойка', water: NAVIGABLE_WATER_Y, bed: -4.9, wall: 'pink', rail: ['moika'], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.4, width: 26, shadeH: 3.1 },
+  'winter-canal': { key: 'winter-canal', name: 'Зимняя канавка', water: NAVIGABLE_WATER_Y, bed: -4.6, wall: 'pink', rail: ['lancet'], post: 'pylon', postW: 0.45, postH: 0.95, bay: 2.3, width: 12.8, shadeH: 3.2 },
   // the Swan Canal is NOT a granite-wall canal: grass slopes down to a low granite banquette (SLOPE_REACHES below; docs/research/mars-bridges-canals.md section 2.1): ball-post rail on the Mars Field
   // (west) side, green trellis on the Summer Garden (east) side; water 10-11 m wide (the data polygon)
-  'swan-canal': { key: 'swan-canal', name: 'Лебяжья канавка', water: -2.8, bed: -4.0, wall: 'swan-canal', rail: ['ballpost', 'trellis'], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.0, width: 10.6, shadeH: 1.2, profile: 'slope' },
-  // the restored Voskresensky canal = the moat along the south front of the Engineering (Mikhailovsky) Castle (OSM WATER r15750440): narrow, only ~1.3 m below the street; landmarksCastle draws its bridges and railings
-  moat: { key: 'moat', name: 'Воскресенский канал', water: -1.2, bed: -2.4, wall: 'moat', rail: [], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.4, width: 14, shadeH: 1.3 },
-  neva: { key: 'neva', name: 'Нева', water: -3.4, bed: -6.0, wall: 'neva', rail: [], post: 'roll', postW: 0.88, postH: 1.0, bay: 2.2, width: 400, shadeH: 3.5 },
+  'swan-canal': { key: 'swan-canal', name: 'Лебяжья канавка', water: NAVIGABLE_WATER_Y, bed: -4.6, wall: 'swan-canal', rail: ['ballpost', 'trellis'], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.0, width: 10.6, shadeH: 1.2, profile: 'slope' },
+  // the restored Voskresensky canal = the moat along the south front of the Engineering (Mikhailovsky) Castle (OSM WATER r15750440): narrow, connected to the Fontanka at the common water datum; landmarksCastle draws its bridges and railings
+  moat: { key: 'moat', name: 'Воскресенский канал', water: NAVIGABLE_WATER_Y, bed: -4.6, wall: 'moat', rail: [], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.4, width: 14, shadeH: 1.3 },
+  neva: { key: 'neva', name: 'Нева', water: NAVIGABLE_WATER_Y, bed: -6, wall: 'neva', rail: [], post: 'roll', postW: 0.88, postH: 1.0, bay: 2.2, width: 400, shadeH: 3.5 },
   // the south-west (docs/research/new-holland.md section 3; rows of the source project, used only by an area that names these waterways in WATER.keyByName / dataWater): the Kryukov Canal (Nikolsky / Mariinsky side, to the Moika)
   // and the Admiralty / Novo-Admiralty canals round New Holland; the inner canals of New Holland (East, South, the Kovsh basin) are walls + coping only: the loop railing, its colliders, the pier, the stairs and the footbridges are landmarksNewHolland's
-  kryukov: { key: 'kryukov', name: 'Крюков канал', water: -2.9, bed: -4.3, wall: 'kryukov', rail: ['vase'], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 22, shadeH: 3.0 },
-  admiralty: { key: 'admiralty', name: 'Адмиралтейский канал', water: -2.8, bed: -4.0, wall: 'admiralty', rail: ['moika'], post: 'moika', postW: 0.45, postH: 1.0, bay: 2.4, width: 10, shadeH: 2.8 },
+  kryukov: { key: 'kryukov', name: 'Крюков канал', water: NAVIGABLE_WATER_Y, bed: -4.8, wall: 'kryukov', rail: ['vase'], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 22, shadeH: 3.0 },
+  admiralty: { key: 'admiralty', name: 'Адмиралтейский канал', water: NAVIGABLE_WATER_Y, bed: -4.6, wall: 'admiralty', rail: ['moika'], post: 'moika', postW: 0.45, postH: 1.0, bay: 2.4, width: 10, shadeH: 2.8 },
   // Vasilyevsky-Okrug 7 (docs/AREAS.md 15.v; row of the source project, 102_3d_piter waterways.js): the Smolenka, the river between the Smolensky cemetery and the Petrograd-side shore, granite walls with a simple bar rail (water level of the Neva)
-  smolenka: { key: 'smolenka', name: 'Смоленка', water: -3.4, bed: -4.4, wall: 'smolenka', rail: ['bars'], post: 'twostep', postW: 0.45, postH: 1.1, bay: 2.7, width: 30, shadeH: 3.2 },
+  smolenka: { key: 'smolenka', name: 'Смоленка', water: NAVIGABLE_WATER_Y, bed: -4.4, wall: 'smolenka', rail: ['bars'], post: 'twostep', postW: 0.45, postH: 1.1, bay: 2.7, width: 30, shadeH: 3.2 },
   // Gavan (docs/gdm-G.md; row of the source project, 102_3d_piter waterways.js line 74): Galerny Harbour and the Shkipersky canal, big cream granite blocks, no railing (the quay is open, the walls of the moles / stairs belong to landmarksGavan), water level of the Neva
-  gavan: { key: 'gavan', name: 'Галерная гавань', water: -3.4, bed: -4.5, wall: 'gavan', rail: [], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.7, width: 40, shadeH: 3.0 },
-  'nh-inner': { key: 'nh-inner', name: 'Каналы Новой Голландии', water: -2.8, bed: -4.0, wall: 'admiralty', rail: [], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 11, shadeH: 2.8 },
+  gavan: { key: 'gavan', name: 'Галерная гавань', water: NAVIGABLE_WATER_Y, bed: -4.5, wall: 'gavan', rail: [], post: 'twostep', postW: 0.45, postH: 1.0, bay: 2.7, width: 40, shadeH: 3.0 },
+  'nh-inner': { key: 'nh-inner', name: 'Каналы Новой Голландии', water: NAVIGABLE_WATER_Y, bed: -4.6, wall: 'admiralty', rail: [], post: 'twostep', postW: 0.5, postH: 1.1, bay: 2.7, width: 11, shadeH: 2.8 },
 };
 // Northern source keys share the Neva datum. The smaller channels retain
 // their own bank chains so bridge openings never become water barriers.

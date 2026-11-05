@@ -56,8 +56,15 @@ export function makeArch(env, site) {
   // ------------------------------------------------------------------ bank lines
   const nSl = Math.max(1, Math.ceil((v1 - v0) / 3.5)), vs = [], bL = [], bR = [];
   let last = null;
+  // At canal mouths the polygon's closing edge crosses the outer fascia.
+  // Continue the two real bank edges through that face; a fixed-width span
+  // leaves its abutments detached from the skewed quay.
+  const centre = site.followBanks && waterAt(site, 0);
+  const edges = centre && centre.map(u => localSegs(site).flat().find(([a, av, b, bv]) =>
+    av * bv <= 0 && av !== bv && Math.abs(a + (b - a) * -av / (bv - av) - u) < .001));
+  const surveyedBank = v => edges && edges.every(Boolean) ? edges.map(([a,av,b,bv]) => a + (b-a)*(v-av)/(bv-av)) : null;
   for (let k = 0; k <= nSl; k++) {
-    const v = v0 + (v1 - v0) * k / nSl, w = site.bank || waterAt(site, v) || last || [-8.5, 8.5];
+    const v = v0 + (v1 - v0) * k / nSl, w = surveyedBank(v) || site.bank || waterAt(site, v) || last || [-8.5, 8.5];
     vs.push(v); bL.push(w[0]); bR.push(w[1]); last = w;
   }
   const uMin = Math.min(...bL) - EXT, uMax = Math.max(...bR) + EXT, uc = (uMin + uMax) / 2, hwD = (uMax - uMin) / 2;

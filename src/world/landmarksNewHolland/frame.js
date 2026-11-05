@@ -25,7 +25,7 @@ export const archW = (u, v) => ({ x: ARCH.x + ARCH.d[0] * u + ARCH.n[0] * v, z: 
 export const toArch = (x, z) => ({ u: (x - ARCH.x) * ARCH.d[0] + (z - ARCH.z) * ARCH.d[1], v: (x - ARCH.x) * ARCH.n[0] + (z - ARCH.z) * ARCH.n[1] });
 
 export const BOTTLE = { x: -3548, z: 337.5, R: 29.5, r: 17 };
-export const WATER_DEEP = -2.8;                      // Kovsh / inner canals when the ground has a hole under them
+export { NAVIGABLE_WATER_Y as WATER_DEEP } from '../environment/water-level.js';
 export const QUAY_H = 2.8;
 export const EAVES = 13.2, RIDGE = 20;               // warehouse eaves / ridge heights above the street
 

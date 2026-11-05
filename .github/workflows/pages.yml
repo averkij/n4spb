@@ -137,6 +137,8 @@ jobs:
           node tools/area.mjs vasilyevsky tools/hedge-geometry-test.mjs --academy
           node tools/area.mjs moskovskaya tools/water-bank-topology-test.mjs
           node tools/water-join-topology-test.mjs
+          node tools/each-area.mjs tools/water-level-test.mjs
+          node tools/area.mjs palace tools/boat-camera-test.mjs
           node tools/area.mjs moskovskaya tools/natural-bank-test.mjs
           node tools/area.mjs palace tools/natural-bank-test.mjs
           node tools/area.mjs kolomna tools/natural-bank-test.mjs

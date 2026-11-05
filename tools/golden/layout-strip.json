@@ -542,8 +542,8 @@
     }
    ],
    "RIVER_Y": {
-    "bed": -4.6,
-    "water": -3.2
+    "bed": -4.8,
+    "water": -3.4
    },
    "SQUARE": {
     "name": "площадь Восстания",
@@ -601,8 +601,8 @@
     "[hashed]": true,
     "kind": "object",
     "n": 17,
-    "bytes": 3073,
-    "hash": "65859b71d987b2d4"
+    "bytes": 3081,
+    "hash": "bc799d23b535f5ce"
    },
    "WORLD": {
     "data": {
@@ -2070,7 +2070,7 @@
   },
   "heightAt": {
    "n": 588,
-   "hash": "5488b2b296a87a8b",
+   "hash": "f1d020946c963de4",
    "head": [
     0,
     0,
@@ -2084,7 +2084,7 @@
   },
   "groundAt": {
    "n": 588,
-   "hash": "5488b2b296a87a8b",
+   "hash": "f1d020946c963de4",
    "head": [
     0,
     0,
@@ -2126,7 +2126,7 @@
   },
   "waterLevelAt": {
    "n": 588,
-   "hash": "2ac99b208d27a588",
+   "hash": "f4c88473b2e2976a",
    "head": [
     null,
     null,

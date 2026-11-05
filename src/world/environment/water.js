@@ -1,11 +1,11 @@
-// environment/water.js - the water of every waterway: Fontanka (surface y = -3.2), Griboedov Canal (-2.9), Moika (-3.0), Winter Canal (-3.1), Swan Canal (-2.8) and the Neva (-3.4),
+// environment/water.js - connected rivers and canals share NAVIGABLE_WATER_Y,
 // each between its granite quay walls, plus the continuations beyond the data and the Neva to the horizon (river.js waterCuts).
 // Toon water shader, adapted from the Yakutsk lake: deep body with large soft patches and short wind chop, sky reflection in four painted steps (stronger at grazing angles), drifting
 // ripple iso-lines, a light edge line along the walls (stained olive-brown instead), WALL SHADOW computed from the sun direction (uSunDir), the nearest bank (gradient of the signed-
 // distance texture of field.js) and the wall height, so the strip under a wall is olive / dark teal exactly where the real water is shaded (docs/research/fontanka.md: sunlit deep blue
 // #27507f with short chop, in shade olive-brown #4a4a37 + dark teal #22404a; west-canals-bridges.md 6.3: canals olive-brown to slate, the Neva #1f3f78-#26509a under a blue sky), foam
 // at the cutwaters of the Anichkov Bridge, darkening under every bridge deck (BRIDGE_ZONES: a tunnel-like soffit shadow, the Blue Bridge is 97 m long) and a low-sun glitter sheet.
-// `ctx.noOutline`, never merged. One mesh (and one material) per waterway, each at its own water level. The mesh is the water cut into the ground grid (16 m cells over the data, growing
+// `ctx.noOutline`, never merged. One mesh (and one material) per waterway, at the shared hydraulic datum. The mesh is the water cut into the ground grid (16 m cells over the data, growing
 // outward: no giant triangles, the shader uses world positions) and clipped against the SAME convex pieces as the ground holes, so its edge IS the quay line.
 import * as THREE from 'three';
 import { axisFor } from './ground.js';

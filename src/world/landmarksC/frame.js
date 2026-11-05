@@ -10,7 +10,8 @@ export const CU = Math.cos(TH), SU = Math.sin(TH);
 export const CX = -441.5, CZ = -91.8;
 export const HALF = 27.3, EXT = 29.5;
 export const FACE = 18.6, EDGE = 18.95, ROAD = 15.95;           // spandrel face / outer face of the cornice / half width of the roadway
-export const SPRING = -2.8, CROWN = 0.2, WATER = -3.2, FOOT = -3.55, STAIN_TOP = -1.35;
+import { NAVIGABLE_WATER_Y } from '../environment/water-level.js';
+export const SPRING = -2.8, CROWN = 0.2, WATER = NAVIGABLE_WATER_Y, FOOT = WATER - 0.35, STAIN_TOP = -1.35;
 export const H0 = 0.06, H1 = 1.5;
 export const ARCHES = [[-22.45, -9.85], [-6.25, 6.25], [9.85, 22.45]];
 

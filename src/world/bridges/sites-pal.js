@@ -9,9 +9,9 @@ export const PAL_SITES = [
     cx: -828.9, cz: -1717.1, b: 246.86, v0: -8.4, v1: 8.0, spans: [9.6, 12.6, 9.6], crowns: [-0.8, -0.5, -0.8], pier: 2.2,
     zones: [[-8.4, -6, 'pave'], [-6, 6, 'asphalt'], [6, 8.0, 'pave']], hump: 0.2, soffitCrown: -0.5, spring: 0.45, at: [-829, -1717] },
   { id: 'swan-upper', name: 'Верхний Лебяжий мост', nameEn: 'Upper Swan Bridge', kind: 'road', style: 'swan-upper', stone: true, water: 'r2653741', ww: 'swan-canal',
-    cx: -1069.3, cz: -1610.8, b: 246.8, v0: -8.4, v1: 7.5, bank: [-5.6, 5.8],
+    cx: -1069.3, cz: -1610.8, b: 246.8, v0: -8.4, v1: 7.5, followBanks: true,
     zones: [[-8.4, -3.6, 'pave'], [-3.6, 3.6, 'asphalt'], [3.6, 7.5, 'pave']], hump: 0.4, soffitCrown: -0.4, spring: 0.2, at: [-1069, -1611] },
   { id: 'eng2', name: '2-й Инженерный мост', nameEn: '2nd Engineer Bridge', kind: 'road', style: 'eng2', look: 'swan-upper', stone: true, water: 'r15750440', ww: 'moat',
-    cx: -636.8, cz: -863.9, b: 326.6, v0: -5.4, v1: 5.4,
+    cx: -636.8, cz: -863.9, b: 326.6, v0: -5.4, v1: 5.4, followBanks: true,
     zones: [[-5.4, -3.6, 'pave'], [-3.6, 3.6, 'asphalt'], [3.6, 5.4, 'pave']], hump: 0.15, soffitCrown: -0.35, spring: 0.0, at: [-637, -864] },
 ];

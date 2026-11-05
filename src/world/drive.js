@@ -31,6 +31,7 @@ import { STEP_HEIGHT } from '../core/physics.js';
 import { loadBoats } from './drive/boat/index.js';
 import { createBoatHandling } from './drive/boat/handling.js';
 import { createWake } from './drive/boat/wake.js';
+import { boatCameraLow, boatCameraFraction } from './drive/boat/camera.js';
 
 const DEG = Math.PI / 180, TAU = Math.PI * 2;
 /** the damage state of a vehicle that cannot be damaged (the motor boat): the shape of drive/damage.js that drive.js, the HUD and the hand-off read, with nothing in it */
@@ -234,6 +235,7 @@ export async function build(ctx) {
     }
   }
   const ray = { x: 0, y: 0, z: 0 };
+  const cameraBlocked = (x, z, r, y0, y1) => L.insideBuilding(x, z) || ph.columnBlocked(x, z, r, y0, y1);
   function cameraStep(dt) {
     const sp = Math.min(1, car.speed / 200), sy = Math.sin(car.yaw), cy = Math.cos(car.yaw);
     const c = car.carCenter, target = view.mode === 2 ? null : _v;
@@ -269,27 +271,37 @@ export async function build(ctx) {
     view.camYaw += angDiff(tYaw, view.camYaw) * Math.min(1, (view.snap ? 100 : 3.6) * dt);
     const a = view.camYaw + view.orbitY;
     const far = view.mode === 1, chase = V.def.chase;
-    const dT = chase ? (far ? chase.far : chase.near) : (far ? 11.5 : 6.4) + 0.8 * (SPEC.len - 4.14) + 2.0 * sp + (car.boosting ? 0.9 : 0);
-    const hT = chase ? chase.height : (far ? 5.2 : 2.35) + 0.9 * (SPEC.hgt - 1.3) + 0.4 * sp;
+    let dT = chase ? (far ? chase.far : chase.near) : (far ? 11.5 : 6.4) + 0.8 * (SPEC.len - 4.14) + 2.0 * sp + (car.boosting ? 0.9 : 0);
+    let hT = chase ? chase.height : (far ? 5.2 : 2.35) + 0.9 * (SPEC.hgt - 1.3) + 0.4 * sp;
+    const lowBoat = car.floats && SPEC.len < 20 && boatCameraLow(view, dt, c.x, car.y, c.z, car.yaw, car.vx, car.vz, dT, hT, cameraBlocked);
+    if (lowBoat) { dT = Math.min(dT, Math.max(4.5, SPEC.len * .8)); hT = Math.min(hT, 1.0); }
     // distance / height / shake follow their targets smoothly (a nitro start used to pop the camera 0.9 m back in one frame)
-    const ks = view.snap ? 1 : Math.min(1, 3.2 * dt);
+    const ks = view.snap ? 1 : car.floats ? 1 - Math.exp(-1.5 * dt) : Math.min(1, 3.2 * dt);
     view.d = view.d === undefined || view.snap ? dT : view.d + (dT - view.d) * ks; view.h = view.h === undefined || view.snap ? hT : view.h + (hT - view.h) * ks;
     const d = view.d, h = view.h;
     const lookAhead = chase?.lookAhead ?? (far ? 5 : 4.2);
     const gy = car.y - 0.5 * (car.h || 0);                                         // a hop lifts the car out of the frame a little instead of dragging the camera up with it
     const tx = c.x + Math.sin(car.yaw) * lookAhead, tz = c.z + Math.cos(car.yaw) * lookAhead, ty = gy + (chase?.lookY ?? (far ? 0.9 : 1.15));
     let cx = c.x - Math.sin(a) * d * Math.cos(view.orbitP * 0.6), cz = c.z - Math.cos(a) * d * Math.cos(view.orbitP * 0.6);
-    const hy = gy + h + d * Math.sin(Math.max(-0.3, view.orbitP * 0.8)) * 0.7;
+    const hy = gy + h + (lowBoat ? 0 : d * Math.sin(Math.max(-0.3, view.orbitP * 0.8)) * 0.7);
     // keep the camera out of walls: march from the car to the wanted spot and stop before the first solid / building
     const dx = cx - c.x, dz = cz - c.z, N = 10; let t = 1;
-    for (let i = 3; i <= N; i++) {
+    for (let i = 3; !car.floats && i <= N; i++) {
       const f = i / N, px = c.x + dx * f, pz = c.z + dz * f, py = gy + (hy - gy) * f + 0.3;
       if (L.insideBuilding(px, pz) || ph.columnBlocked(px, pz, 0.28, py - 0.3, py + 0.3)) { t = (i - 1) / N; break; }
     }
-    t = Math.max(t, 0.28);
+    if (car.floats) {
+      t = boatCameraFraction(c.x, gy + 1.05, c.z, dx, hy - gy - 1.05, dz, cameraBlocked);
+      // Retract to a safe point immediately; release continuously, never
+      // jumping back and forth at each bridge collider boundary.
+      view.boom = view.snap || view.boom === undefined ? t : Math.min(t, view.boom + (t - view.boom) * (1 - Math.exp(-2 * dt)));
+      t = view.boom;
+    } else t = Math.max(t, 0.28);
     cx = c.x + dx * t; cz = c.z + dz * t;
-    const wantY = gy + (hy - gy) * Math.max(t, 0.45) + 0.0, gnd = car.groundAt(cx, cz) + 0.55;
+    const wantY = car.floats ? gy + 1.05 + (hy - gy - 1.05) * t : gy + (hy - gy) * Math.max(t, 0.45), gnd = car.groundAt(cx, cz) + 0.55;
     view.y = view.snap ? wantY : view.y + (wantY - view.y) * Math.min(1, 7 * dt);
+    // Vertical easing must not leave the eye inside a newly reached soffit.
+    if (car.floats && cameraBlocked(cx, cz, .24, view.y - .24, view.y + .24)) view.y = wantY;
     camera.position.set(cx + (Math.random() - 0.5) * amp, Math.max(view.y, gnd) + (Math.random() - 0.5) * amp, cz + (Math.random() - 0.5) * amp);
     camera.up.set(0, 1, 0);
     camera.lookAt(tx, ty - 0.2 * view.orbitP, tz);

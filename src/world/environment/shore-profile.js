@@ -89,7 +89,9 @@ export function naturalBankSurfaces(runs, waterways) {
     for(const[end,dir]of[[0,-1],[r.fr.length-1,1]]){
       const q=r.fr[end],next=r.fr[end===0?1:end-1],dx=(end===0?next.x-q.x:q.x-next.x)*dir,dz=(end===0?next.z-q.z:q.z-next.z)*dir;
       for(let j=0;j+1<profile.length;j++){
-        const p=profile[j],v=profile[j+1];if(v[0]<=p[0]+1e-8)continue;
+        // The submerged shelf is open water, not an earth bank. Raising its
+        // end to street level creates a freestanding panel in the canal.
+        const p=profile[j],v=profile[j+1];if(p[0]<0||v[0]<=p[0]+1e-8)continue;
         let points=[at(q,p),at(q,v),at(q,[v[0],0]),at(q,[p[0],0])];
         const a=points[0],b=points[1],c=points[2],dot=((b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1]))*dx+((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))*dz;
         if(dot<0)points.reverse();add(r,'cap',points,false);

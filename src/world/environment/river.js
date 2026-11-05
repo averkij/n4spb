@@ -95,6 +95,10 @@ export function bridgeZones() {
   }
   for (const z of riverBridgeZones()) out.push(z);      // (WATER.riverBridgeZones: the bridge roads of eastBridges over a keyless RIVER canal of the area, below)
   for (const z of moatBridgeZones()) out.push(z);
+  // The 2nd Engineer Bridge also meets the Fontanka bank at the moat mouth.
+  // The river's own wall and railing must yield to its outer fascia there.
+  const eng2 = out.find(z => z.id === 'eng2');
+  if (eng2) out.push({ ...eng2, key: 'fontanka' });
   for (const z of nhBridgeZones()) out.push(z);
   // the southern Fontanka decks (bridges/sites-south.js, site.south): the opening is the owner's deck frame (|u| <= 30 along the water, 60 m of quay), as in the source project
   for (const site of SITES.filter((s) => s.south || s.ww==='karpovka')) {

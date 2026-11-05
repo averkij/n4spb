@@ -12,7 +12,7 @@
 //  Always use the exports below, never raw numbers.
 //  The map is the strip Moscow station -> Nevsky -> Admiralty (8 play rectangles, data/city.js PLAY_RECTS) plus 120 m of scenery around it; the specialist modules of every other part of the city are not in this repo.
 //
-//  The city is FLAT (y = 0 = street level). The Fontanka lies in a granite trench: water surface y = RIVER_Y.water (-3.2), river bed RIVER_Y.bed; heightAt() returns the
+//  The city is FLAT (y = 0 = street level). The Fontanka lies in a granite trench: water surface y = RIVER_Y.water (the shared navigable datum), river bed RIVER_Y.bed; heightAt() returns the
 //  bed inside the river polygon (the quay walls enclose it; water is reachable: a walker steps off an open edge or through a broken fence, a car falls in and drives on the bed, docs/AREAS.md 13.7). Sidewalks are +0.12 m visually only (SURFACE.sidewalk): the player's feet stay at y = 0.
 //  UNDERGROUND: the metro lies 51-64 m below the street (docs/UNDERGROUND.md); the ground plane (y = 0) is a drawn mesh with holes over the shafts (GROUND_HOLES).
 //  The street grid is not axis aligned: Nevsky runs at bearing ~104 deg (WNW-ESE), Ligovsky / Marata ~17 deg, Liteyny / Vladimirsky ~1.5 deg.
@@ -84,7 +84,7 @@ export const GROUND_Y = 0;
 /** Heights of the drawn surfaces above the ground (metres). Only the ground is physical: roads / sidewalks are drawn, never walk boxes. Granite kerb 0.15, pavement +0.12. */
 export const SURFACE = { ground: 0, road: 0.03, sidewalk: 0.12, kerb: 0.15, plinth: 1.0, platform: 1.1 };   // platform = rail platform above the rail head level (decks are walk boxes)
 /** The Fontanka: water surface and bed below street level (docs/research/fontanka.md: granite wall ~3.2 m). */
-export const RIVER_Y = { water: -3.2, bed: -4.6 };
+export const RIVER_Y = { water: WATERWAYS.fontanka.water, bed: WATERWAYS.fontanka.bed };
 /** Metro datum (docs/research/metro.md): street level = 0, station platforms at -depth (OSM depth tags: Vosstaniya 58, Mayakovskaya 51, Vladimirskaya 55, Dostoevskaya 64). */
 export const METRO_DEPTH = { vosstaniya: -58, mayakovskaya: -51, vladimirskaya: -55, dostoevskaya: -64 };
 

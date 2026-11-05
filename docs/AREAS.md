@@ -1239,6 +1239,15 @@ The Places list and the view keys (1..0, Shift, Alt) are off (`?teleports=1` res
 
 ### 13.7 Water is reachable (the owner's world rule, 2026-10-25)
 
+**Connected water levels (2026-11-05).** Navigable rivers, canals and harbours
+share `NAVIGABLE_WATER_Y = -3.4` from `world/environment/water-level.js` across
+all areas and overlaps. Rendering, terrain beds, bridge waterlines, landing
+stages and boat physics use that datum; an open join must have no vertical step,
+sky slit or transverse foundation face. Imported source water heights are not
+authoritative. Preserve the authored levels of isolated ponds and fountains.
+Validate with `node tools/each-area.mjs tools/water-level-test.mjs`, plus a boat
+view across each changed mouth and handoff. Keep water reachable on foot/by car.
+
 **The rule.** Every river, canal, pond and fountain basin is walkable and drivable, in every area, present and future. Water is never a wall: not for the walker, not for the car, not for the camera, not for the territory or a check. Only fences, parapets, railings and low walls block, and every one of them is
 BREAKABLE through the knock system (a car breaks a bay off at the foot, it topples, the collider is replaced by a rest box of at most 0.42 m: the gap is passable). CLAUDE.md carries the rule for the future sessions. Water transport comes later and will use these waters.
 

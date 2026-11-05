@@ -1,5 +1,13 @@
 # Faster area development
 
+Connected waterways use the common datum in `world/environment/water-level.js`,
+including imported source canals and both sides of area handoffs. Keep rendered
+water, physics, boats, bridge waterlines, bank toes and landing stages in agreement.
+An open mouth must have no water-height step, dry slit or transverse foundation
+wall. Preserve separately authored isolated pond/fountain levels. Run
+`node tools/each-area.mjs tools/water-level-test.mjs` after water changes and inspect
+the mouths and area overlaps from a boat before the final bake.
+
 Use the smallest scene that answers the current authoring question, then validate
 the integrated city at a checkpoint. The full scene is expensive to construct;
 rebuilding it after every cornice, statue or texture edit wastes the edit loop.

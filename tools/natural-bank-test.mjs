@@ -10,6 +10,11 @@ import { Player } from '../src/core/player.js';
 const {ctx,L,THREE,errors}=await buildWorld({});
 assert.deepEqual(errors,[]);
 const ph=ctx.physics,surfaces=slopeSurfaces(),runs=slopeRuns();
+// End caps close the dry bank only. Extending the submerged shelf to street
+// height creates a freestanding wall across open water at each run endpoint.
+for(const s of surfaces.filter(s=>s.kind==='cap'))assert(
+  s.points.every(p=>p[1]>=WATERWAYS[s.key].water-.12-1e-6),
+  'bank end cap rises from the underwater shelf: '+s.bank.id);
 if(process.argv.includes('--mutant-flat'))ph.heightAt=(x,z)=>{const k=L.waterwayAt(x,z);return k?WATERWAYS[k].bed:0;};
 ctx.staticRoot.updateMatrixWorld(true);
 const mesh=[];ctx.staticRoot.traverse(o=>{if(o.isMesh&&/^env-quay-(grass|coping-|submerged-bank)/.test(o.name))mesh.push(o);});

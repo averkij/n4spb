@@ -17,7 +17,7 @@ import { BRIDGE_GROUP_KEYS, BRIDGE_SITES_OFF } from '../lib/area-tables.js';    
 import { EXTENT_RECTS } from '../data/city.js';
 export const EXT = 0.8;                                   // the deck runs this far over the land beyond the bank line (no sliver of water at the corners; the street asphalt ends at the bank, a small overlap)
 /** water surface level per waterway key (dossier section 2.5; environment may publish its own: see bridges.js) */
-export const WATER_Y = { karpovka: -3.4, zhdanovka: -3.4, griboedov: -2.9, moika: -3.0, 'winter-canal': -3.1, neva: -3.4, fontanka: -3.2, 'swan-canal': -2.8, kryukov: -2.9, admiralty: -2.8, smolenka: -3.4, gavan: -3.4, moat: -1.2 };
+export { NAVIGABLE_WATER_LEVELS as WATER_Y } from '../environment/water-level.js';
 
 const BASE_SITES = [
   { id: 'belinsky', name: 'Мост Белинского', nameEn: 'Belinsky Bridge', kind: 'road', style: 'belinsky', water: 'r1201709', ww: 'fontanka',
@@ -63,7 +63,7 @@ const BASE_SITES = [
   // ---- the Mars Field / Summer Garden reach (docs/research/mars-bridges-canals.md sections 4 and 7).  Extra fields: stone (granite arch generator), bank (fixed bank interval), spans / crowns / pier
   // (three-span arch), trams (v of the two tram tracks), pole (tripod name pole text), ped (a pedestrian deck: closed to cars), clear (board).
   { id: 'swan-lower', name: 'Нижний Лебяжий мост', nameEn: 'Lower Swan Bridge', kind: 'road', style: 'swan-lower', stone: true, water: 'r2653741', ww: 'swan-canal',
-    cx: -857.7, cz: -1004.3, b: 67, v0: -10.5, v1: 10.5, bank: [-5.2, 5.5],
+    cx: -857.7, cz: -1004.3, b: 67, v0: -10.5, v1: 10.5, followBanks: true,
     zones: [[-10.5, -7, 'pave'], [-7, 7, 'asphalt'], [7, 10.5, 'pave']],
     hump: 0.5, soffitCrown: -0.3, spring: 0.3, at: [-858, -1004] },
   { id: 'panteleymonovsky', name: 'Пантелеймоновский мост', nameEn: 'Panteleymonovsky Bridge', kind: 'road', style: 'pantel', water: 'r1201709', ww: 'fontanka',
@@ -71,7 +71,7 @@ const BASE_SITES = [
     zones: [[-11.7, -8, 'pave'], [-8, 8, 'asphalt'], [8, 11.7, 'pave']],
     hump: 0.45, soffitCrown: -0.35, spring: 0.2, at: [-725, -1083] },
   { id: 'eng1', name: '1-й Инженерный мост', nameEn: '1st Engineer Bridge', kind: 'road', style: 'eng1', water: 'r1201708', ww: 'moika',
-    cx: -754.7, cz: -1042.0, b: 326, v0: -5, v1: 5, bank: [-12.1, 12.2],
+    cx: -754.7, cz: -1042.0, b: 326, v0: -5, v1: 5, followBanks: true,
     zones: [[-5, -3.4, 'pave'], [-3.4, 3.4, 'asphalt'], [3.4, 5, 'pave']],
     hump: 0.3, soffitCrown: -0.5, spring: 0.5, clear: '2.6', at: [-755, -1042] },
   { id: 'garden1', name: '1-й Садовый мост', nameEn: '1st Sadovy Bridge', kind: 'road', style: 'garden1', water: 'r1201708', ww: 'moika',
@@ -92,7 +92,7 @@ const BASE_SITES = [
     zones: [[-7.8, -7.3, 'pave'], [-7.3, 7.3, 'sett'], [7.3, 7.8, 'pave']],
     hump: 0.3, soffitCrown: -0.4, spring: 0.4, at: [-1253, -1018] },
   { id: 'malo-konyushenny', name: 'Мало-Конюшенный мост', nameEn: 'Malo-Konyushenny Bridge (Triple)', kind: 'road', style: 'aegis', ped: true, water: 'r1201708', ww: 'moika',
-    cx: -1249.8, cz: -1036.4, b: 11, v0: -7.8, v1: 7.8, bank: [-10, 12.2],
+    cx: -1249.8, cz: -1036.4, b: 11, v0: -7.8, v1: 7.8,
     zones: [[-7.8, -7.3, 'pave'], [-7.3, 7.3, 'sett'], [7.3, 7.8, 'pave']],
     hump: 0.3, soffitCrown: -0.4, spring: 0.4, at: [-1250, -1036] },
   { id: 'bankovsky', name: 'Банковский мост', nameEn: 'Bankovsky Bridge (griffins)', kind: 'foot', style: 'bankovsky', water: 'r3298111', ww: 'griboedov',

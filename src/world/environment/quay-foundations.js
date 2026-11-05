@@ -1,6 +1,6 @@
 // A join between different water datums exposes the underside of the higher
-// basin. Close that vertical grade face along the lower ring's existing edge,
-// below the higher surface only. Equal-level navigable joins stay open.
+// isolated basin. Close that vertical grade face up to the higher surface.
+// Navigable water must share water-level.js's datum and never get such a face.
 export function waterLevelSeams(rings, levelOf, foot = .12) {
   const inside = (x,z,o) => {
     let hit=false;
@@ -29,7 +29,7 @@ export function waterLevelSeams(rings, levelOf, foot = .12) {
       }
       if(!Number.isFinite(high))continue;
       const k=[...a,...b].map(v=>Math.round(v*1e4)).join(',');if(seen.has(k))continue;seen.add(k);
-      out.push({key:g.key,a,b,n:[nx,nz],bottom:low-foot,top:high-foot});
+      out.push({key:g.key,a,b,n:[nx,nz],bottom:low-foot,top:high});
     }
   }
   return out;
