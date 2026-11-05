@@ -2883,3 +2883,47 @@ passes its entry, acceleration, camera, braking and exit checks. No page/module
 errors were reported; existing shader/texture warnings remain. Manifest check
 passes all 16 live areas: 1,869 complete products, 759.2 MiB gzip. All source and
 bakes are included in the same version checkpoint.
+
+## 2026-11-05 — Canal seams and boat camera (9.21.1)
+
+Connected navigable water now shares the -3.4 m datum in rendering, layout,
+physics and bridge waterlines. Beds retain their previous depth below water;
+isolated ponds and fountains keep their own levels. Canal-mouth arches follow
+the skewed banks, and natural-bank end caps no longer rise from the submerged
+shelf into open water. These are static changes using the existing batches.
+
+Small-boat chase views probe nearby overhead clearance every 0.08 s, lower
+and retract before a low span, hold across deck-piece gaps, then ease back.
+The continuous obstruction query is bounded at 128 samples even for the
+cargo ship's long camera boom. The real camera/collider regression covers both
+chase views at 12 m/s: maximum movement relative to the hull is 0.076 / 0.202 m
+per frame at 60 Hz, with no bridge intersections and return to open-water view.
+This is a motion/clearance test, not an FPS measurement.
+
+Checks: water-level consistency in all 18 implemented areas; real boat passage
+in Palace (108 checks) and Admiralty (169); 18 Palace bridge envelopes; natural
+banks in Palace, Moskovskaya, Kolomna and Islands; quay fixtures in Palace,
+Moskovskaya and Islands; water joins, audio, gates,
+layout goldens, dependency closures and the CPU deployment oracles. The new
+water-level and boat-camera checks run in CI. Normal-loading screenshots in
+`shots/bridge-fix/final-palace_*`, `final-admiralty_*`, and `final-camera_*`
+cover the reported defects, nearby Upper Swan/Prachechny bridges and a boat
+passing beneath Panteleymonovsky Bridge. The real gate notice is visible in
+`final-warning_0.png`, 25 m before the loading trigger, with travel still idle.
+
+The same two 8 s driving routes and settings as the 9.20.1 comparison above
+were run serially after normal baked loading, with no CPU checks or bake running:
+
+| Route | Load s | Mean / p50 / p95 ms | >40 / >80 ms frames | Mean draws | Distance m | CDP heap / backing MiB |
+|---|---:|---|---|---:|---:|---|
+| Obvodny 9.21.1 | 35.6 | 32.1 / 33.3 / 50.0 | 19 / 2 | 703 | 147.6 | 463.7 / 778.1 |
+| Nevsky 9.21.1 | 44.5 | 52.9 / 50.0 / 66.8 | 134 / 7 | 1296 | 269.0 | 433.0 / 739.2 |
+
+Evidence: `shots/bridge-fix/bench-{obvodny,centre}.json` and their end screenshots.
+Obvodny remains about 31 FPS with a 333 ms streaming hitch. The centre's mean
+is 2.4 ms slower than the earlier short sample, with similar p50/p95 and about
+10 more draw calls; it remains around 19 FPS, below the 30 FPS goal. These short
+runs do not establish a citywide performance improvement. No module/page errors
+were reported in the loaded-scene checks; existing shader warnings remain.
+All 16 live-area manifests match the source: 1,869 complete products, 759.2 MiB
+gzip. The deployment asset audit and generated diagnostic-page check pass.
