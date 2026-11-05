@@ -53,6 +53,10 @@ if(['okrug65','islands'].includes(process.env.AREA))for(const [x,z] of [[-5155.9
   const level=ph.waterLevel(x,z);if(level!==null)assert.equal(level,Y,'shared pond physics datum');
 }
 function pointInside(x,z,p){let inside=false;for(let i=0,j=p.length-1;i<p.length;j=i++)if((p[i][1]>z)!==(p[j][1]>z)&&x<(p[j][0]-p[i][0])*(z-p[i][1])/(p[j][1]-p[i][1])+p[i][0])inside=!inside;return inside;}
+if(process.env.AREA==='okrug65')for(const id of ['coast-w81113431','coast-w717782209']){
+  const zone=AREA_WATER.bridgeZones.find(z=>z.id===id);assert(zone,'shared pond bridge zone');
+  assert.equal(zone.key,L.waterwayAt(...zone.c),'bridge opening follows resolved pond key');
+}
 assert.deepEqual(waterLevelSeams(waterGeo().rings,k=>WATERWAYS[k].water),[],
   'connected water mouths must not acquire vertical masonry seams');
 

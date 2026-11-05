@@ -60,7 +60,9 @@ export const TEST = {
   // neither PLAY_RECTS nor EXTENT_RECTS, source geometry or water predicates.
   extentSlack: { 'okrug65-lakhta': 22.7 },
 };
-export const WATER = { farCenter: [-8100, -5300], farRadius: 6500, farSources: [], ownerRings: WATERFRONT_OWNER_WATER_RINGS, bankRings: [...WATERFRONT_BANK_RINGS, ...BEACH_BANK_RINGS], bridgeZones: [...COASTAL_BRIDGE_ZONES, ...YACHTNY_BRIDGE_ZONES],
+// The imported bridge zones must follow the same Yelagin pond key remapping.
+const YELAGIN_POND_BRIDGES = new Set(['coast-w81113431', 'coast-w717782209']);
+export const WATER = { farCenter: [-8100, -5300], farRadius: 6500, farSources: [], ownerRings: WATERFRONT_OWNER_WATER_RINGS, bankRings: [...WATERFRONT_BANK_RINGS, ...BEACH_BANK_RINGS], bridgeZones: [...COASTAL_BRIDGE_ZONES.map(z => YELAGIN_POND_BRIDGES.has(z.id) ? { ...z, key: 'neva' } : z), ...YACHTNY_BRIDGE_ZONES],
   // Yelagin ponds share the Islands mapping; Lower Buffer Pond retains its
   // independent shallow basin. Source style aliases do not set water levels.
   keyById: Object.fromEntries(['r1567031', 'r1567613', 'r9176724', 'r9176723', 'r18509887', 'r8613894'].map(id => [id, 'neva'])),
