@@ -2887,8 +2887,9 @@ bakes are included in the same version checkpoint.
 ## 2026-11-05 — Canal seams and boat camera (9.21.1)
 
 Connected navigable water now shares the -3.4 m datum in rendering, layout,
-physics and bridge waterlines. Beds retain their previous depth below water;
-isolated ponds and fountains keep their own levels. Canal-mouth arches follow
+physics and bridge waterlines. Beds retain their previous depth below water.
+CI subsequently caught isolated ponds that reused the moat style; their
+restoration and expanded coverage are recorded below for 9.21.2. Canal-mouth arches follow
 the skewed banks, and natural-bank end caps no longer rise from the submerged
 shelf into open water. These are static changes using the existing batches.
 
@@ -2927,3 +2928,33 @@ runs do not establish a citywide performance improvement. No module/page errors
 were reported in the loaded-scene checks; existing shader warnings remain.
 All 16 live-area manifests match the source: 1,869 complete products, 759.2 MiB
 gzip. The deployment asset audit and generated diagnostic-page check pass.
+
+## 2026-11-05 — Explicit isolated pond datums (9.21.2)
+
+The integrated Victory Park test caught a regression missed by the initial
+water-level test: isolated ponds reused the connected castle-moat style and
+were lowered with it. Explicit area water/bed datums restore Moskovskaya and
+Kolomna ponds to -1.2 / -2.4 m. Okrug65's Lower Buffer Pond keeps those levels;
+the six shared Yelagin ponds instead use the Islands mapping at -3.4 m in both
+areas. Their two mapped bridge openings use the same resolved pond key.
+Connected canal mouths retain the common -3.4 m datum.
+
+The expanded 18-area regression samples rendered pond cuts, physics and bridge
+waterlines, checks shared Yelagin coordinates in both areas and rejects an
+intentional isolated-level mutation. Victory Park's integrated check passes
+all 11 dry islands and nine real boat courses. Kolomna's retained pond/canal
+walking routes and render/terrain overlap regression also pass. The datum
+settings add no per-frame work; this correction does not change the measured
+Palace/Obvodny routes above.
+
+All 16 shipping scenes were rebuilt: 1,869 manifest-verified products, 759.2 MiB
+gzip. Pages asset and generated diagnostic-page checks pass. The synthetic
+topology fixture was updated for the added area-table defaults; the Windows
+bake-plan test had one transient temporary-directory cleanup error and passed
+all 21 checks on retry.
+
+Normal baked loading was checked visually in Victory Park, Yekateringof Park
+and the two Yelagin pond crossings (`shots/bridge-fix/pond-moskovskaya_*`,
+`pond-kolomna-close_*`, `pond-okrug65_0.png`). Shallow pond surfaces meet their
+banks and islands; the shared Yelagin water remains continuous beneath both
+crossings. No module/page errors were reported; existing shader warnings remain.

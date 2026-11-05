@@ -8,7 +8,8 @@ wall. Preserve separately authored isolated pond/fountain levels. When a pond
 reuses a canal style, declare `WATER.isolatedKeys` and its explicit water/bed
 datum in `WATER.isolatedLevels`; a style name is not a hydraulic connection.
 Use `WATER.keyById` to reconcile imported aliases for the same surveyed pond
-across overlapping areas. Test actual pond surfaces, beds and physics as well
+across overlapping areas, and give bridge opening/shadow zones the same resolved
+waterway key. Test actual pond surfaces, beds and physics as well
 as connected mouths; retain island walking and boat navigation checks. Run
 `node tools/each-area.mjs tools/water-level-test.mjs` after water changes and inspect
 the mouths and area overlaps from a boat before the final bake.
