@@ -2958,3 +2958,30 @@ and the two Yelagin pond crossings (`shots/bridge-fix/pond-moskovskaya_*`,
 `pond-kolomna-close_*`, `pond-okrug65_0.png`). Shallow pond surfaces meet their
 banks and islands; the shared Yelagin water remains continuous beneath both
 crossings. No module/page errors were reported; existing shader warnings remain.
+
+## 2026-11-06 — Mobile HUD and reload recovery (9.21.3)
+
+The boundary notice now leads the loading trigger by 50 m and reads
+“Вы рядом с границей района”. Mobile street notices and the pulsing boundary
+warning share the minimap street label; reduced motion disables the pulse.
+The clock is removed on both layouts. Mobile speed is a plain number below the
+map, and Report / Exit / Camera / Menu use one row of 44 px icon targets.
+
+The published mobile entry previously paused on developer diagnostics after a
+browser reload, with no live game to return to. It now offers a player-facing
+Continue action, restores the last recorded walking position when available,
+and works with storage blocked. The normal live Report overlay still returns
+to the current scene. This addresses the recovery dead end; it does not prove
+that the underlying real-device walking reload has been eliminated.
+
+Validation: 97 gate checks, 17 touch-logic groups, and 77 focused portrait/layout
+browser checks pass. Existing desktop and multi-touch walking/driving checks
+also pass. The complete published-mobile profile passes the diagnostic suite,
+including actual scene loading, worker decoding, packed geometry, Report input
+release, saved-report recovery and toolbar checks at 320, 390 and 844 px.
+Screenshots were reviewed in `shots/mobile-hud/`; logs are
+`shots/mobile-{gates-test,touch-logic,hud-final-test,full-test}.log`.
+
+All 16 shipping scenes were rebuilt and verified: 1,869 products, 759.2 MiB
+gzip. The Pages asset audit and generated-page checks pass. This round adds
+no scene geometry or rendering passes; no new frame-time benchmark is claimed.
