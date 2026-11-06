@@ -404,7 +404,7 @@ const TERR = { A: [{ x0: 0, x1: 1000, z0: 0, z1: 1000 }], B: [{ x0: 800, x1: 200
 const EAB = { id: 'e1', kind: 'edge', from: 'A', to: 'B', reverse: 'e2' }, EAC = { id: 'e2', kind: 'edge', from: 'A', to: 'C', zone: 40, reverse: null };
 const rectsOf = (id) => TERR[id];
 const edgeM = (gates = [EAB], cfg = {}) => createGateMachine({ gates, config: { graceS: 0, ...cfg }, rectsOf });
-check('area warning precedes the actual edge trigger by 25 m in walking and vehicle modes', () => {
+check('area warning precedes the actual edge trigger by 50 m in walking and vehicle modes', () => {
   for (const mode of ['walk', 'car', 'fly']) {
     const m = edgeM(), speed = mode === 'walk' ? 2 : 12;
     let first = null, trigger = null;
@@ -414,7 +414,7 @@ check('area warning precedes the actual edge trigger by 25 m in walking and vehi
       if (r.offer) { trigger = x; break; }
     }
     assert(first !== null && trigger !== null, mode + ': missing notice or trigger');
-    assert(Math.abs(trigger - first - 25) < speed * DT + .1, mode + ': notice distance ' + (trigger - first));
+    assert(Math.abs(trigger - first - 50) < speed * DT + .1, mode + ': notice distance ' + (trigger - first));
   }
 });
 check('area warning stays hidden along the boundary, indoors and during arrival grace', () => {

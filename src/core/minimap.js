@@ -147,6 +147,19 @@ export function createMinimap() {
 
   // ------------------------------------------------------------------ the street under the player
   const cur = { name: '', d: 1e9 };
+  let boundaryNotice = '', transientNotice = '', noticeUntil = 0, streetVisible = false;
+  function renderStreet() {
+    const notice = boundaryNotice || (performance.now() < noticeUntil ? transientNotice : '');
+    const name = notice || (streetVisible ? cur.name : '');
+    if (pill.dataset.name !== name) {
+      pill.dataset.name = name; pillName.textContent = name;
+    }
+    const latin = notice ? '' : latinStreet(name);
+    if (pillLat.textContent !== latin) pillLat.textContent = latin;
+    pill.classList.toggle('on', !!name);
+    pill.classList.toggle('boundary-notice', !!boundaryNotice);
+    pill.classList.toggle('notice', !!notice);
+  }
   /** nearest named way within `radius` m of (x, z): { name, d } | null (d = distance to the kerb line) */
   function streetAt(x, z, radius = 120) {
     if (!index) index = buildIndex();
@@ -164,11 +177,11 @@ export function createMinimap() {
   }
   let pillT = 0;
   function updateStreet(x, z) {
-    const r = streetAt(x, z); if (!r) { pill.classList.remove('on'); return; }
+    const r = streetAt(x, z); streetVisible = !!r;
+    if (!r) { renderStreet(); return; }
     const curD = cur.name && r.all.has(cur.name) ? Math.max(0, r.all.get(cur.name)) : 1e9;
     if (!cur.name || curD > 60 || r.d < curD - 4) { cur.name = r.name; cur.d = r.d; } else cur.d = curD;      // stay on the street we were on while it is (nearly) as close as the new one
-    if (pill.dataset.name !== cur.name) { pill.dataset.name = cur.name; pillName.textContent = cur.name; pillLat.textContent = latinStreet(cur.name); }
-    pill.classList.add('on');
+    renderStreet();
   }
 
   // ------------------------------------------------------------------ drawing
@@ -253,6 +266,8 @@ export function createMinimap() {
 
   return {
     root, canvas: cv, stats, streetAt, shortStreet,
+    showNotice(text) { transientNotice = text; noticeUntil = performance.now() + 3800; renderStreet(); },
+    setBoundaryNotice(text) { if (text === boundaryNotice) return; boundaryNotice = text; renderStreet(); },
     get diam() { return diam; },
     get street() { return cur.name; },
     setActive(on) { if (on === active) return; active = on; root.classList.toggle('off', !on); document.body.classList.toggle('has-minimap', on); },

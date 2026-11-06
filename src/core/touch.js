@@ -19,12 +19,6 @@ html.tc .chip, html.tc #quality, html.tc #places { min-height: 44px; font-size: 
 html.tc #places, html.tc #fly, html.tc #quality, html.tc #mute, html.tc #interact, html.tc #help, html.tc #coords { display: none !important; }
 html.tc { --hud-surface: rgba(17,30,48,.82); --hud-ink: #f4f0e5; --hud-line: rgba(244,240,229,.32); --hud-accent: #efc76a; --hud-radius: 12px; --hud-x: max(16px, var(--tc-l, 0px)); --hud-y: max(12px, var(--tc-t, 0px)); --mm: 92px; }
 html.tc #corner { left: 50%; right: auto; flex-wrap: nowrap; transform: translateX(-50%); top: var(--hud-y); }
-html.tc #clock { min-height: 32px; height: 32px; box-sizing: border-box; padding: 6px 12px; border: 1px solid var(--hud-line); border-radius: 20px; background: var(--hud-surface); color: var(--hud-ink); font-size: 14px; line-height: 18px; box-shadow: none; }
-html.tc #toast { left: var(--hud-x); top: calc(var(--hud-y) + 112px); max-width: min(310px, calc(100vw - 210px)); transform: none; }
-html.tc #toast .sign { min-width: 0; padding: 8px 12px; border-radius: var(--hud-radius); background: var(--hud-surface); color: var(--hud-ink); border-left: 3px solid var(--hud-accent); box-shadow: none; }
-html.tc #toast .t-name { font-size: 12px; color: var(--hud-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-html.tc #toast .t-en { display: none; }
-html.tc.tc-short #toast { left: 50%; transform: translateX(-50%); top: calc(var(--hud-y) + 100px); max-width: min(260px, calc(100vw - 330px)); }
 html.tc #minimap { left: var(--hud-x); top: var(--hud-y); bottom: auto; }
 html.tc #minimap canvas { box-shadow: 0 0 0 2px rgba(244,240,229,.75), 0 2px 8px rgba(0,0,0,.2); }
 html.tc #minimap .mm-street { bottom: auto; left: calc(100% + 10px); top: 0; width: max-content; max-width: min(190px, calc(50vw - var(--hud-x) - 146px)); border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface); color: var(--hud-ink); padding: 8px 10px; box-shadow: none; }
@@ -36,25 +30,28 @@ html.tc .panel-x { min-height: 44px; padding: 0 22px; font-size: 14px; }
 html.tc #panel .panel-body { touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; -webkit-user-select: none; user-select: none; }
 html.tc #panel { padding: max(12px, var(--tc-t, 0px)) max(12px, var(--tc-r, 0px)) max(12px, var(--tc-b, 0px)) max(12px, var(--tc-l, 0px)); }
 html.tc #panel .panel-card { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
-/* Compact speed and gear beside navigation; the NITRO button carries its own fuel bar. */
+/* Speed sits below the map; navigation messages share its street label. */
+html.tc #toast { display: none !important; }
+html.tc #minimap .mm-street.notice { white-space: normal; width: max-content; }
+html.tc #minimap .mm-street.notice b { overflow: visible; }
+html.tc #minimap .mm-street.notice i { display: none; }
 html.tc #drive .d-touch, html.tc #drive .d-keys, html.tc #drive .d-nitro, html.tc #drive .d-nlab, html.tc #drive .d-condition { display: none !important; }
-html.tc body.driving #drive .d-speedo { left: calc(var(--hud-x) + var(--mm) + 10px); right: auto; top: calc(var(--hud-y) + 54px); bottom: auto; width: 146px; height: 38px; transform: none; filter: none; display: flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface); }
+html.tc body.driving #drive .d-speedo { left: var(--hud-x); right: auto; top: calc(var(--hud-y) + var(--mm) + 8px); bottom: auto; width: var(--mm); height: 28px; transform: none; filter: none; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 0; background: transparent; }
 html.tc #drive .d-speedo svg { display: none; }
 html.tc #drive .d-speedo { box-sizing: border-box; }
 html.tc #drive .d-num { position: static; font: 700 24px/1 "Rubik", sans-serif; letter-spacing: -.03em; transform: none; text-shadow: none; color: var(--hud-ink); }
-html.tc #drive .d-unit { position: static; font: 500 10px/1 "Rubik", sans-serif; letter-spacing: 0; color: #ccd3dc; }
-html.tc #drive .d-gear { position: static; margin-left: auto; width: 26px; height: 26px; border: 1px solid var(--hud-line); border-radius: 6px; font: 700 15px/24px "Rubik", sans-serif; transform: none; color: var(--hud-accent); }
+html.tc #drive .d-unit, html.tc #drive .d-gear { display: none; }
 html.tc #drive .d-drift { top: calc(var(--hud-y) + 55px); font-size: 22px; }
 html.tc #drive .d-drift small { font-size: 9px; letter-spacing: .12em; }
-html.tc body.playing #diag-toggle { top: max(12px, var(--tc-t, 0px)); right: calc(max(16px, var(--tc-r, 0px)) + max(44px, 44px * var(--tc-u, 1)) + 12px * var(--tc-u, 1)); width: 64px; height: 44px; padding: 0; border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface); color: var(--hud-ink); font: 600 11px/1 "Rubik", sans-serif; }
+html.tc.tc-short body.driving { --mm: 56px; }
+html.tc body.playing #diag-toggle { right: auto; min-height: 44px; padding: 0; border: 1px solid var(--hud-line); border-radius: var(--hud-radius); background: var(--hud-surface); color: var(--hud-ink); touch-action: manipulation; }
+#diag-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 @media (orientation: portrait) {
   html.tc #tc-coach, #tc-coach { top: 24vh !important; }
   html.tc #corner { left: auto; right: max(16px, var(--tc-r, 0px)); top: calc(var(--hud-y) + 120px * var(--tc-u, 1)); transform: none; }
   html.tc #minimap .mm-street { top: calc(100% + 12px); left: 0; max-width: calc(100vw - 128px); }
-  html.tc body.driving #drive .d-speedo { top: calc(var(--hud-y) + 64px); width: 120px; left: var(--hud-x); }
   html.tc body.driving { --mm: 56px; }
   html.tc body.driving #minimap .mm-street { top: calc(100% + 54px); }
-  html.tc #toast { top: calc(var(--hud-y) + 174px); max-width: calc(100vw - 32px); }
 }
 body.noui #tc .tc-b:not([data-id="menu"]), body.noui #tc .tc-ghost, body.noui #tc-label, body.noui #tc-coach { display: none !important; }
 
@@ -116,6 +113,8 @@ body.playing #tc { display: block; }
 `;
 
 const SVG = {
+  cam: '<svg viewBox="0 0 24 24"><path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/></svg>',
+  exit: '<svg viewBox="0 0 24 24"><path d="M10 4H4v16h6M9 12h12m-5-5 5 5-5 5"/></svg>',
   menu: '<svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/></svg>',
   left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>', right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
   up: '<svg viewBox="0 0 24 24"><path d="M12 19V6M6 11l6-6 6 6"/></svg>', down: '<svg viewBox="0 0 24 24"><path d="M12 5v13M6 13l6 6 6-6"/></svg>',
@@ -131,8 +130,8 @@ const BTN = {
   up: { label: 'UP', fire: 'hold', aria: 'Вверх · Up' }, down: { label: 'DOWN', fire: 'hold', aria: 'Вниз · Down' }, boost: { label: 'BOOST', fire: 'hold', aria: 'Ускорение · Boost' },
   gas: { label: 'GAS', cls: 'pedal gas', fire: 'hold', aria: 'Газ · Gas' }, brake: { label: 'BRAKE', cls: 'brake', fire: 'hold', aria: 'Тормоз · Brake' },
   nitro: { label: 'NITRO', fire: 'hold', aria: 'Нитро · Nitro' }, hand: { label: 'DRIFT', fire: 'hold', aria: 'Ручник · Handbrake' }, hop: { label: 'HOP', fire: 'down', aria: 'Прыжок авто · Hop' }, flip: { label: 'FLIP', cls: 'flip', fire: 'down', aria: 'Прыжок с бочкой · Barrel hop' },
-  cam: { label: 'CAM', cls: 'small', fire: 'down', aria: 'Камера · Camera' }, horn: { label: 'HORN', cls: 'small', fire: 'down', aria: 'Сигнал · Horn' }, auto: { label: 'AUTO', cls: 'small', fire: 'up', aria: 'Автогаз · Auto gas' },
-  repair: { label: 'FIX', cls: 'small', fire: 'up', aria: 'Починить · Repair' }, exit: { label: 'EXIT', cls: 'small', fire: 'up', aria: 'Выйти из машины · Exit the car' },
+  cam: { label: '', svg: SVG.cam, cls: 'small', fire: 'down', aria: 'Камера · Camera' }, horn: { label: 'HORN', cls: 'small', fire: 'down', aria: 'Сигнал · Horn' }, auto: { label: 'AUTO', cls: 'small', fire: 'up', aria: 'Автогаз · Auto gas' },
+  repair: { label: 'FIX', cls: 'small', fire: 'up', aria: 'Починить · Repair' }, exit: { label: '', svg: SVG.exit, cls: 'small', fire: 'up', aria: 'Выйти из машины · Exit the car' },
   arrowL: { label: '', cls: 'arrow', fire: 'hold', svg: SVG.left, aria: 'Руль влево · Steer left' }, arrowR: { label: '', cls: 'arrow', fire: 'hold', svg: SVG.right, aria: 'Руль вправо · Steer right' },
   recentre: { label: '0°', cls: 'small', fire: 'up', aria: 'Выровнять наклон · Recentre tilt' },
 };
@@ -224,6 +223,8 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
       Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
       el.dataset.inMode = '1';
     }
+    const report = doc.getElementById('diag-toggle'), reportRect = rectOf('report');
+    if (report && reportRect) Object.assign(report.style, { left: reportRect.x + 'px', top: reportRect.y + 'px', width: reportRect.w + 'px', height: reportRect.h + 'px' });
     // ghosts (the faint hint of where the thumb goes) and the wheel gauge
     const inset = settings.leftHanded ? ins.r : ins.l;
     const thumbX = Math.max(16, inset) + 60 * u;

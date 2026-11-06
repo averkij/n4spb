@@ -180,11 +180,16 @@ export const LAYOUT = {
 /** the anchors of a mode (plus the always-there ones) for a w x h screen; a narrow (portrait phone) screen gets smaller steering arrows so that they clear the pedals */
 export function anchors(mode, w, h = Infinity, u = 1) {
   const a = { ...LAYOUT.common, ...LAYOUT[mode] };
+  // Keep the utility row compact even with enlarged thumb controls.
+  const toolbar = mode === 'drive' ? ['menu', 'cam', 'exit', 'report'] : ['menu', 'report'];
+  for (const [i, id] of toolbar.entries()) a[id] = A('r', 't', 16 + i * 52 / u, 12, 44 / u);
   if (mode === 'drive' && w < 480) { a.arrowL = A('l', 'b', 12, 16, 50); a.arrowR = A('l', 'b', 74, 16, 50); }
   // On short landscape screens (or enlarged controls), optional car tricks sit
   // above the steering thumb instead of colliding with camera / exit.
   if (mode === 'drive' && w > h && h / u < 370) {
-    a.hop = A('l', 'b', 16, 152, 56); a.flip = A('l', 'b', 84, 152, 56);
+    // The short-screen map is 56 px; leave space for its speed number too.
+    const gap = (h - 100 - 68 * u) / u;
+    a.hop = A('l', 'b', 16, gap, 56); a.flip = A('l', 'b', 84, gap, 56);
   }
   return a;
 }

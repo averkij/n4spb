@@ -106,10 +106,30 @@ try {
     assert.equal(url.searchParams.get('mobileprofile'), '1'); assert.equal(url.searchParams.get('diagpack'), '1');
     assert.equal(url.searchParams.get('cam'), '1,2,3,4'); assert.equal(url.searchParams.get('tod'), '1.2');
     assert.equal(await mobile.page.$eval('#load-diag', e => e.hidden), true);
-    assert.equal(await mobile.page.$eval('#diag-toggle', e => e.textContent), 'Report');
+    assert.equal(await mobile.page.$eval('#diag-toggle', e => e.getAttribute('aria-label')), 'Report');
+    await mobile.page.evaluate(() => {
+      document.body.classList.add('playing');
+      window.__ctx = { playerObj: { pos: { x: 123, z: 456 }, yaw: 0, pitch: 0, isUnderground: () => false } };
+    });
+    await new Promise(resolve => setTimeout(resolve, 1100));
     await mobile.page.reload({ waitUntil: 'domcontentloaded' });
     await mobile.page.waitForSelector('#diag-start');
     assert.equal(mobile.mainRequests(), 1, 'reload after a possible crash stays paused');
+    assert.equal(await mobile.page.$eval('#load-diag', e => e.hidden), true, 'reload does not expose diagnostics');
+    assert.equal(await mobile.page.$eval('#mobile-resume', e => e.hidden), false, 'mobile recovery offers a return to play');
+    await mobile.page.screenshot({ path: path.join(out, 'mobile-recovery-' + storageDenied + '.png') });
+    await mobile.page.tap('.resume-report');
+    assert.equal(await mobile.page.$eval('#diag-hide', e => e.disabled), false, 'saved report has a usable continue action');
+    await mobile.page.tap('#diag-hide');
+    await mobile.page.waitForFunction(() => document.body.classList.contains('loaded'));
+    assert.equal(mobile.mainRequests(), 2, 'continue starts exactly one scene');
+    assert.equal(await mobile.page.$eval('#load-diag', e => e.hidden), true);
+    if (!storageDenied) assert.equal(new URL(mobile.page.url()).searchParams.get('cam'), '123,456,0,0', 'continue restores the last walking checkpoint');
+    await mobile.page.reload({ waitUntil: 'domcontentloaded' });
+    await mobile.page.waitForSelector('#mobile-continue', { visible: true });
+    await mobile.page.tap('#mobile-continue');
+    await mobile.page.waitForFunction(() => document.body.classList.contains('loaded'));
+    assert.equal(mobile.mainRequests(), 3, 'the direct continue action works too');
     assert.deepEqual(mobile.errors, []); await mobile.context.close();
   }
   // Arrival is deliberate and one-use: the next area's recorder starts with
@@ -828,7 +848,7 @@ try {
         return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
       };
       const report = rect('#diag-toggle'), menu = rect('[data-id="menu"]');
-      return { report, menu, label: document.getElementById('diag-toggle').textContent };
+      return { report, menu, label: document.getElementById('diag-toggle').getAttribute('aria-label') };
     };
     const phoneHUD = await real.page.evaluate(hudCheck);
     assert.equal(phoneHUD.label, 'Report');
@@ -841,8 +861,22 @@ try {
     const speedRect = await real.page.$eval('#drive .d-speedo', e => {
       const r = e.getBoundingClientRect(); return { bottom: r.bottom, width: r.width };
     });
-    assert(speedRect.bottom < 130 && speedRect.width < 170, 'speed readout leaves the car unobstructed');
+    assert(speedRect.bottom <= 142 && speedRect.width < 100, 'plain speed readout sits below the map');
     await real.page.screenshot({ path: path.join(out, 'hud-drive-landscape.png') });
+    for (const [width, height] of [[320, 740], [390, 844], [844, 390]]) {
+      await real.page.setViewport({ width, height, deviceScaleFactor: 1, isMobile: true, hasTouch: true, isLandscape: width > height });
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const toolbar = await real.page.evaluate(() => ['#diag-toggle', '[data-id="exit"]', '[data-id="cam"]', '[data-id="menu"]'].map(s => {
+        const e = document.querySelector(s), r = e.getBoundingClientRect();
+        return { x: r.x, right: r.right, y: r.y, width: r.width, height: r.height, icon: !!e.querySelector('svg'), label: e.getAttribute('aria-label') };
+      }));
+      for (let i = 0; i < toolbar.length; i++) {
+        const b = toolbar[i]; assert(b.width >= 44 && b.height >= 44 && b.icon && b.label);
+        assert(Math.abs(b.y - toolbar[0].y) < .1, 'all four utility icons share one row');
+        if (i) assert(toolbar[i - 1].right + 7.9 <= b.x, 'utility icons have separate touch targets');
+      }
+      await real.page.screenshot({ path: path.join(out, `hud-drive-${width}x${height}.png`) });
+    }
     await real.page.evaluate(() => { __tc.settings.autoGas = true; });
     await real.page.waitForFunction(() => __tc.state.thr > 0);
     await real.page.tap('#diag-toggle');

@@ -35,7 +35,7 @@ export const DEFAULTS = {
   edgeZone: 40,           // an EDGE gate: how far ahead of a walker the probe point lies (a vehicle uses depthFor)
   edgeIn: 60,             // ... and how deep inside the destination's territory that point must be (the arrival is never at the destination's edge)
   edgeAlign: 0.92,        // ... a moving player probes only the direction he heads in (cos 22.5 degrees: his octant): walking ALONG an edge triggers nothing
-  warningLead: 25,        // advance notice, metres before the actual loading trigger
+  warningLead: 50,        // advance notice, metres before the actual loading trigger
 };
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
@@ -389,9 +389,12 @@ export function createGates(deps) {
     const p = xz(), r = machine.update({ dt, x: p.x, z: p.z, mode: mode(), blocked: isBlocked(), indoors: isIndoors() });
     if (PROMPT) setChip(r.chip);      // (the passive chip exists only with ?gateprompt=1)
     else if (chipEl) {
-      const text = r.warning || r.offer ? 'Входим в соседний район' : '';
+      const text = r.warning || r.offer ? 'Вы рядом с границей района' : '';
+      const touch = doc.documentElement.classList.contains('tc');
+      ctx.minimap?.setBoundaryNotice(touch ? text : '');
       if (chipEl.textContent !== text) chipEl.textContent = text;
-      chipEl.classList.toggle('show', !!text);
+      chipEl.classList.toggle('show', !!text && !touch);
+      chipEl.classList.toggle('boundary-notice', !!text);
     }
     if (r.offer && !ui.open && !traveling) prompt(r.offer, 'gate');
   }

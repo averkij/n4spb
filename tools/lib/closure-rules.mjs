@@ -76,7 +76,7 @@ export function isAllowedServed(rel) {
  */
 export const RUNTIME_CALLS = {
   'src/core/loading-diagnostics.js': {
-    'new URL(': { count: 3, why: 'redacts request labels, selects the traced worker, and resolves a probe product in the selected area bake directory' },
+    'new URL(': { count: 4, why: 'redacts request labels, selects the traced worker, resolves a probe product in the selected area bake directory, and restores the mobile walking pose in the current page URL' },
     'fetch(': { count: 1, why: 'standalone assets-only test reads the selected area shipping manifest' },
   },
   'src/core/baked-world.js': {

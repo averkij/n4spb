@@ -20,7 +20,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const BASE = `http://127.0.0.1:${server.address().port}/index.html`;
-const FAST = 'baked=0&only=drive&noroof=1&gate=0&guard=0&teleports=1'; // explicit development mode: fixtures exercise the otherwise disabled Places menu
+const FAST = 'baked=0&only=drive&noroof=1&gate=0&gates=0&guard=0&teleports=1'; // Skip the phone boot question and live area gates; fixtures exercise the otherwise disabled Places menu.
 const EDGE = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find((p) => fs.existsSync(p));
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-webgl', '--disable-gpu-sandbox', '--no-first-run', '--disable-extensions'] });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -54,7 +54,11 @@ async function open(o = {}) {
 async function load(page, query, o = {}) {
   await page.goto(`${BASE}?${query}`, { waitUntil: 'load', timeout: 120000 });
   if (o.noWait) return;
-  await page.waitForFunction("document.body.classList.contains('loaded')", { timeout: 120000, polling: 400 });
+  try { await page.waitForFunction("document.body.classList.contains('loaded')", { timeout: 120000, polling: 400 }); }
+  catch (error) {
+    console.log('       load failure:', await page.evaluate(() => document.body.innerText.slice(-3000)));
+    await shot(page, 'load-failure'); throw error;
+  }
 }
 async function start(page) { await page.tap('#go'); await page.waitForFunction("document.body.classList.contains('playing')", { timeout: 10000 }); await sleep(1000); }      // (the intro fades out over 0.9 s)
 const shot = async (page, name) => { const f = path.join(OUT, name + '.png'); await page.screenshot({ path: f }); console.log('       screenshot ' + path.relative(root, f)); return f; };
@@ -399,7 +403,35 @@ SCENARIOS.portrait = async () => {
     await sleep(6800);
     await shot(page, 'walk-390x844');
     auditChecks('walk 390x844', await layoutAudit(page));
+    await page.evaluate(() => {
+      __ctx.ui.toast('Невский проспект');
+      __minimap.setBoundaryNotice('Вы рядом с границей района');
+    });
+    await sleep(500);
+    const notice = await page.evaluate(() => ({
+      text: document.querySelector('.mm-street b').textContent,
+      pulse: getComputedStyle(document.querySelector('.mm-street')).animationName,
+      toast: getComputedStyle(document.getElementById('toast')).display,
+      clock: !!document.getElementById('clock'),
+    }));
+    check('mobile boundary notice takes priority in the street HUD, pulses, and has no central toast or clock',
+      notice.text === 'Вы рядом с границей района' && notice.pulse === 'boundary-pulse' && notice.toast === 'none' && !notice.clock, notice);
+    await shot(page, 'boundary-390x844');
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    check('boundary respects reduced motion', await page.$eval('.mm-street', e => getComputedStyle(e).animationName === 'none'));
+    await page.emulateMediaFeatures([]);
+    await page.evaluate(() => __minimap.setBoundaryNotice(''));
+    check('street notification returns after boundary clears', await page.$eval('.mm-street b', e => e.textContent === 'Невский проспект'));
+    await sleep(4000);
+    check('temporary notice expires back to the current street', await page.evaluate(() => !document.querySelector('.mm-street').classList.contains('notice')));
     await page.evaluate(() => { __drive.enter('coupe'); }); await sleep(1000);
+    const speed = await page.evaluate(() => {
+      const el = document.querySelector('#drive .d-speedo'), css = getComputedStyle(el);
+      return { y: el.getBoundingClientRect().top, mapBottom: document.getElementById('minimap').getBoundingClientRect().bottom,
+        background: css.backgroundColor, border: css.borderTopWidth,
+        unit: getComputedStyle(el.querySelector('.d-unit')).display, gear: getComputedStyle(el.querySelector('.d-gear')).display };
+    });
+    check('mobile speed is just a number below the map', speed.y > speed.mapBottom && speed.background === 'rgba(0, 0, 0, 0)' && speed.border === '0px' && speed.unit === 'none' && speed.gear === 'none', speed);
     await shot(page, 'drive-390x844');
     auditChecks('drive 390x844', await layoutAudit(page));
     await page.evaluate(() => { __drive.exit(true); }); await sleep(500);

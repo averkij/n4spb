@@ -332,6 +332,7 @@ let areaName = '';
 const areaAt = (x, z) => L.areaAt(x, z);      // squares, landmark buildings, then the nearest named street (layout.AREAS)
 let toastTimer = 0;
 function showToast(name) {
+  if (isTouch && ctx.minimap) { ctx.minimap.showNotice(name); return; }
   const el = $('toast'); if (!el) return;
   el.querySelector('.t-name').textContent = name;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
@@ -389,8 +390,6 @@ function hudTick(t) {
   minimapTick();
   const n = player.isUnderground() || player.riding ? '' : areaAt(player.pos.x, player.pos.z);      // the street names above are wrong underground (the metro module names its own places)
   if (n && n !== areaName) { areaName = n; if (started) showToast(n); }
-  const clock = $('clock');
-  if (clock) clock.textContent = tod.clockText(t);
   flyTick();
 }
 

@@ -23,7 +23,7 @@ full-scene iPhone compatibility.
 | `src/main.js` | the wiring (list in section 8) |
 | `tools/touch-logic-test.mjs`, `tools/touch-browser-test.mjs` | the tests |
 
-## 2. Current mobile HUD (v9.20.0)
+## 2. Current mobile HUD (v9.21.3)
 
 The scene is the primary surface. Keep the vehicle, road ahead and lower centre
 clear. The interface uses translucent navy (`#111e30`), ivory (`#f4f0e5`), warm
@@ -37,9 +37,10 @@ At the default landscape scale:
 | Surface | Placement and behavior |
 |---|---|
 | Navigation | 92 px map at the safe top-left edge; street name beside it |
-| Speed and gear | Compact 146 × 38 px readout below the street name; existing live speed/gear values; no central dial |
-| Time | Small top-centre chip; moves below the utility controls in portrait |
-| Utilities | 44 px Menu and separate 64 × 44 px Report button; diagnostics version/progress stays inside the report panel |
+| Speed | Plain number below the map; no badge, unit or gear on mobile |
+| Notices | Street changes and other transient notices use the street HUD. “Вы рядом с границей района” takes priority about 50 m before the loading trigger and pulses gently, unless reduced motion is requested. No central mobile toast. |
+| Time | No clock on mobile or desktop; the world’s time simulation continues |
+| Utilities | 44 px icons in one row: Report, Exit, Camera, Menu when driving; Report and Menu when walking. Eight-pixel gaps and accessible names; diagnostics version/progress stays inside the report panel |
 | Walking | 112 px floating stick bottom left; amber JUMP, RUN and FLY bottom right; contextual use action near the right thumb |
 | Flying | UP, DOWN, BOOST and LAND in the same thumb area |
 | Driving | 112 px steering hint bottom left; 68 × 86 px GAS/BRAKE, NITRO/DRIFT above; boost level shown within the NITRO button |
@@ -51,6 +52,16 @@ left-handed mirroring, wheel/arrows/tilt, multi-touch, and configurable scale
 remain supported. Opening Menu or Report releases held touch input and suspends
 auto-gas; gameplay input resumes after closing the panel. The confirmed loading/quality
 profile is unchanged by this UI work.
+
+The published mobile entry uses the diagnostic recorder internally. A browser
+reload or discarded-tab restoration with no live scene now shows a simple
+“Продолжить прогулку” recovery screen, not a developer diagnostics dead end.
+Continue starts one scene and restores the last recorded walking position when
+available; it also works without storage. Opening the saved report still offers
+Continue. A live Report overlay retains “Show current game”. Explicit developer
+diagnostic pages retain their paused-on-reload behavior. Recovery requires a tap
+to avoid a restart loop after memory pressure; this does not establish that the
+underlying real-device walking crash is resolved.
 
 The generated walking/driving concept guided the spacing and hierarchy. Deliberate
 implementation refinements: Report uses the secondary navy treatment (amber is

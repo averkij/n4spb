@@ -82,13 +82,16 @@
     ui.version.textContent = `Diagnostics v${diagnosticsVersion}${r?.version ? ' · Report ' + r.version : ''}`;
     ui.status.textContent = r ? `${r === run ? 'Live attempt' : 'Saved attempt'} · ${r.status} · ${r.phase || 'waiting'}${r.elapsedMs ? ` · ${Math.round(r.elapsedMs / 1000)}s` : ''}` : 'No saved attempt. Tap Start test.';
     ui.notice.textContent = storageError || (run ? 'Recording this page. Even at 100%, the first frame may still be loading. Wait for Loaded; monitoring. If it freezes, reopen this link to recover the report.' : 'No test is running in this page. Press Start test to load the game. A saved report does not restore a running scene.');
-    ui.hide.disabled = !sceneTest();
-    ui.hide.textContent = sceneTest() ? 'Show current game' : 'Start a scene test first';
+    ui.hide.disabled = !sceneTest() && !mobileEntry;
+    ui.hide.textContent = sceneTest() ? 'Show current game' : mobileEntry ? 'Продолжить прогулку' : 'Start a scene test first';
     const entries = Object.values(r?.pending || {});
     ui.pending.textContent = entries.length ? 'Waiting: ' + entries.slice(-4).map(p => p.asset).join('\n') : 'No recorded pending requests.';
     ui.tail.textContent = (r?.events || []).slice(-6).map(e => `${(e.ms / 1000).toFixed(1)}s ${e.kind}: ${e.detail}`).join('\n');
     ui.previous.disabled = !previous;
-    ui.toggle.textContent = mobileEntry || document.documentElement.classList.contains('tc') ? 'Report' : `Diagnostics v${diagnosticsVersion} · ${run ? run.phase || run.status : 'saved reports'}`;
+    if (mobileEntry || document.documentElement.classList.contains('tc')) {
+      if (!ui.toggle.querySelector('svg')) ui.toggle.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM14 3v5h4M9 12h6M9 16h6"/></svg>';
+      ui.toggle.setAttribute('aria-label', 'Report'); ui.toggle.title = 'Report';
+    } else ui.toggle.textContent = `Diagnostics v${diagnosticsVersion} · ${run ? run.phase || run.status : 'saved reports'}`;
   }
   function request(kind, asset, rawBytes) {
     if (!run) return null;
@@ -494,6 +497,12 @@
     run.mainStarted = !!window.__mainStarted;
     run.loaded = document.body.classList.contains('loaded');
     run.playing = document.body.classList.contains('playing');
+    // Keep a bounded walking checkpoint for a browser-discarded mobile tab.
+    const p = ctx?.playerObj;
+    if (mobileEntry && run.playing && p && !ctx.drive?.active && !p.fly && !p.riding && !p.isUnderground()) {
+      const pose = [p.pos.x, p.pos.z, p.yaw * 180 / Math.PI, p.pitch * 180 / Math.PI];
+      if (pose.every(Number.isFinite)) run.resumeCam = pose.map(n => Number(n.toFixed(3))).join(',');
+    }
     run.milestones = { fieldReady: !!env?.field, groundReady: !!env?.ground, environmentFinished: !!env?.buildPhases };
     run.modules = Object.keys(window.__stats?.modules || {});
     run.timing = { ...window.__stats?.timing };
@@ -524,6 +533,11 @@
       #load-diag pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:180px; overflow:auto; font-size:12px; padding:10px; background:#172246; border-radius:6px; }
       #load-diag textarea { width:100%; height:35vh; min-height:160px; font:16px/1.4 monospace; background:#fff; color:#111; }
       #diag-toggle { position:fixed; z-index:2147483645; top:max(8px,env(safe-area-inset-top)); right:max(8px,env(safe-area-inset-right)); max-width:80vw; min-height:44px; padding:8px 12px; border:1px solid #fff; border-radius:7px; background:#0b1230; color:white; font:13px system-ui; }
+      #diag-toggle svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; pointer-events:none; }
+      #mobile-resume { position:fixed; z-index:2147483646; inset:0; display:grid; place-content:center; padding:24px; background:#111e30; color:#f4f0e5; text-align:center; font:16px/1.5 system-ui; }
+      #mobile-resume[hidden] { display:none; }
+      #mobile-resume button { min-height:48px; border:0; border-radius:12px; padding:12px 20px; font:600 16px system-ui; background:#efc76a; color:#111e30; cursor:pointer; }
+      #mobile-resume .resume-report { margin-top:12px; background:transparent; color:#f4f0e5; }
     `;
     document.head.append(css);
     const panel = document.createElement('section'); panel.id = 'load-diag'; panel.setAttribute('aria-label', 'Loading diagnostics');
@@ -552,6 +566,10 @@
     document.body.append(panel);
     const $ = id => document.getElementById('diag-' + id);
     const toggle = document.createElement('button'); toggle.id = 'diag-toggle'; toggle.type = 'button'; document.body.append(toggle);
+    const recovery = document.createElement('section'); recovery.id = 'mobile-resume'; recovery.hidden = true;
+    recovery.setAttribute('aria-label', 'Продолжить прогулку');
+    recovery.innerHTML = '<p>Игра была перезагружена браузером.</p><button type="button" id="mobile-continue">Продолжить прогулку</button><button type="button" class="resume-report">Открыть отчёт</button>';
+    document.body.append(recovery);
     ui = { panel, toggle, hide: $('hide'), version: $('version'), status: $('status'), notice: $('notice'), pending: $('pending'), tail: $('tail'), previous: $('previous'), output: $('output') };
     const showText = () => { ui.output.hidden = false; ui.output.value = text(); ui.output.focus(); ui.output.select(); };
     const changeTest = () => {
@@ -589,9 +607,21 @@
     if ($('pack').checked) $('geometry').checked = true;
     $('pack').onchange = () => { if ($('pack').checked) $('geometry').checked = true; };
     $('test').onchange = changeTest; changeTest();
-    toggle.onclick = () => { panel.hidden = false; render(); };
+    toggle.onclick = () => { recovery.hidden = true; panel.hidden = false; render(); };
+    recovery.querySelector('.resume-report').onclick = toggle.onclick;
+    const resumeGame = () => {
+      if (run) return;
+      // An explicit tap avoids restarting indefinitely after a memory failure.
+      if (saved?.path === location.pathname && typeof saved.resumeCam === 'string' &&
+          saved.resumeCam.split(',').length === 4 && saved.resumeCam.split(',').every(n => n.trim() && Number.isFinite(Number(n)))) {
+        const url = new URL(location.href); url.searchParams.set('cam', saved.resumeCam);
+        url.searchParams.delete('ho'); url.searchParams.delete('fly'); history.replaceState(null, '', url);
+      }
+      $('test').value = 'scene-js-gzip'; changeTest(); recovery.hidden = true; $('start').click();
+    };
+    recovery.querySelector('#mobile-continue').onclick = resumeGame;
     $('hide').onclick = () => {
-      if (!sceneTest()) return;
+      if (!sceneTest()) { if (mobileEntry) resumeGame(); return; }
       sample(); event('ui:show-game', `${run.phase}; loaded=${run.loaded}; playing=${run.playing}`);
       panel.hidden = true;
     };
@@ -666,6 +696,7 @@
     const freshMobile = mobileEntry && (arrivalTicket || pageIdentity.navigationType === 'navigate');
     if ((freshMobile || (arrivalTicket && arrivalParams.has('ho') && arrivalParams.has('cam'))) && arrivalParams.get('diagscene') === '1' &&
       ['scene', 'scene-staged', 'scene-js-gzip'].includes($('test').value)) $('start').click();
+    else if (mobileEntry) { panel.hidden = true; recovery.hidden = false; }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();
 })();
