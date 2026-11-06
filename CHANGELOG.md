@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **9.21.4** (2026-11-06, patch): Replace the castle-moat bridge artifact with the ordinary Fontanka quay road
 - **9.21.3** (2026-11-06, patch): Tune mobile HUD and boundary notices; recover mobile reloads without a diagnostics dead end
 - **9.21.2** (2026-11-05, patch): Preserve isolated pond datums and reconcile shared pond aliases
 - **9.21.1** (2026-11-05, patch): Align connected waterways and canal bridges; smooth boat cameras under low spans

@@ -1,5 +1,37 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-06: ordinary Fontanka quay road at the castle moat (9.21.4)
+
+Palace no longer claims or constructs the decorative `eng2` arch. The normal
+street generator supplies asphalt, pavements and markings, with the existing
+floor-only support keeping walkers and cars above the moat. This is an area
+configuration correction; only the Palace bake becomes stale.
+
+At `-620.4,4.4,-860.1,87,-31.6`, the same medium-quality isolated preview
+(`environment,streets,bridges,landmarksCastle`, t=20, 1280x720, RTX 3090 Ti)
+changes from 706 calls / 1,679,849 triangles to 690 / 1,673,205. Both the
+reported view and a car-height view were inspected. These are preview counts,
+not an integrated FPS comparison. Z-fighting: 6 pixels (0.001%).
+
+`tools/area.mjs palace tools/check.mjs environment streets bridges` passes;
+all 18 areas pass `tools/each-area.mjs tools/water-level-test.mjs`. Palace's
+road-surface audit passes (107 residual samples, budget 120), as does the
+ribbon audit. Furniture retains the 15 previously documented failures away
+from this road. The full marking audit still reports one signalised approach
+without a stop bar, reproduced using the unchanged HEAD area definition;
+the focused marking audit within 80 m of `-636.8,-863.9` passes.
+Evidence: `shots/bridges/eng2-*` (ignored local screenshots and logs).
+
+The refreshed Palace bake contains 108 products (55.6 MiB gzip), generated in
+127 s; the all-area manifest check passes. Normal baked loading and both
+integrated screenshots pass without module errors (35.5 s ready time).
+An 8 s medium-quality drive starting at `-636.8,-863.9,146.6` crosses 49 m:
+38.7 ms mean / 33.4 ms p50 / 50.1 ms p95, 3 frames above 80 ms, mean 1,531
+draw calls, 33.3 s load. No regions failed. This short traversal verifies the
+road support; its 26 FPS is below the 30 FPS target and is not a performance
+improvement claim. Reproduce with `tools/drive-bench.mjs --area palace --q
+medium --seconds 8 --start "-636.8,-863.9,146.6" --json`.
+
 ## 2026-11-03: wreck overlay and castle road furniture (9.4.2)
 
 The wreck overlay remains visible with the HUD hidden; screenshot mode still

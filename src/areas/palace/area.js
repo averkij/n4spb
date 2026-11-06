@@ -155,7 +155,10 @@ export const GROUPS = {
 GROUPS.landmarksBelinsky = G_BELINSKY;      // Ciniselli Circus
 GROUPS.landmarksE = G_E; GROUPS.landmarksF = G_F; GROUPS.landmarksG = G_G; GROUPS.landmarksI = G_I; GROUPS.landmarksK = G_K; GROUPS.landmarksCastle = G_CASTLE;
 // the bridges: only the ones whose OSM ways are in the data of this area (the Blue, Red, Pochtamtsky, Fonarny, Kamenny and Mucny bridges lie south-west of it: they stay in the strip's table)
-GROUPS.bridges = G_BR.filter((b) => !['blue', 'red', 'pochtamtsky', 'fonarny', 'kamenny', 'mucny'].includes(b.key)).concat(GROUPS_PAL);      // + the Prachechny, Upper Swan and 2nd Engineer bridges (bridges/groups-pal.js, docs/AREAS.md 15.z)
+GROUPS.bridges = G_BR.filter((b) => !['blue', 'red', 'pochtamtsky', 'fonarny', 'kamenny', 'mucny'].includes(b.key)).concat(GROUPS_PAL.filter((b) => b.key !== 'eng2'));
+// The Fontanka quay at the castle moat stays an ordinary road, without a
+// decorative arch or a second set of bridge parapets. Streets owns its surface.
+export const BRIDGE_SITES_OFF = ['eng2'];
 // Liteyny: the Chernyshevskaya vestibule, the Transfiguration Cathedral, Dom Muruzi, the Podpisnye Izdaniya bookstore and the corridor houses (they replace the strip's landmarksNorth, same ids), the church of Simeon and Anna
 GROUPS.northBridges = G_NORTHBRIDGES.filter((g) => g.osm.length);      // only the sub-groups with mapped ways in THIS data: 'north-liteyny' (the Liteyny Bridge deck, x -123 .. -77, z -1972 .. -2356)
 GROUPS.landmarksNorthFull = G_NORTHFULL; GROUPS.landmarksBelinskyNorth = G_BELINSKY_NORTH;
@@ -421,7 +424,7 @@ const BRIDGE_ZONES = [
   // before): the quay is opened at their decks (c / axis / w come from the site, len = bank to bank).
   { id: 'prachechny', name: 'Прачечный мост', key: 'fontanka', c: [-828.9, -1717.1], axis: 246.86, w: 16.4, len: 37.4, own: true },        // w548349392 + footways w420044392 / w461739409, deck polygon r3808074
   { id: 'swan-upper', name: 'Верхний Лебяжий мост', key: 'swan-canal', c: [-1069.3, -1610.8], axis: 246.8, w: 15.9, len: 11.4, own: true },    // w548349395 + footways w287052711 / w287052712, r3808095
-  { id: 'eng2', name: '2-й Инженерный мост', key: 'moat', c: [-636.8, -863.9], axis: 326.6, w: 10.8, len: 18.0, own: true },          // the castle moat: w466200209 + footways w364227577 / w466200212, r15750441
+  { id: 'eng2', name: '2-й Инженерный мост', key: 'moat', c: [-636.8, -863.9], axis: 326.6, w: 10.8, len: 18.0, floor: true },        // flat support for the ordinary quay road; no arch, parapets or Fontanka quay gap
 ];
 
 /** The decks of the big bridges as the water shader darkens the water under them (deck rectangle centre, axis, width between the railings, length bank to bank). Shade only: the quay openings come from the BRIDGE_ZONES rows above. */
