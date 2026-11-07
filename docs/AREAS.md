@@ -253,8 +253,9 @@ The `help` lines list the keyed views of the area: they must follow `VIEWS` in t
 
 **Current deployment policy (2026-11-07):** pushes to `main` run the real source,
 bake, asset-budget, generated-page, layout, claims-table, registry/gate, import
-and clipping checks in `verify`, plus `smoke` (vehicle input, integrated Aurora
-boarding and physics triangles). Deployment still checks every actually packed
+and clipping checks in `verify`, plus `smoke` (vehicle input, audio including
+construction silence, integrated Aurora boarding and physics triangles).
+Deployment still checks every actually packed
 data export against its source before uploading. Exhaustive `engine` checks and
 the checker-oracle/mutation tests inside `verify` run on pull requests and manual
 `workflow_dispatch` runs. A manual run requires all three jobs to pass before

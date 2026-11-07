@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **10.1.1** (2026-11-07, patch): Remove construction sound synthesis entirely and quiet all bird layers by another 18 dB
 - **10.1.0** (2026-11-07, minor): Open Aurora visitor boarding and walkable inspection decks while preserving ship details and water access
 - **10.0.3** (2026-11-07, patch): Restore Narvsky overpass building clearances and bound mapped infrastructure overlap audits
 - **10.0.2** (2026-11-07, patch): Correct duplicate Victory Park pond banks and keep Moscow Square layout data renderer-independent

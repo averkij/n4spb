@@ -3402,3 +3402,72 @@ closure/import checks and the Firefox vehicle-input regression pass.
 The final package contains 5,059 files / 954,360,309 bytes, below the unchanged
 1 GB limit; all 832 packed modules / 33,336 imported exports retain exact
 source equality.
+
+## 2026-11-07 — Construction audio removed and quieter birds (10.1.1)
+
+The published 10.1.0 audio module matched the repository: legacy `clank` calls
+already returned silence, and no active construction emitter was found. Its
+unused steel-strike synthesizer, buffer-key dispatch and prewarm entry are now
+deleted entirely; legacy callers still return silently. The specific sound
+reported by the user was not positively identified. Pigeon take-off claps are
+another percussive source, covered by the bird reduction below.
+
+All bird levels now share one constant: ambient sparrows, tits, pigeons, crows,
+magpies, swifts and gulls, plus nearby crow/raven/magpie/gull/duck calls and wing
+flaps. Gain is one eighth of the previously deployed half-volume mix, applied
+before the positional and reverb paths. No new audio node, loop, frame callback
+or per-frame work is introduced. The construction buffer is no longer warmed.
+
+`tools/audio-mix-test.mjs` renders real WebAudio PCM in Edge 157 with an
+OfflineAudioContext at 48 kHz, without a sound card or reduced 3D scene posing as
+a performance test. Fifteen cases run against both frozen 10.1.0 source and final
+source: six nearby bird effects, flat and positional/reverberant, a 45-second
+ambient bird sequence, repeated maximum-volume construction calls/loop, and an
+ordinary car-horn control. Construction output is exactly zero. Bird RMS ratios
+are 0.125000–0.125004, approximately -18.06 dB; the loudest tested bird peak falls
+from 0.2919 to 0.0365 at caller volume 1.15. The horn PCM level remains identical.
+The ordinary audio/mock scheduler, wildlife ambience and garage sound checks
+pass. Audio name/silence/scheduler checks are included in the short deployment
+smoke job. Evidence: `shots/sound-10.1.1/{mix-final.json,audio-test-final.log,
+wildlife-audio.log,drive-sound.log}`.
+
+The old city-base sign PNGs were created with Edge 156.0.4314.58. Edge updated to
+157.0.4341.42 on this machine, selecting different UA-keyed Google font binaries
+before this audio change. Consequently an old-toolchain raw product comparison
+detects rerasterized sign PNGs. Inspection retains the intended Noto Sans 2.015
+and Rubik 2.300 families and every original Cyrillic/Latin cmap entry. Advance
+changes are below 0.017 px at a 21 px size. Palace atlas changes cover
+0.96%/0.67%/0.073% of their pixels, with unchanged alpha; geometry, colliders,
+services, material definitions and atlas packing remain exact. Font loader code
+is unchanged. External font bytes are not pinned in the existing bake inputs.
+The strict product checker remains strict; its error formatting now avoids
+dumping multi-megabyte texture trees into an assertion message.
+
+All 2,053 products across 17 areas were compared with the original snapshots:
+2,039 are byte-identical. Fourteen city-base products differ only in their
+reported PNG image fields; all other decoded values and texture metadata match,
+and PNG dimensions and alpha remain exact. No unexpected product changes occur.
+For a controlled audio-only comparison, frozen pre-change Palace source was
+rebaked under the same current Edge 157/font environment, then compared with
+the final bake using the unchanged strict acceptance rule: **108/108 products
+byte-identical**, including sign PNGs. The original snapshot is separately kept
+as `baseline-palace-original`. This distinguishes the external font change from
+the audio edit without relaxing comparisons or manually replacing bake data.
+
+Normal eight-second station driving samples use that matching old-source bake
+and the final source/bake, Edge 157 / RTX 3090 Ti / D3D11, medium, 1280x720,
+default Palace Digit1 start `(560,192)`. GPU jobs are serial, CPU audits excluded,
+no profiling or mid-run screenshot. Before/after loading is 24.6/24.3 s;
+mean 20.4/20.2 ms, p50 16.7/16.7 ms, p95 33.4/33.4 ms, maximum 216.7/200.0 ms;
+both runs have two frames above 40 ms and two above 80 ms. Mean draws are
+1,174/1,167; distance 53.6/62.4 m and endpoint speed 26/38 km/h. Traffic collision
+and streaming differ, so no FPS improvement is claimed. Existing 200 ms hitches
+remain. CDP used heap is 518.7/501.3 MiB, backing storage 915.7/894.2 MiB,
+sampled after timing. No modules or regions fail, and both end views are reviewed.
+Evidence: `shots/sound-10.1.1/drive-{before,after}.json`,
+`controlled-product-compare.log` and `product-diagnostic-final.json`.
+
+All 17 canonical source/manifest/hash checks pass. The final package is
+5,059 files / 954,443,349 bytes, with all 832 modules / 33,336 actual imported
+exports retaining source equality. Audio, wildlife ambience, garage sound,
+imports, dependency closure and generated diagnostic pages pass.

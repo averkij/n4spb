@@ -136,6 +136,8 @@ jobs:
       - run: npm ci
       - name: Vehicle entry and exit with physical or privacy-hidden Firefox E keys
         run: node tools/drive-input-test.mjs
+      - name: Audio names, silent construction calls and bounded sound scheduling
+        run: node tools/audio-test.mjs
       - name: Aurora visitor boarding, deck inspection, open water and breakable rails
         run: node tools/area.mjs aptekarsky tools/aurora-boarding-test.mjs --integrated
       - name: Physical walking triangles and bridge decks

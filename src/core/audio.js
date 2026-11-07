@@ -377,17 +377,6 @@ function wagtailCall(sr, r) {              // white wagtail "tsi-lik": two quick
   addSwept(x, sr, 0.15, 0.08, (u) => f + 700 - 1300 * u, (u) => 0.85 * Math.sin(Math.PI * u), [1, 0.1]);
   fadeEdges(x, sr, 0.002, 0.03); return norm(x, 0.7);
 }
-function clank(sr, r, v) {                 // far construction: steel struck two or three times (damped partials 1 : 2.76 : 5.4 : 8.9), irregular spacing
-  const x = arr(sr, 1.6), f0 = r.range(680, 980), n = 2 + (v % 2); let t = 0.02;
-  for (let k = 0; k < n; k++) {
-    const a = 1 - 0.25 * k;
-    thump(x, sr, t, 300, 150, 0.03, 0.4 * a);
-    for (const [m, pa, tau] of [[1, 1, 0.22], [2.76, 0.6, 0.12], [5.4, 0.35, 0.06], [8.9, 0.15, 0.03]]) addDamped(x, sr, t, f0 * m, a * pa * 0.5, tau, 0.0005);
-    burst(x, sr, r, t, 0.02, 'hp', 2500, 0.7, 0.2 * a, 0.004);
-    t += r.range(0.33, 0.55);
-  }
-  fadeEdges(x, sr, 0, 0.1); return norm(x, 0.8);
-}
 function busBrake(sr, r) {                 // a city bus stopping: a short squeal, then the air release
   const x = arr(sr, 2.2);
   addSwept(x, sr, 0, 0.55, (u) => 3000 - 350 * u, (u) => 0.14 * Math.sin(Math.PI * u) * (0.8 + 0.2 * Math.sin(TAU * 7 * u)), [1, 0.15]);
@@ -542,7 +531,6 @@ function synthKey(key, sr) {
   if ((m = /^mag(\d)$/.exec(key))) return magpie(sr, r, +m[1]);
   if ((m = /^wing(\d)$/.exec(key))) return wingClap(sr, r, +m[1]);
   if ((m = /^dog(\d)$/.exec(key))) return dogBark(sr, r, +m[1]);
-  if ((m = /^clk(\d)$/.exec(key))) return clank(sr, r, +m[1]);
   if ((m = /^stp_(\w+)_(\d)$/.exec(key))) return footstep(sr, r, m[1]);
   if ((m = /^gull(\d)$/.exec(key))) return gull(sr, r, +m[1] % 3);
   if ((m = /^horn(\d)$/.exec(key))) return carHorn(sr, r, +m[1] % 3);
@@ -580,6 +568,7 @@ export function createAudio(options = {}) {
   const handles = new Set(), voices = [], disposals = [], cache = new Map(), warm = [], warned = new Set();
   const CAP = { sfx: 16, bird: 5, amb: 4 };
   const HRTF_VOICES = 8;                                   // one-shots using HRTF at once (the rest: equal-power)
+  const BIRD_LEVEL = 0.0625;                             // all bird layers: 1/8 of the previous half-volume mix, including wings and reverb
   const SILENT = new Set(['clank', 'footstep', 'footsteps', 'step', 'crossingBell', 'cafeMusic', 'catMeow', 'sparrow', 'vendingDrop', 'departMelody', 'town', 'trainRun', 'trainBrake', 'doorChime', 'announce', 'boatHorn']); // removed on purpose: accepted and ignored
 
   const warnOnce = (k, ...a) => { if (warned.has(k)) return; warned.add(k); try { console.warn('[audio]', ...a); } catch (e) { /* */ } };
@@ -709,13 +698,13 @@ export function createAudio(options = {}) {
     doorOpen: { ref: 4, range: 90, gain: 0.55, wet: 'lo', buf: ['doorOpen'], jitter: 0.02 },
     doorClose: { ref: 4, range: 90, gain: 0.6, wet: 'lo', buf: ['doorClose'], jitter: 0.02 },
     bikeBell: { ref: 3, range: 80, gain: 0.5, wet: 'lo', buf: ['bike'], jitter: 0.03 },
-    gull: { ref: 10, range: 380, gain: 0.2, wet: 'hi', buf: ['gull0', 'gull1', 'gull2'], jitter: 0.07 },
-    duck: { ref: 8, range: 160, gain: 0.21, wet: 'hi', buf: ['quack0', 'quack1', 'quack2'], jitter: 0.07 },
+    gull: { ref: 10, range: 380, gain: 0.4 * BIRD_LEVEL, wet: 'hi', buf: ['gull0', 'gull1', 'gull2'], jitter: 0.07 },
+    duck: { ref: 8, range: 160, gain: 0.42 * BIRD_LEVEL, wet: 'hi', buf: ['quack0', 'quack1', 'quack2'], jitter: 0.07 },
     carHorn: { ref: 12, range: 320, gain: 0.42, wet: 'hi', buf: ['horn0', 'horn1', 'horn2'], jitter: 0.03 },
-    crow: { ref: 8, range: 260, gain: 0.25, wet: 'hi', buf: ['crow0', 'crow1'], jitter: 0.05 },
-    raven: { ref: 10, range: 300, gain: 0.275, wet: 'hi', buf: ['raven0', 'raven1', 'raven2'], jitter: 0.04 },
-    magpie: { ref: 8, range: 220, gain: 0.225, wet: 'hi', buf: ['mag0', 'mag1', 'mag2', 'mag3'], jitter: 0.05 },
-    wings: { ref: 6, range: 120, gain: 0.25, wet: 'lo', buf: ['wing0', 'wing1', 'wing2'], jitter: 0.04 },
+    crow: { ref: 8, range: 260, gain: 0.5 * BIRD_LEVEL, wet: 'hi', buf: ['crow0', 'crow1'], jitter: 0.05 },
+    raven: { ref: 10, range: 300, gain: 0.55 * BIRD_LEVEL, wet: 'hi', buf: ['raven0', 'raven1', 'raven2'], jitter: 0.04 },
+    magpie: { ref: 8, range: 220, gain: 0.45 * BIRD_LEVEL, wet: 'hi', buf: ['mag0', 'mag1', 'mag2', 'mag3'], jitter: 0.05 },
+    wings: { ref: 6, range: 120, gain: 0.5 * BIRD_LEVEL, wet: 'lo', buf: ['wing0', 'wing1', 'wing2'], jitter: 0.04 },
     dogBark: { ref: 8, range: 160, gain: 0.5, wet: 'hi', buf: ['dog0', 'dog1', 'dog2'], jitter: 0.06 },
     busBrake: { ref: 8, range: 200, gain: 0.45, wet: 'lo', buf: ['bbrake'], jitter: 0.03 },
     carDoor: { ref: 6, range: 100, gain: 0.45, wet: 'lo', buf: ['cdoor'], jitter: 0.05 },
@@ -988,7 +977,7 @@ export function createAudio(options = {}) {
   function buildBirds(I, now) {
     const wet = I.send(N.wetAmb, 0.5);
     const st = { sp: now + R.range(0.6, 2.2), tt: now + R.range(8, 18), pg: now + R.range(6, 14), cr: now + R.range(8, 22), mg: now + R.range(60, 150), sw: now + R.range(3, 10), gl: now + R.range(4, 12) };
-    const spawn = (key, t, pos, ref, gain, rate) => { const v = voice('bird', { pos, dist: distTo(pos), gain: gain * 0.5, ref, bus: I.in, wet }); if (v) vSrc(v, key, t, 1, rate); };
+    const spawn = (key, t, pos, ref, gain, rate) => { const v = voice('bird', { pos, dist: distTo(pos), gain: gain * BIRD_LEVEL, ref, bus: I.in, wet }); if (v) vSrc(v, key, t, 1, rate); };
     I.tick = (t, dt, _d, aud) => {
       for (const k of Object.keys(st)) if (st[k] < t - 1) st[k] = t + 0.4 + (k === 'sp' ? 0 : 3);
       set(I.in.gain, AMB.wOut, 0.3, t);
@@ -1236,7 +1225,7 @@ export function createAudio(options = {}) {
   // ------------------------------------------------------------ graph, start, update
   const PREWARM = (() => {
     const k = ['sp0', 'sp1', 'sp2', 'sp3', 'sp4', 'sp5', 'tit0', 'tit1', 'tit2', 'coo0', 'coo1', 'crow0', 'crow1', 'raven0', 'raven1', 'raven2', 'mag0', 'mag1', 'wing0', 'wing1', 'dog0', 'dog1', 'dog2', 'swc', 'wag',
-      'car0', 'car1', 'car2', 'car3', 'horn0', 'horn1', 'horn2', 'plip0', 'plip1', 'plip2', 'plip3', 'lap0', 'lap1', 'lap2', 'clk0', 'bike', 'bbrake', 'cdoor', 'doorOpen', 'doorClose', 'airRel',
+      'car0', 'car1', 'car2', 'car3', 'horn0', 'horn1', 'horn2', 'plip0', 'plip1', 'plip2', 'plip3', 'lap0', 'lap1', 'lap2', 'bike', 'bbrake', 'cdoor', 'doorOpen', 'doorClose', 'airRel',
       'gull0', 'gull1', 'gull2', 'quack0', 'quack1', 'quack2', 'cup0', 'cup1', 'cup2', 'cup3', 'cup4', 'cup5', 'chime0', 'chime1'];
     for (const s of ['paved', 'asphalt', 'sand', 'grass']) for (let i = 0; i < 4; i++) k.push('stp_' + s + '_' + i);
     return k;
