@@ -9,6 +9,7 @@ import path from 'node:path';
 import { here, toM, pyCarve, inRings } from './lib.mjs';
 
 const D = JSON.parse(fs.readFileSync(process.argv[2] || path.join(here, 'intro-data.json'), 'utf8'));
+const areaById = Object.fromEntries(D.areas.map((a) => [a.k, a]));
 const EDITS = JSON.parse(fs.readFileSync(path.join(here, 'edits.json'), 'utf8'));
 const REACH_M = 450;
 const MEAN_W_M = 12;                                 // the page rings are simplified with a 18 m tolerance, each independently: the mean offset of a shared edge stays well below that
@@ -20,18 +21,33 @@ const fails = [];
 const plain = (n) => n.replace(/^округ\s+/i, '').trim();
 const fix = (v, n = 3) => Math.round(v * 10 ** n) / 10 ** n;
 
+// Public IDs can have gaps after merges; every published reference must resolve.
+if (Object.keys(areaById).length !== D.areas.length) fails.push('duplicate public area IDs');
+const checkRef = (k) => { if (k >= 0 && !areaById[k]) fails.push('unresolved public area ID ' + k); };
+for (const a of D.areas) {
+  for (const n of [...(a.nb || []), ...(a.ovl || [])]) checkRef(n.k);
+  for (const b of a.bs || []) checkRef(b.n);
+  for (const k of a.mergeGroup || []) checkRef(k);
+}
+for (const item of [...(D.junctions || []), ...(D.bridges || [])]) for (const k of item.areas) checkRef(k);
+for (const mg of EDITS.mergeAfterCarve || []) {
+  const rep = D.edits?.merge?.find((m) => m.into === mg.ru);
+  const a = D.areas.find((a) => a.ru === mg.ru);
+  if (!rep || rep.outer !== 1 || rep.holes || !a || a.outer.length !== 1 || a.inner.length || a.km2 > rep.km2 + 0.05 || a.km2 < rep.km2 * 0.7) fails.push('invalid final merge ' + mg.ru);
+}
+
 // 1. merges
-for (const mg of EDITS.merge || []) {
+for (const mg of [...(EDITS.merge || []), ...(EDITS.mergeAfterCarve || [])]) {
   const merged = D.areas.filter((a) => a.ru === mg.ru);
   if (merged.length !== 1) { fails.push(`merge ${mg.ru}: ${merged.length} areas of that name (want 1)`); continue; }
   for (const n of mg.names.slice(1)) if (D.areas.some((a) => plain(a.ru) === n)) fails.push(`merge ${mg.ru}: the part ${n} is still an area of its own`);
   if (mg.stable) {
-    for (const e of D.existing) { const a = D.areas[e.mapId]; if (!a || a.live !== e.id) fails.push(`merge ${mg.ru}: the live area ${e.id} is not at k=${e.mapId} any more`); }
-    for (const [k, id] of Object.entries(LIVE_K)) { const a = D.areas[k]; if (!a || a.live !== id) fails.push(`merge ${mg.ru}: the live area ${id} (registry mapId ${k}) is not at k=${k}`); }
+    for (const e of D.existing) { const a = areaById[e.mapId]; if (!a || a.live !== e.id) fails.push(`merge ${mg.ru}: the live area ${e.id} is not at k=${e.mapId} any more`); }
+    for (const [k, id] of Object.entries(LIVE_K)) { const a = areaById[k]; if (!a || a.live !== id) fails.push(`merge ${mg.ru}: the live area ${id} (registry mapId ${k}) is not at k=${k}`); }
   }
   console.log(`ok merge ${mg.ru}: k=${merged[0].k}, ${merged[0].km2} km2 (${merged[0].kind}), ${merged[0].rayon}`);
 }
-for (const [k, id] of Object.entries(LIVE_K)) if (!D.areas[k] || D.areas[k].live !== id) fails.push(`live area ${id} is not at k=${k}`);
+for (const [k, id] of Object.entries(LIVE_K)) if (!areaById[k] || areaById[k].live !== id) fails.push(`live area ${id} is not at k=${k}`);
 for (const rn of EDITS.rename || []) {
   if (D.areas.filter((a) => a.ru === rn.ru && a.en === rn.en).length !== 1 || D.areas.some((a) => plain(a.ru) === rn.name)) fails.push(`rename ${rn.name}: expected exactly one ${rn.ru} with its English name`);
 }
@@ -46,12 +62,12 @@ for (const [name, points] of [
   for (const p of points) if (!a || !inRings(p, a.outer) || inRings(p, a.inner)) fails.push(`${name}: expected land point ${p} inside the area`);
 }
 // the stable merges keep the k of the first district: Kolomna-Yekateringofsky at 42, Semyonovsky-Izmaylovsky at 45 (tools/area-shape.mjs --k and the docs name them so)
-for (const [k, ru] of [[42, 'Коломна–Екатерингофский'], [45, 'Семёновский–Измайловский']]) if (!D.areas[k] || D.areas[k].ru !== ru) fails.push(`k=${k} is ${D.areas[k] && D.areas[k].ru}, expected ${ru}`);
+for (const [k, ru] of [[42, 'Коломна–Екатерингофский'], [45, 'Семёновский–Измайловский']]) if (!areaById[k] || areaById[k].ru !== ru) fails.push(`k=${k} is ${areaById[k] && areaById[k].ru}, expected ${ru}`);
 
 // Representative points in the three large southern pockets formerly enclosed
 // by the Kolomna–Yekateringofsky walkable outline.
 for (const p of [[30.27315, 59.90956], [30.28001, 59.90217], [30.26414, 59.89943]]) {
-  if (!inRings(p, D.areas[42].fp)) fails.push(`Коломна–Екатерингофский: southern pocket ${p} is outside the footprint`);
+  if (!inRings(p, areaById[42].fp)) fails.push(`Коломна–Екатерингофский: southern pocket ${p} is outside the footprint`);
 }
 
 // 2. the area of the cut: Okrug 7 (before the merge) or the merged Vasilyevsky-Okrug 7
@@ -59,12 +75,13 @@ for (const a of D.areas) if (a.ru === 'Округ № 7' || a.ru === 'Васил
 
 // 3. carves
 const geomOf = (a) => ({ outer: a.outer, inner: a.inner });
+const finalName = (name) => (EDITS.mergeAfterCarve || []).find((m) => m.names.includes(name))?.ru || (EDITS.rename || []).find((r) => r.name === name)?.ru || name;
 [...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS.blockCarve || []), ...(EDITS.crossStreetCarve || [])].forEach((cv, i) => {
   const rep = D.edits && D.edits.carve && D.edits.carve[i];
   if (!rep) { fails.push(`carve ${cv.street}: no report in the data (rebuild with build-intro.mjs)`); return; }
   const into = D.areas.find((a) => a.ru === cv.into);
   if (!into) { fails.push(`carve ${cv.street}: the target area ${cv.into} is missing`); return; }
-  const rems = cv.from.map((n) => D.areas.find((a) => plain(a.ru) === ((EDITS.rename || []).find((r) => r.name === n)?.ru || n)));
+  const rems = cv.from.map((n) => D.areas.find((a) => plain(a.ru) === finalName(n)));
   if (cv.seed && (!inRings(cv.seed, into.outer) || inRings(cv.seed, into.inner) || rems.some((a) => a && inRings(cv.seed, a.outer) && !inRings(cv.seed, a.inner)))) fails.push(`block carve: seed ${cv.seed} must belong only to ${cv.into}`);
   cv.from.forEach((n, j) => { if (!rems[j]) fails.push(`carve ${cv.street}: the remainder of ${n} is missing`); });
   if (fails.length && rems.some((r) => !r)) return;
@@ -84,6 +101,8 @@ const geomOf = (a) => ({ outer: a.outer, inner: a.inner });
       const part = later.from.find((p) => p.name === f.name);
       if (part) finalKm2 = part.restKm2;
     }
+    const merged = (D.edits.merge || []).find((m) => m.names.includes(f.name));
+    if (merged) finalKm2 = merged.km2;
     if (rems[j].km2 > finalKm2 + 0.05 || rems[j].km2 < finalKm2 * 0.7) fails.push(`carve: ${f.name} remainder land ${rems[j].km2} km2 vs final exact ${finalKm2} km2`);
     console.log(`ok carve ${f.name} (k=${rems[j].k}): ${f.srcKm2} -> ${f.restKm2} km2 (page land ${rems[j].km2}), ${f.carvedKm2} km2 to ${cv.into}`);
   });
@@ -94,7 +113,7 @@ const geomOf = (a) => ({ outer: a.outer, inner: a.inner });
   console.log(`ok carve ${cv.into}: +${fix(gain)} km2 -> ${rep.targetKm2} km2 exact (page land ${into.km2}), ${rep.targetOuter} outer ring, holes ${rep.targetHolesBefore} -> ${rep.targetHolesAfter}; exact overlap ${rep.exactOverlapKm2.toExponential(1)} gap ${rep.exactGapKm2.toExponential(1)} extra ${rep.exactExtraKm2.toExponential(1)} km2`);
   // the same on the page rings (python / shapely; fails loudly when it is missing)
   for (const [line, j] of rep.cut.map((l, j) => [l, j])) {
-    const au = pyCarve({ op: 'audit', areas: [into, ...rems].map((a) => ({ name: a.ru, geom: geomOf(a) })), line, gapM: 20 });
+    const au = pyCarve({ op: 'audit', areas: [...new Set([into, ...rems])].map((a) => ({ name: a.ru, geom: geomOf(a) })), line, gapM: 20 });
     const ovW = au.overlapKm2 * 1e6 / (au.lineKm * 1000), gapW = au.gapKm2 * 1e6 / (au.lineKm * 1000);
     console.log(`${ovW <= MEAN_W_M && gapW <= MEAN_W_M ? 'ok' : 'FAIL'} cut ${j + 1} (${fix(au.lineKm, 2)} km) on the page rings: overlap ${fix(au.overlapKm2, 4)} km2 (mean ${fix(ovW, 1)} m), gap ${fix(au.gapKm2, 4)} km2 (mean ${fix(gapW, 1)} m)`);
     if (ovW > MEAN_W_M) fails.push(`carve: the areas overlap along the cut by ${fix(ovW, 1)} m on average (max ${MEAN_W_M})`);

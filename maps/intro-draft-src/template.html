@@ -152,6 +152,7 @@ svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 (() => {
 'use strict';
 const D = JSON.parse(document.getElementById('data').textContent);
+const areaById = Object.fromEntries(D.areas.map((a) => [a.k, a]));
 const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
@@ -349,7 +350,7 @@ function selectStreet(nid, zoom = true) {
 }
 function renderJunctionCard(j) {
   const s = S();
-  card.innerHTML = `<button class="x" aria-label="close">×</button><h2>${s.junctionT}</h2><div class="en">${j.near ? j.near + ' · ' : ''}${j.n} ${s.junctionAreas}</div><div class="plan">${s.rulesList[2]}</div><div class="chips">${j.areas.map((k) => `<a href="#" data-go="${k}">${nm(D.areas[k])}</a>`).join('')}</div>`;
+  card.innerHTML = `<button class="x" aria-label="close">×</button><h2>${s.junctionT}</h2><div class="en">${j.near ? j.near + ' · ' : ''}${j.n} ${s.junctionAreas}</div><div class="plan">${s.rulesList[2]}</div><div class="chips">${j.areas.map((k) => `<a href="#" data-go="${k}">${nm(areaById[k])}</a>`).join('')}</div>`;
   card.classList.add('show');
   card.querySelector('.x').onclick = () => select(null);
   card.querySelectorAll('[data-go]').forEach((l) => { l.onclick = (e) => { e.preventDefault(); select(Number(l.dataset.go)); }; });
@@ -359,7 +360,7 @@ function renderStreetCard(o) {
   const alt = lang === 'ru' ? (o.en && o.en !== o.ru ? o.en : '') : o.ru;
   card.innerHTML = `<button class="x" aria-label="close">×</button><h2>${sname(o)}</h2><div class="en">${alt ? alt + ' · ' : ''}${s.streetCls[o.c]}</div>
   <dl><dt>${s.len}</dt><dd>${fmt(o.len / 1000)} ${s.km}</dd></dl>
-  ${areas.length ? `<h3>${s.bordersOf}</h3><ul class="bs">${areas.map(([k, len]) => `<li><a href="#" data-go="${k}">${nm(D.areas[k])}</a><span class="len">${fmt(len / 1000)} ${s.km}</span></li>`).join('')}</ul>` : ''}`;
+  ${areas.length ? `<h3>${s.bordersOf}</h3><ul class="bs">${areas.map(([k, len]) => `<li><a href="#" data-go="${k}">${nm(areaById[k])}</a><span class="len">${fmt(len / 1000)} ${s.km}</span></li>`).join('')}</ul>` : ''}`;
   card.classList.add('show');
   card.querySelector('.x').onclick = () => select(null);
   card.querySelectorAll('[data-go]').forEach((l) => { l.onclick = (e) => { e.preventDefault(); select(Number(l.dataset.go)); }; });
@@ -384,7 +385,7 @@ function streetAt(sx, sy) {
 let hoverK = null;
 function showFp(k) {
   if (k == null) { gFp.setAttribute('d', ''); gFpW.setAttribute('d', ''); gFpX.setAttribute('d', ''); return; }
-  const a = D.areas[k];
+  const a = areaById[k];
   if (a.fpD === undefined) { a.fpD = ringsD(a.fp || []); a.wzD = ringsD(a.wz || []); a.extD = ringsD(a.ext || []); }
   gFp.setAttribute('d', a.fpD); gFpW.setAttribute('d', a.wzD); gFpX.setAttribute('d', a.extD);
 }
@@ -403,7 +404,7 @@ function hoverMove(e) {
   if (jn >= 0) { const j = D.junctions[jn]; tip.textContent = S().junctionT + ' · ' + j.n + ' ' + S().junctionAreas + (j.near ? ' · ' + j.near : ''); tip.style.display = 'block'; tip.style.left = Math.min(e.clientX - r0.left + 14, r0.width - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY - r0.top + 16) + 'px'; stage.style.cursor = 'pointer'; return; }
   if (t.classList && t.classList.contains('area')) {
     setHover(Number(t.dataset.k));
-    const a = D.areas[Number(t.dataset.k)]; const r = rect();
+    const a = areaById[Number(t.dataset.k)]; const r = rect();
     tip.textContent = nm(a) + ' · ' + fmt(a.km2) + ' ' + S().km2; tip.style.display = 'block';
     tip.style.left = Math.min(e.clientX - r.left + 14, r.width - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY - r.top + 16) + 'px';
   } else { hideTip(); setHover(null); }
@@ -504,8 +505,8 @@ function select(k, zoom = true) {
   document.querySelectorAll('.item').forEach((i) => i.classList.toggle('on', Number(i.dataset.k) === k));
   if (k == null) { card.classList.remove('show'); gSelPath.setAttribute('d', ''); gSelPath2.setAttribute('d', ''); gSelPartners.setAttribute('d', ''); updateFp(); return; }
   updateFp();
-  const a = D.areas[k]; gSelPath.setAttribute('d', a.d); gSelPath2.setAttribute('d', a.d);
-  gSelPartners.setAttribute('d', a.kind === 'small' && a.mergeGroup ? a.mergeGroup.filter((q) => q !== k).map((q) => D.areas[q].d).join('') : '');
+  const a = areaById[k]; gSelPath.setAttribute('d', a.d); gSelPath2.setAttribute('d', a.d);
+  gSelPartners.setAttribute('d', a.kind === 'small' && a.mergeGroup ? a.mergeGroup.filter((q) => q !== k).map((q) => areaById[q].d).join('') : '');
   pathOf.get(k).parentNode.appendChild(pathOf.get(k));
   renderCard(a);
   if (zoom) { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const r of a.outer) for (const p of r) { const q = pm(p); x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); } const wide = window.innerWidth > 820; fitBox(x0, y0, x1 + (wide ? 900 : 0), y1, 0.5); }
@@ -518,7 +519,7 @@ function renderCard(a) {
   if (a.kind === 'large') plan = `<div class="plan"><b>${s.cls.large}</b> · ${s.clsLong.large}</div>`;
   if (a.kind === 'big') plan = `<div class="plan"><b>${s.cls.big}</b> · ${s.clsLong.big}<br>${s.splitInto(a.split)}${fmt(a.km2 / a.split)} ${s.km2})</div>`;
   if (a.kind === 'small') {
-    const ms = (a.mergeGroup || []).filter((k) => k !== a.k).map((k) => D.areas[k]); const links = ms.map((m) => `<a href="#" data-go="${m.k}">${nm(m)}</a>`).join(' + ');
+    const ms = (a.mergeGroup || []).filter((k) => k !== a.k).map((k) => areaById[k]); const links = ms.map((m) => `<a href="#" data-go="${m.k}">${nm(m)}</a>`).join(' + ');
     const note = a.mergeLone ? (a.mergeSum > D.meta.B_HI * 1.5 ? s.isolated : s.bestEffort) : (a.mergeSum >= D.meta.B_LO && a.mergeSum <= D.meta.B_HI ? s.mergeOk : s.mergeNear);
     plan = `<div class="plan"><b>${s.cls.small}</b> · ${s.clsLong.small}${ms.length ? `<br>${s.mergeWith}: ${links}<br>${a.mergeLone ? '' : fmt(a.mergeSum) + ' ' + s.km2 + ' · '}${note}` : ''}</div>`; }
   const lv = a.live ? D.existing.find((q) => q.id === a.live) : null;
@@ -536,11 +537,11 @@ function renderCard(a) {
   ${plan}
   ${a.sightList && a.sightList.length ? `<h3>${s.sightsN} (${s.srcSumm})</h3><div class="chips">${a.sightList.map((c) => `<span style="font-size:12.5px">${c}</span>`).join(' · ')}${a.sights > a.sightList.length ? ' · …' : ''}</div>` : ''}
   ${a.contains.length ? `<h3>${s.contains}</h3><div class="chips">${a.contains.map((c) => `<span style="font-size:12.5px">${lang === 'ru' ? c.ru : c.en}</span>`).join(' · ')}</div>` : ''}
-  ${a.ovl && a.ovl.length ? `<h3>${s.takes}</h3><div class="chips">${a.ovl.map((o) => `<a href="#" data-go="${o.k}">${nm(D.areas[o.k])} ${fmt(o.km2)}</a>`).join('')}</div>` : ''}
+  ${a.ovl && a.ovl.length ? `<h3>${s.takes}</h3><div class="chips">${a.ovl.map((o) => `<a href="#" data-go="${o.k}">${nm(areaById[o.k])} ${fmt(o.km2)}</a>`).join('')}</div>` : ''}
   ${(() => { const js = D.junctions.filter((j) => j.areas.includes(a.k)); return js.length ? `<h3>${s.junctionsH}</h3><div style="font-size:13px">${js.map((j) => `${j.near || '·'} <span style="color:var(--muted)">(${j.n})</span>`).join('<br>')}</div>` : ''; })()}
   ${(() => { const names = [...new Set(BR.filter((b) => b.areas.includes(a.k) && b.n).map((b) => b.n))]; return names.length ? `<h3>${s.bridgesH}</h3><div style="font-size:13px">${names.slice(0, 12).join(' · ')}${names.length > 12 ? ' · …' : ''}</div>` : ''; })()}
-  <h3>${s.neighbours}</h3><div class="chips">${a.nb.slice(0, 6).map((n) => `<a href="#" data-go="${n.k}">${nm(D.areas[n.k])}</a>`).join('')}</div>
-  ${(a.bs && a.bs.length) ? `<h3>${s.borderStreets}</h3><ul class="bs">${a.bs.map((b) => `<li>${b.s >= 0 ? `<a href="#" data-st="${b.s}">${sname(SN[b.s])}</a>` : '—'}<span class="len">${fmt(b.len / 1000)} ${s.km}</span>${b.n >= 0 ? ` → <a href="#" data-go="${b.n}">${nm(D.areas[b.n])}</a>` : ` → <span style="color:var(--muted)">${s.bwater}</span>`}</li>`).join('')}</ul>` : ''}${goLinks ? '<div>' + goLinks + '</div>' : ''}`;
+  <h3>${s.neighbours}</h3><div class="chips">${a.nb.slice(0, 6).map((n) => `<a href="#" data-go="${n.k}">${nm(areaById[n.k])}</a>`).join('')}</div>
+  ${(a.bs && a.bs.length) ? `<h3>${s.borderStreets}</h3><ul class="bs">${a.bs.map((b) => `<li>${b.s >= 0 ? `<a href="#" data-st="${b.s}">${sname(SN[b.s])}</a>` : '—'}<span class="len">${fmt(b.len / 1000)} ${s.km}</span>${b.n >= 0 ? ` → <a href="#" data-go="${b.n}">${nm(areaById[b.n])}</a>` : ` → <span style="color:var(--muted)">${s.bwater}</span>`}</li>`).join('')}</ul>` : ''}${goLinks ? '<div>' + goLinks + '</div>' : ''}`;
   card.classList.add('show');
   card.querySelector('.x').onclick = () => select(null);
   card.querySelectorAll('[data-go]').forEach((l) => { l.onclick = (e) => { e.preventDefault(); select(Number(l.dataset.go)); }; });
@@ -628,7 +629,7 @@ function texts() {
   const cb = $('colorBy').children; cb[0].textContent = s.rayon; cb[1].textContent = s.size; cb[2].textContent = s.bySrc;
   document.querySelectorAll('#lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === lang)));
   const tb = $('tabs').children; tb[0].textContent = s.areasTab; tb[1].textContent = s.streetsTab; $('search').placeholder = tab === 'areas' ? s.search : s.searchStreet;
-  buildSide(); buildLayers(); if (selected != null) renderCard(D.areas[selected]); else if (selStreet != null) renderStreetCard(NM[selStreet]); drawLabels();
+  buildSide(); buildLayers(); if (selected != null) renderCard(areaById[selected]); else if (selStreet != null) renderStreetCard(NM[selStreet]); drawLabels();
 }
 function recolor() { for (const a of D.areas) pathOf.get(a.k).setAttribute('fill', fillOf(a)); buildSide(); }
 document.querySelectorAll('#lang button').forEach((b) => { b.onclick = () => { lang = b.dataset.v; try { localStorage.setItem('intro-lang', lang); } catch (e) {} texts(); }; });

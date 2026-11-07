@@ -176,6 +176,11 @@ def main():
         out = op_audit(req)
     elif op == 'version':
         out = {'shapely': shapely.__version__}
+    elif op == 'union':
+        shapes = [to_shape(g) for g in req['geoms']]
+        merged = unary_union(shapes)
+        out = {'geom': from_shape(merged), 'km2': km2(merged), 'outer': len(polys_of(merged)),
+               'holes': holes(merged), 'sourceKm2': sum(km2(s) for s in shapes)}
     elif op == 'streetBlock':
         from shapely.geometry import Point
         from shapely.ops import polygonize

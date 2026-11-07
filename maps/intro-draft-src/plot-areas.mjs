@@ -9,7 +9,7 @@ import { here, raw } from './lib.mjs';
 const ids = (process.argv[2] || '').split(',').map(Number);
 const outPng = process.argv[3] || 'plot.png';
 const D = JSON.parse(fs.readFileSync(process.argv[4] || path.join(here, 'intro-data.json'), 'utf8'));
-const areas = ids.map((k) => D.areas[k]).filter(Boolean);
+const areas = ids.map((k) => D.areas.find((a) => a.k === k)).filter(Boolean);
 const streets = [];
 for (const f of ['main_roads', 'secondary', 'tertiary']) for (const e of raw(f).elements || []) if (e.tags && e.tags.name === 'Лиговский проспект' && e.geometry) streets.push(e.geometry.map((g) => [g.lon, g.lat]));
 const cut = ((D.edits && D.edits.carve) || []).flatMap((c) => c.cut);

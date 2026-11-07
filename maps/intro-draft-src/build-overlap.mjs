@@ -4,7 +4,7 @@
 //   R4  bridges between areas belong to both; R5 water is reachable: every water cell belongs to the areas whose shore is within 320 m of the nearest one (max 2 km)
 import fs from 'node:fs';
 import path from 'node:path';
-import { here, raw, geomOf, dp, rpt, toM } from './lib.mjs';
+import { here, raw, geomOf, dp, rpt, toM, publishAreaIds } from './lib.mjs';
 import { GW, GH, CELL, fromG, cellOf, toG, drawLine, traceRings } from './grid.mjs';
 
 const D = JSON.parse(fs.readFileSync(path.join(here, 'intro-data.json'), 'utf8'));
@@ -250,10 +250,11 @@ for (const j of junctions) {
 }
 D.junctions = junctions; D.bridges = outBridges;
 D.rules = { depthM: DEPTH * CELL, junctionRadiusM: JR * CELL, waterReachM: R * CELL, waterBankM: TOL * CELL };
-fs.writeFileSync(path.join(here, 'intro-data.json'), JSON.stringify(D));
 const kb = (o) => (Buffer.byteLength(JSON.stringify(o)) / 1024) | 0;
-log('KB fp', kb(A.map((a) => a.fp)), 'ext', kb(A.map((a) => a.ext)), 'wz', kb(A.map((a) => a.wz)), 'total', (fs.statSync(path.join(here, 'intro-data.json')).size / 1024) | 0);
+log('KB fp', kb(A.map((a) => a.fp)), 'ext', kb(A.map((a) => a.ext)), 'wz', kb(A.map((a) => a.wz)), 'total', kb(D));
 const j4 = junctions.filter((j) => j.n >= 4).sort((p, q) => q.n - p.n);
 log('4+ area junctions:'); for (const j of j4.slice(0, 14)) log('  ', j.p.join(','), j.n, j.near || '-', j.areas.map((k) => A[k].ru).join(' / '));
 const mos = A.find((a) => a.ru === 'Дворцовый–Литейный') || A[0];
 log(mos.ru, 'core km2', mos.km2, 'footprint', mos.fpKm2, 'overlap', mos.extKm2, 'water', mos.wzKm2, JSON.stringify(mos.ovl.map((o) => A[o.k].ru + ' ' + o.km2)));
+publishAreaIds(D);
+fs.writeFileSync(path.join(here, 'intro-data.json'), JSON.stringify(D));

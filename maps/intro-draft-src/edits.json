@@ -9,6 +9,10 @@
     { "names": ["Посадский", "Аптекарский остров"], "ru": "Аптекарский–Посадский", "en": "Apothecary–Posadsky", "stable": true },
     { "names": ["Кронверкское", "Введенский", "Петровский"], "ru": "Кронверкское–Введенский–Петровский", "en": "Kronverkskoye–Vvedensky–Petrovsky", "stable": true }
   ],
+  "mergeAfterCarve": [
+    { "names": ["Гагаринское", "Звёздное"], "ru": "Гагаринское–Звёздное", "en": "Gagarinskoye–Zvyozdnoye", "stable": true },
+    { "names": ["Новоизмайловское", "Княжево", "Красненькая речка", "Дачное"], "ru": "Новоизмайловское–Княжево–Красненькая речка–Дачное", "en": "Novoizmaylovskoye–Knyazhevo–Krasnenkaya Rechka–Dachnoye", "stable": true }
+  ],
   "carve": [
     { "from": ["Московская застава", "Волковское"], "into": "Семёновский–Измайловский", "street": "Лиговский проспект", "side": "west", "expectOuter": 1,
       "note": "The north-west (top) parts of Moskovskaya zastava and Volkovskoye, on the side of Ligovsky prospekt that touches Semyonovsky and Izmaylovskoye, join the merged Semyonovsky-Izmaylovsky area. The cut line is the centerline of the street (dual carriageways collapsed), extended along its end bearings through the rest of the districts; the remainders of 6 and 90 keep their k and share the new edge." }

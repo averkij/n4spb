@@ -320,6 +320,20 @@ for (const cv of [...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS
   CARVE_REPORT.push(rep);
 }
 
+// Keep public IDs independent of dense raster indices as more areas merge.
+mos.forEach((m, k) => { m.stableK = k; });
+const MERGE_REPORT = [];
+for (const mg of EDITS.mergeAfterCarve || []) {
+  const parts = mg.names.map((n) => mos.find((m) => plainName(m.rawName) === n));
+  if (parts.some((p) => !p)) throw new Error('post-carve merge: missing part of ' + mg.ru);
+  const merged = pyCarve({ op: 'union', geoms: parts.map((p) => p.rings) });
+  if (merged.outer !== 1 || merged.holes || Math.abs(merged.km2 - merged.sourceKm2) > 1e-6) throw new Error('post-carve merge: invalid union of ' + mg.ru);
+  parts[0].rings = merged.geom; parts[0].rawName = mg.ru; parts[0].nameEnOsm = mg.en;
+  for (const part of parts.slice(1)) mos.splice(mos.indexOf(part), 1);
+  MERGE_REPORT.push({ names: mg.names, into: mg.ru, km2: merged.km2, outer: merged.outer, holes: merged.holes });
+  log('edit: merged after carving', mg.names.join(' + '), '->', mg.ru, merged.km2.toFixed(3), 'km2');
+}
+
 // Rename after carving so edits can refer to the original municipal name.
 for (const rn of EDITS.rename || []) {
   const m = mos.find((m) => plainName(m.rawName) === rn.name);
@@ -464,7 +478,7 @@ if (srcCov) {
 }
 
 // ---------- output per area
-const out = { meta: { cell: CELL, B_KM2, B_LO, B_HI, bbox: BBOX }, areas: [], rayons: [], existing: [], layers: {}, edits: { carve: CARVE_REPORT } };
+const out = { meta: { cell: CELL, B_KM2, B_LO, B_HI, bbox: BBOX }, areas: [], rayons: [], existing: [], layers: {}, edits: { carve: CARVE_REPORT, merge: MERGE_REPORT } };
 const rayNames = [...new Set(mos.map((m) => m.rayon))];
 const order = ['Центральный район', 'Адмиралтейский район', 'Василеостровский район', 'Петроградский район', 'Московский район', 'Фрунзенский район', 'Невский район', 'Красногвардейский район', 'Калининский район', 'Выборгский район', 'Приморский район', 'Кировский район', 'Красносельский район', 'Колпинский район', 'Пушкинский район', 'Петродворцовый район', 'Курортный район', 'Кронштадтский район'];
 rayNames.sort((a, b) => (order.indexOf(a) + 100) % 100 - (order.indexOf(b) + 100) % 100);
@@ -481,7 +495,7 @@ mos.forEach((m, k) => {
   for (const [key, v] of adj) { const a = Math.floor(key / 1000), b = key % 1000; if (a === k) nb.push([b, v]); else if (b === k) nb.push([a, v]); }
   m.nb = nb.sort((a, b) => b[1] - a[1]);
   out.areas.push({
-    k, osm: m.id, ru: nm, en: EN_FIX[nm] || m.nameEnOsm || translit(nm), raw: m.rawName,
+    k, stableK: m.stableK, osm: m.id, ru: nm, en: EN_FIX[nm] || m.nameEnOsm || translit(nm), raw: m.rawName,
     rayon: m.rayon, ray: rayIdx.get(m.rayon), km2: Math.round(km2 * 100) / 100, x: Math.round(km2 / B_KM2 * 100) / 100,
     kind, split: kind === 'big' ? Math.max(2, Math.round(km2 / B_KM2)) : 0,
     label: [r5(lp.p[0]), r5(lp.p[1])], lr: Math.round(lp.r),
@@ -540,7 +554,7 @@ out.rayons = rayNames.map((r, i) => ({ id: i, ru: r.replace(' район', ''), 
 out.source = { rects: srcRects, km2: srcKm2, regions: srcRects.length, sights: srcCov ? srcCov.sights.length : 0 };
 out.existing = existing.map((e) => ({ id: e.id, key: e.key, page: e.page, title: e.title, titleEn: e.titleEn, status: e.status, km2: e.km2, rects: e.rects, mapId: e.mapId, approxMB: e.approxMB, sights: e.sights, rectN: e.rectN, edges: e.edges }));
 // the map areas that ARE a live scene (the card and the list show the badge); k of out.areas is the district index = the registry's mapId
-for (const e of existing) { const a = out.areas.find((x) => x.k === e.mapId); if (!a) throw new Error('mapId ' + e.mapId + ' is not an area of the map'); a.live = e.id; }
+for (const e of existing) { const a = out.areas.find((x) => x.stableK === e.mapId); if (!a) throw new Error('mapId ' + e.mapId + ' is not an area of the map'); a.live = e.id; }
 
 // ---------- base layers (simplified)
 const q = (pts) => pts.map(rpt);

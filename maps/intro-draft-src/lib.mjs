@@ -6,6 +6,23 @@ import { fileURLToPath } from 'node:url';
 export const here = path.dirname(fileURLToPath(import.meta.url));
 export const raw = (name) => JSON.parse(fs.readFileSync(path.join(here, 'raw', name + '.json'), 'utf8'));
 
+// Raster stages use dense indices; publish stable IDs only after all stages.
+export function publishAreaIds(data) {
+  const ids = new Map(data.areas.map((a) => [a.k, a.stableK ?? a.k]));
+  const id = (k) => {
+    if (k < 0) return k;
+    if (!ids.has(k)) throw new Error('Unknown area reference ' + k);
+    return ids.get(k);
+  };
+  for (const a of data.areas) {
+    a.k = id(a.k); delete a.stableK;
+    for (const n of [...(a.nb || []), ...(a.ovl || [])]) n.k = id(n.k);
+    for (const b of a.bs || []) b.n = id(b.n);
+    if (a.mergeGroup) a.mergeGroup = a.mergeGroup.map(id);
+  }
+  for (const item of [...(data.junctions || []), ...(data.bridges || [])]) item.areas = item.areas.map(id);
+}
+
 export const LAT0 = 59.95;
 const KX = 111320 * Math.cos((LAT0 * Math.PI) / 180);
 const KY = 110950;
