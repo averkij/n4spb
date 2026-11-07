@@ -13,6 +13,15 @@ import * as THREE from 'three';
 
 const keyName = (code) => (code || 'KeyE').replace(/^Key/, '').replace(/^Digit/, '');
 
+// Firefox's fingerprinting resistance can hide code for Cyrillic input.
+// Keep physical bindings authoritative; only recover the bilingual E/У action
+// when the browser supplies no physical key. Never act during IME composition.
+export function isInteractionKey(event, code = 'KeyE') {
+  if (event.isComposing) return false;
+  if (event.code && event.code !== 'Unidentified') return event.code === code;
+  return code === 'KeyE' && ['e', 'E', 'у', 'У'].includes(event.key);
+}
+
 export function createUI({ player, toast, doc = typeof document !== 'undefined' ? document : null }) {
   const $ = (id) => (doc ? doc.getElementById(id) : null);
   let open = null;          // { el, onClose, wasLocked }
@@ -132,7 +141,7 @@ export function createInteract({ camera, player, ui, doc = typeof document !== '
     addEventListener('keydown', (e) => {
       if (e.repeat || !target || ui.modalOpen || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
-      if (e.code === target.key) { e.preventDefault(); use(); }
+      if (isInteractionKey(e, target.key)) { e.preventDefault(); use(); }
     });
     if (chip) chip.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); use(); });      // touch screens: tap the chip
   }

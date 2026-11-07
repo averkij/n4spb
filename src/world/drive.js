@@ -18,6 +18,7 @@
 // SERVICE  ctx.drive = ctx.services.drive = { active, car (handling state of the current car), parked, model, damage, fleet, boats, vehicles, vehicle, vehicleById(id), enter(idOrVehicle), exit(force), place(x, z, yawDeg), setView(i), sim(seconds, input) (test hook) }
 // TEST HOOKS  window.__drive = ctx.drive;  ?cam=... shots show the parked car; node tools/shot.mjs --eval "__ctx.drive.enter(); __ctx.drive.sim(3, { thr: 1 })" drives it headlessly.
 import * as THREE from 'three';
+import { isInteractionKey } from '../core/ui.js';
 import { loadGarage } from './drive/cars/index.js';
 import { GARAGE } from './lib/area-tables.js';
 import { createHandling, holdInput } from './drive/handling.js';
@@ -413,7 +414,7 @@ export async function build(ctx) {
       if (ctx.ui && ctx.ui.modalOpen) return;
       // The interaction handler consumes the enter event before this listener. First-time HUD/audio
       // setup can take longer than the debounce window; that same E must never immediately exit.
-      if (e.code === 'KeyE' && !e.defaultPrevented && performance.now() - state.enteredAt > 350 && !e.ctrlKey && !e.metaKey) { e.preventDefault(); exit(); }
+      if (isInteractionKey(e) && !e.defaultPrevented && performance.now() - state.enteredAt > 350 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); exit(); }
       else if (e.code === 'KeyV') api.setView((view.mode + 1) % 3);
       else if (e.code === 'KeyG') sound.horn();
       else if (e.code === 'KeyX') hopTap = true;

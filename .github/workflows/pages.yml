@@ -126,6 +126,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Vehicle entry and exit with physical or privacy-hidden Firefox E keys
+        run: node tools/drive-input-test.mjs
       - name: Moskovskaya landmarks, open gate bays, park water and mapped gardens
         run: |
           node tools/area.mjs semyonovsky tools/moscow-gate-passage-test.mjs

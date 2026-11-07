@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from 'three';
-import { createInteract } from '../src/core/ui.js';
+import { createInteract, isInteractionKey } from '../src/core/ui.js';
 
 const source = fs.readFileSync(new URL('../src/world/drive.js', import.meta.url), 'utf8');
 const section = source.indexOf('// ---------------------------------------------------------------- keys / mouse');
@@ -17,7 +17,11 @@ assert(section >= 0 && begin > section && end > begin, 'drive keydown listener i
 const driveListener = source.slice(begin, end);
 const originalAdd = globalThis.addEventListener;
 try {
-  for (const setupDelay of [0, 1000, 12000]) {
+  for (const key of [
+    { code: 'KeyE', key: 'e' }, { code: 'KeyE', key: 'у' },
+    { code: '', key: 'e' }, { code: '', key: 'у' },
+    { code: 'Unidentified', key: 'У' },
+  ]) for (const setupDelay of [0, 1000, 12000]) {
     const events = new EventTarget();
     globalThis.addEventListener = events.addEventListener.bind(events);
     const player = { fly: false, inputLock: 0 }, camera = new THREE.PerspectiveCamera(), ui = { modalOpen: false };
@@ -30,19 +34,32 @@ try {
     });
     interact.update();
     vm.runInNewContext(driveListener, {
-      addEventListener, state, ctx: { ui }, performance: { now: () => now },
+      addEventListener, isInteractionKey, state, ctx: { ui }, performance: { now: () => now },
       exit: () => { exits++; state.active = false; player.inputLock = 0; },
     }, { filename: 'drive.js keydown listener' });
-    const press = (repeat = false) => {
-      const e = new Event('keydown', { cancelable: true }); Object.assign(e, { code: 'KeyE', repeat });
+    const press = (repeat = false, extra = {}) => {
+      const e = new Event('keydown', { cancelable: true }); Object.assign(e, { ...key, repeat, ...extra });
       events.dispatchEvent(e); return e;
     };
+    for (const modifier of ['ctrlKey', 'metaKey', 'altKey', 'isComposing']) {
+      assert.equal(press(false, { [modifier]: true }).defaultPrevented, false);
+      assert.equal(state.active, false, modifier + ' cannot board');
+    }
+    for (const tag of ['INPUT', 'SELECT']) {
+      events.tagName = tag; press();
+      assert.equal(state.active, false, tag + ' keeps its text/control input');
+    }
+    delete events.tagName;
     assert.equal(press().defaultPrevented, true, 'interaction consumes entry event');
     assert.equal(state.active, true, `entry stays seated after ${setupDelay} ms setup`);
     assert.equal(exits, 0, 'entry cannot exit on the same event');
     interact.update();
     now += 1000; press(true);
     assert.equal(exits, 0, 'holding E cannot exit on auto-repeat');
+    for (const modifier of ['ctrlKey', 'metaKey', 'altKey', 'isComposing']) {
+      press(false, { [modifier]: true });
+      assert.equal(state.active, true, modifier + ' cannot exit');
+    }
     assert.equal(press().defaultPrevented, true, 'a fresh E consumes exit event');
     assert.equal(exits, 1, 'a subsequent E exits normally');
   }
@@ -50,6 +67,12 @@ try {
   if (originalAdd === undefined) delete globalThis.addEventListener;
   else globalThis.addEventListener = originalAdd;
 }
+for (const event of [
+  { code: 'KeyT', key: 'e' }, { code: 'KeyT', key: 'у' },
+  { code: '', key: 'е' }, { code: '', key: 'x' },
+]) assert.equal(isInteractionKey(event), false, 'another physical key/letter cannot use the E action');
+assert.equal(isInteractionKey({ code: 'Space', key: ' ' }, 'Space'), true, 'other explicit interaction bindings are preserved');
+assert.equal(isInteractionKey({ code: '', key: 'e' }, 'Space'), false, 'fallback applies only to E interactions');
 // ---- the hop key: the real readInput of drive.js with a fake key set / touch state
 {
   const r0 = source.indexOf('  function readInput(out = {}) {'), r1 = source.indexOf('  const input = {};', r0);
@@ -81,7 +104,7 @@ try {
   // the keydown listener latches the press of X (hopTap) and of C (flipTap): immediately, only while driving, not on auto-repeat, not behind a modal; each key has its own latch
   {
     const events = new EventTarget(); globalThis.addEventListener = events.addEventListener.bind(events);
-    const sb = { addEventListener, state: { active: true, enteredAt: 0 }, ctx: { ui: { modalOpen: false } }, performance: { now: () => 1e6 }, exit() {}, api: { setView() {}, repair() {} }, view: { mode: 0 }, sound: { horn() {} }, hopTap: false, flipTap: false };
+    const sb = { addEventListener, isInteractionKey, state: { active: true, enteredAt: 0 }, ctx: { ui: { modalOpen: false } }, performance: { now: () => 1e6 }, exit() {}, api: { setView() {}, repair() {} }, view: { mode: 0 }, sound: { horn() {} }, hopTap: false, flipTap: false };
     vm.runInNewContext(driveListener, sb, { filename: 'drive.js keydown listener (hop)' });
     const press = (code, repeat = false) => events.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { code, repeat }));
     for (const [code, latch, other] of [['KeyX', 'hopTap', 'flipTap'], ['KeyC', 'flipTap', 'hopTap']]) {
@@ -105,4 +128,4 @@ try {
   const e0 = source.indexOf('  function exit(force = false) {'), e1 = source.indexOf('EXIT_MAX_KMH', e0);
   assert(e0 >= 0 && /!force && car\.air\) return false/.test(source.slice(e0, e1)), 'exit() keeps the door shut while the car is airborne');
 }
-console.log('RESULT: OK - first-E entry, held key and subsequent exit with 0, 1,000 and 12,000 ms setup delays; the hop keys (X simple / C barrel, keyboard and touch), exhaust-point room, no exit in the air.');
+console.log('RESULT: OK - physical and Firefox-hidden E keys across 15 key/setup-delay combinations, modifier/IME/input guards, first-E entry, held key and subsequent exit; hop keys, exhaust-point room, no exit in the air.');

@@ -3155,3 +3155,87 @@ asset failures. Final screenshots were reviewed. Evidence is
 and their combined `packed-final-report.json`. Reproduce with
 `node tools/pages-assets-browser-test.mjs --site dist --pages palace,moskovskaya,narvsky
 --mobile narvsky --out shots/packed-deployment` after assembling the site.
+
+## 2026-11-07 — Firefox E-key compatibility (10.0.1)
+
+A user reported car entry failing in Firefox on a MacBook, without further
+information about the keyboard layout, prompt or browser preferences. Native
+macOS hardware is unavailable in this environment, so that exact report is not
+confirmed. A concrete compatible failure is documented by
+[Mozilla bug 1715105](https://bugzilla.mozilla.org/show_bug.cgi?id=1715105):
+fingerprinting resistance can return an empty `KeyboardEvent.code` for a
+Cyrillic character. The old interaction listener required `code === 'KeyE'`.
+
+The interaction matcher now preserves any supplied physical code, and only
+when it is missing or `Unidentified` accepts English E or Russian У, the same
+key position. Entry and exit share this rule. Modifier chords, IME composition,
+auto-repeat and input/select focus do not trigger boarding; modified/composing
+events cannot exit either. The consumed entry event still cannot immediately
+exit after slow first-use HUD/audio setup. No browser privacy setting is changed.
+There is no new frame-loop work, geometry, collision or simulation behavior.
+
+Firefox 159.0.1 on Windows was tested through WebDriver BiDi. A trusted Cyrillic
+`key: 'у', code: ''` event produces zero uses against the original interaction
+module and one use against the patched module, with the event consumed. This
+passes in separate default and fingerprinting-resistant profiles. It validates
+the browser event path, not a physical Mac keyboard or the original user's
+configuration. Evidence: `shots/firefox-entry/keyshape.json`. Scratch scripts
+remain outside the repository. One initial shell-generated probe lost its
+Cyrillic character; it was corrected to an explicit Unicode code point before
+accepting the final evidence.
+
+`node tools/drive-input-test.mjs` runs the real entry and exit listeners across
+five key shapes and three setup delays, including hidden-code Latin/Cyrillic,
+provided-code Cyrillic and `Unidentified`. It also checks modifiers, composition,
+editable control focus, unrelated physical keys, repeat, later exit and existing
+hop controls. The test now gates the engine CI job. Runtime-only/import/closure
+checks, 17 touch-logic groups and generated diagnostic pages also pass.
+
+Final packed-scene Firefox checks pass ordinary E, supplied-code Cyrillic,
+Shift+E, focus return, and trusted hidden-code Cyrillic entry and exit. Default
+and fingerprinting-resistant profiles load Narvsky in 17.8 / 13.9 s. Entry
+and exit screenshots were inspected in `shots/firefox-entry/{fixed,privacy}/`.
+The default profile shows the surrounding buildings intact. RFP screenshots
+have gaps in some facade surfaces despite passing the keyboard checks; full
+graphics compatibility in that profile remains unverified.
+
+All 17 live scenes were rebuilt for the shared input dependency. The first
+Palace pass differed from the frozen 10.0.0 snapshot in one of 14,817,600
+`field-qT` planting-distance bytes (255 versus 247 at index 2,920,552); its
+other 107 products were identical. An unchanged-source repeat restores exact
+identity. The final strict `bake-product-compare.mjs` comparison passes all
+2,053 products, byte-for-byte, without widening its accepted differences.
+The initial transient's cause is not attributed to the keyboard change.
+Reports are `shots/firefox-entry/product-identity-final.json`,
+`shots/firefox-bake-all.log` and `shots/firefox-palace-repeat.log`.
+
+The same two eight-second normal integrated driving routes as 10.0.0 ran
+serially on Edge 156 / RTX 3090 Ti / D3D11, 1280×720, medium, with no profiling,
+mid-run screenshots, CPU audits or other GPU tasks. CDP heap and backing
+storage are reported separately. These are short validation samples, not an
+optimization claim.
+
+| Route / version | Load s | Mean / p50 / p95 / max ms | >40 / >80 ms frames | Mean draws | Distance m | CDP heap / backing MiB |
+|---|---:|---|---|---:|---:|---|
+| Nevsky, Palace 10.0.0 | 25.2 | 20.6 / 16.7 / 33.4 / 33.5 | 0 / 0 | 1313 | 264.8 | 502.2 / 1039.6 |
+| Nevsky, Palace 10.0.1 | 24.1 | 19.2 / 17.6 / 34.9 / 36.8 | 0 / 0 | 1312 | 266.8 | 511.8 / 982.2 |
+| Stachek, Narvsky 10.0.0 | 13.6 | 19.3 / 16.7 / 33.3 / 233.4 | 6 / 2 | 878 | 157.5 | 403.1 / 500.1 |
+| Stachek, Narvsky 10.0.1 | 12.9 | 18.3 / 17.5 / 18.2 / 192.6 | 2 / 2 | 890 | 173.0 | 483.2 / 595.5 |
+
+The Narvsky traffic collision differs (the final car is still moving at 51 km/h,
+versus stopped previously), and the region working set differs, so its timing
+and retained-memory changes are not attributed to input handling. Its 193 ms
+hitch and 203 ms long task still limit comfortable driving. The existing
+long-task/working-set diagnostic target remains. All failed-region counts are
+zero and both end screenshots were reviewed. Reproduction commands use the
+same `--start` values in the 10.0.0 table with output prefixes
+`shots/firefox-entry/bench-{palace,narvsky}`.
+
+The final deployment copy contains 5,057 files, 954,363,547 bytes, within the
+unchanged 1 GB budget. Its 831 packed data modules and 33,335 decoded exports
+retain their original data; the strict packing fixtures are unchanged. The
+shipping source and all 17 manifests match, with 835.0 MiB of complete gzip
+products.
+Packed desktop Moskovskaya and the published mobile Narvsky entry also pass
+native revision/layout/start/helper/asset checks, loading in 18.6 / 18.1 s.
+Their screenshots in `shots/firefox-entry/packed-final/` were reviewed.
