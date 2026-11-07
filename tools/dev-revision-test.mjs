@@ -1,6 +1,6 @@
 // CPU test of the development / test server answer to /__baked_revision (tools/lib/dev-revision.mjs) and of tools/dev-servers-lint.mjs. No browser, no three.js, no GPU, no node_modules.
 //   1. the page -> area mapping (Referer pathname: '/' is index.html, '/<name>.html', a base path, query / fragment, unknown pages)
-//   2. a REAL http server on the real tree answers, for each of the five live areas, exactly revisionOf(area) of the tool that CI and the bake use (a multi-area server: one server, five Referers)
+//   2. a REAL http server on the real tree answers, for every live area, exactly revisionOf(area) of the tool that CI and the bake use (one server, every live page's Referer)
 //   3. 404 without a Referer, for an unknown page, for a foreign path; the query string of the request is harmless; other URLs are not handled (the caller serves them)
 //   4. the stat-signature cache on a small fixture tree on disk: the second request does not re-walk; an edit of a closure file does; an edit of a file outside every closure does not;
 //      a new file in a folder that a whole-folder rule reads does; a runtime-only file does not change the revision; a broken tree answers 'unscannable' (fail closed, the server survives) and recovers
@@ -13,7 +13,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleBakedRevision, areaOfPath, areaOfReferer, liveRevision, liveStatus, resetDevRevisionCache, stats, ENDPOINT } from './lib/dev-revision.mjs';
-import { revisionsOf } from './baked-revision.mjs';
+import { revisionsOf, liveAreas } from './baked-revision.mjs';
 import { lintDevServers, toolSources, ENDPOINT_EXEMPT } from './dev-servers-lint.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -99,9 +99,10 @@ console.log('a real http server on the real tree:');
 resetDevRevisionCache();
 const expected = revisionsOf(root);
 const real = await serverOf(root);
-const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky'];
-const PAGE = { palace: '/', smolny: '/smolny.html', vladimirsky: '/vladimirsky.html', admiralty: '/admiralty.html', vasilyevsky: '/vasilyevsky.html' };
-await check('the five live areas: one server, five Referers, five answers equal to revisionOf(area) (the revision CI and the bake compute)', async () => {
+const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'moskovskaya', 'narvsky', 'kronverk', 'aptekarsky', 'islands'];
+const PAGE = Object.fromEntries(liveAreas(root).map(row => [row.id, row.page === 'index.html' ? '/' : `/${row.page}`]));
+await check('all seventeen live areas: one server, seventeen Referers, seventeen answers equal to revisionOf(area)', async () => {
+  assert.deepEqual(Object.keys(PAGE), LIVE, 'the real-tree revision test covers every live registry page');
   const seen = new Set();
   for (const id of LIVE) {
     const r = await get(real.port, ENDPOINT, { Referer: `http://127.0.0.1:${real.port}${PAGE[id]}?q=medium` });
@@ -109,7 +110,7 @@ await check('the five live areas: one server, five Referers, five answers equal 
     const j = JSON.parse(r.body); assert.equal(j.revision, expected[id].revision, id); assert.equal(j.area, id);
     assert(/^[0-9a-f]{20}$/.test(j.revision)); seen.add(j.revision);
   }
-  assert.equal(seen.size, 5, 'five different revisions: an answer that ignores the page would give one');
+  assert.equal(seen.size, 17, 'seventeen different revisions: an answer that ignores the page would give one');
 });
 await check('the parked areas answer too (their pages are registry pages): strip, north', async () => {
   for (const id of ['strip', 'north']) { const r = await get(real.port, ENDPOINT, { Referer: `http://h/${id}.html` }); assert.equal(r.status, 200); assert.equal(JSON.parse(r.body).revision, expected[id].revision, id); }

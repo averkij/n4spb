@@ -19,7 +19,7 @@ ctx.staticRoot.traverse(o=>{
   for(let i=0;i<p.count;i++){
     point.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);const {x,y,z}=point;
     assert([x,y,z].every(Number.isFinite),'finite authored geometry');
-    assert(x < -900 && x > -3300 && z > 4450 && z < 8500,`misplaced facade geometry ${o.name} at ${x},${y},${z}`);
+    assert(x < -900 && x > -3300 && z > 4450 && z < 9350,`misplaced facade geometry ${o.name} at ${x},${y},${z}`);
     if(Math.abs(x+1672)<15&&Math.abs(z-7554)<15)tip=Math.max(tip,y);
     vertices++;
   }

@@ -6,8 +6,8 @@ const { rects } = JSON.parse(fs.readFileSync(`src/areas/${id}/territory.json`, '
 const row = {
   id, page: `${id}.html`, bake: `baked/${id}/`, requireBake: true,
   title: 'Московская застава', titleEn: 'Moskovskaya Zastava',
-  sights: ['Московские триумфальные ворота', 'Московский парк Победы', 'Площадь Братьев Стругацких', 'Дом со шпилем', 'Российская национальная библиотека', 'Чесменская церковь и дворец', 'Московский райсовет'],
-  approxMB: 55, dev: false, mapId: 6,
+  sights: ['Московские триумфальные ворота', 'Московский парк Победы', 'Площадь Братьев Стругацких', 'Дом со шпилем', 'Российская национальная библиотека', 'Чесменская церковь и дворец', 'Московский райсовет', 'Дом Советов и Московская площадь'],
+  approxMB: 75, dev: false, mapId: 6,
   remap: {
     'src/world/data/city.js': `src/areas/${id}/data/city.js`,
     'src/world/area.js': `src/areas/${id}/area.js`,

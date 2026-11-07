@@ -37,6 +37,8 @@ jobs:
         run: node tools/closure-lint.mjs
       - name: Pages ships current bakes and rejects oversized sites
         run: node tools/pages-assets-test.mjs
+      - name: Deployment-only data packing is lossless and bounded
+        run: node tools/pages-data-pack-test.mjs
       - name: No dev / test server answers the bake revision by itself, nobody uses the global revision (dev-servers-lint)
         run: node tools/dev-servers-lint.mjs
       - name: Area pages are generated from index.html
@@ -129,8 +131,21 @@ jobs:
           node tools/area.mjs semyonovsky tools/moscow-gate-passage-test.mjs
           node tools/area.mjs moskovskaya tools/moscow-gate-passage-test.mjs
           node tools/area.mjs moskovskaya tools/moskovskaya-landmarks-test.mjs
+          node tools/area.mjs moskovskaya tools/moskovskaya-soviets-test.mjs
+          node tools/area.mjs moskovskaya tools/moskovskaya-square-paving-test.mjs
           node tools/area.mjs moskovskaya tools/strugatsky-square-test.mjs
           node tools/area.mjs moskovskaya tools/moskovskaya-park-test.mjs --integrated
+      # HEAD exists in a shallow checkout. Current geographic invariants run in
+      # CI; conservation against the pre-expansion ref is also run manually at
+      # the authoring checkpoint with --baseline <ref>, before committing data.
+      - name: Moskovskaya expanded territory and preserved geographic contracts
+        run: node tools/area.mjs moskovskaya tools/moskovskaya-expansion-test.mjs --baseline HEAD
+      - name: Narvsky surveyed landmarks, open entrances, garage and connected water
+        run: |
+          node tools/area.mjs narvsky tools/narvsky-area-test.mjs
+          node tools/area.mjs narvsky tools/narvsky-constructivism-test.mjs
+          node tools/area.mjs narvsky tools/area-garage-check.mjs
+          node tools/area.mjs narvsky tools/water-level-test.mjs
       - name: Closed vegetation, supported quay fixtures and two-way natural banks
         run: |
           node tools/area.mjs moskovskaya tools/hedge-geometry-test.mjs
@@ -203,6 +218,8 @@ jobs:
           cp LICENSE LICENSE-sakuragaoka-station.txt NOTICE.md README.md dist/
           touch dist/.nojekyll
           node tools/pages-assets.mjs
+      - name: Every deployed packed data export equals its source export
+        run: node --max-old-space-size=8192 tools/pages-data-pack-test.mjs --actual
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

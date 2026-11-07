@@ -1,27 +1,33 @@
 # Московская застава
 
+The current expansion is **10.0.0**. Older checkpoint measurements below remain
+historical; final shipping and driving evidence is in [PERFORMANCE.md](PERFORMANCE.md).
+
 Planning-map area **6**, playable as `moskovskaya.html`. The territory follows
 the current embedded outline in `maps/intro-draft.html`, including its overlap
-bands, rather than the older municipal core alone. The 80 m raster has 73
-rectangles and covers **14.3872 km²**. Two enclosed raster holes are filled so
+bands, rather than the older municipal core alone. The expanded 80 m raster has 69
+rectangles and covers **22.0096 km²**. It reaches Ленинский проспект and улица
+Типанова, including transferred northern blocks of neighbouring districts.
+Existing live cells are retained. Enclosed raster holes are filled so
 residential blocks cannot contain invisible territory walls. The complete Boris
 Strugatsky house block on Pobedy Street is retained as an explicit overlap.
 `src/areas/moskovskaya/territory.json` records the exact rectangles and policy.
 
 The data port uses `D:/git2/agi-fun-tests/102_3d_piter`, commit
-`022e72ca8b3a2d0bf716367e7399187cacca019e`. Its southern coverage comprises the
+`47a475d108a959f17e2460ceb59ed37bf9f9d4db`. Its southern coverage comprises the
 Moskovsky Prospekt corridor and the full Victory Park extract; it does not cover
 all of the planned industrial and residential territory to their west and east.
 Missing geography comes from the current OpenStreetMap geometry snapshot
-`2026-11-01T07:20:51Z`, including minor streets, service roads, courtyards,
+`2026-11-01T07:20:51Z`, supplemented on 2026-11-07 in the new eastern/southern
+strips and expanded water ring, including minor streets, service roads, courtyards,
 footpaths, lawns, crossings, buildings and street furniture. There is no invented
-street grid. Existing source records remain authoritative inside its coverage;
+street grid. Evolved live records remain authoritative inside their coverage;
 crossing features use complete newly mapped geometry. Raw responses and converter
 scratch files remain in the system temporary directory, outside the repository.
 
-The 73 regional data parts contain 4,153 building records (3,798 outlines and 355
-parts), 11,181 roads and paths, 2,205 green areas, 2,440 mapped trees, 100 tree rows,
-3,905 furniture records, 35 water polygons and 24 waterway records. The facade
+The 69 regional data parts contain 5,580 building records (5,054 outlines and 526
+parts), 18,561 roads and paths, 3,421 green areas, 3,970 mapped trees, 172 tree rows,
+5,800 furniture records, 44 water records and 27 waterway records. The facade
 retains the standard area data exports and source route metadata. These are data
 record counts, not rendered object counts; generic generators apply their normal
 placement, claims, batching and distance rules.
@@ -94,7 +100,8 @@ crossings without hits or scrapes, and each connected basin retains one free
 water body. Half-metre park footbridge slabs match the visible fascia and the
 shared floating-hull collision rule; no additional water blockers are used.
 
-The surface audit records **180 residual samples out of 504,436 (0.03568%)**.
+The original 14.39 km² checkpoint's surface audit recorded
+**180 residual samples out of 504,436 (0.03568%)**.
 These are existing shared-generator edge cases in this larger dense network,
 below both the 0.3% contract and the strip's documented 0.0412% baseline:
 
@@ -244,3 +251,45 @@ between unequal water levels at quay junctions; and reserves raised long-bridge
 decks against generic paving and below-deck trolley hardware. The
 [quay junction note](research/quay-junctions.md) records the exact reported
 Fontanka rays and why an ordinary downward bank extension was insufficient.
+
+## 10.0.0 — Southern and eastern expansion
+
+The planned Leninsky/Tipanova extension is now actual scene territory, including
+the eastern Gagarina/Vitebsky streets and Moscow Square. Regeneration fetches
+the uncovered strips of the cached OSM window instead of silently accepting
+an older, smaller download. The water ring has its own bounds-keyed cache.
+All prior live cells remain in the new union. Repeated records with one OSM ID
+are retained as families, and disjoint source way pieces are recovered without
+overwriting maintained local geometry.
+
+`moskovskaya-expansion-test.mjs --baseline 1ca86f6f --source
+D:/git2/agi-fun-tests/102_3d_piter/src/world/data/city.js` independently checks
+all 4,153 prior buildings, 2,440 earlier mapped trees, 85,862 earlier road
+samples, 352 split-source samples, 881 wet pond probes, 50 dry island probes
+and 2,248 previous playable cells. Library portico/hall/underpass and Basseynaya
+pilotis protections remain intact. Current geometry has no missing prior family.
+
+The separately authored House of Soviets keeps all four building parts and
+three open courtyards. Fourteen physical columns, end porticoes, relief figures,
+the roof emblem and Lenin's granite plinth follow the inspected reference.
+The square's 32,377.705 m² surveyed field is partitioned into granite paving,
+mapped lawn islands and eleven real basin openings. The competing generic
+`w715035938` paving yields to this owner. Paving adds 1,010 static triangles,
+three materials, no colliders and no frame callbacks; 7,178 independent rays
+protect the water openings, lawns and slab surfaces.
+
+Four OSM pool records had been tagged as ponds while their operating nozzles
+were separate fountain nodes. The preparation correction marks the true basin
+polygons as fountains, removes their false river cuts and retains the five
+nozzle nodes as aliases. The generic shared live-fountain owner animates all
+eleven physical basins, including the relation containing two main pools.
+Fountain planting masks preserve their water openings and the existing trees
+on actual lawn islands. Water remains reachable on foot and by car.
+
+Final strict road furniture checks have zero failing obstacles, narrow-median
+fixtures or parking overlaps. The full surface audit retains 311 shared
+generator residual samples out of 799,234 (0.03891%), with no authored building
+or square overlay; the documented tripwire is 360. Road markings and ribbon
+audits pass. The formal square's focused audit is not independently all-green:
+it includes 35 of those external median samples beyond its surveyed boundary.
+The fountain/architecture and square-paving regressions run in CI.

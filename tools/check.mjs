@@ -88,11 +88,15 @@ for (const k of ['error', 'warn']) { const orig = console[k].bind(console); cons
 // area builds (the North's landmarks below) stay in BUDGET: no other page lists them.
 const AREA = process.env.AREA || 'strip';
 const BUDGET_AREA = {
-  // Moskovskaya's 14.39 km² source+map cut: measured static totals + ~15%.
+  // Moskovskaya's expanded 22.01 km² source+map cut: measured static totals + ~15%.
   // Fine landmark counts are tracked separately from its generic city budget.
-  moskovskaya: { environment: 980e3, streets: 1.39e6, city: 1.37e6, props: 345e3,
-    landmarksMoskovsky: 27e3, landmarksMoskovskaya: 300e3,
-    landmarksMoskovskayaPark: 260e3, coastalBridges: 345e3 },
+  moskovskaya: { environment: 1.36e6, streets: 2.0e6, city: 1.97e6, props: 475e3,
+    landmarksMoskovsky: 27e3, landmarksMoskovskaya: 383e3,
+    landmarksMoskovskayaPark: 260e3, coastalBridges: 510e3 },
+  // Initial 15.15 km² Narvsky: measured 930082 / 942031 / 1178397,
+  // 71769 landmark and 434279 bridge/fence triangles; + ~15% tripwires.
+  narvsky: { environment: 1.07e6, streets: 1.09e6, city: 1.36e6,
+    landmarksNarvsky: 83e3, coastalBridges: 500e3 },
   north: { landmarksOktyabrsky: 57e3 },
   // the two live areas (measured at 320efb6 with `node tools/area.mjs <id> tools/check.mjs --area-modules`, + about 15 %): their territories are 7.0 and 9.4 km2 against the strip's ~2 km2, so the generic modules build 2 to 2.5 times the strip's triangles
   palace: { environment: 890e3, streets: 1.17e6, city: 1.3e6, props: 410e3 },      // measured: environment 776,743, streets 1,013,573, city 1,128,586, props 353,786 (the Summer Garden 392 k and the Mars Field 270 k have no entry: no other area builds them)

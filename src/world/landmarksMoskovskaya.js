@@ -12,6 +12,9 @@ import { libraryForecourt } from './landmarksMoskovskaya/library-forecourt.js';
 import { libraryUnderpass } from './landmarksMoskovskaya/library-underpass.js';
 import { basseynaya } from './landmarksMoskovskaya/basseynaya.js';
 import { tollCanopy } from './landmarksMoskovskaya/bridge-details.js';
+import { soviets, lenin } from './landmarksMoskovskaya/soviets.js';
+import { squareForecourt } from './landmarksMoskovskaya/soviets-square.js';
+import { MONUMENTS } from './data/city.js';
 import { removeBridgeFallbacks } from '../areas/moskovskaya/bridge-fallbacks.js';
 export const OWNS_GROUPS = true;
 
@@ -22,7 +25,7 @@ export function build(ctx) {
   const K = makeKit(ctx, root, svc);
   for (const [key, fn] of [
     ['chesme-church', church], ['chesme-palace', palace], ['spire', spire],
-    ['library', library], ['council', council], ['toll-canopy', tollCanopy], ['basseynaya', basseynaya],
+    ['library', library], ['council', council], ['toll-canopy', tollCanopy], ['basseynaya', basseynaya], ['soviets', soviets],
   ]) {
     const records = L.groupMembers('mz-' + key);
     if (!records.length) continue;
@@ -31,6 +34,9 @@ export function build(ctx) {
   K.begin(); square(K); K.flush('strugatsky');
   K.begin(); libraryForecourt(K); K.flush('library-forecourt');
   K.begin(); libraryUnderpass(K); K.flush('library-underpass');
+  const statue = MONUMENTS.find(m => m.id === 'w189982684');
+  if (statue) { K.begin(); lenin(K, statue); K.flush('moskovskaya-lenin'); }
+  K.begin(); squareForecourt(K); K.flush('soviets-square');
   ctx.addStatic(root);
   const all = ctx.services.landmarks ||= {};
   for (const k of ['monuments', 'photoSpots']) (all[k] ||= []).push(...svc[k]);

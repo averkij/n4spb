@@ -3017,3 +3017,141 @@ Screenshots were reviewed in `shots/mobile-hud/`; logs are
 All 16 shipping scenes were rebuilt and verified: 1,869 products, 759.2 MiB
 gzip. The Pages asset audit and generated-page checks pass. This round adds
 no scene geometry or rendering passes; no new frame-time benchmark is claimed.
+
+## 2026-11-07 — Moskovskaya expansion and Narvsky opening (10.0.0)
+
+Moskovskaya grows from 14.3872 to 22.0096 km², retaining every previous playable
+cell and supplementing the full-city source beyond its eastern/southern coverage.
+Narvsky opens with 15.1488 km² and four reciprocal neighbours. The source and
+OSM snapshot provenance, official landmark references, surveyed footprints and
+estimated modelling dimensions are recorded in `docs/research/moskovskaya-soviets.md`,
+`narvsky-area.md` and `narvsky-constructivism.md`. Planning polygons remain in
+`maps/intro-draft.html`; its live-area catalogue now includes Narvsky.
+
+Detailed static House of Soviets/Lenin geometry adds about 50,262 triangles;
+Narva Gate and Gorky Palace together add 71,769. They use the existing static
+batching and finite detail ranges, with no landmark update callbacks. The
+32,377.705 m² Moscow Square field separates 20,615.930 m² granite paving,
+7,345.995 m² lawns and 4,415.780 m² pools. Its paving adds 1,010 triangles,
+three materials, no colliders and no updates. Eleven physical fountain basins
+use the existing nearby-only live-fountain service, including five mapped
+nozzle aliases. No shared renderer, simulation or loading implementation changed.
+
+Normal integrated driving runs below used Edge 156, RTX 3090 Ti / D3D11,
+1280×720, medium, eight seconds of real W input, no profiling or mid-run
+screenshots. GPU jobs ran serially without concurrent bakes or CPU audits.
+Before samples are the intact 9.21.4 source+bake checkpoint `1ca86f6f`;
+after samples use matching 10.0.0 bakes, without `baked=force` or module filters.
+Heap columns are CDP `usedSize` and `backingStorageSize`, separately in MiB.
+
+| Route / checkpoint | Load s | Mean / p50 / p95 / max ms | >40 / >80 ms frames | Mean draws | Distance m | CDP heap / backing MiB |
+|---|---:|---|---|---:|---:|---|
+| Nevsky, Palace page, before | 40.2 | 38.2 / 33.4 / 50.1 / 83.3 | 62 / 1 | 1305 | 267.8 | 459.6 / 1011.4 |
+| Nevsky, Palace page, after | 25.2 | 20.6 / 16.7 / 33.4 / 33.5 | 0 / 0 | 1313 | 264.8 | 502.2 / 1039.6 |
+| Moskovsky pr., before | 23.5 | 26.4 / 16.8 / 33.5 / 233.3 | 14 / 2 | 1002 | 256.0 | 519.9 / 635.3 |
+| Moskovsky pr., after | 23.7 | 21.0 / 16.7 / 33.4 / 200.0 | 6 / 3 | 990 | 270.0 | 758.3 / 792.0 |
+| New east: Vitebsky pr. | 22.1 | 20.2 / 16.7 / 33.4 / 233.2 | 6 / 2 | 735 | 138.9 | 674.8 / 733.7 |
+| Narvsky: pr. Stachek | 13.6 | 19.3 / 16.7 / 33.3 / 233.4 | 6 / 2 | 878 | 157.5 | 403.1 / 500.1 |
+
+The same Nevsky route retains practically the same draws and distance; its
+large timing difference is not an attributed optimization: Palace's source
+closure and bake are unchanged. Browser/driver/cache and short-run variation
+remain uncontrolled. On Moskovsky, traffic collisions change the endpoint
+from 1 to 78 km/h, so neither its lower mean nor changed draw count establishes
+a rendering improvement. The expanded area's heap rises 238.4 MiB and backing
+storage 156.7 MiB in these samples. This is a material memory cost.
+
+The new Vitebsky and Stachek runs hit traffic and finish at zero speed; their
+means include a stopped tail and are not sustained high-speed FPS evidence.
+An additional southern Moskovsky attempt (`after-moskovskaya-south`) was
+interrupted after 28.6 m: 21.3 / 16.7 / 33.4 / 250.1 ms, 6 / 2 hitches,
+1,159 draws, 22.9 s load, 720.0 / 813.4 MiB heap/backing. No crashes or traffic
+were disabled to improve these numbers. Mean frame time meets 33.3 ms in the
+final samples, but comfortable driving is not established: 200–250 ms hitches
+remain. Recorded long tasks reach 205 ms on Moskovsky, 240 ms on Vitebsky and
+231 ms on Stachek, while individual region attaches stay below 8.5 ms there.
+The next diagnostic target is those long tasks and the retained working set,
+using a separate allocation/CPU profile rather than modifying this FPS run.
+Narvsky also retains 8,829 breakable bridge-rail registrations along 24.179 km
+of mapped bridge centreline, mainly WHSD; this warrants targeted coastal-cost
+profiling before another large coastal port.
+
+Reproduce each route with `node tools/drive-bench.mjs --area AREA --q medium
+--seconds 8 --start "X,Z,YAW" --json --diagnostics --out PREFIX`:
+
+| AREA | X,Z,YAW | PREFIX under `shots/areas-nov7/` |
+|---|---|---|
+| palace | 498.2286,135.1625,76.0322 | before-palace / after-palace |
+| moskovskaya | -1725,7100,0 | before-moskovskaya / after-moskovskaya |
+| moskovskaya | 509.05,8220,-165.917 | after-moskovskaya-east |
+| narvsky | -4215,3910,173.28 | after-narvsky |
+| moskovskaya | -1668,8680,1.6 | after-moskovskaya-south |
+
+The JSON, logs and end screenshots use those prefixes. All end screenshots
+were inspected; failed region counts are zero. `before-centre.json` is an
+accidental parked-strip diagnostic and is excluded from these comparisons.
+
+Real-input normal-loading playtests pass 65 Moskovskaya and 24 Narvsky checks:
+walking through library interiors, underpass and pilotis, entering/accelerating/
+steering/braking/exiting cars and boats, R recovery, teleports, live fountain
+motion and two-way Moskovskaya–Semyonovsky / Narvsky–Kolomna handoffs. Final
+Narvsky load is 17.5 s in the first successful run (90.3 s repeated pass);
+Moskovskaya load is 26.9 s. No browser/module/asset failures were reported.
+Reviewed final context images include `square-shipping_{0,1}.png`,
+`square-night-shipping_0.png` and the street/boat/arch images in
+`shots/narvsky-playtest/`. Older Moskovskaya sights were also checked in context.
+
+Focused checks retain all 4,153 old buildings, 2,440 trees, 85,862 old road
+probes, 352 split-source road probes, 881 pond and 50 island samples, and all
+2,248 old playable cells against `1ca86f6f`. Paving has 7,178 independent mesh
+ray probes; its deliberate pool-fill mutation fails. Water datums pass in all
+19 implemented areas; gates pass 97 checks and area geometry passes 619.
+Road furniture has zero strict road/median/parking failures in both areas.
+Existing procedural road-surface residues are 311/799,234 samples in Moskovskaya
+and 135/466,345 in Narvsky (0.03891% / 0.02895%); measured budgets are 360 / 156,
+with no landmark exceptions. Road ribbons and marking audits pass.
+Closure coverage includes all 17 live pages with no missing fixtures or unhashed
+dependencies; all nine closure mutations are killed and 25 revision checks pass.
+
+Only Moskovskaya and Narvsky required new products. Their final revisions are
+`839ba9dbcfdd201f47b8` (190 products, 78.1 MiB gzip) and
+`519046af67d3675508af` (143 products, 52.2 MiB gzip). All 17 live manifests are
+fresh: 2,053 complete products, 835.0 MiB gzip; the other fifteen bakes remain
+unchanged. Version agreement, generated pages, dependency closures and Pages
+asset/entry tests pass. No deployment or push is performed by this checkpoint.
+
+The complete uncompressed deployment inventory initially exceeded the existing
+1,000,000,000-byte Pages budget. The deployment assembler now losslessly packs
+long JSON strings only in strictly parsed generated leaf data modules. Original
+source files, copyright comments, public module filenames, exported values and
+bake products stay unchanged. The readable deployment-only decoder reuses the
+existing fflate vendor, validates gzip CRC and exact decoded length, and caps
+each JSON value at 32 MiB. It adds startup decoding, with no per-frame work or
+new package dependency. Its emitted helper and every transformed module have
+source/output hashes in `vendor/pages-data-manifest.json`.
+
+`node tools/pages-assets.mjs --assemble` produces 5,057 files totaling
+954,362,999 bytes, leaving 45,637,001 bytes below the unchanged budget. Packing
+831 modules saves about 118.59 MB. `node tools/pages-data-pack-test.mjs --actual`
+independently imports all 33,335 original and emitted exports and finds them
+identical. Strict syntax, Unicode, source/comment preservation, public import
+paths, oversized values, corrupt gzip and deliberately changed output/helper
+fixtures also pass. An initial generated decoder disappeared locally after an
+EPERM error; the readable source-copy decoder remains available and passes the
+actual equality test. No local security exclusions or settings were changed.
+The frame-time table above uses the raw source server; packed deployment
+loading is verified separately and is not substituted into that comparison.
+
+The packed static-site browser checks pass Palace, Moskovskaya and Narvsky
+desktop entries (29.3 / 20.5 / 14.2 s loading) and Narvsky's published mobile
+diagnostics entry (21.0 s, 390×844). The mobile check clicks the normal heavy-scene
+Continue button before loading its standard performance profile. Every entry
+fetches the emitted helper, resolves its own layout, matches the native generated
+bake revision, starts the real scene and has no failed regions or module errors.
+The static site's absent development-revision endpoint returns the expected
+404; only that exact probe and its associated cancellation are excluded from
+asset failures. Final screenshots were reviewed. Evidence is
+`shots/areas-nov7/packed-deployment/` (three desktop entries), `packed-mobile/`
+and their combined `packed-final-report.json`. Reproduce with
+`node tools/pages-assets-browser-test.mjs --site dist --pages palace,moskovskaya,narvsky
+--mobile narvsky --out shots/packed-deployment` after assembling the site.

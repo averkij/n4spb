@@ -12,14 +12,20 @@ import { cutArea } from './area-data-cut.mjs';
 import { rectsOfRings } from './area-shape.mjs';
 import { unproj, elementPolys, flat, orient, simplify } from './osm-lib.mjs';
 import { grow, clipParts, readPart, partFileText, facadeTextOf } from './strip-data-clip.mjs';
+import { correctMoskovskayaSquareParts } from './moskovskaya-square-fountains.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2), arg = (n, d = null) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const id = 'moskovskaya';
 const cfg={k:6,prefix:'M'};
 const area=mapData().areas.find(a=>a.k===cfg.k);
+// Retain the evolved live records (pond islands, corrected datums, open
+// buildings) when expanding the original source cut. The converter below
+// writes new part files, so capture this snapshot before it runs.
+const previous = await import(pathToFileURL(path.join(root,'src/areas',id,'data/city.js')).href);
 const cells=new Set(),each=(r,fn)=>{for(let x=r.x0/80;x<r.x1/80;x++)for(let z=r.z0/80;z<r.z1/80;z++)fn(x+','+z);};
 for(const r of rectsOfRings([],80,4,[area.fp,area.wz||[]],600))each(r,k=>cells.add(k));
+for(const r of REGISTRY[id].play)each(r,k=>cells.add(k));
 // The map's narrow garden overlap stops east of Boris Strugatsky's house.
 // Include its complete block and the adjoining end of Pobedy Street.
 each({x0:-2320,x1:-1920,z0:7920,z1:8320},k=>cells.add(k));
@@ -79,7 +85,22 @@ async function query(name,ql,bounds=name==='water-ring'?grow(bb,600):bb) {
 const tag='^(building(:part)?|highway|natural|landuse|leisure|waterway|water|amenity|barrier|man_made|historic|tourism|shop|railway|entrance|public_transport|traffic_calming)$';
 const data=await query('mapped',`[out:json][timeout:180];nwr[~"${tag}"~"."](${boxQL(bb)});out geom;`);
 const supplements=[];
-const water=argv.includes('--reuse-mapped-water') ? data : await query('water-ring',`[out:json][timeout:180];(nwr["natural"~"^(water|coastline)$"](${boxQL(grow(bb,600))});nwr["waterway"](${boxQL(grow(bb,600))}););out geom;`);
+// Reuse the old download, but fetch every newly exposed strip. Cached query
+// metadata describes real coverage; it must never be silently relabelled.
+const covered=data.authoring.bounds;
+const uncovered=[
+  {x0:bb.x0,x1:Math.min(bb.x1,covered.x0),z0:bb.z0,z1:bb.z1},
+  {x0:Math.max(bb.x0,covered.x1),x1:bb.x1,z0:bb.z0,z1:bb.z1},
+  {x0:Math.max(bb.x0,covered.x0),x1:Math.min(bb.x1,covered.x1),z0:bb.z0,z1:Math.min(bb.z1,covered.z0)},
+  {x0:Math.max(bb.x0,covered.x0),x1:Math.min(bb.x1,covered.x1),z0:Math.max(bb.z0,covered.z1),z1:bb.z1},
+].filter(r=>r.x1>r.x0&&r.z1>r.z0);
+for(const r of uncovered){
+  const name='extension-'+[r.x0,r.x1,r.z0,r.z1].join('_');
+  supplements.push(await query(name,`[out:json][timeout:180];nwr[~"${tag}"~"."](${boxQL(r)});out geom;`,r));
+}
+const waterBounds=grow(bb,600);
+const waterName='water-ring-'+[waterBounds.x0,waterBounds.x1,waterBounds.z0,waterBounds.z1].join('_');
+const water=argv.includes('--reuse-mapped-water') ? data : await query(waterName,`[out:json][timeout:180];(nwr["natural"~"^(water|coastline)$"](${boxQL(waterBounds)});nwr["waterway"](${boxQL(waterBounds)}););out geom;`,waterBounds);
 const all=[...new Map([...data.elements,...water.elements,...supplements.flatMap(s=>s.elements)].map(e=>[e.type+e.id,e])).values()].sort((a,b)=>a.type.localeCompare(b.type)||a.id-b.id);
 const categories={
   buildings:e=>e.tags?.building||e.tags?.['building:part'],
@@ -152,21 +173,33 @@ const originalDir='D:/git2/agi-fun-tests/102_3d_piter/src/world/data';
 const original=await import(pathToFileURL(path.join(originalDir,'city.js')).href);
 REGISTRY[id]={id,page:id+'.html',titleEn:area.en,play};
 const sourceCut=await cutArea({area:id,orig:originalDir,command:'node tools/prepare-moskovskaya-area.mjs'});
-const sourceCovered=(x,z)=>original.EXTENT_RECTS.some(r=>x>=r.x0&&x<=r.x1&&z>=r.z0&&z<=r.z1);
+const sourceCovered=(x,z)=>[...original.EXTENT_RECTS,...previous.EXTENT_RECTS].some(r=>x>=r.x0&&x<=r.x1&&z>=r.z0&&z<=r.z1);
 const recPoints=r=>Array.isArray(r)?r:r.polys?.flatMap(p=>p.o)||r.pts||(r.x!=null?[r.x,r.z]:[]);
 const crossesSource=r=>{const p=recPoints(r);for(let i=0;i+1<p.length;i+=2)if(!sourceCovered(p[i],p[i+1]))return true;return false;};
+// A clipped way can have several records with the same OSM ID. Replace whole
+// families, never collapse their separate pieces to the last Map entry.
+const families=records=>{const groups=new Map();for(const r of records){const k=r.id||JSON.stringify(r);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);}return groups;};
+const segmentDistance=(x,z,p)=>{let best=Infinity;for(let i=0;i+3<p.length;i+=2){const dx=p[i+2]-p[i],dz=p[i+3]-p[i+1],t=Math.max(0,Math.min(1,((x-p[i])*dx+(z-p[i+1])*dz)/(dx*dx+dz*dz||1)));best=Math.min(best,Math.hypot(x-p[i]-t*dx,z-p[i+1]-t*dz));}return best;};
+const disjointPiece=(r,maintained)=>{
+  if(!r.pts?.length||typeof r.pts[0]!=='number'||!maintained.every(q=>q.pts?.length&&typeof q.pts[0]==='number'))return false;
+  for(let i=0;i+3<r.pts.length;i+=2){const dx=r.pts[i+2]-r.pts[i],dz=r.pts[i+3]-r.pts[i+1],n=Math.max(1,Math.ceil(Math.hypot(dx,dz)/3));for(let j=0;j<n;j++){const x=r.pts[i]+dx*(j+.5)/n,z=r.pts[i+1]+dz*(j+.5)/n;if(maintained.some(q=>segmentDistance(x,z,q.pts)<.6))return false;}}
+  return true;
+};
 let sourceKept=0,supplementKept=0;
 for(const name of sourceCut.NAMES){
   if(name==='OVERLAPS')continue;
-  const sourced=sourceCut.parts.flatMap(P=>P.arrays.get(name)||[]),fresh=parts.flatMap(P=>P.arrays.get(name)||[]);
+  let sourced=sourceCut.parts.flatMap(P=>P.arrays.get(name)||[]);
+  const fresh=parts.flatMap(P=>P.arrays.get(name)||[]);
+  if(name==='TREES')sourced=[...sourced,...previous.TREES];
+  else { const kept=families(sourced);for(const [k,rs] of families(previous[name]||[])){const recovered=(kept.get(k)||[]).filter(r=>disjointPiece(r,rs));kept.set(k,[...rs,...recovered]);}sourced=[...kept.values()].flat(); }
   let merged;
   if(name==='TREES'){
-    merged=sourced.slice();const seen=new Set();for(let i=0;i<merged.length;i+=2)seen.add(merged[i]+','+merged[i+1]);
+    merged=[];const seen=new Set();for(let i=0;i<sourced.length;i+=2){const k=sourced[i]+','+sourced[i+1];if(!seen.has(k)){seen.add(k);merged.push(sourced[i],sourced[i+1]);}}
     for(let i=0;i<fresh.length;i+=2)if(!sourceCovered(fresh[i],fresh[i+1])&&!seen.has(fresh[i]+','+fresh[i+1]))merged.push(fresh[i],fresh[i+1]);
   }else{
-    const byId=new Map();sourced.forEach((r,i)=>byId.set(r.id||'source-'+i,r));sourceKept+=sourced.length;
-    fresh.forEach((r,i)=>{const key=r.id||'fresh-'+i;if(crossesSource(r)){byId.set(key,r);supplementKept++;}});
-    merged=[...byId.values()];
+    const byId=families(sourced);sourceKept+=sourced.length;
+    for(const [key,rs] of families(fresh))if(rs.some(crossesSource)){byId.set(key,rs);supplementKept+=rs.length;}
+    merged=[...byId.values()].flat();
     if(name==='BUILDINGS')merged=merged.filter(b=>ext.some(r=>b.cx>=r.x0&&b.cx<=r.x1&&b.cz>=r.z0&&b.cz<=r.z1));
   }
   for(const P of parts)if(P.arrays.has(name))P.arrays.set(name,[]);
@@ -228,6 +261,7 @@ if(holed.length){
 const waterKeys=new Set(['fontanka','griboedov','moika','winter-canal','swan-canal','moat','neva','kryukov','admiralty','smolenka','gavan','nh-inner']);
 for(const P of parts)for(const r of P.arrays.get('RIVER')||[])if(r.key&&!waterKeys.has(r.key))r.key='neva';
 
+console.log('Moscow Square fountains',correctMoskovskayaSquareParts(parts));
 for(const P of parts)fs.writeFileSync(path.join(out,P.file),partFileText(P.lines,P.order,P.arrays));
 let facade=fs.readFileSync(path.join(out,'city.js'),'utf8');
 facade=facade.replace('// GENERATED by tools/bake-osm.mjs',`// GENERATED by tools/prepare-moskovskaya-area.mjs --area ${id} via tools/bake-osm.mjs`)
@@ -235,4 +269,6 @@ facade=facade.replace('// GENERATED by tools/bake-osm.mjs',`// GENERATED by tool
 facade=`// SOURCE: full city 102_3d_piter ${sourceCut.commit}; missing edge geography from Overpass OSM snapshot ${sourceInfo.timestamp}; water ring ${sourceInfo.waterTimestamp}; ODbL https://www.openstreetmap.org/copyright\n`+facade;
 if(sourceInfo.supplements.length)facade=`// SOURCE SUPPLEMENTS: ${sourceInfo.supplements.map(s=>`${s.timestamp}, ${s.elements} elements, local bounds ${JSON.stringify(s.queryBounds)}`).join('; ')}\n`+facade;
 fs.writeFileSync(path.join(out,'city.js'),facadeTextOf(facade,parts));
+const keptParts=new Set(parts.map(p=>p.file));
+for(const file of fs.readdirSync(out))if(/^city-m\d+\.js$/.test(file)&&!keptParts.has(file))fs.unlinkSync(path.join(out,file));
 console.log('written',path.relative(root,out));

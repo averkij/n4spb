@@ -1,13 +1,30 @@
 # Areas: one page per scene
 
 Московская застава is live as **moskovskaya.html**, planning-map district **6**,
-badge **Z** (9.0.0). Its 73 territory rectangles cover 14.3872 km², with reciprocal
-street transitions to Семёновский–Измайловский. See
+badge **Z** (expanded in 10.0.0). Its 69 territory rectangles cover 22.0096 km²,
+reaching Ленинский проспект and улица Типанова, with reciprocal street transitions
+to Семёновский–Измайловский and Нарвский. See
 [the area guide](MOSKOVSKAYA-AREA.md) for coverage, regeneration, exact pond
 geography and current verification. Its research dossiers cover
 [Victory Park](research/moskovskaya-park.md),
 [Strugatsky Square](research/strugatsky-square.md) and
 [the avenue landmarks](research/moskovskaya-landmarks.md).
+
+**Нарвский**, planning-map district **73**, badge **N**, is live as
+**narvsky.html** (10.0.0). Its 83 territory rectangles cover 15.1488 km²,
+including the planned overlaps, Екатерингофка, Таракановка and the industrial
+and railway streets beyond the old source's edge. Four reciprocal neighbours
+are Коломна, Семёновский–Измайловский, Морские ворота and Московская застава.
+Distinct specialists authored the detailed Нарвские ворота and ДК имени
+Горького. See [the Narvsky guide](research/narvsky-area.md) and
+[constructivist architecture dossier](research/narvsky-constructivism.md).
+
+The expanded Moscow Square ensemble adds the measured House of Soviets,
+its fourteen-column portico, open courts and Lenin monument. Eleven surveyed
+fountain basins use live water; separate mapped nozzle nodes resolve as aliases.
+See [the ensemble dossier](research/moskovskaya-soviets.md). All 4,153 prior
+Moskovskaya buildings and earlier playable cells remain, with prior road/pond
+geometry independently checked against the pre-expansion commit.
 
 The scene retains the whole-city source where it exists and fills its missing
 territory with current mapped geometry. New architecture includes the National

@@ -3,12 +3,16 @@
 // remains reachable, islands dry, and the generic bridge service owns its decks.
 import { GROUPS_LIST as GATE_GROUPS } from '../../world/landmarksMoskovsky/groups.js';
 import { GROUPS_LIST as DISTRICT_GROUPS } from '../../world/landmarksMoskovskaya/groups.js';
+import { GROUPS_LIST as SOVIETS_GROUPS } from '../../world/landmarksMoskovskaya/soviets-groups.js';
+import { MOSCOW_SQUARE_PAVED_RINGS } from '../../world/landmarksMoskovskaya/soviets-square-plan.js';
 import { GROUPS_LIST as PARK_GROUPS, PAVED_RINGS as PARK_PAVED, FOUNTAIN_WATER_BODIES } from '../../world/landmarksMoskovskayaPark/groups.js';
 import { inFormalTreeClearing } from '../../world/landmarksMoskovskayaPark/plan.js';
 import { COASTAL_BRIDGE_GROUPS, COASTAL_BRIDGE_ZONES } from '../../world/coastalBridges/sites.js';
 import { BUILDINGS, GREEN, RIVER } from './data/city.js';
 import { FORECOURT_PAVED_RING, FORECOURT_WATER_BODIES, forecourtContains } from '../../world/landmarksMoskovskaya/library-forecourt-plan.js';
 import { UNDERPASS_GROUND_HOLES, UNDERPASS_BUILDING_IDS, inUnderpassMouth, inUnderpassPavilion } from '../../world/landmarksMoskovskaya/library-underpass-plan.js';
+import { withFountainKeepouts } from '../fountain-keepout.js';
+import { FOUNTAIN_SITES } from './fountain-rings.js';
 
 export const ID = 'moskovskaya';
 export const BAKE_DIR = 'baked/moskovskaya/';
@@ -37,7 +41,7 @@ export const NAMES = { place: 'Санкт-Петербург', placeEn: 'Saint P
 export const SQUARE = { x: 589, z: 173, name: NAMES.square, nameEn: NAMES.squareEn };
 export const OBELISK = { x: 592.2, z: 164.9, h: 36 };
 export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, tower: { x: 602.1, z: 246.4 } };
-export const GROUPS = { landmarksMoskovsky: GATE_GROUPS, landmarksMoskovskaya: DISTRICT_GROUPS, landmarksMoskovskayaPark: PARK_GROUPS, coastalBridges: COASTAL_BRIDGE_GROUPS };
+export const GROUPS = { landmarksMoskovsky: GATE_GROUPS, landmarksMoskovskaya: [...DISTRICT_GROUPS, ...SOVIETS_GROUPS], landmarksMoskovskayaPark: PARK_GROUPS, coastalBridges: COASTAL_BRIDGE_GROUPS };
 export function makeAreas() {
   return [
     { name: 'Московские триумфальные ворота · Moscow Triumphal Gate', c: [-1780.9, 4569.8], r: 100 },
@@ -45,6 +49,7 @@ export function makeAreas() {
     { name: 'площадь братьев Стругацких · Strugatsky Square', c: [-1740, 7890], r: 150 },
     { name: 'Чесменская церковь · Chesme Church', c: [-1139.7, 8408.5], r: 125 },
     { name: 'СКА Арена · SKA Arena', c: [-559.1, 7041.3], r: 210 },
+    { name: 'Московская площадь · Moscow Square', c: [-1578, 8942], r: 240 },
     { name: 'Московская застава · Moskovskaya Zastava', x0: -20000, x1: 20000, z0: -20000, z1: 20000 },
   ];
 }
@@ -67,11 +72,12 @@ export function makeViews({ yawToward }) {
     { key: 'Place.house-with-spire', label: 'Дом со шпилем', ...spire },
     { key: 'Place.strugatsky', label: 'Площадь братьев Стругацких', ...strugatsky },
     { key: 'Place.chesme', label: 'Чесменская церковь', ...chesme },
+    { key: 'Place.house-of-soviets', label: 'Дом Советов и Московская площадь', x: -1649, z: 8942, yaw: -90, pitch: 10 },
   ] };
 }
 export const TEST = {
   claimed: [{ id: 'w50224296', by: 'landmarksMoskovsky', group: 'moskovsky-gate' }, { id: 'r15756570', by: 'landmarksMoskovskayaPark', group: 'victory-park-memorials' }],
-  viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Place.victory-park', 'Place.moskovsky-gate', 'Place.rnb-moskovsky', 'Place.house-with-spire', 'Place.strugatsky', 'Place.chesme'],
+  viewKeys: ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Place.victory-park', 'Place.moskovsky-gate', 'Place.rnb-moskovsky', 'Place.house-with-spire', 'Place.strugatsky', 'Place.chesme', 'Place.house-of-soviets'],
   mustHaveAreas: [{ x: -1683, z: 7074, has: 'victory' }], farPoint: [-3200, 6000],
 };
 export const WATER = {
@@ -93,7 +99,7 @@ const ringHas = (x, z, p) => { let on = false; for (let i = 0, j = p.length - 2;
 const LIBRARY_FOOTPRINTS = BUILDINGS.filter(b=>['r1806688','r3466512'].includes(b.id)).flatMap(b=>b.polys);
 const inLibrary = (x,z) => LIBRARY_FOOTPRINTS.some(p=>ringHas(x,z,p.o));
 const districtTreeReject = (x, z) => inLibrary(x,z) || forecourtContains(x,z) || inUnderpassPavilion(x,z,1) || inUnderpassMouth(x,z,1) || inFormalTreeClearing(x, z) || STRUGATSKY_GARDENS.some(g => g.polys.some(p => ringHas(x, z, p.o) && !(p.h || []).some(h => ringHas(x, z, h))));
-export const HOOKS = {
+export const HOOKS = withFountainKeepouts({
   // The mapped car park overlaps the newly open pilotis. Keep its central
   // passage free of generated parked cars and bay paint; driving remains open.
   parkingReject: (x,z)=>x>-1300&&x< -1164&&z>7663&&z<7691,
@@ -106,9 +112,9 @@ export const HOOKS = {
   groundHoles: () => [FORECOURT_PAVED_RING],
   groundWayReject: r => !r.tunnel && !['primary','primary_link','secondary','secondary_link','tertiary','tertiary_link','residential','service','unclassified','living_street'].includes(r.hw) && r.pts?.every(p=>forecourtContains(p[0],p[1])),
   waterBodies: () => [...FOUNTAIN_WATER_BODIES, ...FORECOURT_WATER_BODIES],
-};
+}, FOUNTAIN_SITES);
 export const GROUND_HOLES = UNDERPASS_GROUND_HOLES;
 export const OPEN_GROUND_BUILDING_IDS = [...UNDERPASS_BUILDING_IDS,'w31192359'];
-export const PAVED_RINGS = [{ module: 'landmarksMoskovskayaPark', rings: PARK_PAVED.map(w => w.ring || w) }, { module:'landmarksMoskovskaya', rings:[FORECOURT_PAVED_RING] }];
+export const PAVED_RINGS = [{ module: 'landmarksMoskovskayaPark', rings: PARK_PAVED.map(w => w.ring || w) }, { module:'landmarksMoskovskaya', rings:[FORECOURT_PAVED_RING,...MOSCOW_SQUARE_PAVED_RINGS] }];
 export const HEIGHT_PATCHES = [];
 export const CROSS_PLACES = [];
