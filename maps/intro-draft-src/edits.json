@@ -13,6 +13,10 @@
     { "from": ["Московская застава", "Волковское"], "into": "Семёновский–Измайловский", "street": "Лиговский проспект", "side": "west", "expectOuter": 1,
       "note": "The north-west (top) parts of Moskovskaya zastava and Volkovskoye, on the side of Ligovsky prospekt that touches Semyonovsky and Izmaylovskoye, join the merged Semyonovsky-Izmaylovsky area. The cut line is the centerline of the street (dual carriageways collapsed), extended along its end bearings through the rest of the districts; the remainders of 6 and 90 keep their k and share the new edge." }
   ],
+  "crossStreetCarve": [
+    { "from": ["Новоизмайловское", "Пулковский меридиан", "Звёздное", "Гагаринское"], "into": "Московская застава", "boundaryStreets": ["Ленинский проспект", "улица Типанова"], "side": "north", "expectOuter": 1,
+      "note": "Add the northern parts of all four districts down to the centreline of Leninsky Prospekt and Tipanova Street, including the square between them. Keep southern remainders and all area indices." }
+  ],
   "riverCarve": [
     { "from": ["Чкаловское"], "into": "Кронверкское–Введенский–Петровский", "river": "Малая Невка", "side": "south", "expectOuter": 1,
       "note": "The Petrogradsky Island side joins the merged southern area; Krestovsky, Kamenny and Yelagin islands stay together north of the river." }

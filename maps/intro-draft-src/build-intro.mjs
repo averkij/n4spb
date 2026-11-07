@@ -256,15 +256,45 @@ function streetBlockRing(cv) {
   const block = pyCarve({ op: 'streetBlock', streets, seed: cv.seed });
   return { ring: block.ring, full: block.ring, ways: streets.reduce((n, s) => n + s.lines.length, 0), lengthM: Math.round(block.ring.slice(1).reduce((s, p, i) => s + Math.hypot((p[0] - block.ring[i][0]) * KXm, (p[1] - block.ring[i][1]) * KYm), 0)) };
 }
-for (const cv of [...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS.blockCarve || [])]) {
+// East-west street corridors can include divided carriageways and a square
+// between the two named streets. Average their latitude in 25 m longitude bins.
+function crossStreetNorthRing(names) {
+  const ways = new Map();
+  for (const f of ['main_roads', 'secondary', 'tertiary']) for (const e of raw(f).elements || []) {
+    if (names.includes(e.tags?.name) && e.geometry) ways.set(e.id, geomOf(e.geometry));
+  }
+  for (const name of names) if (!['main_roads', 'secondary', 'tertiary'].some((f) => raw(f).elements.some((e) => e.tags?.name === name && e.geometry))) throw new Error('cross-street carve: no geometry for ' + name);
+  const bins = new Map();
+  for (const way of ways.values()) for (let i = 1; i < way.length; i++) {
+    const a = way[i - 1], b = way[i];
+    const n = Math.max(1, Math.ceil(Math.hypot((b[0] - a[0]) * KXm, (b[1] - a[1]) * KYm) / 10));
+    for (let j = 0; j <= n; j++) {
+      const t = j / n, k = Math.round((a[0] + (b[0] - a[0]) * t) * KXm / 25);
+      if (!bins.has(k)) bins.set(k, []);
+      bins.get(k).push(a[1] + (b[1] - a[1]) * t);
+    }
+  }
+  const keys = [...bins.keys()].sort((a, b) => a - b);
+  const line = keys.map((k, i) => {
+    const ys = bins.get(k);
+    // Tipanova splits around the square; both sides define its centreline.
+    if ((Math.max(...ys) - Math.min(...ys)) * KYm > 350) throw new Error('cross-street carve: carriageways over 350 m apart');
+    if (i && (k - keys[i - 1]) * 25 > 300) throw new Error('cross-street carve: street gap over 300 m');
+    return [k * 25 / KXm, ys.reduce((s, y) => s + y, 0) / ys.length];
+  });
+  const full = [[W - 1, line[0][1]], ...line, [E + 1, line.at(-1)[1]]];
+  return { ring: [...full, [E + 1, N + 1], [W - 1, N + 1], full[0]], full, ways: ways.size,
+    lengthM: Math.round(line.slice(1).reduce((s, p, i) => s + Math.hypot((p[0] - line[i][0]) * KXm, (p[1] - line[i][1]) * KYm), 0)) };
+}
+for (const cv of [...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS.blockCarve || []), ...(EDITS.crossStreetCarve || [])]) {
   const into = mos.find((m) => plainName(m.rawName) === cv.into);
   const from = cv.from.map((n) => mos.find((m) => plainName(m.rawName) === n));
   if (!into) throw new Error('carve: the target area ' + cv.into + ' is not an area (check the merge that creates it)');
   if (from.some((p) => !p)) throw new Error('carve: not found: ' + cv.from.filter((n, i) => !from[i]).join(', '));
-  const cl = cv.streets ? streetBlockRing(cv) : cv.river ? riverSouthRing(cv.river) : streetCenterline(cv.street, 40000);
-  const cutName = cv.streets?.join(' / ') || cv.river || cv.street;
+  const cl = cv.boundaryStreets ? crossStreetNorthRing(cv.boundaryStreets) : cv.streets ? streetBlockRing(cv) : cv.river ? riverSouthRing(cv.river) : streetCenterline(cv.street, 40000);
+  const cutName = cv.boundaryStreets?.join(' / ') || cv.streets?.join(' / ') || cv.river || cv.street;
   const side = cv.streets ? 'inside' : cv.side || 'west';
-  if (!cv.streets && (cv.river ? side !== 'south' : side !== 'west' && side !== 'east')) throw new Error('carve: invalid side');
+  if (!cv.streets && (cv.boundaryStreets ? side !== 'north' : cv.river ? side !== 'south' : side !== 'west' && side !== 'east')) throw new Error('carve: invalid side');
   // Street half-plane: close the latitude-monotone extended line on its far
   // side. River cuts supply their own south-side ring instead.
   const f = cl.full, lonFar = side === 'west' ? Math.min(...f.map((p) => p[0])) - 1 : Math.max(...f.map((p) => p[0])) + 1;
@@ -272,7 +302,7 @@ for (const cv of [...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS
   const res = pyCarve({ op: 'carve', west: ring, parts: from.map((m) => ({ name: plainName(m.rawName), geom: m.rings })), target: into.rings, absorbEnclavesM2: cv.absorbEnclavesM2 });
   const km = (v) => Math.round(v * 1000) / 1000;
   log('edit: carve', cutName, '(' + cl.ways + ' ways, ' + cl.lengthM + ' m) ->', cv.into);
-  const rep = { street: cv.street, river: cv.river, streets: cv.streets, into: cv.into, side, from: [], cut: res.cut.map((l) => l.map(rpt)), northBearing: cl.northBearing, southBearing: cl.southBearing, lengthM: cl.lengthM };
+  const rep = { street: cv.street, river: cv.river, streets: cv.streets, boundaryStreets: cv.boundaryStreets, into: cv.into, side, from: [], cut: res.cut.map((l) => l.map(rpt)), northBearing: cl.northBearing, southBearing: cl.southBearing, lengthM: cl.lengthM };
   from.forEach((m, i) => {
     const r = res.parts[i];
     if (r.westKm2 <= 0) throw new Error('carve: ' + r.name + ' has nothing on the ' + side + ' side of ' + cutName);

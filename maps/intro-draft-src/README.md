@@ -41,6 +41,8 @@ node shot-intro.mjs out "" 1500 900   # a PNG of the page through Edge (puppetee
 
 ## Manual edits (edits.json)
 
+* `crossStreetCarve`: `{ from, into, boundaryStreets, side: "north", expectOuter? }` transfers territory north of a connected east-west street corridor. Cached OSM carriageways are sampled every 10 m and their latitudes averaged in 25 m longitude bins (maximum spread 350 m for streets divided around a square, maximum gap 300 m). The line closes north beyond the city bounds and uses the same exact partition and topology checks as other carves. Московская застава (k = 6) includes the northern parts of Новоизмайловское, Пулковский меридиан, Звёздное and Гагаринское down to Ленинский проспект / улица Типанова. The four southern remainders retain their names and indices. This is a planning boundary; live scene rectangles remain defined by the registry.
+
 The 111 districts are cut and merged by hand in `edits.json`; the page shows 101 areas.
 
 The Petrogradsky planning areas are **Аптекарский–Посадский** (k = 84, 3.16 km2 land), **Кронверкское–Введенский–Петровский** (k = 86, 6.70 km2 land, including the southern part of Чкаловское and the block below) and **Крестовский—Каменный—Елагин** (k = 85, 5.52 km2 land). The two new merges use `stable` so all live registry mapIds stay unchanged. Their completed scenes are now live; implemented territories and transitions remain authoritative in the area registry.

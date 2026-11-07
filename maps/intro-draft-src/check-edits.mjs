@@ -59,7 +59,7 @@ for (const a of D.areas) if (a.ru === 'Округ № 7' || a.ru === 'Васил
 
 // 3. carves
 const geomOf = (a) => ({ outer: a.outer, inner: a.inner });
-[...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS.blockCarve || [])].forEach((cv, i) => {
+[...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS.blockCarve || []), ...(EDITS.crossStreetCarve || [])].forEach((cv, i) => {
   const rep = D.edits && D.edits.carve && D.edits.carve[i];
   if (!rep) { fails.push(`carve ${cv.street}: no report in the data (rebuild with build-intro.mjs)`); return; }
   const into = D.areas.find((a) => a.ru === cv.into);
@@ -74,9 +74,17 @@ const geomOf = (a) => ({ outer: a.outer, inner: a.inner });
     if (!(f.carvedKm2 > 0.05)) fails.push(`carve: ${f.name} gave only ${f.carvedKm2} km2 to ${cv.into}`);
     if (!(f.restKm2 > 0.05)) fails.push(`carve: nothing of ${f.name} is left (${f.restKm2} km2)`);
     if (f.restPieces !== 1) fails.push(`carve: the remainder of ${f.name} is ${f.restPieces} pieces (want 1)`);
-    if (Math.abs(f.carvedKm2 + f.restKm2 - f.srcKm2) > 1e-3) fails.push(`carve: ${f.name} ${f.carvedKm2} + ${f.restKm2} != ${f.srcKm2} km2`);
+    if (Math.abs(f.carvedKm2 + f.restKm2 - f.srcKm2) > 1e-3 + 1e-9) fails.push(`carve: ${f.name} ${f.carvedKm2} + ${f.restKm2} != ${f.srcKm2} km2`);
     // the page's own number (land cells of the 40 m raster) is the land part of the exact area
-    if (rems[j].km2 > f.restKm2 + 0.05 || rems[j].km2 < f.restKm2 * 0.7) fails.push(`carve: ${f.name} remainder land ${rems[j].km2} km2 vs exact ${f.restKm2} km2`);
+    // A remainder can gain or lose territory in a later carve. Compare the
+    // final page with the last exact geometry report for that area.
+    let finalKm2 = f.restKm2;
+    for (const later of D.edits.carve.slice(i + 1)) {
+      if (later.into === f.name) finalKm2 = later.targetKm2;
+      const part = later.from.find((p) => p.name === f.name);
+      if (part) finalKm2 = part.restKm2;
+    }
+    if (rems[j].km2 > finalKm2 + 0.05 || rems[j].km2 < finalKm2 * 0.7) fails.push(`carve: ${f.name} remainder land ${rems[j].km2} km2 vs final exact ${finalKm2} km2`);
     console.log(`ok carve ${f.name} (k=${rems[j].k}): ${f.srcKm2} -> ${f.restKm2} km2 (page land ${rems[j].km2}), ${f.carvedKm2} km2 to ${cv.into}`);
   });
   if (rep.targetOuter !== 1) fails.push(`carve: ${cv.into} has ${rep.targetOuter} outer rings (want 1)`);
