@@ -4,7 +4,7 @@
 import { GROUPS_LIST as GATE_GROUPS } from '../../world/landmarksMoskovsky/groups.js';
 import { GROUPS_LIST as DISTRICT_GROUPS } from '../../world/landmarksMoskovskaya/groups.js';
 import { GROUPS_LIST as SOVIETS_GROUPS } from '../../world/landmarksMoskovskaya/soviets-groups.js';
-import { MOSCOW_SQUARE_PAVED_RINGS } from '../../world/landmarksMoskovskaya/soviets-square-plan.js';
+import { MOSCOW_SQUARE_PAVED_RINGS } from './data/soviets-square-paving.js';
 import { GROUPS_LIST as PARK_GROUPS, PAVED_RINGS as PARK_PAVED, FOUNTAIN_WATER_BODIES } from '../../world/landmarksMoskovskayaPark/groups.js';
 import { inFormalTreeClearing } from '../../world/landmarksMoskovskayaPark/plan.js';
 import { COASTAL_BRIDGE_GROUPS, COASTAL_BRIDGE_ZONES } from '../../world/coastalBridges/sites.js';

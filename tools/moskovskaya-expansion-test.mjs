@@ -61,6 +61,7 @@ for(const [id,rs]of families(old.ROADS)){
   }
 }
 const pondIds=['r77680','r109994','r11008649','r11010469','r147758','r1380826','r11010790','r11014824','r11016386'];
+for(const r of D.RIVER)check(new Set(r.polys.map(p=>JSON.stringify(p))).size===r.polys.length,'duplicate bank polygons accumulated in '+r.id);
 const inside=(x,z,h)=>{let yes=false;for(let i=0,j=h.length-2;i<h.length;j=i,i+=2)if((h[i+1]>z)!==(h[j+1]>z)&&x<(h[j]-h[i])*(z-h[i+1])/(h[j+1]-h[i+1])+h[i])yes=!yes;return yes;};
 let pondProbes=0,islandProbes=0;
 for(const id of pondIds){

@@ -134,6 +134,7 @@ jobs:
           node tools/area.mjs moskovskaya tools/moscow-gate-passage-test.mjs
           node tools/area.mjs moskovskaya tools/moskovskaya-landmarks-test.mjs
           node tools/area.mjs moskovskaya tools/moskovskaya-soviets-test.mjs
+          node tools/area.mjs moskovskaya tools/moskovskaya-square-paving-data.mjs --check
           node tools/area.mjs moskovskaya tools/moskovskaya-square-paving-test.mjs
           node tools/area.mjs moskovskaya tools/strugatsky-square-test.mjs
           node tools/area.mjs moskovskaya tools/moskovskaya-park-test.mjs --integrated

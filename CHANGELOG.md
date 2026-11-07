@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **10.0.2** (2026-11-07, patch): Correct duplicate Victory Park pond banks and keep Moscow Square layout data renderer-independent
 - **10.0.1** (2026-11-07, patch): Recover vehicle E entry and exit when Firefox hides Cyrillic physical key codes
 - **10.0.0** (2026-11-07, major): Expand Moskovskaya Zastava to Leninsky and Tipanova, add House of Soviets and live square fountains, open Narvsky with detailed Narva Gate and Gorky Palace; losslessly pack deployed map data within the existing asset budget
 - **9.21.4** (2026-11-06, patch): Replace the castle-moat bridge artifact with the ordinary Fontanka quay road

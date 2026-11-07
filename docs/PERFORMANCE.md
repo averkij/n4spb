@@ -3239,3 +3239,51 @@ products.
 Packed desktop Moskovskaya and the published mobile Narvsky entry also pass
 native revision/layout/start/helper/asset checks, loading in 18.6 / 18.1 s.
 Their screenshots in `shots/firefox-entry/packed-final/` were reviewed.
+
+## 2026-11-07 — Release shoreline and layout correction (10.0.2)
+
+Release CI caught duplicated Victory Park pond polygons: repeated area imports
+appended canonical holed WATER polygons to already split RIVER pieces. Five
+pond records contained three copies of each piece. The importer now deduplicates
+exact polygons after island subtraction. Removing 40 duplicates (87 to 47 total
+RIVER polygons) retains all 27 records, every unique surveyed polygon, all eleven
+islands and all other city arrays. The geographic preservation audit passes
+5,580 buildings, 3,970 trees, 136,369 road probes, 881 wet and 50 dry pond probes.
+
+The real natural-bank test now passes 850 draw/terrain probes over 24,642 walkable
+triangles (maximum error 0.02022 m, below the unchanged 0.025 m threshold), 48
+two-way routes and 12,239 walking steps. The integrated park check passes eleven
+dry islands, nine real boat courses, legal car water poses, the fountain crossing,
+open colonnades and knockable furniture. Water datum checks pass every real area.
+Normal integrated screenshots at Figurny Pond include boat-height and island-bank
+views (`shots/release-10.0.2/pond-banks_{0,1}.png`); both were reviewed.
+
+CI's dependency-free layout job also found the new square plan indirectly
+imported Three.js. The area now consumes a generated pure table of the same 147
+paving rings; the rendered square retains its original exact calculation.
+The importer regenerates this table, and CI checks it against the calculation.
+The layout test passes with a loader explicitly rejecting Three.js imports.
+The square still passes 1,010 rendered triangles, eleven open basin holes and
+thirty mapped green beds, with no added callbacks or collision surfaces.
+
+Only Moskovskaya required rebaking: `685d14b7d323259236ea`, 190 products. All
+seventeen manifests pass freshness and completeness (2,053 products total).
+Closure, imports, layout/claims for every real area, 619 area checks, clipping
+idempotence and the Firefox vehicle-input regression pass. Deployment packing
+passes 832 actual modules / 33,336 imported exports with source equality; the
+site is 954,377,969 bytes in 5,058 files, below the unchanged 1 GB limit.
+
+The same normal eight-second Moskovsky route as 10.0.0 (`-1725,7100,0`, medium,
+Edge / RTX 3090 Ti / D3D11, 1280×720) completes 273 m, finishing at 78 km/h:
+17.9 s loading, mean/p50/p95/max 18.6/17.5/18.2/140.0 ms, 5/3 frames above
+40/80 ms, 1,074 mean draws and CDP heap/backing 746.9/805.0 MiB. The 10.0.0
+after-expansion sample above measured 23.7 s, 21.0/16.7/33.4/200.0 ms, 6/3
+hitches, 990 draws and 270 m. Traffic and streaming differ; this is release
+validation, not a performance improvement claim. The three 92–130 ms long tasks
+and hitches remain a limitation. No regions fail; the end image was reviewed.
+Artifacts: `shots/release-10.0.2/drive-moskovskaya{.json,_end.png}`.
+
+The final packed Moskovskaya browser entry passes normal revision, layout,
+Start, helper fetch and asset/module/region checks. Its screenshot is reviewed
+in `shots/release-10.0.2/packed/`; the prior 10.0.1 Narvsky Firefox and mobile
+checks still cover unchanged Narvsky source and products.

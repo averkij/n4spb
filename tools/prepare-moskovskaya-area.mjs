@@ -261,6 +261,21 @@ if(holed.length){
 const waterKeys=new Set(['fontanka','griboedov','moika','winter-canal','swan-canal','moat','neva','kryukov','admiralty','smolenka','gavan','nh-inner']);
 for(const P of parts)for(const r of P.arrays.get('RIVER')||[])if(r.key&&!waterKeys.has(r.key))r.key='neva';
 
+// Preserved RIVER records already hold hole-free island-subtraction pieces.
+// A raw WATER pond with holes is appended above when its JSON differs from
+// those pieces, then split into the same pieces again. Retain each exact
+// polygon once so repeated imports cannot stitch the same shore into two or
+// three loops and draw ordinary coping across the natural-bank terrain.
+// Deduplication preserves every unique surveyed ring and all island cuts.
+let duplicateRiverPolys=0;
+for(const P of parts)for(const r of P.arrays.get('RIVER')||[]){
+  const seen=new Set();r.polys=r.polys.filter(p=>{
+    const key=JSON.stringify(p);if(seen.has(key)){duplicateRiverPolys++;return false;}
+    seen.add(key);return true;
+  });
+}
+console.log('removed duplicate river polygons',duplicateRiverPolys);
+
 console.log('Moscow Square fountains',correctMoskovskayaSquareParts(parts));
 for(const P of parts)fs.writeFileSync(path.join(out,P.file),partFileText(P.lines,P.order,P.arrays));
 let facade=fs.readFileSync(path.join(out,'city.js'),'utf8');
@@ -272,3 +287,5 @@ fs.writeFileSync(path.join(out,'city.js'),facadeTextOf(facade,parts));
 const keptParts=new Set(parts.map(p=>p.file));
 for(const file of fs.readdirSync(out))if(/^city-m\d+\.js$/.test(file)&&!keptParts.has(file))fs.unlinkSync(path.join(out,file));
 console.log('written',path.relative(root,out));
+const paving=spawnSync(process.execPath,['tools/area.mjs',id,'tools/moskovskaya-square-paving-data.mjs'],{cwd:root,stdio:'inherit'});
+if(paving.status!==0)throw new Error('Moscow Square paving data generation failed');
