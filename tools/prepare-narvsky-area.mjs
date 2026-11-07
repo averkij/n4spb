@@ -188,7 +188,18 @@ const takenBuildings=new Set(parts.flatMap(P=>P.arrays.get('BUILDINGS')).map(r=>
 const overlaps=new Map();for(const r of [...sourceCut.parts.flatMap(P=>P.arrays.get('OVERLAPS')||[]),...parts.flatMap(P=>P.arrays.get('OVERLAPS'))])if(takenBuildings.has(r.a)&&takenBuildings.has(r.b))overlaps.set(r.a+'|'+r.b,r);
 parts.forEach(P=>P.arrays.set('OVERLAPS',[]));parts[0].arrays.set('OVERLAPS',[...overlaps.values()]);
 // Gate owner supplies piers and open passage; upper mass starts above 15m.
-for(const P of parts)for(const b of P.arrays.get('BUILDINGS'))if(b.id==='w73174258')b.minH=15.15;
+// w49629469 is a low industrial shed below the WHSD, not the generic21m
+// five-storey rental house. SERVICE shed massing suppresses the hash mansard
+// (the central grammar does not consume roof=flat).9.9m is an explicit visual estimate, not OSM survey:
+// Esri World Imagery export bbox30.2515,59.8870..30.2574,59.8905 (2026-11-07).
+// w685882720 is the roof over covered ramp w685882716. The shared approach
+// deck is6.025m; restore the evolved5m opening used by Moskovskaya. The area-local owner
+// preserves the existing .32m supported metal slab, hence top11.345m.
+for(const P of parts)for(const b of P.arrays.get('BUILDINGS')){
+  if(b.id==='w73174258')b.minH=15.15;
+  if(b.id==='w49629469')Object.assign(b,{h:9.9,hEst:9.9,hSrc:'height',kind:'shed',roof:'flat',roofH:0,roofLevels:0,heightSource:'Visual estimate: low industrial hall in Esri World Imagery, inspected 2026-11-07; not a surveyed OSM height.'});
+  if(b.id==='w685882720')Object.assign(b,{minH:11.025,h:11.345,hEst:11.345,hSrc:'height',levels:null,roof:'flat',roofH:0,roofLevels:0});
+}
 console.log('preserved source records',sourceKept,'supplement records',supplementKept,'source commit',sourceCut.commit);
 // The centre converter matches unnamed river polygons only when their centroid
 // is within25m of a named centreline. That drops long, curved real waterways

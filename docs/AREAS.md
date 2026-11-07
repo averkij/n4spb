@@ -1987,3 +1987,36 @@ Both river-facing directions have procedural screenshot review. See
 [WATERFRONT-VIEWS.md](WATERFRONT-VIEWS.md) for generation, implementation and
 focused checks; matching-bake integration/performance evidence is recorded
 separately in `PERFORMANCE.md`.
+
+## Release bridge overlaps (10.0.3)
+
+The expanded Moskovskaya data includes the Dzhanelidze hospital at
+Budapeshtskaya 3. Ways `w127208685`, `w143604484` and `w143604489` are the
+two curved ambulance ramps and covered connector built into the low hospital
+parts, rather than a second building shell. The hospital's
+[official access page](https://emergency.spb.ru/for-patients/dostupnaya-sreda/)
+confirms the ambulance ramp entrance. Their measured deck tops span
+0.065–5.919 m. The ownership audit retains explicit notes for the four host
+footprints `r8478034`–`r8478037`, bounded to infrastructure geometry below
+7.25 m, including rails. It retains the hospital buildings and real mapped
+roads; the generic hospital/ramp junction remains an approximation.
+
+In Narvsky, `w49629469` is a low industrial hall below the WHSD, visible in
+[Esri World Imagery](https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=30.2515,59.8870,30.2574,59.8905&bboxSR=4326&imageSR=3857&size=1200,1000&format=jpg&f=image).
+Its former generic 21 m cornice intersected the viaduct soffit at 19.425 m.
+The explicit 9.9 m body height is a visual estimate, not a surveyed height.
+The existing shed massing keeps the actual roof and wall colliders at 10.9 m,
+8.5 m below the drawn girder soffit at 19.4 m.
+The toll canopy `w685882720` over ramp `w685882716` also retains the evolved
+11.025 m underside from Moskovskaya, leaving five metres above the road.
+Narvsky now preserves the same authored 0.32 m steel roof, rim, underside spine
+and four physical supports. Its own landmark claim removes the generic city
+box, and a vehicle-width sweep checks the full lane under the supported roof.
+
+The claims audit continues to grade `coastalBridges` as a landmark owner.
+Only the hospital ramp hosts and industrial hall receive notes, with a minimum
+height of 19.35 m over the hall (5 cm below the drawn soffit for floating point
+tolerance). The claimed canopy is checked through its actual roof and support
+geometry; unexpected low piers and lane obstructions still fail.
+The inland bridge envelope regression independently checks actual bridge
+meshes against their mapped deck, rail and support corridors.

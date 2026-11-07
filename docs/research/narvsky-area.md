@@ -123,3 +123,39 @@ dry-hull samples. The neighbouring13×3.2m and12×3.4m tourist boats remain
 unchanged. The normal playtest now boards from that actual pontoon floor and
 requires a30m launch; the CPU regression tests35m of complete hull clearance
 and all three timed handling courses, with player focus/time set as in-game.
+
+
+The release overlap audit also exposed two height problems in supplemental OSM
+records. [Warehouse w49629469](https://www.openstreetmap.org/way/49629469)
+at30.2545801,59.8887853 has no mapped height or storey count. The generic
+21m rental-house mass intersected the WHSD above its western/southern roof edge.
+[Esri World Imagery aerial](https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=30.2515,59.8870,30.2574,59.8905&bboxSR=4326&imageSR=3857&size=1200,1000&format=jpg&f=image),
+inspected2026-11-07, shows a large low industrial hall with repeated sawtooth/shed
+roof strips. The real footprint overlap is retained. Its9.9m height is an explicit
+visual estimate, not a surveyed OSM value; `heightSource` records that distinction
+while `hSrc:'height'` selects the existing exact-height path. Local `kind:'shed'`
+and flat-roof attributes prevent a randomly selected residential mansard: the
+central city grammar does not consume flat-roof tags by themselves.
+
+The actual built factory roof/cornice and wall-collider tops are10.9m. Over the
+warehouse footprint, actual coastalBridges vertex and triangle-centroid minimum
+is19.3999996185m (Float32 representation of19.4), maximum22.055m. The visible
+girder is8.5m above the roof; the bridge collider soffit is19.425m. A bounded
+audit height threshold19.35m allows5cm for this measured underside difference;
+it does not excuse geometry outside the real bridge envelope.
+
+[Roof w685882720](https://www.openstreetmap.org/way/685882720) above
+[covered ramp w685882716](https://www.openstreetmap.org/way/685882716) had lost the
+evolved Moskovskaya canopy datum. Its restored lower face is11.025m,5m over the
+6.025m ramp. Narvsky preserves the existing Moskovskaya canopy in an area-local
+owner using only Narvsky bridge-site data: the .32m slab tops at11.345m, with
+rim, underside spine and four real supporting columns spanning6.025..11.025m.
+The columns clear the actual street carriageway; no wall crosses the lanes.
+The former generic floating city slab is claimed and replaced. This owner uses
+four material collectors, static batching and finite2600m LOD with no textures
+or per-frame work. The actual physics column from6.1 to10.9m remains clear.
+
+`node tools/area.mjs narvsky tools/narvsky-height-test.mjs` builds the actual
+streets/city/landmarksNarvsky/coastalBridges modules on these two source records and verifies drawn
+buffers, wall colliders, the clear covered-ramp column, and the measured bridge
+envelope. It is a focused CPU geometry test, not a loading/FPS benchmark.

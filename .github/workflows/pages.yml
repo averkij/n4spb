@@ -147,6 +147,7 @@ jobs:
         run: |
           node tools/area.mjs narvsky tools/narvsky-area-test.mjs
           node tools/area.mjs narvsky tools/narvsky-constructivism-test.mjs
+          node tools/area.mjs narvsky tools/narvsky-height-test.mjs
           node tools/area.mjs narvsky tools/area-garage-check.mjs
           node tools/area.mjs narvsky tools/water-level-test.mjs
       - name: Closed vegetation, supported quay fixtures and two-way natural banks
@@ -178,6 +179,10 @@ jobs:
         run: |
           node tools/area.mjs north tools/tauride-height-test.mjs
           node tools/area.mjs north tools/tauride-height-test.mjs --model north --build landmarksTauride --assert-cars --no-selfcheck
+      - name: Inland bridge meshes stay within mapped infrastructure corridors
+        run: |
+          node tools/area.mjs moskovskaya tools/coastal-bridge-envelope-test.mjs
+          node tools/area.mjs narvsky tools/coastal-bridge-envelope-test.mjs
       - name: Landmark claims are drawn by their owners and by nobody else (every real area)
         run: node tools/each-area.mjs tools/claims-draw-audit.mjs
       - name: Panorama details cannot hide missing or duplicate building shells

@@ -24,7 +24,7 @@ export const NAMES = { place:'Санкт-Петербург',placeEn:'Saint Pete
 export const SQUARE = { x:-4329.2,z:3510.4,name:NAMES.square,nameEn:NAMES.squareEn };
 export const OBELISK = { x:-4329.2,z:3510.4,h:31 };
 export const STATION = { x:612,z:300,facadeBearing:348,trackBearing:167,tower:{x:602.1,z:246.4} };
-export const GROUPS = { landmarksNarvsky:[...GATE,...CLUB],coastalBridges:COASTAL_BRIDGE_GROUPS };
+export const GROUPS = { landmarksNarvsky:[...GATE,...CLUB,{key:'narvsky-toll-canopy',name:'Навес над съездом ЗСД',ids:['w685882720'],osm:[],at:[-3182.1,6038.7]}],coastalBridges:COASTAL_BRIDGE_GROUPS };
 export function makeAreas(){return [
   {name:'Нарвские триумфальные ворота · Narva Triumphal Gate',c:[-4329.2,3510.4],r:75},
   {name:'Дворец культуры имени Горького · Gorky Palace of Culture',c:[-4220.5,3556.6],r:75},
@@ -36,7 +36,7 @@ export function makeViews({yawToward}){
   const north={x:-4325,z:3480,yaw:yawToward(-4325,3480,-4329.2,3510.4),pitch:14};
   return {HERO,VIEWS:[{key:'Digit1',label:'Нарвские триумфальные ворота',...HERO},{key:'Digit2',label:'Дворец культуры имени Горького',...club},{key:'Digit3',label:'Нарвские ворота · северный фасад',...north},{key:'Place.narva-gate',label:'Нарвские триумфальные ворота',...HERO},{key:'Place.gorky-palace',label:'Дворец культуры имени Горького',...club}]};
 }
-export const TEST={claimed:[{id:'w73174258',by:'landmarksNarvsky',group:'narva-gate'},{id:'w42342130',by:'landmarksNarvsky',group:'narvsky-gorky'}],viewKeys:['Digit1','Digit2','Digit3','Place.narva-gate','Place.gorky-palace'],mustHaveAreas:[{x:-4329.2,z:3510.4,has:'narva'}],farPoint:[-5000,6000]};
+export const TEST={claimed:[{id:'w73174258',by:'landmarksNarvsky',group:'narva-gate'},{id:'w42342130',by:'landmarksNarvsky',group:'narvsky-gorky'},{id:'w685882720',by:'landmarksNarvsky',group:'narvsky-toll-canopy'}],viewKeys:['Digit1','Digit2','Digit3','Place.narva-gate','Place.gorky-palace'],mustHaveAreas:[{x:-4329.2,z:3510.4,has:'narva'}],farPoint:[-5000,6000]};
 export const WATER={farCenter:[-4900,4300],farRadius:7000,farSources:[],bridgeZones:COASTAL_BRIDGE_ZONES,
   riverKeys:Object.fromEntries(RIVER.map(r=>[r.name,r.key||'neva'])),
   isolatedKeys:{moat:'Mapped isolated garden ponds, with no navigable river outlet.'},isolatedLevels:{moat:{water:-1.2,bed:-2.4}},

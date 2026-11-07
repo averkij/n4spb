@@ -3287,3 +3287,69 @@ The final packed Moskovskaya browser entry passes normal revision, layout,
 Start, helper fetch and asset/module/region checks. Its screenshot is reviewed
 in `shots/release-10.0.2/packed/`; the prior 10.0.1 Narvsky Firefox and mobile
 checks still cover unchanged Narvsky source and products.
+
+## 2026-11-07 — Overpass clearance and bounded ownership notes (10.0.3)
+
+The next release gate found six projected bridge/building overlaps. The four
+Moskovskaya footprints are the Dzhanelidze hospital's real ambulance ramps and
+covered connector, documented by its official access page and retained in the
+source data. Narrow ownership notes bound this infrastructure to its measured
+0–7.25 m band; they neither claim the hospital nor remove its mapped roads.
+The generic ramp/hospital junction remains an approximation. The full composed
+ownership audit now passes Moskovskaya, retaining all other landmark checks.
+
+Two Narvsky records required actual data corrections. Aerial imagery shows the
+industrial hall `w49629469` is low, while its unspecified source height selected
+a generic 21 m residential mass intersecting the WHSD. Its explicit 9.9 m body
+is a documented visual estimate; existing shed massing produces a 10.9 m roof
+and wall colliders, 8.5 m below the actual drawn girder at 19.4 m. The covered
+ramp's canopy `w685882720` also lost Moskovskaya's evolved elevated datum during
+the port. It now starts at 11.025 m, leaving five metres above the 6.025 m road.
+Narvsky preserves Moskovskaya's existing supported roof at 11.025–11.345 m,
+with four physical columns outside the carriageway and no generic city box.
+Twenty vehicle-width underpass samples remain clear. The focused height test
+inspects actual city/owner buffers, colliders and WHSD solids,
+rather than inferring clearance from layout metadata. The regenerator reproduces
+both corrections; references and the estimate's limits are in
+[the Narvsky dossier](research/narvsky-area.md) and [AREAS.md](AREAS.md).
+
+The claims auditor retains `coastalBridges` in its existing graded category.
+Only the industrial hall receives a bounded Narvsky note: all deep overlap
+geometry must remain above 19.35 m (5 cm tolerance below the Float32 soffit).
+The canopy has its own proper landmark claim and physical clearance check.
+Unexpected piers and lane obstructions still fail. Independently, the new inland envelope test scans actual
+static meshes, every rail instance and triangle interiors against raw mapped
+bridge roads and widths. It passes 926,076 vertices / 461,552 triangle probes
+in Moskovskaya and 894,569 / 445,823 in Narvsky. An injected off-road building
+fails through the same scan. No global bridge exemption was added.
+
+The final Narvsky bake is `69d15245fd298e1bf0fd` (143 products); the other
+sixteen bakes retain their previous revisions. Normal integrated overpass and
+supported-canopy screenshots were reviewed in
+`shots/release-10.0.3/overpass-final_{0,1}.png`. Ownership, layout, current
+landmarks, source clipping, height/vehicle-width clearance, imports, closure,
+and all ten previously skipped engine-tail commands pass locally. The latter
+include panorama mutation checks, arrivals for all nineteen real areas, North
+knock checks, coastal water/decks and 23 coastal ship checks.
+
+The same eight-second Stachek route as 10.0.1 ran on Edge / RTX 3090 Ti / D3D11,
+1280×720, medium, without concurrent GPU jobs, CPU audits, profiling or mid-run
+screenshots. Final source validation records 20.8 s loading, mean/p50/p95/max
+24.4/16.7/33.4/316.7 ms, 9/5 frames above 40/80 ms, 835 mean draws, 151 m and
+CDP heap/backing 484.1/597.7 MiB. The previous 10.0.1 sample above was 12.9 s,
+18.3/17.5/18.2/192.6 ms, 2/2 hitches, 890 draws and 173 m. The final car wrecks
+and stops in traffic, unlike the previous moving endpoint. Its 317 ms long
+task and hitches remain a limitation; this does not isolate an FPS effect of
+the two distant structures. An intermediate data-only canopy sample measured
+28.2 ms mean / 350.3 ms maximum before visual review required the supported
+owner; it is retained but excluded from the final-source comparison.
+No performance improvement is claimed. Final route evidence is
+`shots/release-10.0.3/drive-narvsky-final{.json,_end.png}`; the end image was
+reviewed and no regions fail.
+
+The packed checkpoint contains 5,059 files / 954,357,763 bytes, below the
+unchanged 1 GB limit, with 832 packed modules and 33,336 source exports.
+All 33,336 actual imported exports retain source equality. The final packed
+Narvsky browser entry passes normal revision/layout/Start/helper/asset checks,
+with no failed modules or regions; its screenshot in
+`shots/release-10.0.3/packed-final/` was reviewed.

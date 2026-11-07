@@ -116,7 +116,9 @@ const GENERIC_WAIVERS = {
     'r6147392|streets': 'street lamps (lamps-D) of the Lavra internal roads stand up to 3.4 m inside the outline of the Metropolitan Corps (1904, 1207): the lamp phase of the Lavra roads; hidden in the wall mass of the wing landmarksEast draws (Smolninskoye leaves the wings to the city module)',
   },
 };
-/** unclaimed buildings a landmark module is known to cover (printed, not red); keyed by area then id: { module, why } */
+/** unclaimed buildings a landmark module is known to cover (printed, not red);
+ * keyed by area then id: { module, why, minY?, maxY? }. Bounds apply to every
+ * deep overlap centroid, so an unexpected pier or raised shell still fails. */
 const KNOWN_UNCLAIMED = {
   kolomna: {
     r2210356: { module: 'landmarksBaltic', why: 'the Baltic Station entrance r3225591 is a claimed part of parent r2210356; landmarksBaltic replaces only that entrance, inside the parent outline, while city draws the remaining mapped wings (landmarksBaltic/groups.js)' },
@@ -204,6 +206,18 @@ KNOWN_UNCLAIMED.morskoy = { ...(KNOWN_UNCLAIMED.morskoy || {}),
 // 45 m high is permitted here: a future pier/support through the house must fail.
 KNOWN_UNCLAIMED['morskie-vorota'] = {
   w1015862793: { module: 'coastalBridges', minY: 45, why: 'the WHSD deck/truss passes at y 50..59.33 above the 3.3 m house; mapped piers avoid its footprint (docs/NEW-COAST-DATA.md)' },
+};
+
+// Built-in ambulance access ramps are infrastructure, not replacement hospital
+// shells. Keep these four surveyed host footprints and the measured ramp band
+// explicit; every other coastalBridges/building overlap is still graded.
+// Official access reference: https://emergency.spb.ru/for-patients/dostupnaya-sreda/
+KNOWN_UNCLAIMED.moskovskaya = Object.fromEntries(['r8478034','r8478035','r8478036','r8478037'].map(id=>[id,{
+  module:'coastalBridges',maxY:7.25,
+  why:'mapped hospital ambulance ramps w127208685 / w143604484 and covered connector w143604489 are built into the low parts of Budapeshtskaya 3; measured deck tops 0.065..5.919 m, including rails below 7.25 m; city retains the hospital shells (docs/AREAS.md, release bridge overlaps)',
+}]));
+KNOWN_UNCLAIMED.narvsky = {
+  w49629469:{module:'coastalBridges',minY:19.35,why:'mapped WHSD slabs pass above the low industrial hall: drawn soffit 19.4 m (19.425 m collision floor), corrected estimated cornice 9.9 m; the 5 cm bound tolerance covers Float32 coordinates, and piers must still remain outside its footprint (docs/AREAS.md, release bridge overlaps)'},
 };
 
 // ---------------------------------------------------------------- engine
@@ -335,7 +349,7 @@ console.log(`claims-draw-audit area ${AREA}: ${claimedBy.size} claimed ids (${ta
 //   own: of hi, those that are not foliage and belong to THIS building and not to a deeper neighbour of another claim group (rule 1) }
 const counts = new Map();
 //   fol / low / shallow / stolen: of the centroids inside a claimed building that are NOT own, why (a plant; at or below the band; within the inset of the outline; deeper inside a neighbour of another claim group)
-const bump = (m, i, f) => { const k = m + '|' + i; let c = counts.get(k); if (!c) counts.set(k, (c = { n: 0, hi: 0, deep: 0, minDeepY: Infinity, overlap: 0, shared: 0, own: 0, fol: 0, low: 0, shallow: 0, stolen: 0 })); c.n++; if (f.hi) c.hi++; if (f.deep) { c.deep++; c.minDeepY = Math.min(c.minDeepY, f.y); } if (f.overlap) c.overlap++; if (f.shared && !f.overlap) c.shared++; if (f.own) c.own++; else if (f.why) c[f.why]++; };
+const bump = (m, i, f) => { const k = m + '|' + i; let c = counts.get(k); if (!c) counts.set(k, (c = { n: 0, hi: 0, deep: 0, minDeepY: Infinity, maxDeepY: -Infinity, overlap: 0, shared: 0, own: 0, fol: 0, low: 0, shallow: 0, stolen: 0 })); c.n++; if (f.hi) c.hi++; if (f.deep) { c.deep++; c.minDeepY = Math.min(c.minDeepY, f.y); c.maxDeepY = Math.max(c.maxDeepY, f.y); } if (f.overlap) c.overlap++; if (f.shared && !f.overlap) c.shared++; if (f.own) c.own++; else if (f.why) c[f.why]++; };
 const groupOf = (t) => (t.claim ? t.claim.module + '/' + t.claim.key : 'unclaimed:' + t.id);
 const V = new THREE.Vector3(), M = new THREE.Matrix4(), tmpM = new THREE.Matrix4();
 const centroidsOf = (o, out, meshIdx, owners) => {
@@ -500,8 +514,8 @@ for (let i = 0; i < targets.length; i++) {
     const label = `${t.id}${t.rec.name ? ' (' + t.rec.name + ')' : ''}${t.rec.addr ? ' ' + JSON.stringify(t.rec.addr) : ''}`;
     if (c.deep >= MIN_UNCLAIMED) {
       const k = known[t.id];
-      if (k && k.module === m && (k.minY === undefined || c.minDeepY >= k.minY)) { unclaimedHits.push({ m, id: t.id, n: c.deep, known: true }); notes.push(`${m} draws ${c.deep} triangles deep inside the unclaimed building ${label}: known, ${k.why}`); }
-      else { unclaimedHits.push({ m, id: t.id, n: c.deep }); failed = true; problems.push(`${m} draws ${c.deep} triangles above ${ABOVE} m and deeper than ${DEEP} m inside the UNCLAIMED building ${label}: claimed by nobody${mutantIds.has(t.id) ? ' (the --mutant)' : ''}`); }
+      if (k && k.module === m && (k.minY === undefined || c.minDeepY >= k.minY) && (k.maxY === undefined || c.maxDeepY <= k.maxY)) { unclaimedHits.push({ m, id: t.id, n: c.deep, known: true }); notes.push(`${m} draws ${c.deep} triangles deep inside the unclaimed building ${label}: known, y ${c.minDeepY.toFixed(3)}..${c.maxDeepY.toFixed(3)}, ${k.why}`); }
+      else { unclaimedHits.push({ m, id: t.id, n: c.deep }); failed = true; problems.push(`${m} draws ${c.deep} triangles above ${ABOVE} m and deeper than ${DEEP} m inside the UNCLAIMED building ${label}: claimed by nobody (y ${c.minDeepY.toFixed(3)}..${c.maxDeepY.toFixed(3)})${mutantIds.has(t.id) ? ' (the --mutant)' : ''}`); }
     } else if (VERBOSE) unclaimedHits.push({ m, id: t.id, n: c.deep, edge: c.hi - c.deep, low: c.n - c.hi, minor: true });      // low: on the outline (a party wall), within the inset, or below ABOVE (a floor)
   }
 }
