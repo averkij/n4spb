@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {fileURLToPath} from 'node:url';
 import puppeteer from 'puppeteer-core';
 import {startStaticServer} from './lib/static-readonly.mjs';
+import {ENDPOINT} from './lib/dev-revision.mjs';
 import {installFontTransport} from './font-transport.mjs';
 import {REGISTRY} from '../src/areas/registry.js';
 import {CODEC_PATH,PACK_MANIFEST} from './pages-data-pack.mjs';
@@ -36,11 +37,11 @@ try{
       page.on('response',r=>{const url=new URL(r.url());if(url.pathname==='/'+CODEC_PATH&&r.ok())entry.helper=true;
         // Static Pages has no development revision endpoint. Its exact expected
         // 404 falls back to the generated revision, verified against the bake below.
-        if(r.status()===404&&url.pathname==='/__baked_revision'){entry.expectedRevisionProbes.push({status:404,url:r.url()});return;}
+        if(r.status()===404&&url.pathname===ENDPOINT){entry.expectedRevisionProbes.push({status:404,url:r.url()});return;}
         if(r.status()>=400&&!url.pathname.endsWith('/favicon.ico'))entry.failedRequests.push({status:r.status(),url:r.url()});});
       page.on('requestfailed',req=>{
         const failure={url:req.url(),error:req.failure()?.errorText};
-        if(new URL(req.url()).pathname==='/__baked_revision'&&failure.error==='net::ERR_ABORTED'&&entry.expectedRevisionProbes.some(probe=>probe.status===404&&probe.url===failure.url)){entry.expectedRevisionProbeCancellations.push(failure);return;}
+        if(new URL(req.url()).pathname===ENDPOINT&&failure.error==='net::ERR_ABORTED'&&entry.expectedRevisionProbes.some(probe=>probe.status===404&&probe.url===failure.url)){entry.expectedRevisionProbeCancellations.push(failure);return;}
         if(!req.url().includes('fonts.'))entry.failedRequests.push(failure);
       });
       const started=Date.now();await page.goto(`http://127.0.0.1:${server.port}/${row.page}?q=medium`,{waitUntil:'load',timeout:120000});
