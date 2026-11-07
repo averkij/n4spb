@@ -6,13 +6,14 @@
 //   · fore mast (s 28.5: search-light platform, fighting top, yard, truck 39 m) and main mast (s -27.7: platform, yard, gaff, truck 43.5 m) with the standing rigging as ctx.wires
 //   · fourteen 152 mm guns with box shields (bow, stern, six a side on half-round sponsons) · eight boats on curved davits · Hall anchors, hawse rings, bow stars, stern name
 //   · guard rails, port holes (instanced) · the gangway to the quay platform with the banner, the port accommodation ladder, two spacer booms with dolphins, four red-and-white mooring
-//   barrels on white chains · the ticket pavilion on the platform (w486091825) · colliders (the ship is closed: solid).
+//   barrels on white chains · the ticket pavilion on the platform (w486091825) · open visitor boarding and walkable weather decks.
 import * as THREE from 'three';
 import * as L from '../layout.js';
 import { tube } from '../lib/figures.js';
 import { SHIP, shipWaterY, shipAfloat, TICKET_ID, STELE, pairs } from './frame.js';
 import { buildHull, half, topY, deckY, hullPt, UD, FC, BULWARK, BREAK, AFT_END, STERN } from './hull.js';
 import { partsGeos, addInstanced } from './inst.js';
+import { knockBays, unitBox } from '../lib/fence-bays.js';
 
 const FUNNELS = [0.2, 11.8, 23.5], FORE = 28.5, MAIN = -27.7, FUN_TOP = 23.5, FORE_TOP = 39, MAIN_TOP = 43.5;
 const SIDE_GUNS = [34.3, 25.5, 15.5, -13.5, -28.5, -40.5];
@@ -23,6 +24,14 @@ export function build(K) {
   const { ctx, M, P, svc, root } = K, ph = ctx.physics;
   const WY = shipWaterY(), QY = -WY;                                    // QY = the quay top (street level) in the ship frame
   const W = (s, y, t) => [SHIP.x + SHIP.ax[0] * s + SHIP.zx[0] * t, WY + y, SHIP.z + SHIP.ax[1] * s + SHIP.zx[1] * t];
+  const solid = (s0,s1,y0,y1,t0,t1,rot=0) => {const c=SHIP.w((s0+s1)/2,(t0+t1)/2);return ph.addBox(c.x,c.z,s1-s0,t1-t0,SHIP.rot+rot,WY+y0,WY+y1);};
+  const floor = (a,b,c,d,thick=.22) => {ph.addWalkTriangle([a,b,c].map(p=>W(...p)),thick);ph.addWalkTriangle([a,c,d].map(p=>W(...p)),thick);};
+  const railTop=unitBox(.99,1.04,-.025,.025),railMid=unitBox(.49,.53,-.02,.02),railPost=new THREE.BoxGeometry(.05,1.04,.05).translate(0,.52,0);
+  const boardingBays=[];
+  const rail = (a,b) => {
+    const A=W(...a),B=W(...b),n=Math.ceil(Math.hypot(B[0]-A[0],B[2]-A[2])/1.6);
+    for(let i=0;i<n;i++){const u=i/n,v=(i+1)/n;boardingBays.push({x0:A[0]+(B[0]-A[0])*u,z0:A[2]+(B[2]-A[2])*u,x1:A[0]+(B[0]-A[0])*v,z1:A[2]+(B[2]-A[2])*v,y:A[1]+(B[1]-A[1])*u,ye:A[1]+(B[1]-A[1])*v});}
+  };
   const wire = (pts, width = 0.035, color = '#3d444c') => { if (ctx.wires) ctx.wires.add(pts.map((p) => W(p[0], p[1], p[2])), { width, color }); };
   const tub = (mat, path, rad, o = {}) => { const g = tube(path, rad, { seg: 8, per: 3, ...o }); P.geo(mat, g); g.dispose(); };
   const H = buildHull();
@@ -38,9 +47,21 @@ export function build(K) {
       const a = H.cols[i], b = H.cols[i + 1]; if (b - a < 0.05) continue;
       const ya = deckY(a + 0.02), yb = deckY(b - 0.02), ha = Math.max(0.02, half(a, ya) - 0.08), hb = Math.max(0.02, half(b, yb) - 0.08);
       P.quad(M.deck, [a, ya, ha], [b, yb, hb], [b, yb, -hb], [a, ya, -ha], [0, 1, 0], [[a / 2.4, ha / 2.4], [b / 2.4, hb / 2.4], [b / 2.4, -hb / 2.4], [a / 2.4, -ha / 2.4]]);
+      floor([a,ya,ha],[b,yb,hb],[b,yb,-hb],[a,ya,-ha]);
     }
     { const h0 = half(BREAK, UD), h1 = half(BREAK, FC); P.quad(M.grey, [BREAK, UD, h0], [BREAK, UD, -h0], [BREAK, FC, -h1], [BREAK, FC, h1], [-1, 0, 0]);          // the forecastle break bulkhead
       for (const t of [-2.6, 2.6]) P.box(M.greyDark, BREAK - 0.06, BREAK, UD + 0.1, UD + 2.0, t - 0.4, t + 0.4, 'r'); }
+    // Paired weather-deck companionways against the forecastle break. Keep the
+    // centreline gun and both side-gun stations untouched; visitors pass inboard.
+    for(const t of [-4.6,4.6]){
+      const a=33.5,b=36.85,w=1.45,n=15;
+      for(let i=0;i<n;i++){const s0=a+(b-a)*i/n,s1=a+(b-a)*(i+1)/n,y=UD+(FC-UD)*(i+1)/n;
+        P.box(M.grey,s0,s1,y-.09,y,t-w/2,t+w/2,'b');
+        const c=SHIP.w((s0+s1)/2,t),it=ph.addWalkBox(c.x,c.z,s1-s0,w,SHIP.rot,WY+y,WY+y-.12);it.sticky=true;
+      }
+      P.box(M.grey,b,37.3,FC-.12,FC,t-w/2,t+w/2,'b');floor([b,FC,t-w/2],[37.3,FC,t-w/2],[37.3,FC,t+w/2],[b,FC,t+w/2]);
+      for(const sd of [-1,1])rail([a,UD,t+sd*w/2],[b,FC,t+sd*w/2]);
+    }
 
     // ================================================================== deck houses, bridge
     P.box(M.grey, -4.5, 27, UD, 8.1, -2.4, 2.4, 'b');                                                       // the boiler casing the funnels and cowls stand on
@@ -132,6 +153,8 @@ export function build(K) {
 
     // ================================================================== guns (152 mm Canet, box shields)
     const gun = (s, y, t, yaw, elev = 0.05) => {
+      // Shield/pedestal only: a barrel is not a full-width invisible wall.
+      const c=SHIP.w(s,t);ph.addBox(c.x,c.z,1.95,2.3,SHIP.rot+yaw,WY+y,WY+y+2.05);
       P.push(s, y, t, yaw);
       P.col(M.greyDark, 0, 0, 0, 0.95, 0.6, 0.42, 10, false);
       P.box(M.greyDark, -1.1, 0.75, 0.95, 1.55, -0.32, 0.32, '');
@@ -213,7 +236,7 @@ export function build(K) {
     }
 
     // ================================================================== guard rails: forecastle, quarterdeck (stanchions here, the two wires as ctx.wires)
-    for (const [s0, s1] of [[BREAK + 0.6, 62], [STERN + 0.8, AFT_END - 0.4]]) for (const sd of [-1, 1]) {
+    for (const [a, b] of [[BREAK + 0.6, 62], [STERN + 0.8, AFT_END - 0.4]]) for (const sd of [-1, 1]) for(const [s0,s1] of (sd===1&&a<GANG_S&&b>GANG_S?[[a,GANG_S-1.1],[GANG_S+1.1,b]]:[[a,b]])) {
       const top = [], mid = [];
       for (let s = s0; s <= s1 + 0.01; s += (s1 - s0) / Math.round((s1 - s0) / 2.2)) {
         const y = deckY(s), t = sd * Math.max(0.05, half(s, y) - 0.22);
@@ -254,32 +277,43 @@ export function build(K) {
 
     // ================================================================== the gangway from the quay platform (banner on its south side)
     {
-      const b = half(GANG_S, UD), tA = b - 0.6, tB = SHIP.loc(-785.1, -2582.8).v + 0.9, yA = UD + 0.25, yB = QY + 1.25, wid = 1.7;
+      const b = half(GANG_S, UD), tA = b - 1.15, tB = SHIP.loc(-785.1, -2582.8).v + 0.9, yA = deckY(GANG_S), yB = QY + 1.25, wid = 1.7;
       const len = tB - tA, ny = (yB - yA) / len;
       const yAt = (t) => yA + (t - tA) * ny;
       P.quad(M.deck, [GANG_S - wid / 2, yA, tA], [GANG_S + wid / 2, yA, tA], [GANG_S + wid / 2, yB, tB], [GANG_S - wid / 2, yB, tB], [0, 1, 0], [[0, 0], [0.7, 0], [0.7, len / 2.4], [0, len / 2.4]]);
+      floor([GANG_S-wid/2,yA,tA],[GANG_S+wid/2,yA,tA],[GANG_S+wid/2,yB,tB],[GANG_S-wid/2,yB,tB]);
       P.quad(M.greyDark, [GANG_S - wid / 2, yA - 0.04, tA], [GANG_S - wid / 2, yB - 0.04, tB], [GANG_S + wid / 2, yB - 0.04, tB], [GANG_S + wid / 2, yA - 0.04, tA], [0, -1, 0]);
       for (const sx of [-1, 1]) {
         const x = GANG_S + sx * wid / 2;
-        for (const dy of [-0.25, 0.0, 1.1]) P.cyl(M.grey, [x, yA + dy, tA], [x, yB + dy, tB], 0.05, 0.05, 5, false);
-        const n = Math.round(len / 1.3);
-        for (let k = 0; k <= n; k++) { const t = tA + len * k / n; P.cyl(M.grey, [x, yAt(t) - 0.25, t], [x, yAt(t) + 1.1, t], 0.035, 0.035, 4, false); if (k < n) { const t1 = tA + len * (k + 1) / n; P.cyl(M.grey, [x, yAt(t) - 0.25, t], [x, yAt(t1), t1], 0.025, 0.025, 4, false); } }
+        P.cyl(M.grey,[x,yA-.25,tA],[x,yB-.25,tB],.05,.05,5,false);
+        rail([x,yA,tA],[x,yB,tB]);
       }
       const banTex = ctx.tex.draw(1024, 96, (g, w, h) => { g.fillStyle = '#f2f0e8'; g.fillRect(0, 0, w, h); g.fillStyle = '#1d2f5a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `bold 50px ${(ctx.tex.FONTS && ctx.tex.FONTS.sans) || 'sans-serif'}`; g.fillText('КРЕЙСЕР I РАНГА БАЛТИЙСКОГО ФЛОТА «АВРОРА»', w / 2, h / 2 + 3); }, { key: 'lmAu-banner' });
       const banMat = ctx.mat.toon('#ffffff', { map: banTex, name: 'lmAu-banner' });
       const x = GANG_S + wid / 2 + 0.07, t0 = tA + 1.2, t1 = tB - 1.2;                                     // facing the bow (+x): readable from the south part of the quay
       P.quad(banMat, [x, yAt(t1) + 0.1, t1], [x, yAt(t0) + 0.1, t0], [x, yAt(t0) + 0.95, t0], [x, yAt(t1) + 0.95, t1], [1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
       P.quad(M.white, [x - 0.02, yAt(t0) + 0.1, t0], [x - 0.02, yAt(t1) + 0.1, t1], [x - 0.02, yAt(t1) + 0.95, t1], [x - 0.02, yAt(t0) + 0.95, t0], [-1, 0, 0]);
-      // shore end: a steel landing over the parapet that runs into the ticket pavilion (the ship is closed: no way through)
-      const tP = SHIP.loc(-790.1, -2586.6).v + 0.04;
+      // Open shore landing bridges the parapet; the pavilion visitor aisle has
+      // seven shallow treads, so no jump/flight or broken rail is required.
+      const tP = 25.4;
       P.box(M.greyDark, GANG_S - 1.0, GANG_S + 1.0, QY + 1.1, QY + 1.25, tB - 0.4, tP, '');
-      for (const sx of [-1.0, 1.0]) { for (const dy of [1.75, 2.3]) P.cyl(M.grey, [GANG_S + sx, QY + dy, tB - 0.4], [GANG_S + sx, QY + dy, tP], 0.035, 0.035, 4, false); for (const t of [tB - 0.4, (tB + tP) / 2, tP - 0.05]) P.cyl(M.grey, [GANG_S + sx, QY + 1.25, t], [GANG_S + sx, QY + 2.3, t], 0.035, 0.035, 4, false); }
-      P.box(M.mouth, GANG_S - 0.85, GANG_S + 0.85, QY + 1.25, QY + 3.3, tP - 0.02, tP + 0.02, 'f');
-      P.box(M.greyLight, GANG_S - 0.98, GANG_S + 0.98, QY + 1.2, QY + 3.42, tP - 0.01, tP + 0.012, 'f');
-      { const c = SHIP.w(GANG_S, (tB + tP) / 2 - 0.2); ph.addBox(c.x, c.z, 2.2, tP - tB + 0.5, SHIP.rot, 0, 2.6); }
-      svc.gangway = { s: GANG_S, x: SHIP.w(GANG_S, tB).x, z: SHIP.w(GANG_S, tB).z };
+      for(const sx of [-1,1])rail([GANG_S+sx,QY+1.25,tB-.4],[GANG_S+sx,QY+1.25,tP]);
+      floor([GANG_S-1,QY+1.25,tB-.4],[GANG_S+1,QY+1.25,tB-.4],[GANG_S+1,QY+1.25,tP],[GANG_S-1,QY+1.25,tP]);
+      const n=7,end=29.2;
+      for(let i=0;i<n;i++){const t0=tP+(end-tP)*i/n,t1=tP+(end-tP)*(i+1)/n,y=QY+1.25*(1-i/n);
+        P.box(M.greyDark,GANG_S-1,GANG_S+1,y-.14,y,t0,t1,'b');
+        const c=SHIP.w(GANG_S,(t0+t1)/2),it=ph.addWalkBox(c.x,c.z,2,t1-t0,SHIP.rot,WY+y,WY+y-.16);it.sticky=true;
+      }
+      for(const sx of [-1,1])rail([GANG_S+sx,QY+1.25,tP],[GANG_S+sx,QY,end]);
+      svc.gangway = { s:GANG_S,x:SHIP.w(GANG_S,tB).x,z:SHIP.w(GANG_S,tB).z,open:true,width:wid,deck:W(GANG_S,yA,tA),shore:W(GANG_S,QY,end+.7) };
     }
   } finally { P.pop(); }
+
+  // One fixture family for the whole boarding route, spatially split by the
+  // shared helper; no per-run mesh batches or per-frame callbacks.
+  const boarding=knockBays(ctx,{name:'aurora-boarding-rail',bays:boardingBays,parts:[{geo:railTop,mat:M.grey,stretch:true},{geo:railMid,mat:M.grey,stretch:true},{geo:railPost,mat:M.grey,ats:()=>['start','end']}],collider:b=>({thick:.055,y0:Math.min(b.y,b.ye),y1:Math.max(b.y,b.ye)+1.04}),rec:{kind:'fence',mass:24,h:1.04,anchored:12,hitK:.4,metal:true},far:180});
+  svc.boardingRails=boarding.records.filter(Boolean);
+  for(const m of boarding.meshes)K.extraTris+=(m.geometry.index?.count??m.geometry.attributes.position.count)/3*m.count;
 
   // ================================================================== port holes (two instanced meshes: brass rim, dark glass)
   {
@@ -302,11 +336,16 @@ export function build(K) {
     if (b) {
       const r = pairs(b.polys[0].o), cx = b.cx, cz = b.cz, e0 = [r[1][0] - r[0][0], r[1][1] - r[0][1]], l0 = Math.hypot(e0[0], e0[1]), e1 = [r[2][0] - r[1][0], r[2][1] - r[1][1]], l1 = Math.hypot(e1[0], e1[1]);
       P.push(cx, 0, cz, Math.atan2(-e0[1], e0[0]));
-      P.box(M.greyDark, -l0 / 2, l0 / 2, 0, 0.5, -l1 / 2, l1 / 2, 'b'); P.box(M.port, -l0 / 2 + 0.05, l0 / 2 - 0.05, 0.5, 3.45, -l1 / 2 + 0.05, l1 / 2 - 0.05, 'tb');
+      const rot=Math.atan2(-e0[1],e0[0]),p=SHIP.w(GANG_S,26),gap=(p.x-cx)*Math.sin(rot)+(p.z-cz)*Math.cos(rot);
+      // Retain the exact mapped pavilion and glass side bays, opening only its
+      // gangway-aligned visitor aisle through the two end screens.
+      for(const [z0,z1] of [[-l1/2,gap-1.17],[gap+1.17,l1/2]]){
+        P.box(M.greyDark,-l0/2,l0/2,0,.5,z0,z1,'b');P.box(M.port,-l0/2+.05,l0/2-.05,.5,3.45,z0+.05,z1-.05,'tb');
+        const z=(z0+z1)/2;ph.addBox(cx+Math.sin(rot)*z,cz+Math.cos(rot)*z,l0,z1-z0,rot,0,3.45);
+      }
       for (const [x, z] of [[-l0 / 2, -l1 / 2], [l0 / 2, -l1 / 2], [l0 / 2, l1 / 2], [-l0 / 2, l1 / 2], [0, -l1 / 2], [0, l1 / 2]]) P.box(M.greyDark, x - 0.08, x + 0.08, 0.5, 3.45, z - 0.08, z + 0.08, 'tb');
       P.box(M.greyDark, -l0 / 2 - 0.35, l0 / 2 + 0.35, 3.45, 3.7, -l1 / 2 - 0.35, l1 / 2 + 0.35, '');
       P.pop();
-      ph.addBox(cx, cz, l0, l1, Math.atan2(-e0[1], e0[0]), 0, 3.7);
     }
     // the granite stele of the eternal mooring (text from the OSM inscription tag)
     const stTex = ctx.tex.draw(512, 512, (g, w, h) => {
@@ -322,8 +361,14 @@ export function build(K) {
     ph.addBox(STELE.x, STELE.z, 2.0, 0.5, SHIP.rot, 0, 2.2);
   } catch (e) { console.error('[landmarksAurora] ship quay furniture:', e); }
 
-  // ================================================================== colliders: the hull (closed ship), the dolphins; services
-  for(let s=-60;s<63;s+=2){const c=SHIP.w(s+1,0),hw=Math.max(half(s,0),half(s+1,0),half(s+2,0));ph.addBox(c.x,c.z,2,hw*2,SHIP.rot,WY-6,WY+14);}
+  // Hull collision stops below the weather deck; the exact drawn deck triangles
+  // above own walking. Boats still meet the physical immersed ship body.
+  for(let s=-60;s<63;s+=2){const c=SHIP.w(s+1,0),hw=Math.max(half(s,0),half(s+1,0),half(s+2,0));ph.addBox(c.x,c.z,2,hw*2,SHIP.rot,WY-6,WY+Math.min(deckY(s),deckY(s+1),deckY(s+2))-.08);}
+  for(const [s0,s1,t0,t1,y1] of [[-4.5,27,-2.4,2.4,8.1],[25,33.4,-3.1,3.1,9.1],[-30.4,-25.4,-1.8,1.8,9]])solid(s0,s1,UD,y1,t0,t1);
+  // Skylights and capstans are real inspectable deck obstacles, with their
+  // visible heights rather than a hull-sized exclusion volume.
+  for(const [a,b,h,w] of [[-37.5,-35,.83,1.1],[-47,-44.6,.73,1],[-19.5,-17,.93,1.3],[41.5,43.6,.73,1]])solid(a,b,deckY((a+b)/2),deckY((a+b)/2)+h,-w,w);
+  for(const [s,r] of [[55.5,.63],[-57,.52]]){const c=SHIP.w(s,0);ph.addCylinder(c.x,c.z,r,WY+deckY(s),WY+deckY(s)+.9);}
   for (const [s, t] of [[84, 11], [86, -13], [-82, 10], [-86, -12]]) { const c = SHIP.w(s, t); ph.addCylinder(c.x, c.z, 1.7, WY - 3, WY + 2.5); }
   svc.monuments.push({ id: 'r3272566', name: 'Крейсер «Аврора»', x: SHIP.x, z: SHIP.z, h: WY + MAIN_TOP });
   const spot = SHIP.w(34, 34), spot2 = SHIP.w(-30, 26);

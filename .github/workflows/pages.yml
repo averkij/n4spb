@@ -128,6 +128,8 @@ jobs:
       - run: npm ci
       - name: Vehicle entry and exit with physical or privacy-hidden Firefox E keys
         run: node tools/drive-input-test.mjs
+      - name: Aurora visitor boarding, deck inspection, open water and breakable rails
+        run: node tools/area.mjs aptekarsky tools/aurora-boarding-test.mjs --integrated
       - name: Moskovskaya landmarks, open gate bays, park water and mapped gardens
         run: |
           node tools/area.mjs semyonovsky tools/moscow-gate-passage-test.mjs

@@ -3353,3 +3353,52 @@ All 33,336 actual imported exports retain source equality. The final packed
 Narvsky browser entry passes normal revision/layout/Start/helper/asset checks,
 with no failed modules or regions; its screenshot in
 `shots/release-10.0.3/packed-final/` was reviewed.
+
+## 2026-11-07 — Aurora visitor boarding (10.1.0)
+
+Aurora now has an open pavilion aisle, seven shallow quay steps, a continuous
+gangway and grounded weather decks. Two companionways reach the forecastle.
+The fourteen historical guns retain their geometry and positions; bounded
+shield colliders leave the visitor routes open. Exact rendered deck triangles
+own the walking surfaces, while the immersed hull remains solid to boats.
+Forty-four boarding and stair rail bays share one knock fixture family, six
+spatially split meshes, existing materials and finite 180 m detail range. The
+landmark adds no frame callback; near-ship geometry totals 33,512 triangles.
+References and circulation adaptations are recorded in
+[the boarding dossier](research/aurora-boarding.md).
+
+The integrated real-Player test completes 4,901 walking frames, both bow and
+stern gun routes and both companionways, without flight, jump or rescue. Its
+212 floor rays agree with rendered surfaces within 0.0000053 m. Nine under-
+gangway boat probes, solid immersed hull checks and real rail break/removal
+pass; reinstating the closed shore gate makes the route fail. The normal
+packed browser scene also passes twelve native W-key waypoints from the quay
+to the quarterdeck and back to street level, without rescue or module/region
+failures. Entrance, aboard, return, gangway, companionway and bow views are
+reviewed in `shots/aurora-10.1.0/`.
+
+The Aptekarsky road comparison uses exact committed source+bake baseline
+`c854475b`, revision `949157d614b832292b6a`, against final revision
+`84ec87115b525f30f72f`. Both use normal baked loading, Edge / RTX 3090 Ti /
+D3D11, 1280x720, medium, ten seconds from `-1942.856,-3160.215,25.586`, with
+GPU jobs serial and CPU audits excluded from timing. No profiler or mid-run
+screenshot is enabled. Baseline/final respectively: loading 29.7/28.6 s;
+mean 29.6/29.9 ms, p50 33.3/33.3 ms, p95 50.0/50.0 ms, maximum 350.1/316.8 ms;
+20/23 frames above 40 ms and 3/5 above 80 ms; 994/992 mean draws;
+46.5/47.0 m travelled. Both cars stop in traffic at nearly the same endpoint.
+CDP used heap is 317.0/329.4 MiB and backing storage 793.4/790.9 MiB, sampled
+after timing. No modules or regions fail. The frozen baseline omitted only
+the root web app manifest and logs its harmless static 404; scene source,
+dependencies and assets were independently verified against Git blobs.
+No performance improvement is claimed: 50 ms p95 and 317 ms final hitches
+remain below the comfortable-driving goal. Evidence is
+`shots/aurora-10.1.0/{before-c854,after}.json`. All sixteen other area closures
+and baked revisions remain unchanged, so this local addition introduces no
+new builder or update work in the old centre.
+
+Aptekarsky's 108 final products pass canonical source/manifest/hash checks.
+Full ownership, water reachability, boat passages, all-area water datums,
+closure/import checks and the Firefox vehicle-input regression pass.
+The final package contains 5,059 files / 954,360,309 bytes, below the unchanged
+1 GB limit; all 832 packed modules / 33,336 imported exports retain exact
+source equality.
