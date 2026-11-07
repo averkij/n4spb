@@ -251,6 +251,26 @@ The `help` lines list the keyed views of the area: they must follow `VIEWS` in t
 
 ### 5.3 CI (`.github/workflows/pages.yml`, M7)
 
+**Current deployment policy (2026-11-07):** pushes to `main` run the real source,
+bake, asset-budget, generated-page, layout, claims-table, registry/gate, import
+and clipping checks in `verify`, plus `smoke` (vehicle input, integrated Aurora
+boarding and physics triangles). Deployment still checks every actually packed
+data export against its source before uploading. Exhaustive `engine` checks and
+the checker-oracle/mutation tests inside `verify` run on pull requests and manual
+`workflow_dispatch` runs. A manual run requires all three jobs to pass before
+deployment; PRs never deploy. A failed release check or cancelled run cannot
+deploy. Use Actions → Deploy to GitHub Pages → Run workflow for a full run.
+
+This policy supersedes the historical all-engine deployment gate described
+below and in sections 6.1 / 11.3. The previous run spent 604 s rebuilding all
+areas for ownership auditing, 345 s on vegetation/banks/quay checks, 158 s on
+North/Tauride engine checks, and 129 s testing deliberately broken dependency
+scanners. Those tests remain available without delaying every ordinary push.
+Changed-area authoring, focused regressions and browser review still happen
+locally before a checkpoint; the smaller release gate does not replace them.
+
+Historical M7 implementation:
+
 Two jobs run on a pull request and on a push to `main`. **`verify`** is the job of 6.1, unchanged in nature: no `npm ci`, repository files only (`deploy` needs it and, since 11.3, `engine` too). M7 added one step to it, the two Tauride tests that
 need neither three.js nor python: `node tools/tauride/data-test.mjs --no-regen` (the committed data modules of `src/world/landmarksTauride/data` against the facade, 138 checks, 1 s) and `node tools/tauride-cams-check.mjs`
 (the 12 camera poses against the data, 4 s). **`engine`** is new: `npm ci` (three.js from `package-lock.json`, `cache: npm`), then the lanes that build the engine in node and were "not in CI" until now (T3 log, 9.7): `npm run hooks:all`

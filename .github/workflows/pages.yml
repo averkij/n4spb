@@ -1,6 +1,7 @@
 # Deploys the static scene to GitHub Pages (https://averkij.github.io/n4spb/): no build step, the deployment whitelist of docs/STRIP.md section 7.
-# A pull request runs the CPU 'verify' job (no npm ci: repository files only) and the 'engine' job (npm ci: three.js in node, the hook set and the Tauride tests); nothing is deployed.
-# A push to main deploys when BOTH 'verify' and 'engine' passed (M7 polish: 'engine' ran green on GitHub and became a deploy gate: docs/AREAS.md section 11.3).
+# Pushes run source/data verification and a small engine smoke test before deploying.
+# Pull requests and manual runs additionally run the exhaustive engine and checker-oracle suites.
+# Manual deployment requires that full suite to pass; pull requests never deploy.
 name: Deploy to GitHub Pages
 
 on:
@@ -90,23 +91,32 @@ jobs:
         run: node tools/import-lint.mjs
       # the per-area bake revision (docs/AREAS.md section 4): CPU oracles, none needs three.js, a browser or the node_modules (the lock entry of three is read from package-lock.json)
       - name: Bake revision per area - order, exclusions, isolation, golden (fixture trees)
+        if: github.event_name != 'push'
         run: node tools/baked-revision-test.mjs
       - name: Bake revision per area - the real tree (which file moves which area), recorded page loads inside the closure
+        if: github.event_name != 'push'
         run: node tools/closure-real-test.mjs
       - name: Bake manifest check - every failure kind (fabricated bake directories)
+        if: github.event_name != 'push'
         run: node tools/bake-manifest-check-test.mjs
       - name: Bake plan, publish and the crash between manifest and map
+        if: github.event_name != 'push'
         run: node tools/bake-plan-test.mjs
       - name: Bake publish (served-file audit, lock, purge) and the whole flow on fabricated trees
+        if: github.event_name != 'push'
         run: node tools/bake-publish-test.mjs && node tools/bake-flow-test.mjs
       - name: MODULES parser fails closed (feeds the closure)
+        if: github.event_name != 'push'
         run: node tools/modules-list-test.mjs
       - name: Generated src/core/baked-revision.js resolves the revision of its page's area
+        if: github.event_name != 'push'
         run: node tools/baked-revision-js-test.mjs
       - name: Dev servers answer the revision of the area of the page (Referer, stat-signature cache)
+        if: github.event_name != 'push'
         run: node tools/dev-revision-test.mjs
       # the scanner is tested against 9 broken scanners (each must be caught): about a minute
       - name: The closure oracles catch 9 of 9 broken scanners
+        if: github.event_name != 'push'
         run: node tools/closure-mutation-test.mjs
       - name: Area data is clipped to its extent (idempotent)
         run: |
@@ -114,10 +124,8 @@ jobs:
             if [ -d "$d" ]; then echo "== $d"; node tools/strip-data-clip.mjs --in "$d" --check; fi
           done
 
-  # The CPU tests that build the engine in node (three.js from package-lock.json, no browser, no GPU, no bake): the hook set of M6 with its engine call sites (docs/AREAS.md 9.2, 9.6: `npm run hooks:all`)
-  # and the Tauride remake tests of docs/TAURIDE-REMAKE.md section 10 (T2-T4a: the garden floor, the ponds, the relief and the real built module). A separate job so that 'verify' stays free of
-  # 'npm ci' and its steps keep running when the engine part is red; since M7 polish it GATES 'deploy' together with 'verify' (docs/AREAS.md sections 5.3 and 11.3). Nothing here reads assets/baked.
-  engine:
+  # Small real-engine checks run on every release. Full city rebuilding is below.
+  smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -130,6 +138,20 @@ jobs:
         run: node tools/drive-input-test.mjs
       - name: Aurora visitor boarding, deck inspection, open water and breakable rails
         run: node tools/area.mjs aptekarsky tools/aurora-boarding-test.mjs --integrated
+      - name: Physical walking triangles and bridge decks
+        run: node tools/physics-triangle-test.mjs
+
+  # Expensive city-wide regressions remain mandatory for PRs and manual full runs.
+  engine:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - name: Moskovskaya landmarks, open gate bays, park water and mapped gardens
         run: |
           node tools/area.mjs semyonovsky tools/moscow-gate-passage-test.mjs
@@ -195,7 +217,6 @@ jobs:
         run: node tools/area.mjs north tools/north-knock-test.mjs
       - name: Coastal ship and physical bridge decks
         run: |
-          node tools/physics-triangle-test.mjs
           node tools/area.mjs okrug65 tools/three-flagpoles-test.mjs
           node tools/area.mjs okrug65 tools/okrug65-waterfront-test.mjs
           node tools/area.mjs morskie-vorota tools/marine-data-bridges-test.mjs --engine
@@ -204,8 +225,14 @@ jobs:
           node tools/area.mjs morskie-vorota tools/coastal-ship-test.mjs
 
   deploy:
-    needs: [verify, engine]
-    if: github.event_name != 'pull_request'
+    needs: [verify, smoke, engine]
+    # always() permits the deliberately skipped full engine job on a push.
+    # Failures/cancellation still block, and manual runs require full success.
+    if: >-
+      always() && !cancelled() && github.event_name != 'pull_request' &&
+      needs.verify.result == 'success' && needs.smoke.result == 'success' &&
+      (needs.engine.result == 'success' ||
+      (github.event_name == 'push' && needs.engine.result == 'skipped'))
     runs-on: ubuntu-latest
     environment:
       name: github-pages
