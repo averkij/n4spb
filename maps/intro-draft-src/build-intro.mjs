@@ -175,6 +175,8 @@ function unionRings(rA, rB) {
 const plainName = (n) => n.replace(/^округ\s+/i, '').replace(/\s+округ$/i, '').trim();
 const EDITS = (() => { try { return JSON.parse(fs.readFileSync(path.join(here, 'edits.json'), 'utf8')); } catch (e) { return { merge: [] }; } })();
 for (const mg of EDITS.merge || []) {
+  // Later planning merges retain the IDs already published to live area registries.
+  if (mg.preserveIds) mos.forEach((m, k) => { m.stableK ??= k; });
   const parts = mg.names.map((n) => mos.find((m) => plainName(m.rawName) === n));
   if (parts.some((p) => !p)) { log('edit: merge skipped, not found:', mg.names.join(' + ')); continue; }
   const before = parts.map((p) => p.rings.outer.length);
@@ -321,7 +323,7 @@ for (const cv of [...(EDITS.carve || []), ...(EDITS.riverCarve || []), ...(EDITS
 }
 
 // Keep public IDs independent of dense raster indices as more areas merge.
-mos.forEach((m, k) => { m.stableK = k; });
+mos.forEach((m, k) => { m.stableK ??= k; });
 const MERGE_REPORT = [];
 for (const mg of EDITS.mergeAfterCarve || []) {
   const parts = mg.names.map((n) => mos.find((m) => plainName(m.rawName) === n));

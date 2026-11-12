@@ -7,7 +7,9 @@
     { "names": ["Коломна", "Екатерингофский"], "ru": "Коломна–Екатерингофский", "en": "Kolomna–Yekateringofsky", "stable": true },
     { "names": ["Семёновский", "Измайловское"], "ru": "Семёновский–Измайловский", "en": "Semyonovsky–Izmaylovsky", "stable": true },
     { "names": ["Посадский", "Аптекарский остров"], "ru": "Аптекарский–Посадский", "en": "Apothecary–Posadsky", "stable": true },
-    { "names": ["Кронверкское", "Введенский", "Петровский"], "ru": "Кронверкское–Введенский–Петровский", "en": "Kronverkskoye–Vvedensky–Petrovsky", "stable": true }
+    { "names": ["Кронверкское", "Введенский", "Петровский"], "ru": "Кронверкское–Введенский–Петровский", "en": "Kronverkskoye–Vvedensky–Petrovsky", "stable": true },
+    { "names": ["Комендантский аэродром", "Озеро Долгое"], "ru": "Комендантский аэродром–Озеро Долгое", "en": "Komendantsky Aerodrom–Ozero Dolgoye", "stable": true, "preserveIds": true },
+    { "names": ["Сампсониевское", "Ланское"], "ru": "Сампсониевское–Ланское", "en": "Sampsoniyevskoye–Lanskoye", "stable": true }
   ],
   "mergeAfterCarve": [
     { "names": ["Гагаринское", "Звёздное"], "ru": "Гагаринское–Звёздное", "en": "Gagarinskoye–Zvyozdnoye", "stable": true },
