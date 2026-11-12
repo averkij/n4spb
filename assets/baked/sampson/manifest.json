@@ -1,0 +1,1024 @@
+{
+  "format": 1,
+  "scheme": 2,
+  "area": "sampson",
+  "revision": "1b0ad483e413d3b4d7c1",
+  "closure": {
+    "files": 389,
+    "bytes": 21236320
+  },
+  "files": {
+    "field-qP": "field-qP.1b0ad483e413d3b4d7c1.bin.gz",
+    "field-qH": "field-qH.1b0ad483e413d3b4d7c1.bin.gz",
+    "field-qT": "field-qT.1b0ad483e413d3b4d7c1.bin.gz",
+    "field-claim": "field-claim.1b0ad483e413d3b4d7c1.bin.gz",
+    "field-dtex": "field-dtex.1b0ad483e413d3b4d7c1.bin.gz",
+    "field-clsB": "field-clsB.1b0ad483e413d3b4d7c1.bin.gz",
+    "field": "field.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-textures": "street-textures.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-kerbs": "street-kerbs.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-13": "street-surfaces--3_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-14": "street-surfaces--3_-14.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-13": "street-surfaces--2_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--4_-13": "street-surfaces--4_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--5_-13": "street-surfaces--5_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-12": "street-surfaces--3_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--5_-12": "street-surfaces--5_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-12": "street-surfaces--2_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--6_-13": "street-surfaces--6_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--4_-12": "street-surfaces--4_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--4_-11": "street-surfaces--4_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--6_-12": "street-surfaces--6_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--5_-11": "street-surfaces--5_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-11": "street-surfaces--3_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-12": "street-surfaces--1_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-11": "street-surfaces--2_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--6_-11": "street-surfaces--6_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-11": "street-surfaces--1_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-10": "street-surfaces--2_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-11": "street-surfaces-0_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--4_-10": "street-surfaces--4_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--9_-11": "street-surfaces--9_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--8_-11": "street-surfaces--8_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--10_-11": "street-surfaces--10_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--9_-10": "street-surfaces--9_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--7_-11": "street-surfaces--7_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--7_-10": "street-surfaces--7_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-10": "street-surfaces--1_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--5_-10": "street-surfaces--5_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-10": "street-surfaces--3_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--6_-10": "street-surfaces--6_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-10": "street-surfaces-0_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--8_-10": "street-surfaces--8_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-1_-10": "street-surfaces-1_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-9": "street-surfaces-0_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--10_-10": "street-surfaces--10_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-9": "street-surfaces--2_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--8_-9": "street-surfaces--8_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--6_-9": "street-surfaces--6_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--7_-9": "street-surfaces--7_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--5_-9": "street-surfaces--5_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-9": "street-surfaces--1_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-1_-9": "street-surfaces-1_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-2_-9": "street-surfaces-2_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--4_-9": "street-surfaces--4_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-9": "street-surfaces--3_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-8": "street-surfaces--2_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--9_-9": "street-surfaces--9_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--10_-9": "street-surfaces--10_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-8": "street-surfaces--1_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-8": "street-surfaces--3_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-1_-8": "street-surfaces-1_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-7": "street-surfaces--2_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--4_-8": "street-surfaces--4_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-8": "street-surfaces-0_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--7_-8": "street-surfaces--7_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-7": "street-surfaces--1_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-7": "street-surfaces-0_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-2_-8": "street-surfaces-2_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--3_-7": "street-surfaces--3_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-6": "street-surfaces--2_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-6": "street-surfaces--1_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-6": "street-surfaces-0_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-5": "street-surfaces--2_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-5": "street-surfaces--1_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-5": "street-surfaces-0_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-4": "street-surfaces--1_-4.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-4": "street-surfaces--2_-4.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-4": "street-surfaces-0_-4.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--1_-3": "street-surfaces--1_-3.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-3": "street-surfaces--2_-3.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-0_-3": "street-surfaces-0_-3.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--2_-14": "street-surfaces--2_-14.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-1_-11": "street-surfaces-1_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--8_-8": "street-surfaces--8_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-1_-6": "street-surfaces-1_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces-1_-5": "street-surfaces-1_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces--4_-14": "street-surfaces--4_-14.1b0ad483e413d3b4d7c1.bin.gz",
+    "street-surfaces": "street-surfaces.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-6": "city-base--1_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-5": "city-base--1_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-7": "city-base--1_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-6": "city-base-0_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-7": "city-base-0_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-8": "city-base--1_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-9": "city-base--1_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-10": "city-base--1_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-11": "city-base--1_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-11": "city-base-0_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-3": "city-base--1_-3.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-4": "city-base--1_-4.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-5": "city-base-0_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--5_-9": "city-base--5_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--5_-10": "city-base--5_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--6_-10": "city-base--6_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--5_-11": "city-base--5_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--5_-12": "city-base--5_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--5_-13": "city-base--5_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--6_-9": "city-base--6_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--6_-11": "city-base--6_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--6_-12": "city-base--6_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--6_-13": "city-base--6_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--7_-10": "city-base--7_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--7_-9": "city-base--7_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--7_-11": "city-base--7_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--8_-10": "city-base--8_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--8_-9": "city-base--8_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--9_-10": "city-base--9_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--8_-11": "city-base--8_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--9_-11": "city-base--9_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--9_-9": "city-base--9_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-5": "city-base--2_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-6": "city-base--2_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-8": "city-base--2_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-9": "city-base--2_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-7": "city-base--2_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-10": "city-base--2_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-11": "city-base--2_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-12": "city-base--2_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-13": "city-base--2_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-10": "city-base--3_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-13": "city-base--3_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-14": "city-base--2_-14.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-7": "city-base--3_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-8": "city-base--3_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-9": "city-base--3_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-11": "city-base--3_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-12": "city-base--3_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--3_-14": "city-base--3_-14.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--4_-10": "city-base--4_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--4_-11": "city-base--4_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--4_-12": "city-base--4_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--4_-8": "city-base--4_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--4_-9": "city-base--4_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--4_-13": "city-base--4_-13.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-8": "city-base-0_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-9": "city-base-0_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-10": "city-base-0_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-1_-8": "city-base-1_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-1_-9": "city-base-1_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-1_-10": "city-base-1_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-2_-8": "city-base-2_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-2_-9": "city-base-2_-9.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--1_-12": "city-base--1_-12.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-1_-11": "city-base-1_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--10_-11": "city-base--10_-11.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--10_-10": "city-base--10_-10.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--8_-8": "city-base--8_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--7_-8": "city-base--7_-8.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-1_-7": "city-base-1_-7.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-1_-5": "city-base-1_-5.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-1_-6": "city-base-1_-6.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base--2_-4": "city-base--2_-4.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-4": "city-base-0_-4.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base-0_-3": "city-base-0_-3.1b0ad483e413d3b4d7c1.bin.gz",
+    "city-base": "city-base.1b0ad483e413d3b4d7c1.bin.gz",
+    "nav-medium": "nav-medium.1b0ad483e413d3b4d7c1.bin.gz",
+    "roof": "roof.1b0ad483e413d3b4d7c1.bin.gz",
+    "nav-low": "nav-low.1b0ad483e413d3b4d7c1.bin.gz"
+  },
+  "sizes": {
+    "field-qP": {
+      "raw": 48921696,
+      "gzip": 2173066
+    },
+    "field-qH": {
+      "raw": 48921696,
+      "gzip": 1552348
+    },
+    "field-qT": {
+      "raw": 48921696,
+      "gzip": 1324321
+    },
+    "field-claim": {
+      "raw": 48921696,
+      "gzip": 47670
+    },
+    "field-dtex": {
+      "raw": 195686496,
+      "gzip": 17808000
+    },
+    "field-clsB": {
+      "raw": 195686496,
+      "gzip": 1280633
+    },
+    "field": {
+      "raw": 262592,
+      "gzip": 247862
+    },
+    "street-textures": {
+      "raw": 336941,
+      "gzip": 328469
+    },
+    "street-kerbs": {
+      "raw": 152516,
+      "gzip": 34730
+    },
+    "street-surfaces--3_-13": {
+      "raw": 1253688,
+      "gzip": 311184
+    },
+    "street-surfaces--3_-14": {
+      "raw": 142680,
+      "gzip": 37790
+    },
+    "street-surfaces--2_-13": {
+      "raw": 845040,
+      "gzip": 206478
+    },
+    "street-surfaces--4_-13": {
+      "raw": 774088,
+      "gzip": 201252
+    },
+    "street-surfaces--5_-13": {
+      "raw": 1010960,
+      "gzip": 229339
+    },
+    "street-surfaces--3_-12": {
+      "raw": 892328,
+      "gzip": 221806
+    },
+    "street-surfaces--5_-12": {
+      "raw": 1320392,
+      "gzip": 337765
+    },
+    "street-surfaces--2_-12": {
+      "raw": 1140664,
+      "gzip": 292196
+    },
+    "street-surfaces--6_-13": {
+      "raw": 163232,
+      "gzip": 40343
+    },
+    "street-surfaces--4_-12": {
+      "raw": 777488,
+      "gzip": 210385
+    },
+    "street-surfaces--4_-11": {
+      "raw": 963624,
+      "gzip": 250604
+    },
+    "street-surfaces--6_-12": {
+      "raw": 344680,
+      "gzip": 82306
+    },
+    "street-surfaces--5_-11": {
+      "raw": 1376600,
+      "gzip": 341271
+    },
+    "street-surfaces--3_-11": {
+      "raw": 1736560,
+      "gzip": 427101
+    },
+    "street-surfaces--1_-12": {
+      "raw": 40416,
+      "gzip": 10724
+    },
+    "street-surfaces--2_-11": {
+      "raw": 2144696,
+      "gzip": 551166
+    },
+    "street-surfaces--6_-11": {
+      "raw": 172152,
+      "gzip": 49533
+    },
+    "street-surfaces--1_-11": {
+      "raw": 595160,
+      "gzip": 170200
+    },
+    "street-surfaces--2_-10": {
+      "raw": 1363696,
+      "gzip": 347025
+    },
+    "street-surfaces-0_-11": {
+      "raw": 898360,
+      "gzip": 219358
+    },
+    "street-surfaces--4_-10": {
+      "raw": 1660648,
+      "gzip": 407841
+    },
+    "street-surfaces--9_-11": {
+      "raw": 857832,
+      "gzip": 191735
+    },
+    "street-surfaces--8_-11": {
+      "raw": 125768,
+      "gzip": 28218
+    },
+    "street-surfaces--10_-11": {
+      "raw": 38120,
+      "gzip": 8317
+    },
+    "street-surfaces--9_-10": {
+      "raw": 1615944,
+      "gzip": 366423
+    },
+    "street-surfaces--7_-11": {
+      "raw": 294524,
+      "gzip": 72180
+    },
+    "street-surfaces--7_-10": {
+      "raw": 1564480,
+      "gzip": 393317
+    },
+    "street-surfaces--1_-10": {
+      "raw": 1863704,
+      "gzip": 470374
+    },
+    "street-surfaces--5_-10": {
+      "raw": 1856880,
+      "gzip": 466158
+    },
+    "street-surfaces--3_-10": {
+      "raw": 1035912,
+      "gzip": 260424
+    },
+    "street-surfaces--6_-10": {
+      "raw": 1614896,
+      "gzip": 401208
+    },
+    "street-surfaces-0_-10": {
+      "raw": 1034264,
+      "gzip": 270001
+    },
+    "street-surfaces--8_-10": {
+      "raw": 1071992,
+      "gzip": 251728
+    },
+    "street-surfaces-1_-10": {
+      "raw": 679168,
+      "gzip": 175153
+    },
+    "street-surfaces-0_-9": {
+      "raw": 1101760,
+      "gzip": 293075
+    },
+    "street-surfaces--10_-10": {
+      "raw": 68624,
+      "gzip": 16582
+    },
+    "street-surfaces--2_-9": {
+      "raw": 980416,
+      "gzip": 254175
+    },
+    "street-surfaces--8_-9": {
+      "raw": 833408,
+      "gzip": 199853
+    },
+    "street-surfaces--6_-9": {
+      "raw": 715256,
+      "gzip": 171886
+    },
+    "street-surfaces--7_-9": {
+      "raw": 751208,
+      "gzip": 184881
+    },
+    "street-surfaces--5_-9": {
+      "raw": 843464,
+      "gzip": 204589
+    },
+    "street-surfaces--1_-9": {
+      "raw": 1359512,
+      "gzip": 357264
+    },
+    "street-surfaces-1_-9": {
+      "raw": 783016,
+      "gzip": 201002
+    },
+    "street-surfaces-2_-9": {
+      "raw": 167392,
+      "gzip": 42097
+    },
+    "street-surfaces--4_-9": {
+      "raw": 602568,
+      "gzip": 149719
+    },
+    "street-surfaces--3_-9": {
+      "raw": 1237096,
+      "gzip": 314923
+    },
+    "street-surfaces--2_-8": {
+      "raw": 970464,
+      "gzip": 246829
+    },
+    "street-surfaces--9_-9": {
+      "raw": 519056,
+      "gzip": 125288
+    },
+    "street-surfaces--10_-9": {
+      "raw": 19980,
+      "gzip": 4470
+    },
+    "street-surfaces--1_-8": {
+      "raw": 1369704,
+      "gzip": 342068
+    },
+    "street-surfaces--3_-8": {
+      "raw": 1132864,
+      "gzip": 278416
+    },
+    "street-surfaces-1_-8": {
+      "raw": 554360,
+      "gzip": 142514
+    },
+    "street-surfaces--2_-7": {
+      "raw": 1311496,
+      "gzip": 326947
+    },
+    "street-surfaces--4_-8": {
+      "raw": 286088,
+      "gzip": 70426
+    },
+    "street-surfaces-0_-8": {
+      "raw": 422536,
+      "gzip": 113532
+    },
+    "street-surfaces--7_-8": {
+      "raw": 21488,
+      "gzip": 5458
+    },
+    "street-surfaces--1_-7": {
+      "raw": 1821184,
+      "gzip": 470492
+    },
+    "street-surfaces-0_-7": {
+      "raw": 283384,
+      "gzip": 76686
+    },
+    "street-surfaces-2_-8": {
+      "raw": 78824,
+      "gzip": 21455
+    },
+    "street-surfaces--3_-7": {
+      "raw": 108008,
+      "gzip": 27875
+    },
+    "street-surfaces--2_-6": {
+      "raw": 853800,
+      "gzip": 203680
+    },
+    "street-surfaces--1_-6": {
+      "raw": 1117848,
+      "gzip": 299731
+    },
+    "street-surfaces-0_-6": {
+      "raw": 699440,
+      "gzip": 189303
+    },
+    "street-surfaces--2_-5": {
+      "raw": 1011368,
+      "gzip": 248334
+    },
+    "street-surfaces--1_-5": {
+      "raw": 1552744,
+      "gzip": 406303
+    },
+    "street-surfaces-0_-5": {
+      "raw": 1260528,
+      "gzip": 332409
+    },
+    "street-surfaces--1_-4": {
+      "raw": 902832,
+      "gzip": 227144
+    },
+    "street-surfaces--2_-4": {
+      "raw": 185632,
+      "gzip": 48116
+    },
+    "street-surfaces-0_-4": {
+      "raw": 680936,
+      "gzip": 172395
+    },
+    "street-surfaces--1_-3": {
+      "raw": 436352,
+      "gzip": 110129
+    },
+    "street-surfaces--2_-3": {
+      "raw": 31272,
+      "gzip": 7689
+    },
+    "street-surfaces-0_-3": {
+      "raw": 59552,
+      "gzip": 16155
+    },
+    "street-surfaces--2_-14": {
+      "raw": 22384,
+      "gzip": 7352
+    },
+    "street-surfaces-1_-11": {
+      "raw": 3040,
+      "gzip": 1518
+    },
+    "street-surfaces--8_-8": {
+      "raw": 15128,
+      "gzip": 6283
+    },
+    "street-surfaces-1_-6": {
+      "raw": 5712,
+      "gzip": 1838
+    },
+    "street-surfaces-1_-5": {
+      "raw": 9424,
+      "gzip": 3276
+    },
+    "street-surfaces--4_-14": {
+      "raw": 5152,
+      "gzip": 1783
+    },
+    "street-surfaces": {
+      "raw": 11536166,
+      "gzip": 2677801
+    },
+    "city-base--1_-6": {
+      "raw": 5628992,
+      "gzip": 769624
+    },
+    "city-base--1_-5": {
+      "raw": 5611224,
+      "gzip": 745698
+    },
+    "city-base--1_-7": {
+      "raw": 4666216,
+      "gzip": 625341
+    },
+    "city-base-0_-6": {
+      "raw": 4766336,
+      "gzip": 653519
+    },
+    "city-base-0_-7": {
+      "raw": 940920,
+      "gzip": 129554
+    },
+    "city-base--1_-8": {
+      "raw": 2908424,
+      "gzip": 372362
+    },
+    "city-base--1_-9": {
+      "raw": 3977904,
+      "gzip": 490291
+    },
+    "city-base--1_-10": {
+      "raw": 4028728,
+      "gzip": 512310
+    },
+    "city-base--1_-11": {
+      "raw": 728488,
+      "gzip": 92613
+    },
+    "city-base-0_-11": {
+      "raw": 1492680,
+      "gzip": 184029
+    },
+    "city-base--1_-3": {
+      "raw": 759224,
+      "gzip": 91255
+    },
+    "city-base--1_-4": {
+      "raw": 595440,
+      "gzip": 84793
+    },
+    "city-base-0_-5": {
+      "raw": 4606272,
+      "gzip": 610592
+    },
+    "city-base--5_-9": {
+      "raw": 344960,
+      "gzip": 42520
+    },
+    "city-base--5_-10": {
+      "raw": 5290280,
+      "gzip": 682312
+    },
+    "city-base--6_-10": {
+      "raw": 5445056,
+      "gzip": 749124
+    },
+    "city-base--5_-11": {
+      "raw": 2821984,
+      "gzip": 348622
+    },
+    "city-base--5_-12": {
+      "raw": 3920536,
+      "gzip": 485105
+    },
+    "city-base--5_-13": {
+      "raw": 963120,
+      "gzip": 117790
+    },
+    "city-base--6_-9": {
+      "raw": 892624,
+      "gzip": 111426
+    },
+    "city-base--6_-11": {
+      "raw": 2146192,
+      "gzip": 266425
+    },
+    "city-base--6_-12": {
+      "raw": 1376224,
+      "gzip": 172805
+    },
+    "city-base--6_-13": {
+      "raw": 416136,
+      "gzip": 55405
+    },
+    "city-base--7_-10": {
+      "raw": 5592736,
+      "gzip": 756368
+    },
+    "city-base--7_-9": {
+      "raw": 1768232,
+      "gzip": 223591
+    },
+    "city-base--7_-11": {
+      "raw": 1469512,
+      "gzip": 183634
+    },
+    "city-base--8_-10": {
+      "raw": 3188472,
+      "gzip": 406143
+    },
+    "city-base--8_-9": {
+      "raw": 1133880,
+      "gzip": 130496
+    },
+    "city-base--9_-10": {
+      "raw": 2706752,
+      "gzip": 325257
+    },
+    "city-base--8_-11": {
+      "raw": 473528,
+      "gzip": 60511
+    },
+    "city-base--9_-11": {
+      "raw": 645904,
+      "gzip": 82808
+    },
+    "city-base--9_-9": {
+      "raw": 526336,
+      "gzip": 67169
+    },
+    "city-base--2_-5": {
+      "raw": 1374248,
+      "gzip": 164280
+    },
+    "city-base--2_-6": {
+      "raw": 1309624,
+      "gzip": 160963
+    },
+    "city-base--2_-8": {
+      "raw": 5694416,
+      "gzip": 755351
+    },
+    "city-base--2_-9": {
+      "raw": 5691280,
+      "gzip": 752165
+    },
+    "city-base--2_-7": {
+      "raw": 2312328,
+      "gzip": 339127
+    },
+    "city-base--2_-10": {
+      "raw": 4332736,
+      "gzip": 524592
+    },
+    "city-base--2_-11": {
+      "raw": 2265328,
+      "gzip": 283087
+    },
+    "city-base--2_-12": {
+      "raw": 3673024,
+      "gzip": 459218
+    },
+    "city-base--2_-13": {
+      "raw": 2267976,
+      "gzip": 290814
+    },
+    "city-base--3_-10": {
+      "raw": 3943816,
+      "gzip": 502689
+    },
+    "city-base--3_-13": {
+      "raw": 1356864,
+      "gzip": 169299
+    },
+    "city-base--2_-14": {
+      "raw": 196724,
+      "gzip": 28673
+    },
+    "city-base--3_-7": {
+      "raw": 122960,
+      "gzip": 19067
+    },
+    "city-base--3_-8": {
+      "raw": 688488,
+      "gzip": 85298
+    },
+    "city-base--3_-9": {
+      "raw": 2840984,
+      "gzip": 368080
+    },
+    "city-base--3_-11": {
+      "raw": 3685624,
+      "gzip": 445461
+    },
+    "city-base--3_-12": {
+      "raw": 3175304,
+      "gzip": 405625
+    },
+    "city-base--3_-14": {
+      "raw": 385336,
+      "gzip": 52650
+    },
+    "city-base--4_-10": {
+      "raw": 4627984,
+      "gzip": 611220
+    },
+    "city-base--4_-11": {
+      "raw": 4518112,
+      "gzip": 594733
+    },
+    "city-base--4_-12": {
+      "raw": 3900528,
+      "gzip": 494766
+    },
+    "city-base--4_-8": {
+      "raw": 560504,
+      "gzip": 76597
+    },
+    "city-base--4_-9": {
+      "raw": 1056760,
+      "gzip": 144680
+    },
+    "city-base--4_-13": {
+      "raw": 207152,
+      "gzip": 28750
+    },
+    "city-base-0_-8": {
+      "raw": 1671760,
+      "gzip": 213166
+    },
+    "city-base-0_-9": {
+      "raw": 3552568,
+      "gzip": 421655
+    },
+    "city-base-0_-10": {
+      "raw": 2399744,
+      "gzip": 302290
+    },
+    "city-base-1_-8": {
+      "raw": 2151904,
+      "gzip": 270333
+    },
+    "city-base-1_-9": {
+      "raw": 1948352,
+      "gzip": 241753
+    },
+    "city-base-1_-10": {
+      "raw": 2090280,
+      "gzip": 245576
+    },
+    "city-base-2_-8": {
+      "raw": 122128,
+      "gzip": 18598
+    },
+    "city-base-2_-9": {
+      "raw": 244592,
+      "gzip": 32600
+    },
+    "city-base--1_-12": {
+      "raw": 43008,
+      "gzip": 6462
+    },
+    "city-base-1_-11": {
+      "raw": 9400,
+      "gzip": 2020
+    },
+    "city-base--10_-11": {
+      "raw": 16868,
+      "gzip": 3040
+    },
+    "city-base--10_-10": {
+      "raw": 150196,
+      "gzip": 18906
+    },
+    "city-base--8_-8": {
+      "raw": 8976,
+      "gzip": 1847
+    },
+    "city-base--7_-8": {
+      "raw": 15952,
+      "gzip": 2874
+    },
+    "city-base-1_-7": {
+      "raw": 7896,
+      "gzip": 1690
+    },
+    "city-base-1_-5": {
+      "raw": 75000,
+      "gzip": 11220
+    },
+    "city-base-1_-6": {
+      "raw": 14576,
+      "gzip": 2849
+    },
+    "city-base--2_-4": {
+      "raw": 431000,
+      "gzip": 54933
+    },
+    "city-base-0_-4": {
+      "raw": 674248,
+      "gzip": 84648
+    },
+    "city-base-0_-3": {
+      "raw": 178632,
+      "gzip": 24304
+    },
+    "city-base": {
+      "raw": 40152040,
+      "gzip": 10523716
+    },
+    "nav-medium": {
+      "raw": 7846360,
+      "gzip": 2106441
+    },
+    "roof": {
+      "raw": 104269248,
+      "gzip": 904911
+    },
+    "nav-low": {
+      "raw": 7847656,
+      "gzip": 2106767
+    }
+  },
+  "sha256": {
+    "field-qP": "7fb1227e30980df67f498d2b6b58560002e49c7910040b025d0f96ba3fa6d795",
+    "field-qH": "f2b0628c2ad7349e36301cd501494c9a4c762ca2c3fce27eb3e9bdf000efb1b1",
+    "field-qT": "c467e79336349ae0c332f53e19d67ede6eb14d00ce344453c05ea559cf165b1c",
+    "field-claim": "955efdfd50990dc5d204356e0e1d09df107d41ffae93cb45f1a355683781779b",
+    "field-dtex": "a6117d0829426eac3ad6216dc5dc78f48b44a9ed72fa0b25269c9d859588db74",
+    "field-clsB": "b31de53d3e19218c3281926523c9f3fb83610d65c8c7f484a2d460062f9d13e3",
+    "field": "217781e938c055634d5d0f5db51aa723b101cf83ab0871d40f2ec299462665c0",
+    "street-textures": "aea388ea974e694b8fa9c60c93f7b501b5db605c8e8f3807117867eb72dcef48",
+    "street-kerbs": "92bae1636abb124126b474cd7c33e4f76091c088ffd9d00f2041876dd673fcbc",
+    "street-surfaces--3_-13": "f4c8cf5a25524d44e03c194a4c9311e62ae8f674889ae6d32419fc16a4080a24",
+    "street-surfaces--3_-14": "5e7275ade6a05a66e478be2019f71ebdfbc67622bbd143eee64b5dbf836e86af",
+    "street-surfaces--2_-13": "2e39572d3e015f04fd1cb694a9c466617eb091e5058835efb7cc3035f7d3c4a1",
+    "street-surfaces--4_-13": "812a532a9d6a71b5a55ce9aeb2cee78228213acdd2b33cf14f182f6ca9729a8d",
+    "street-surfaces--5_-13": "206d7b7c1bfd5788a4c2110745f9ebc96f9ffc51b9409bf9df1f1dd79315d768",
+    "street-surfaces--3_-12": "2b8b8621a25b8fbe31fdc615065fdf00e3f23c3b14da605eefd893963e19c651",
+    "street-surfaces--5_-12": "f71e7a3979fae410b87312b927c0c5a9537238e687bce21197c0378c7772eb74",
+    "street-surfaces--2_-12": "69578d49c818bb7e53a261c33576a83f388fd0b4c9e9ae7dafaad5a52a98fa72",
+    "street-surfaces--6_-13": "d7688cfc2631971140642971733267ad0482ce1a2888546b923b050c18a16c8b",
+    "street-surfaces--4_-12": "eeb949982480b6adc4272963773554f00e1e3d4fcc44436ba46f445ff66ca09d",
+    "street-surfaces--4_-11": "a9c03a6a0f37f3ffd1aef99ef0a5de2d41330a6b30e8a9fc0b167b19cce30091",
+    "street-surfaces--6_-12": "0c2264b2d54c6caca67392af432ec40aede555105b1d55baa126483cb3e72594",
+    "street-surfaces--5_-11": "aec03a3eafca0206b479a77381d2b03334603a677aac1f23cfc8476705a81f5b",
+    "street-surfaces--3_-11": "f1c380d84e697856f193f16f6194e76e1c84545f72bbd7baeddb3ce3b0293935",
+    "street-surfaces--1_-12": "7d986cc1e941b222109b53a05d1f6a7a632244f704a4039aae744b4116a6a0c9",
+    "street-surfaces--2_-11": "2082a1e4408296d5023abc303cc08345e0450609aa2d8fc6ca99e471711a98aa",
+    "street-surfaces--6_-11": "02a947254a19a8e4f8b364eaacb0428d6570dda9f3e04d03431e21fc6cf4f915",
+    "street-surfaces--1_-11": "0fa71c514e298278fd00a01d7b3070e712500ea9c55b050894bb86cead093e0b",
+    "street-surfaces--2_-10": "def50b85b86e5d5beba3b94e6999b553b0b86371bac4aa9c55f6343e419f9a39",
+    "street-surfaces-0_-11": "2d2b48d9f724b3edb922406b6f39db5911d4170a35114956a25a13e35402aea3",
+    "street-surfaces--4_-10": "310ea36da04580bf2895c1651ede6765b5f9c1c3fa11aef4ffcd4b681f698e19",
+    "street-surfaces--9_-11": "daccda6c137b12ddd00cdc4fae18344ffe82569b286640c0fb6ea361995efb0c",
+    "street-surfaces--8_-11": "57c5d7b7f521cc957da87ece699939674608f9748aaefb0cf9a0dfe347420ff5",
+    "street-surfaces--10_-11": "dfcf328147e13430dfe316fa018c5e2d8aa8f9d087b64802b9e80817c70b6991",
+    "street-surfaces--9_-10": "fd742ee5ff2e632785231e701eda5498100f0fc5ca70016b3516cbc86138b7e9",
+    "street-surfaces--7_-11": "04ec29da476082df8df48de9c94958d624c2ee67ad53ba60ac7b44cdef1d8c93",
+    "street-surfaces--7_-10": "bd251a43235d0d93c28ea63b34f49b732a71c229378043dbc5faac27d3a0bdf3",
+    "street-surfaces--1_-10": "ac07756d9d38d18ec8a45d93126db5d073b25700abcbc4b704e301e7becea985",
+    "street-surfaces--5_-10": "ce00bfab31e2671c43402ae886493499c0ca4e27dffa38f2c08619d469197919",
+    "street-surfaces--3_-10": "ea8be254a9295c4140e5c0bb1029ea89ff3959bb4a8298c630c48aba9938398d",
+    "street-surfaces--6_-10": "314122269e989c3e2b0bec5415bdf68341e11a164fc06d031ff0b351b73fc55a",
+    "street-surfaces-0_-10": "6131c274aeb5348672813de10a5487e8a5c09d98230db6ea8e32be7f75e1f80a",
+    "street-surfaces--8_-10": "b4cde6b2f331458ab17cc6e281ab88214ddf4726133cffaa169b60fa8e13c7e2",
+    "street-surfaces-1_-10": "4c1d57104ed5294c583628ec2ce0028ce96377b72faf3ac93837ad4e3de20013",
+    "street-surfaces-0_-9": "aec1988104b0cd2d0afc811dd7496878e1204dd6818af2be5f816966d41c8e23",
+    "street-surfaces--10_-10": "89b9a9bcc9194e3c862280a9d10cbac7c8c047a9aa98ffc4ac76b0cc697f485c",
+    "street-surfaces--2_-9": "4df3cc352e61acc81ce0eccd882dd10f20642e4d5c809f9b7b9595c0290021f3",
+    "street-surfaces--8_-9": "9e6f2d614940a42270e8936a7422e7ce53b9afc75745dee1c82f81107f87445c",
+    "street-surfaces--6_-9": "6ad88e6ee7329e7d71b71f96971c25b68fb0ba8172383db01da7e88a0a6d8680",
+    "street-surfaces--7_-9": "9f1beda84fb4a9ce850fd6748ec91779016fcd08ee23a0c34a96ef0577b61aeb",
+    "street-surfaces--5_-9": "0541302ef44ec43ee1e3ac903b5f0187129356cd2f0296590e82d2fbec767707",
+    "street-surfaces--1_-9": "2b093a4d1d49ce6920bf95faa4e95a7a239029b9d1bd17fdaf3afadad4ef1a87",
+    "street-surfaces-1_-9": "b7638243c25b2f9d9456296a17d62c2bd664492d984468e3919132aaca7325e6",
+    "street-surfaces-2_-9": "762b3dda8f095344faa70446de02c7bee4930d9745ad0b733e8452f756a1a748",
+    "street-surfaces--4_-9": "cbed31073e87916814ae2308a2de745b502854bfe2d4ec2d5937b201465d146f",
+    "street-surfaces--3_-9": "55acb43b046e68f1a28ba01f07dca7f6a3a4259cf89206c339cb3438666a94f6",
+    "street-surfaces--2_-8": "6b5a3f995942122b4a71d231b9f45ed93c83513db2fe4ef16c82e97d6748d7fc",
+    "street-surfaces--9_-9": "fd4f5a523941a4af1788b297b92ec3460d3b38134d6a30944daf2e48dddaf3e8",
+    "street-surfaces--10_-9": "a9de048436adbfdeec2c2bb07cf4bab81bfd2fe2155d9fa00132dff4be443012",
+    "street-surfaces--1_-8": "f02bd76d2bf1022d00ac1f1c4845f25786697b5ea67d27c1e6998234268e53bb",
+    "street-surfaces--3_-8": "d80d5c6fe8866f9d7633342f9c59c43c557f971130122eff0c20c71b5aae8fe2",
+    "street-surfaces-1_-8": "337ac2694bdda909bd391ddc1b560c1614068ff88f1007b270f2e9e9ec67e93d",
+    "street-surfaces--2_-7": "4c4949bcd26969a5456debc1193fc428ec8ec603fb56d7330d1880d29fe31e26",
+    "street-surfaces--4_-8": "21f4dbd32a92885a8d72ab277b02f6adf51d5e486c19845a7e7992ab2cbffa7f",
+    "street-surfaces-0_-8": "1fe810e8ebbf66a8c642a2e122cf7b4dd6edeaecfed0e13967f5a50eb6b70b96",
+    "street-surfaces--7_-8": "94f074f73207e7160dda29fddb7c7887a904724a8cf4a1e9415f575f653ad09d",
+    "street-surfaces--1_-7": "1a39bccd5b550b751102854abfa4f7d45e3c92085fedc24929823c3f9c032710",
+    "street-surfaces-0_-7": "f7f72c1d242eaee2ab77665b8a3edac6aeb1b0fa12884e8d416e8589577270c2",
+    "street-surfaces-2_-8": "746cd6bac6a9636830c5d8362868bb1938c23c32ebb9753224753c1ea40b2008",
+    "street-surfaces--3_-7": "075346da46b932a7576a37582c152df829f360cbf4ee97c52cfedb7f41427ebf",
+    "street-surfaces--2_-6": "5f763d7d7dfacaf87221409a38165a0abba6ebbb98ef2a1c4a350888da49070d",
+    "street-surfaces--1_-6": "4f9d3c46a1ed4fb0378da5af2476d40590a8bc79183d6ab8abf24c241aa74d05",
+    "street-surfaces-0_-6": "b2008f101fc0c38ddb16691153267b1b0be0a80451e7070d2739c12ced753f67",
+    "street-surfaces--2_-5": "f466d1345078db3d3db3bf662eb4c010cbf99c87c0252e37da2ffe93bd63d75c",
+    "street-surfaces--1_-5": "712733e8e21711396fcbc0ca25105989c6c0f9dd95cfddfbdb917c494c588a5c",
+    "street-surfaces-0_-5": "7d4e23abd9a15c30116230f6d6c98cabb332a9c013f6fda8af75d262258564f7",
+    "street-surfaces--1_-4": "9089d21a6bee2a6155573d1cadf4028a1785a316e7fea72fb717589c8105cad8",
+    "street-surfaces--2_-4": "20d8becab76000b818485d2513e01da7daf0f87b81d57b87791483ab500267f8",
+    "street-surfaces-0_-4": "20d5701ce032b92dcebd78f1009b5d0a98d587277101dd86a2ca0d834da5d804",
+    "street-surfaces--1_-3": "b5c200a3f01496ab0c60556c66bbeb83a20a109c12463aa7f77640478d8ebd97",
+    "street-surfaces--2_-3": "94fa162cd452408b5ed97be7dee0f1428a8de67422f0522de35bc1bf52d4b08f",
+    "street-surfaces-0_-3": "dea4bf178c33982bd9ca4240e5cb491944ceb4331532f9cc2456aa4148dbc22b",
+    "street-surfaces--2_-14": "8582dabee5c0248078a88b2bf43ecb67bed36e40cc94468000029587c979511c",
+    "street-surfaces-1_-11": "7d7700c8603b52584978ce16c0756f1a7123404c528891e5214dc57c599456e7",
+    "street-surfaces--8_-8": "f2e2eaca29d15ccbd6271ecada3e1e7b069839ffebbd4a13ccbd16a17a1cb50b",
+    "street-surfaces-1_-6": "16100653891d6214cd325ccecf9f20dba727b918311289757671bfe57e89716d",
+    "street-surfaces-1_-5": "dcc0bd02360fb47365cd7a896a57a42d731924506f3a768d7663893a7b4a3926",
+    "street-surfaces--4_-14": "e514334ddad04d42a4eab2b6ec11b4f41c990837a530881266db54c1ca7a23e9",
+    "street-surfaces": "cd17ab2dffc41289063be714c480a731bbd12c8fda0ddb8b2b301b2396e22ab8",
+    "city-base--1_-6": "442a701fcb0064e3219a6b428dfb071828569547f79be4a09e8637aaa7f5d25c",
+    "city-base--1_-5": "8133cf98fd5812419022dd47e7a80e97c19bbff97e1b6f483182886b23011ad3",
+    "city-base--1_-7": "2256510ec28f4fd36763d208e864dc9ed68861f8a667637712f6e57d2e9d34dc",
+    "city-base-0_-6": "5d692c52c899d5399285b438c8aede630ac6378797b8c76faf31ded5fba3281d",
+    "city-base-0_-7": "a2e4d16b2c5c618561fec9f4d4807da2c0e708c53595ad305229c88d61b3e79f",
+    "city-base--1_-8": "f91c832e547068698c1f2d5b53fe18da547d99fcd86f83e9fabf995d3ba9ebcd",
+    "city-base--1_-9": "15b47818acbce10e52c2747e148d30f9ceaa39cfa6c3fc7f52bd0cb5857f88e0",
+    "city-base--1_-10": "79fbeb7f3a6b678505dd0c42876fcab949677d9000d88ec5becb2b0c405b2dac",
+    "city-base--1_-11": "4a831b4cb333b84367967ebdd40a85628a4b1c5f3fa1723ced2629ac42df0474",
+    "city-base-0_-11": "9ec3eda22055dae5906e7bfc61f055c28587b78f09acc9c984c4de4e07d6285e",
+    "city-base--1_-3": "062eff566cd85b8eb05f92774224f5ba579892fc042a240a3574d1dfb929453a",
+    "city-base--1_-4": "36da6cacf0cfd04dcd9d885bd35e575e974e731de2c4dc761d60ae3c7ca44d8f",
+    "city-base-0_-5": "eaac88c508ae2a049921b0dcfc998f0dfb0df078c6f7836f1ed0d3908e4328c9",
+    "city-base--5_-9": "817abd069aed32b0a22ea29391b4833276654f42496d24fa5001aafd83975b25",
+    "city-base--5_-10": "e54c842d0f58e519cd43528271ca625df4014c664923f990d437ce3d65fbc0b1",
+    "city-base--6_-10": "22fd933e752a2bd8ae9932620dd651070e475c01d184d15fabab273ae0706efe",
+    "city-base--5_-11": "4ff83583da422650a831a717d6e0cb7afe78cd350810bfc8a6426f6bcb19a25e",
+    "city-base--5_-12": "44926bbc2c18e2396c676c39a36894a5406b4d37304ea1572604f94ed5535a83",
+    "city-base--5_-13": "662cb40d388b4a7109de304536053f33bfd032e8db2b9c2364bb10087f12ca61",
+    "city-base--6_-9": "d0fada45e6622b1a1a42578ad24027a8b2228f11936f9e6d1ae8fab1c868c90f",
+    "city-base--6_-11": "1c493b3d971c0eba812211655a1d7489f6bac7a6fa598b2540b50317dae6c8bb",
+    "city-base--6_-12": "522dd3289b4b885f06dd5bfa33a363954e1f46279925a39296afb21e1e3efca9",
+    "city-base--6_-13": "fa41e685649e7fa7a260df756ec3970ddbbfb57ee942ad5eef598a14bb9eda30",
+    "city-base--7_-10": "50b71378a4b050382ab36ae342bb96a7596e5f740dcb909549ba32371ead5767",
+    "city-base--7_-9": "761d11c9a7cc7fdf1aa775ecbb99aae5d066e6bc579cf011f6cfb70518e9a1c6",
+    "city-base--7_-11": "7ce0585acf449628a5ca487411be9778a7c2ad66e5860385195c9ce5cae911a9",
+    "city-base--8_-10": "5f095252562acc77ab7ba6ed0ede6572a3705d3eed744329a305e1d609dcbfcb",
+    "city-base--8_-9": "0779a64c7c7bc8c07c6f82d48bc52ee4d9f1dfc33d16cd703eb61f93c11b67ed",
+    "city-base--9_-10": "1247f6572bed76c4a196db51136b543675eaf191a9125697d0a71fb7785771be",
+    "city-base--8_-11": "6120966ab4d58f4a2344b862e437b22d7212800b628de506c3b59c6290c453c8",
+    "city-base--9_-11": "4e82fd16a9865be274b54aaac5ed41a5f987b1b2209d4ff7462522af56539b98",
+    "city-base--9_-9": "04e2fc9d75989fa4f3398a6446b2cb258bae5ee9f60afc26d5ef724911990ea6",
+    "city-base--2_-5": "1378af9d74c01eda82f07635cf0b638604dc22ce7c1b314e3a3b8d9e0ac04ef5",
+    "city-base--2_-6": "9396d09ed621c67f5d8d5aee681cb58f42be47f6bab46766af1e4a83bc202d0b",
+    "city-base--2_-8": "85ca0ed8aa918e06d087cfb0b5225224ceafd251dde6ba90a539f23b83170a40",
+    "city-base--2_-9": "402fadf95fce8e9d8035af27da5f9a5e5157664fdd954b6c930cca29c6b6f860",
+    "city-base--2_-7": "52d812e21b928b9ac8382c40db0644f20d4ad4efaa0bdc272226a2ddc005afdf",
+    "city-base--2_-10": "5688ee4461cf99c88ec9a6531bcaccf5b01991ade95e66f660945917a4e63549",
+    "city-base--2_-11": "69ed85dc61f3ce589bcd7ef9d803256305777f1ef9039ada012130a98b3d2392",
+    "city-base--2_-12": "d43ce56a0be50577b2f5fa7ae0d01b9fe7d9b7148e62ae86963c8752905eea4c",
+    "city-base--2_-13": "730e97d3613d746362e59ef5f98effe7d98c1ab63ed3ed4ba3e5fb2d002d4d15",
+    "city-base--3_-10": "fbb9b4e2810a8f9f5f7bb4e5b368896090588abf4e0ffe29a70f9f88093ca6b5",
+    "city-base--3_-13": "d5c5ce0c971356da1ed134d247aa197db23be6ad327bf0b7c3b7d3cc3235d451",
+    "city-base--2_-14": "77a75af03de63b3d383f9d428da36c3e3a7364e43616486836789ce34a569684",
+    "city-base--3_-7": "11d758019bdde54dd8bfb5e1169d7166cb9b41f7d4be4b936a05757bba6a871f",
+    "city-base--3_-8": "1adca72b77ae52665cca43c78666de680de9ec27138d5d820bc8608e3ae52d9e",
+    "city-base--3_-9": "95a465b6bd193cba4159963e994b3861de71ccbabb41985d915c8788c425753b",
+    "city-base--3_-11": "c18f845b585e0417ecc54b5e71633e1f4a17a75c9f123c5f026affc6ae56e9fd",
+    "city-base--3_-12": "4ad6fd219410107b7a15a7b7b8e7f51deb1ad0c2b1b2de58362c622d2869c0bb",
+    "city-base--3_-14": "485e5ce133198a3a12eca6022528ba19a0de14039f145d781fe2a8f6357a3fe5",
+    "city-base--4_-10": "f87ae4682b26a610b9a7fc8712217e05ee83f8986060ce7a9ec2cce606457733",
+    "city-base--4_-11": "2b2cde1264853addb1269de149301764d40fe12f7a8aab483e7ff20da929ec7b",
+    "city-base--4_-12": "81192523608bfbfce920b07639346c7016467931723eff9c06b1e7aba20f1dc8",
+    "city-base--4_-8": "f5322386ec363f0817e64b91efd53ef78f4c2fe4dd6357ab4dad74a3349ebbdb",
+    "city-base--4_-9": "44a82f68b626e539f7a665a1080bfd6a67b6c836c28f55f0929b178bb410e819",
+    "city-base--4_-13": "615ab1a30902b3a772275b6671c73910323dc6c38ba4e771a2acec9f3ed02c12",
+    "city-base-0_-8": "ea0bbef8bc4052d191a846845619bb7b5baa87a3d0407ab0966f85b49b04b32d",
+    "city-base-0_-9": "90faccda3489bf7c8b2713d43d0ebeadbe64dcad13bf164a9b6cf591d4eb776f",
+    "city-base-0_-10": "09e48f85c636673008a008e8c40f96741a8e8e3849d34040417296f0f4d4cb2f",
+    "city-base-1_-8": "912c28021fe66f0229e863339a8f4b9a63c77a348c0e5c527e7246e44a3d0d6d",
+    "city-base-1_-9": "a53a783dccdfae31d776c5b2c8c43084608927c5ddcd9f02e9310090053d0487",
+    "city-base-1_-10": "37df970b353d9c808130ed9b1525a356bda89bc926bc008aeb1e9f2586a66488",
+    "city-base-2_-8": "579a83b11a93a28152fe56bc5763855f4b85915a220daf321faaedbfccf32dab",
+    "city-base-2_-9": "8e7d2d17db0bcb9fa428ce07125d8ee53b7565e3e314e80cead9eba54c2f2501",
+    "city-base--1_-12": "9503e6bc7fede0bedcd2dcd49f9abb8d28925a421be1c3a6bf845a6582e0eb2e",
+    "city-base-1_-11": "a83199ee577226178fb2b090c65891c0ca4a5336b7410bfe21a7bb4336e0be74",
+    "city-base--10_-11": "f615e5e40cf7578c097aee96b0c671e62c8f05fcc232ac5292d1e3f79b2a57d4",
+    "city-base--10_-10": "55baea9e374030afb9bc683af4c59021941f5d0f441d5d28db392fe95737ec50",
+    "city-base--8_-8": "54d11348edb17a60053b2c0c3e795091778739d5678aa691d4af211a0da96be9",
+    "city-base--7_-8": "42e3a2ba8316e26fc2e6787c3fba44bdfabceaff3aa0c43754f00dd50cca4270",
+    "city-base-1_-7": "353441a4420b98e812b10192f9bd1341804214c082410acbc911d3b66c950389",
+    "city-base-1_-5": "c34c25e965f3d21352f4093ed1ff3bb85d95bf5e8bde652a6e31a6aaf0622778",
+    "city-base-1_-6": "8e592e75a5758a01162a732b00902bb529f2ed34bd518aef5f982d99cc3fcd43",
+    "city-base--2_-4": "2f92d5e01651e41606c3f877ec8e76f236e02a4acc7762db3bc81f2a7936d702",
+    "city-base-0_-4": "fbd241b8c7d8b9d117f8890503d4c91274ad35d0d0eff4e58a51cf9b9a18aee4",
+    "city-base-0_-3": "2d0826d06a337d050b79a65620c91346f5c99e131d5b72f6b4200c7ad0dffbdf",
+    "city-base": "dfdacd40a06a61712e0c1237e1d0cfe8b2f7ebdd93eead402bd50532cf9e8cd5",
+    "nav-medium": "17f45ad181e1fbebdc4253dd15834f66aeef9c930a6463acfc6266b654cf1949",
+    "roof": "53d543a9129e5de4e582699c927f9788014d24ba74e8f93aadc28bab385c3ad7",
+    "nav-low": "296e14e0b9b4207674c5d49ac7f1798edc393b4d423d4265f0f81ce5a35b677d"
+  }
+}

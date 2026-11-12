@@ -2,9 +2,12 @@
 // The base is the planning map's B600 raster. Tiny transition refinements are
 // explicit cells, never a relaxed gate/dead-strip test or a water exclusion.
 import { mapData, rectsOfRings } from './area-shape.mjs';
-const CONFIG={ 'morskie-vorota':{k:71,prefix:'M'},okrug65:{k:100,prefix:'O'} };
+const CONFIG={ 'morskie-vorota':{k:71,prefix:'M'},okrug65:{k:100,prefix:'O'},komendantsky:{k:89,prefix:'Q'} };
 const CELL=80;
 export const COASTAL_REFINEMENTS={
+  // The southern raster fringe is already the Islands scene's water reach.
+  // Do not create an accidental three-cell area overlap with its E01 play cell.
+  komendantsky:{add:[],remove:[{x0:-5600,x1:-5360,z0:-5840,z1:-5760}]},
   'morskie-vorota':{add:[
     {x0:-6880,x1:-6320,z0:1120,z1:1520},
     {x0:-5360,x1:-4880,z0:1440,z1:1520},

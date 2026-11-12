@@ -2041,3 +2041,39 @@ tolerance). The claimed canopy is checked through its actual roof and support
 geometry; unexpected low piers and lane obstructions still fail.
 The inland bridge envelope regression independently checks actual bridge
 meshes against their mapped deck, rail and support corridors.
+
+## 17. Komendantsky Aerodrom–Ozero Dolgoye and Sampsoniyevskoye–Lanskoye (2026-11-12)
+
+The two merged planning polygons (map IDs 89 and 52) are live scenes with
+independent pages, data facades, module lists, owns tables, bakes and handoffs.
+Their 80 m play rasters include a 600 m shore-water band. Enclosed pockets
+in the draft raster are filled so they cannot become invisible walls. The
+implemented territories cover 17.7728 and 17.5552 km² respectively; the
+planning cores remain 10.87 and 9.20 km². Three incidental cells toward
+Islands and five small Sampson–Kronverk overlap boxes were removed because
+they offered no usable crossing. `tools/register-northern-areas.mjs` refreshes
+the registry rectangles; `tools/connect-northern-areas.mjs` derives the six
+paired handoffs and tests their priority against the actual gate state machine.
+
+The full-city source covers little of these districts, so both facades were
+authored from current OpenStreetMap geometry, retaining mapped building
+footprints, road classes, parks, trees, metro entrances and water. The
+Komendantsky generator is `tools/marine-data.mjs --area komendantsky`, with
+snapshot provenance in `src/areas/komendantsky/README.md`; the Sampson generator
+and its snapshot provenance are described in `src/areas/sampson/README.md`.
+The current city modules build the ordinary
+movable furniture and transport around those mapped footprints. Both scenes
+start with one purple Zhiguli, since neither contains the central station.
+
+Komendantsky includes Dolgoye Lake as an isolated reachable basin, park paths,
+the Komendantsky and Pionerskaya metro surroundings, the two-aircraft early
+aviators' memorial, Matsievich Garden's seven busts, and the mapped lake-park
+gateway and sign. [The city describes the park's lake and improvements](https://www.gov.spb.ru/gov/terr/reg_primorsk/news/170615/).
+Sampson includes its [cathedral and bell tower](https://sampsony.ru/contacts/).
+The modeled complex has an open nave arcade, five domes, an arched bell-stage
+and a separate Baroque chapel. The area also includes the Bolshoy
+Sampsoniyevsky Prospekt axis, Vyborgskaya and Lesnaya, the
+Stroganovsky and Golovinsky gardens, and the [Sampsoniyevsky](https://mostotrest-spb.krti.gov.spb.ru/bridges/sampsonievskij)
+and [Grenadersky](https://mostotrest-spb.krti.gov.spb.ru/bridges/grenaderskij)
+bridge groups. Smaller mapped crossings have finite drivable bridge floors;
+the connected Bolshaya Nevka remains open to boats, feet and cars.

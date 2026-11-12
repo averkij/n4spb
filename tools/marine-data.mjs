@@ -1,6 +1,6 @@
 // Coastal OSM authoring: current mapped geometry, the established bake schema,
 // and the planning map's B600 territory. Raw HTTP responses stay in the OS temp.
-// node tools/marine-data.mjs --area morskie-vorota|okrug65 [--fetch-only]
+// node tools/marine-data.mjs --area morskie-vorota|okrug65|komendantsky [--fetch-only]
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,7 +14,7 @@ import { grow, clipParts, readPart, partFileText, facadeTextOf } from './strip-d
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2), arg = (n, d = null) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const id = arg('--area', 'morskie-vorota');
-const configs = { 'morskie-vorota': { k: 71, prefix: 'M' }, okrug65: { k: 100, prefix: 'O' } };
+const configs = { 'morskie-vorota': { k: 71, prefix: 'M' }, okrug65: { k: 100, prefix: 'O' }, komendantsky: { k: 89, prefix: 'Q' } };
 const cfg = configs[id]; if (!cfg) throw new Error('Unknown coastal area ' + id);
 const area = mapData().areas.find(a => a.k === cfg.k);
 const play = coastalRects(id);
@@ -148,6 +148,18 @@ for(const e of all.filter(e=>e.tags?.waterway==='dock'&&e.tags?.dock==='floating
   if(!parts.some(P=>P.arrays.get('PIERS').some(r=>r.id===id)))parts[part].arrays.get('PIERS').push({id,kind:'dock',name:e.tags.name||null,polys,pts:[]});
 }
 clipParts(parts,{extRects:ext,waterRing:600});
+// A complete outline can cross the scenery edge. Keep it only if its own
+// centroid belongs to an extent cell; the runtime's first-owner rule and the
+// area-data audit both use that representative point.
+if(id==='komendantsky'){
+  const kept=new Set();
+  for(const P of parts){
+    const buildings=P.arrays.get('BUILDINGS').filter(b=>ext.some(r=>b.cx>=r.x0&&b.cx<=r.x1&&b.cz>=r.z0&&b.cz<=r.z1));
+    P.arrays.set('BUILDINGS',buildings);
+    for(const b of buildings)kept.add(b.id);
+  }
+  for(const P of parts)P.arrays.set('OVERLAPS',P.arrays.get('OVERLAPS').filter(o=>kept.has(o.a)&&kept.has(o.b)));
+}
 // The centre converter matches unnamed river polygons only when their centroid
 // is within25m of a named centreline. That drops long, curved real waterways
 // (Ekateringofka / Tarakanovka here). Keep every such mapped polygon in RIVER,
@@ -159,7 +171,9 @@ const represented=new Set(riverParts.flatMap(r=>(r.polys||[]).map(p=>JSON.string
 const inRing=(x,z,p)=>{let on=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2)if((p[i+1]>z)!==(p[j+1]>z)&&x<(p[j]-p[i])*(z-p[i+1])/(p[j+1]-p[i+1])+p[i])on=!on;return on;};
 const inPolys=(x,z,ps)=>ps.some(p=>inRing(x,z,p.o)&&!(p.h||[]).some(h=>inRing(x,z,h)));
 for(const P of parts)for(const w of P.arrays.get('WATER')){
-  const raw=rawById.get(w.id),pond=raw?.tags?.water==='pond';
+  // The urban Dolgoye Lake is an isolated basin, despite its generic OSM
+  // natural=water/water=lake tags. Give it the pond datum, not a Neva join.
+  const raw=rawById.get(w.id),pond=raw?.tags?.water==='pond'||(id==='komendantsky'&&w.id==='r6597846');
   if(pond){w.kind='pond';for(const r of riverParts)if(r.id===w.id){r.kind='pond';r.key='moat';r.drop=1.2;}}
   const navigable=['river','canal'].includes(w.kind)||raw?.tags?.boat==='yes';
   if(!navigable)continue;
@@ -202,6 +216,10 @@ if(holed.length){
 // because it takes precedence over the area module's name-based fallback.
 const waterKeys=new Set(['fontanka','griboedov','moika','winter-canal','swan-canal','moat','neva','kryukov','admiralty','smolenka','gavan','nh-inner']);
 for(const P of parts)for(const r of P.arrays.get('RIVER')||[])if(r.key&&!waterKeys.has(r.key))r.key='neva';
+// This out-of-extent polygon duplicates the isolated Fifth Northern Pond at
+// Yelagin with a generic "Aquatoria" Neva key. It creates a false masonry
+// seam on that pond and is not part of Komendantsky's mapped lake or river.
+if(id==='komendantsky')for(const P of parts)if(P.arrays.has('RIVER'))P.arrays.set('RIVER',P.arrays.get('RIVER').filter(r=>r.id!=='r18509888'));
 console.log('current OSM bay coastline',seaRecords.map(r=>r.id+':'+r.polys.length+' pieces').join(', '));
 for(const P of parts)fs.writeFileSync(path.join(out,P.file),partFileText(P.lines,P.order,P.arrays));
 let facade=fs.readFileSync(path.join(out,'city.js'),'utf8');

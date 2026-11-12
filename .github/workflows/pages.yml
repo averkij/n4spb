@@ -40,6 +40,8 @@ jobs:
         run: node tools/pages-assets-test.mjs
       - name: Deployment-only data packing is lossless and bounded
         run: node tools/pages-data-pack-test.mjs
+      - name: Deployment-only bake packing is lossless and bounded
+        run: node tools/pages-bake-brotli-test.mjs
       - name: No dev / test server answers the bake revision by itself, nobody uses the global revision (dev-servers-lint)
         run: node tools/dev-servers-lint.mjs
       - name: Area pages are generated from index.html
@@ -241,6 +243,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Assemble the site
         run: |
           mkdir dist
@@ -259,6 +264,8 @@ jobs:
           node tools/pages-assets.mjs
       - name: Every deployed packed data export equals its source export
         run: node --max-old-space-size=8192 tools/pages-data-pack-test.mjs --actual
+      - name: Every deployed Brotli bake expands to its source product
+        run: node --max-old-space-size=8192 tools/pages-bake-brotli-test.mjs --actual
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

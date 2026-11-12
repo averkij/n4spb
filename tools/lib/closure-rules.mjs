@@ -39,6 +39,9 @@ export const DYNAMIC_IMPORTS = {
  * A row whose literal is gone from its file is a hard error; so is an asset-looking literal without a row.
  */
 export const RUNTIME_ASSETS = {
+  'vendor/brotli-dec-wasm/decoder.js': {
+    'brotli_dec_wasm_bg.wasm': { path: null, hash: false, why: 'deployment-only Brotli decoder resolves its adjacent WASM; the Pages pack manifest verifies its exact SHA-256' },
+  },
   'src/core/handoff.js': {
     'index.html': { path: null, hash: false, why: 'ordinary Palace arrival page, selected at runtime' },
     'diagnostics.html': { path: null, hash: false, why: 'instrumented Palace arrival page; other diagnostic pages derive from registry filenames' },
@@ -49,7 +52,7 @@ export const RUNTIME_ASSETS = {
     './assets/': { path: null, hash: false, why: 'support page metadata selects the area bake directory' },
   },
   'vendor/rapier/rapier.js': { 'rapier_wasm3d_bg.wasm': { path: null, hash: false, why: 'the default URL of the wasm in the compat bundle (new URL(..., "<deleted>")): the wasm is embedded in rapier.js, nothing is fetched' } },
-  'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html', 'morskie-vorota.html', 'okrug65.html', 'kronverk.html', 'aptekarsky.html', 'islands.html', 'moskovskaya.html', 'narvsky.html']
+  'src/areas/registry.js': Object.fromEntries(['strip.html', 'north.html', 'index.html', 'smolny.html', 'vladimirsky.html', 'admiralty.html', 'vasilyevsky.html', 'gavan.html', 'morskoy.html', 'dekabristov.html', 'kolomna.html', 'semyonovsky.html', 'morskie-vorota.html', 'okrug65.html', 'kronverk.html', 'aptekarsky.html', 'islands.html', 'moskovskaya.html', 'narvsky.html', 'komendantsky.html', 'sampson.html']
     .map((p) => [p, { path: null, hash: false, why: 'the page name of a registry row (runtime-only file: a hand-off navigates to it; the page of an area is an entry of its own closure)' }])),
   'src/world/drive/model.js': { './assets/bibliotochka.png': { path: 'assets/bibliotochka.png', hash: true, why: 'the car logo texture (drawn into the model)' } },
   'src/core/baked-world.js': {

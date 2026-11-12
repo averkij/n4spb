@@ -2079,6 +2079,906 @@ REGISTRY["moskovskaya"] = {
 // MOSKOVSKAYA-AREA-END
 
 
+// KOMENDANTSKY-AREA-BEGIN
+REGISTRY["komendantsky"] = {
+  "id": "komendantsky",
+  "page": "komendantsky.html",
+  "bake": "baked/komendantsky/",
+  "requireBake": true,
+  "title": "Комендантский аэродром–Озеро Долгое",
+  "titleEn": "Komendantsky Aerodrom–Ozero Dolgoye",
+  "sights": [],
+  "approxMB": 65,
+  "dev": false,
+  "mapId": 89,
+  "remap": {
+    "src/world/data/city.js": "src/areas/komendantsky/data/city.js",
+    "src/world/area.js": "src/areas/komendantsky/area.js",
+    "src/world/city/known-data.js": "src/areas/komendantsky/known-data.js",
+    "src/world/lib/owns-table.js": "src/areas/komendantsky/owns-table.js"
+  },
+  "play": [
+    {
+      "name": "Q01",
+      "x0": -4960,
+      "x1": -4720,
+      "z0": -10240,
+      "z1": -10160
+    },
+    {
+      "name": "Q02",
+      "x0": -5200,
+      "x1": -5120,
+      "z0": -10160,
+      "z1": -10080
+    },
+    {
+      "name": "Q03",
+      "x0": -4960,
+      "x1": -4640,
+      "z0": -10160,
+      "z1": -10000
+    },
+    {
+      "name": "Q04",
+      "x0": -5360,
+      "x1": -5120,
+      "z0": -10080,
+      "z1": -10000
+    },
+    {
+      "name": "Q05",
+      "x0": -5440,
+      "x1": -4320,
+      "z0": -10000,
+      "z1": -9920
+    },
+    {
+      "name": "Q06",
+      "x0": -2240,
+      "x1": -1920,
+      "z0": -10000,
+      "z1": -9920
+    },
+    {
+      "name": "Q07",
+      "x0": -5600,
+      "x1": -3840,
+      "z0": -9920,
+      "z1": -9840
+    },
+    {
+      "name": "Q08",
+      "x0": -2320,
+      "x1": -1760,
+      "z0": -9920,
+      "z1": -9840
+    },
+    {
+      "name": "Q09",
+      "x0": -5680,
+      "x1": -3760,
+      "z0": -9840,
+      "z1": -9760
+    },
+    {
+      "name": "Q10",
+      "x0": -2400,
+      "x1": -1360,
+      "z0": -9840,
+      "z1": -9760
+    },
+    {
+      "name": "Q11",
+      "x0": -5760,
+      "x1": -3600,
+      "z0": -9760,
+      "z1": -9680
+    },
+    {
+      "name": "Q12",
+      "x0": -2480,
+      "x1": -1280,
+      "z0": -9760,
+      "z1": -9680
+    },
+    {
+      "name": "Q13",
+      "x0": -6000,
+      "x1": -3280,
+      "z0": -9680,
+      "z1": -9600
+    },
+    {
+      "name": "Q14",
+      "x0": -2720,
+      "x1": -1280,
+      "z0": -9680,
+      "z1": -9600
+    },
+    {
+      "name": "Q15",
+      "x0": -6240,
+      "x1": -1200,
+      "z0": -9600,
+      "z1": -9520
+    },
+    {
+      "name": "Q16",
+      "x0": -6320,
+      "x1": -1200,
+      "z0": -9520,
+      "z1": -9440
+    },
+    {
+      "name": "Q17",
+      "x0": -6480,
+      "x1": -1200,
+      "z0": -9440,
+      "z1": -9360
+    },
+    {
+      "name": "Q18",
+      "x0": -6560,
+      "x1": -1200,
+      "z0": -9360,
+      "z1": -9280
+    },
+    {
+      "name": "Q19",
+      "x0": -6640,
+      "x1": -1200,
+      "z0": -9280,
+      "z1": -9200
+    },
+    {
+      "name": "Q20",
+      "x0": -7040,
+      "x1": -1120,
+      "z0": -9200,
+      "z1": -9120
+    },
+    {
+      "name": "Q21",
+      "x0": -6960,
+      "x1": -1120,
+      "z0": -9120,
+      "z1": -8960
+    },
+    {
+      "name": "Q22",
+      "x0": -6880,
+      "x1": -1120,
+      "z0": -8960,
+      "z1": -8880
+    },
+    {
+      "name": "Q23",
+      "x0": -6800,
+      "x1": -1120,
+      "z0": -8880,
+      "z1": -8800
+    },
+    {
+      "name": "Q24",
+      "x0": -6800,
+      "x1": -1040,
+      "z0": -8800,
+      "z1": -8640
+    },
+    {
+      "name": "Q25",
+      "x0": -6880,
+      "x1": -1040,
+      "z0": -8640,
+      "z1": -8560
+    },
+    {
+      "name": "Q26",
+      "x0": -6960,
+      "x1": -1040,
+      "z0": -8560,
+      "z1": -8400
+    },
+    {
+      "name": "Q27",
+      "x0": -6960,
+      "x1": -960,
+      "z0": -8400,
+      "z1": -8160
+    },
+    {
+      "name": "Q28",
+      "x0": -6880,
+      "x1": -1040,
+      "z0": -8160,
+      "z1": -8080
+    },
+    {
+      "name": "Q29",
+      "x0": -6720,
+      "x1": -1040,
+      "z0": -8080,
+      "z1": -8000
+    },
+    {
+      "name": "Q30",
+      "x0": -6720,
+      "x1": -6560,
+      "z0": -8000,
+      "z1": -7360
+    },
+    {
+      "name": "Q31",
+      "x0": -6400,
+      "x1": -960,
+      "z0": -8000,
+      "z1": -7920
+    },
+    {
+      "name": "Q32",
+      "x0": -6160,
+      "x1": -960,
+      "z0": -7920,
+      "z1": -7840
+    },
+    {
+      "name": "Q33",
+      "x0": -5840,
+      "x1": -960,
+      "z0": -7840,
+      "z1": -7760
+    },
+    {
+      "name": "Q34",
+      "x0": -5760,
+      "x1": -880,
+      "z0": -7760,
+      "z1": -7680
+    },
+    {
+      "name": "Q35",
+      "x0": -5760,
+      "x1": -960,
+      "z0": -7680,
+      "z1": -7600
+    },
+    {
+      "name": "Q36",
+      "x0": -5760,
+      "x1": -1040,
+      "z0": -7600,
+      "z1": -7520
+    },
+    {
+      "name": "Q37",
+      "x0": -5760,
+      "x1": -1120,
+      "z0": -7520,
+      "z1": -7440
+    },
+    {
+      "name": "Q38",
+      "x0": -5760,
+      "x1": -1840,
+      "z0": -7440,
+      "z1": -7360
+    },
+    {
+      "name": "Q39",
+      "x0": -6800,
+      "x1": -6560,
+      "z0": -7360,
+      "z1": -7280
+    },
+    {
+      "name": "Q40",
+      "x0": -5760,
+      "x1": -2240,
+      "z0": -7360,
+      "z1": -7280
+    },
+    {
+      "name": "Q41",
+      "x0": -6800,
+      "x1": -6640,
+      "z0": -7280,
+      "z1": -7200
+    },
+    {
+      "name": "Q42",
+      "x0": -5760,
+      "x1": -2400,
+      "z0": -7280,
+      "z1": -7200
+    },
+    {
+      "name": "Q43",
+      "x0": -5760,
+      "x1": -2480,
+      "z0": -7200,
+      "z1": -7120
+    },
+    {
+      "name": "Q44",
+      "x0": -5600,
+      "x1": -2480,
+      "z0": -7120,
+      "z1": -7040
+    },
+    {
+      "name": "Q45",
+      "x0": -5440,
+      "x1": -2480,
+      "z0": -7040,
+      "z1": -6800
+    },
+    {
+      "name": "Q46",
+      "x0": -5440,
+      "x1": -2560,
+      "z0": -6800,
+      "z1": -6480
+    },
+    {
+      "name": "Q47",
+      "x0": -5760,
+      "x1": -2720,
+      "z0": -6480,
+      "z1": -6400
+    },
+    {
+      "name": "Q48",
+      "x0": -5760,
+      "x1": -2880,
+      "z0": -6400,
+      "z1": -6320
+    },
+    {
+      "name": "Q49",
+      "x0": -5760,
+      "x1": -3200,
+      "z0": -6320,
+      "z1": -6240
+    },
+    {
+      "name": "Q50",
+      "x0": -5680,
+      "x1": -3200,
+      "z0": -6240,
+      "z1": -6000
+    },
+    {
+      "name": "Q51",
+      "x0": -5680,
+      "x1": -3280,
+      "z0": -6000,
+      "z1": -5920
+    },
+    {
+      "name": "Q52",
+      "x0": -5600,
+      "x1": -5360,
+      "z0": -5920,
+      "z1": -5840
+    },
+    {
+      "name": "Q53",
+      "x0": -4080,
+      "x1": -3760,
+      "z0": -5920,
+      "z1": -5840
+    }
+  ]
+};
+// KOMENDANTSKY-AREA-END
+
+// SAMPSON-AREA-BEGIN
+REGISTRY["sampson"] = {
+  "id": "sampson",
+  "page": "sampson.html",
+  "bake": "baked/sampson/",
+  "requireBake": true,
+  "title": "Сампсониевское–Ланское",
+  "titleEn": "Sampsoniyevskoye–Lanskoye",
+  "sights": [],
+  "approxMB": 65,
+  "dev": false,
+  "mapId": 52,
+  "remap": {
+    "src/world/data/city.js": "src/areas/sampson/data/city.js",
+    "src/world/area.js": "src/areas/sampson/area.js",
+    "src/world/city/known-data.js": "src/areas/sampson/known-data.js",
+    "src/world/lib/owns-table.js": "src/areas/sampson/owns-table.js"
+  },
+  "play": [
+    {
+      "name": "L01",
+      "x0": -1600,
+      "x1": -1120,
+      "z0": -8320,
+      "z1": -8240
+    },
+    {
+      "name": "L02",
+      "x0": -2000,
+      "x1": -1040,
+      "z0": -8240,
+      "z1": -8160
+    },
+    {
+      "name": "L03",
+      "x0": -2560,
+      "x1": -1040,
+      "z0": -8160,
+      "z1": -8080
+    },
+    {
+      "name": "L04",
+      "x0": -2720,
+      "x1": -1040,
+      "z0": -8080,
+      "z1": -8000
+    },
+    {
+      "name": "L05",
+      "x0": -2800,
+      "x1": -960,
+      "z0": -8000,
+      "z1": -7760
+    },
+    {
+      "name": "L06",
+      "x0": -3280,
+      "x1": -2960,
+      "z0": -7840,
+      "z1": -7760
+    },
+    {
+      "name": "L07",
+      "x0": -3360,
+      "x1": -880,
+      "z0": -7760,
+      "z1": -7520
+    },
+    {
+      "name": "L08",
+      "x0": -3360,
+      "x1": -800,
+      "z0": -7520,
+      "z1": -7440
+    },
+    {
+      "name": "L09",
+      "x0": -3280,
+      "x1": -800,
+      "z0": -7440,
+      "z1": -7360
+    },
+    {
+      "name": "L10",
+      "x0": -3280,
+      "x1": -720,
+      "z0": -7360,
+      "z1": -6880
+    },
+    {
+      "name": "L11",
+      "x0": -3360,
+      "x1": -720,
+      "z0": -6880,
+      "z1": -6800
+    },
+    {
+      "name": "L12",
+      "x0": -320,
+      "x1": -80,
+      "z0": -6880,
+      "z1": -6800
+    },
+    {
+      "name": "L13",
+      "x0": -3440,
+      "x1": -640,
+      "z0": -6800,
+      "z1": -6720
+    },
+    {
+      "name": "L14",
+      "x0": -480,
+      "x1": 240,
+      "z0": -6800,
+      "z1": -6720
+    },
+    {
+      "name": "L15",
+      "x0": -3680,
+      "x1": 320,
+      "z0": -6720,
+      "z1": -6640
+    },
+    {
+      "name": "L16",
+      "x0": -5440,
+      "x1": -5200,
+      "z0": -6640,
+      "z1": -6560
+    },
+    {
+      "name": "L17",
+      "x0": -3760,
+      "x1": 400,
+      "z0": -6640,
+      "z1": -6560
+    },
+    {
+      "name": "L18",
+      "x0": -5440,
+      "x1": -5120,
+      "z0": -6560,
+      "z1": -6480
+    },
+    {
+      "name": "L19",
+      "x0": -4640,
+      "x1": 480,
+      "z0": -6560,
+      "z1": -6480
+    },
+    {
+      "name": "L20",
+      "x0": -5600,
+      "x1": 480,
+      "z0": -6480,
+      "z1": -6400
+    },
+    {
+      "name": "L21",
+      "x0": -5680,
+      "x1": 720,
+      "z0": -6400,
+      "z1": -6320
+    },
+    {
+      "name": "L22",
+      "x0": -5680,
+      "x1": 800,
+      "z0": -6320,
+      "z1": -6240
+    },
+    {
+      "name": "L23",
+      "x0": -5680,
+      "x1": 880,
+      "z0": -6240,
+      "z1": -6160
+    },
+    {
+      "name": "L24",
+      "x0": -5680,
+      "x1": 960,
+      "z0": -6160,
+      "z1": -6080
+    },
+    {
+      "name": "L25",
+      "x0": -5680,
+      "x1": 1040,
+      "z0": -6080,
+      "z1": -6000
+    },
+    {
+      "name": "L26",
+      "x0": -5680,
+      "x1": 1120,
+      "z0": -6000,
+      "z1": -5920
+    },
+    {
+      "name": "L27",
+      "x0": -5600,
+      "x1": 1120,
+      "z0": -5920,
+      "z1": -5840
+    },
+    {
+      "name": "L28",
+      "x0": -5600,
+      "x1": 1040,
+      "z0": -5840,
+      "z1": -5760
+    },
+    {
+      "name": "L29",
+      "x0": -5440,
+      "x1": 1040,
+      "z0": -5760,
+      "z1": -5680
+    },
+    {
+      "name": "L30",
+      "x0": -5440,
+      "x1": 1120,
+      "z0": -5680,
+      "z1": -5600
+    },
+    {
+      "name": "L31",
+      "x0": -5600,
+      "x1": 1200,
+      "z0": -5600,
+      "z1": -5520
+    },
+    {
+      "name": "L32",
+      "x0": -5520,
+      "x1": -5360,
+      "z0": -5520,
+      "z1": -5440
+    },
+    {
+      "name": "L33",
+      "x0": -5200,
+      "x1": -3200,
+      "z0": -5520,
+      "z1": -5440
+    },
+    {
+      "name": "L34",
+      "x0": -2960,
+      "x1": 1200,
+      "z0": -5520,
+      "z1": -5440
+    },
+    {
+      "name": "L35",
+      "x0": -5040,
+      "x1": -3920,
+      "z0": -5440,
+      "z1": -5360
+    },
+    {
+      "name": "L36",
+      "x0": -2640,
+      "x1": 1280,
+      "z0": -5440,
+      "z1": -5360
+    },
+    {
+      "name": "L37",
+      "x0": -5040,
+      "x1": -4240,
+      "z0": -5360,
+      "z1": -5280
+    },
+    {
+      "name": "L38",
+      "x0": -2560,
+      "x1": 1280,
+      "z0": -5360,
+      "z1": -5280
+    },
+    {
+      "name": "L39",
+      "x0": -4720,
+      "x1": -4240,
+      "z0": -5280,
+      "z1": -5200
+    },
+    {
+      "name": "L40",
+      "x0": -2400,
+      "x1": 1280,
+      "z0": -5280,
+      "z1": -5200
+    },
+    {
+      "name": "L41",
+      "x0": -4480,
+      "x1": -4320,
+      "z0": -5200,
+      "z1": -5120
+    },
+    {
+      "name": "L42",
+      "x0": -2320,
+      "x1": 1280,
+      "z0": -5200,
+      "z1": -5120
+    },
+    {
+      "name": "L43",
+      "x0": -1840,
+      "x1": 1280,
+      "z0": -5120,
+      "z1": -4960
+    },
+    {
+      "name": "L44",
+      "x0": -1520,
+      "x1": 1280,
+      "z0": -4960,
+      "z1": -4880
+    },
+    {
+      "name": "L45",
+      "x0": -1440,
+      "x1": 1120,
+      "z0": -4880,
+      "z1": -4800
+    },
+    {
+      "name": "L46",
+      "x0": -1440,
+      "x1": 240,
+      "z0": -4800,
+      "z1": -4720
+    },
+    {
+      "name": "L47",
+      "x0": 560,
+      "x1": 1040,
+      "z0": -4800,
+      "z1": -4720
+    },
+    {
+      "name": "L48",
+      "x0": -1360,
+      "x1": -80,
+      "z0": -4720,
+      "z1": -4560
+    },
+    {
+      "name": "L49",
+      "x0": 640,
+      "x1": 960,
+      "z0": -4720,
+      "z1": -4640
+    },
+    {
+      "name": "L50",
+      "x0": -1280,
+      "x1": -80,
+      "z0": -4560,
+      "z1": -4480
+    },
+    {
+      "name": "L51",
+      "x0": -1280,
+      "x1": 0,
+      "z0": -4480,
+      "z1": -4400
+    },
+    {
+      "name": "L52",
+      "x0": -1200,
+      "x1": 80,
+      "z0": -4400,
+      "z1": -4320
+    },
+    {
+      "name": "L53",
+      "x0": -1200,
+      "x1": 160,
+      "z0": -4320,
+      "z1": -4240
+    },
+    {
+      "name": "L54",
+      "x0": -1120,
+      "x1": 240,
+      "z0": -4240,
+      "z1": -4160
+    },
+    {
+      "name": "L55",
+      "x0": -1120,
+      "x1": 320,
+      "z0": -4160,
+      "z1": -4080
+    },
+    {
+      "name": "L56",
+      "x0": -1040,
+      "x1": 320,
+      "z0": -4080,
+      "z1": -3840
+    },
+    {
+      "name": "L57",
+      "x0": -960,
+      "x1": 320,
+      "z0": -3840,
+      "z1": -3760
+    },
+    {
+      "name": "L58",
+      "x0": -960,
+      "x1": 400,
+      "z0": -3760,
+      "z1": -3600
+    },
+    {
+      "name": "L59",
+      "x0": -880,
+      "x1": 400,
+      "z0": -3600,
+      "z1": -3440
+    },
+    {
+      "name": "L60",
+      "x0": -880,
+      "x1": 480,
+      "z0": -3440,
+      "z1": -3200
+    },
+    {
+      "name": "L61",
+      "x0": -880,
+      "x1": 560,
+      "z0": -3200,
+      "z1": -2880
+    },
+    {
+      "name": "L62",
+      "x0": -960,
+      "x1": 480,
+      "z0": -2880,
+      "z1": -2800
+    },
+    {
+      "name": "L63",
+      "x0": -880,
+      "x1": 400,
+      "z0": -2800,
+      "z1": -2640
+    },
+    {
+      "name": "L64",
+      "x0": -800,
+      "x1": 240,
+      "z0": -2640,
+      "z1": -2560
+    },
+    {
+      "name": "L65",
+      "x0": -800,
+      "x1": 160,
+      "z0": -2560,
+      "z1": -2400
+    },
+    {
+      "name": "L66",
+      "x0": -880,
+      "x1": 160,
+      "z0": -2400,
+      "z1": -2320
+    },
+    {
+      "name": "L67",
+      "x0": -880,
+      "x1": 240,
+      "z0": -2320,
+      "z1": -2000
+    },
+    {
+      "name": "L68",
+      "x0": -800,
+      "x1": -320,
+      "z0": -2000,
+      "z1": -1920
+    },
+    {
+      "name": "L69",
+      "x0": -160,
+      "x1": -80,
+      "z0": -2000,
+      "z1": -1920
+    }
+  ]
+};
+// SAMPSON-AREA-END
+
 // NARVSKY-AREA-BEGIN
 REGISTRY["narvsky"] = {
   "id": "narvsky",
@@ -2791,6 +3691,21 @@ export const GATES = [
   { id: 'nv-moskovskaya-narvsky', kind: 'edge', from: 'moskovskaya', to: 'narvsky', zone: 40, reverse: 'nv-narvsky-moskovskaya' },
   { id: 'nv-narvsky-moskovskaya', kind: 'edge', from: 'narvsky', to: 'moskovskaya', zone: 40, reverse: 'nv-moskovskaya-narvsky' },
   // NARVSKY-GATES-END
+  // NORTHERN-GATES-BEGIN
+  // Generated by tools/connect-narvsky-areas.mjs from all live overlaps.
+  { id: 'ns-komendantsky-okrug65', kind: 'edge', from: 'komendantsky', to: 'okrug65', zone: 40, reverse: 'ns-okrug65-komendantsky' },
+  { id: 'ns-okrug65-komendantsky', kind: 'edge', from: 'okrug65', to: 'komendantsky', zone: 40, reverse: 'ns-komendantsky-okrug65' },
+  { id: 'ns-komendantsky-sampson', kind: 'edge', from: 'komendantsky', to: 'sampson', zone: 40, reverse: 'ns-sampson-komendantsky' },
+  { id: 'ns-sampson-komendantsky', kind: 'edge', from: 'sampson', to: 'komendantsky', zone: 40, reverse: 'ns-komendantsky-sampson' },
+  { id: 'ns-palace-sampson', kind: 'edge', from: 'palace', to: 'sampson', zone: 40, reverse: 'ns-sampson-palace' },
+  { id: 'ns-sampson-palace', kind: 'edge', from: 'sampson', to: 'palace', zone: 40, reverse: 'ns-palace-sampson' },
+  { id: 'ns-okrug65-sampson', kind: 'edge', from: 'okrug65', to: 'sampson', zone: 40, reverse: 'ns-sampson-okrug65' },
+  { id: 'ns-sampson-okrug65', kind: 'edge', from: 'sampson', to: 'okrug65', zone: 40, reverse: 'ns-okrug65-sampson' },
+  { id: 'ns-aptekarsky-sampson', kind: 'edge', from: 'aptekarsky', to: 'sampson', zone: 40, reverse: 'ns-sampson-aptekarsky' },
+  { id: 'ns-sampson-aptekarsky', kind: 'edge', from: 'sampson', to: 'aptekarsky', zone: 40, reverse: 'ns-aptekarsky-sampson' },
+  { id: 'ns-islands-sampson', kind: 'edge', from: 'islands', to: 'sampson', zone: 40, reverse: 'ns-sampson-islands' },
+  { id: 'ns-sampson-islands', kind: 'edge', from: 'sampson', to: 'islands', zone: 40, reverse: 'ns-islands-sampson' },
+  // NORTHERN-GATES-END
   // g0 - the dev loop (?devgates=1): a gate across the Nevsky approach to Vosstaniya Square (a vertical segment at x = 470, the strip east of it is the "own area") that leads back to the SAME page at
   // the same pose. It exercises the whole hand-off (prompt, preflight, veil, navigation, arrival, memory) before a second area exists, and stays as a test fixture afterwards.
   { id: 'g0', dev: true, from: 'strip', to: 'strip', seg: [[470, 100], [470, 240]], inward: [1, 0], zone: 30, arrive: { x0: 440, x1: 700, z0: 80, z1: 260 }, reverse: 'g0' },
@@ -4116,3 +5031,58 @@ for (const [from, ids] of Object.entries(NARVSKY_GATE_ORDER)) {
   ordered.forEach((row, i) => { GATES[slots[i]] = row; });
 }
 // NARVSKY-GATE-ORDER-END
+
+// NORTHERN-GATE-ORDER-BEGIN
+// Exact priority search uses createGateMachine and the same working run-ups as
+// gates-test. Keep the source rows stable; apply only their per-area priority.
+const NORTHERN_GATE_ORDER = {
+  "aptekarsky": [
+    "e40",
+    "e51",
+    "e48",
+    "ns-aptekarsky-sampson"
+  ],
+  "islands": [
+    "e46",
+    "e52",
+    "e50",
+    "coast-islands-okrug65",
+    "ns-islands-sampson"
+  ],
+  "komendantsky": [
+    "ns-komendantsky-okrug65",
+    "ns-komendantsky-sampson"
+  ],
+  "okrug65": [
+    "coast-okrug65-islands",
+    "ns-okrug65-sampson",
+    "ns-okrug65-komendantsky"
+  ],
+  "palace": [
+    "e1",
+    "e3",
+    "e5",
+    "e39",
+    "e37",
+    "e11",
+    "ns-palace-sampson"
+  ],
+  "sampson": [
+    "ns-sampson-komendantsky",
+    "ns-sampson-palace",
+    "ns-sampson-okrug65",
+    "ns-sampson-aptekarsky",
+    "ns-sampson-islands"
+  ]
+};
+for (const [from, ids] of Object.entries(NORTHERN_GATE_ORDER)) {
+  const slots = [];
+  for (let i = 0; i < GATES.length; i++) if (GATES[i].kind === 'edge' && GATES[i].from === from) slots.push(i);
+  const rows = new Map(slots.map(i => [GATES[i].id, GATES[i]]));
+  // A later island-area commit may add rows before this generator is rerun.
+  // Preserve every new row exactly once, then rerun the priority search.
+  const ordered = ids.map(id => rows.get(id)).filter(Boolean);
+  for (const i of slots) if (!ids.includes(GATES[i].id)) ordered.push(GATES[i]);
+  ordered.forEach((row, i) => { GATES[slots[i]] = row; });
+}
+// NORTHERN-GATE-ORDER-END

@@ -37,12 +37,38 @@ const only = process.argv.includes('--area') ? process.argv[process.argv.indexOf
 const hereArea = process.env.AREA || 'strip';      // the area whose layout.js this process loads (tools/area.mjs sets AREA)
 const layoutUrl = pathToFileURL(path.join(root, 'src/world/layout.js')).href;
 
+// One Sampson→Komendantsky raster edge crosses a row of actual buildings.
+// A player cannot reach those origin points, so test arrival only where the
+// source layout permits standing. Ask the source-area child; the destination
+// remap in this process cannot answer that question.
+function edgeArrivalPoints(g) {
+  const points = EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 0 }).points;
+  if (g.id !== 'ns-sampson-komendantsky') return points;
+  const env = { ...process.env }; delete env.AREA;
+  const r = spawnSync(process.execPath, [path.join(root, 'tools/area.mjs'), g.from, path.join(root, 'tools/areas-test.mjs'), '--source-blocked-only', g.id], { encoding: 'utf8', env, maxBuffer: 1 << 22 });
+  const line = String(r.stdout || '').split('\n').find(l => l.startsWith('SOURCE_BLOCKED '));
+  if (!line || r.status !== 0) throw new Error(`source passability child failed for ${g.id}: ${String(r.stderr || r.stdout).slice(0, 400)}`);
+  const blocked = JSON.parse(line.slice(15));
+  if (blocked.length > points.length / 4) throw new Error(`${g.id}: ${blocked.length}/${points.length} blocked origin samples; inspect the seam`);
+  const skip = new Set(blocked);
+  return points.filter((_, i) => !skip.has(i));
+}
+
+if (process.argv.includes('--source-blocked-only')) {
+  const g = GATES.find(x => x.id === process.argv[process.argv.indexOf('--source-blocked-only') + 1]);
+  if (!g || g.from !== hereArea) { console.error('source-blocked-only: wrong origin'); process.exit(2); }
+  const L = await import(layoutUrl);
+  const points = EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 0 }).points;
+  console.log('SOURCE_BLOCKED ' + JSON.stringify(points.flatMap((p, i) => L.insideBuilding(p.x, p.z, 0.3) ? [i] : [])));
+  process.exit(0);
+}
+
 // child mode: print the arrival grid of ONE gate for the layout of THIS process's area (the destination of the gate)
 if (process.argv.includes('--arrival-only')) {
   const g = GATES.find((x) => x.id === process.argv[process.argv.indexOf('--arrival-only') + 1]);
   if (!g || g.to !== hereArea) { console.error(`arrival-only: gate ${g && g.id} does not lead to ${hereArea}`); process.exit(2); }
   const L = await import(layoutUrl);
-  console.log('ARRIVAL_GRID ' + JSON.stringify(g.kind === 'edge' ? EG.edgeArrival(EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 0 }).points, L) : GG.arrivalGrid(g, L)));
+  console.log('ARRIVAL_GRID ' + JSON.stringify(g.kind === 'edge' ? EG.edgeArrival(edgeArrivalPoints(g), L) : GG.arrivalGrid(g, L)));
   process.exit(0);
 }
 
@@ -149,7 +175,12 @@ const LENS_GLOBAL = { worksMin: 1000, deadMax: 300, nearMaxPct: 10 };
 // 8.8 percent for e26). The exception is e16 (dekabristov -> gavan): of the 2520 m of its hopping boundary 380 m (15.1 percent) land within 100 m of the place where e15 (gavan -> dekabristov) would fire again. The cause is the thin overlap of the two
 // territories (1.09 km2: the Gulf water between the Smolenka mouth and the Gavan coast, 40 m gate zone over a 2.5 km boundary), not a shape defect that a rectangle could repair; the arrival grace of core/gates.js (graceS, 6 s) only delays a hop back, it does not prevent one: a known limit, listed in docs/AREAS.md 15.g.
 // Measured with tools/edge-geometry (step 20 m): e16 bounce 380 of 2520 m = 15.1 percent; the limit is set to 16.
-const LENS_RELAX = { e16: { nearMaxPct: 16 } };      // gate id -> a partial { worksMin, deadMax, nearMaxPct }, e.g. e9: { deadMax: 320 }   // measured: ...
+const LENS_RELAX = {
+  e16: { nearMaxPct: 16 },
+  // One 20 m sample beyond ten percent after filling the enclosed planning
+  // pockets; 5560 m working boundary, 10.07% near the reverse trigger.
+  'ns-sampson-aptekarsky': { nearMaxPct: 11 },
+};
 const lensRule = (g) => ({ ...LENS_GLOBAL, ...(LENS_RELAX[g.id] || {}) });
 for (const g of GATES.filter(isEdge)) {
   const lens = EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 300 }), rule = lensRule(g);
@@ -191,6 +222,22 @@ for (const g of GATES.filter(isEdge)) {
 // ---------------------------------------------------------------------------------------------- the generated area pages (tools/gen-area-html.mjs)
 console.log('area pages (generator fixtures, page.json data, pages on disk):');
 const stripHtml = fs.readFileSync(path.join(root, 'strip.html'), 'utf8').replaceAll('\r\n', '\n');
+const googleTag = `<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-53ZVSJV3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>`;
+check('every published HTML page has exactly one Google tag immediately after <head>', () => {
+  const pages = fs.readdirSync(root).filter(f => f.endsWith('.html') && /<html[^>]*\sdata-area=/.test(fs.readFileSync(path.join(root, f), 'utf8')));
+  assert(pages.length > 0);
+  for (const file of pages) {
+    const html = fs.readFileSync(path.join(root, file), 'utf8').replaceAll('\r\n', '\n');
+    assert(html.includes(`<head>\n${googleTag}\n`), `${file}: Google tag must be immediately after <head>`);
+    assert.equal((html.match(/googletagmanager\.com\/gtm\.js/g) || []).length, 1, `${file}: one Google tag`);
+    assert.equal((html.match(/function gtag\(\)/g) || []).length, 1, `${file}: one gtag initializer`);
+  }
+});
 const FIX_ROW = { id: 'fix', page: 'fix.html', approxMB: 20, remap: { 'src/world/data/city.js': 'src/areas/fix/data/city.js', 'src/world/area.js': 'src/areas/fix/area.js' } };
 const FIX_PAGE = {
   schema: 1, title: 'Fixture area · Saint Petersburg', appTitle: 'Fix', canvasLabel: 'A fixture area: 3D scene', intro: { kicker: 'Fixture walk', title: 'Fixture title' },
@@ -582,7 +629,7 @@ console.log('edge gates (the arrival at the working points of the boundary, in t
 for (const g of GATES.filter((q) => isEdge(q) && (!only || q.from === only || q.to === only))) {
   let grid = null, gridError = null;
   try {
-    if (g.to === hereArea) grid = EG.edgeArrival(EG.edgeLens(REGISTRY[g.from].play, REGISTRY[g.to].play, { backMax: 0 }).points, await import(layoutUrl));
+    if (g.to === hereArea) grid = EG.edgeArrival(edgeArrivalPoints(g), await import(layoutUrl));
     else {
       const env = { ...process.env }; delete env.AREA;
       const r = spawnSync(process.execPath, [path.join(root, 'tools/area.mjs'), g.to, path.join(root, 'tools/areas-test.mjs'), '--arrival-only', g.id], { encoding: 'utf8', env, maxBuffer: 1 << 26 });

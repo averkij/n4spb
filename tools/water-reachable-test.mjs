@@ -354,7 +354,12 @@ check('4 the car drives into a quay fence at 40 km/h: the bay breaks, the car fa
     for (let k = 0; k < 40 && !lane(); k++) { const b = corridorFree.last; if (!b || b.fence || b.type === 'walk' || b.type === 'ramp' || (b.y1 ?? 0) > 8 || (b.y0 ?? 0) < -1 || Math.max(b.hw || 0, b.hd || 0) > 2.5) break; cleared.push({ b, inItems: ph.items.includes(b), cells: [...ph.grid.values()].filter((a) => a.includes(b)) }); ph.remove(b); for (const a of ph.grid.values()) { const j = a.indexOf(b); if (j >= 0) a.splice(j, 1); } }      // the run-up lane: a lamp, a tree or a bench in it is taken out for the run (the check is about the fence and the water), put back after
     const restore = () => { for (const c of cleared) { if (c.inItems) ph._insert(c.b); else for (const a of c.cells) a.push(c.b); } };
     if (!lane()) { restore(); f.r.__tried = true; f = null; continue; }
-    const rr = withoutFloors(() => carRun(f, 40)); restore(); if (rr.minY < -1 && rr.fell && r.state !== 'stand') res = rr; else { /* a blocked run: try another place */ f.r.__tried = true; }
+    const rr = withoutFloors(() => carRun(f, 40)); restore();
+    // A narrow channel can let the car cross the wet bed and finish on the
+    // far bank. That run proves the fence breaks, but not sustained driving in
+    // water; keep looking for a bay whose endpoint is still in the water.
+    if (rr.minY < -1 && rr.fell && r.state !== 'stand' && waterAt(rr.car.x, rr.car.z) !== null) res = rr;
+    else f.r.__tried = true;
   }
   assert(res, 'no fence in this area let the car through (the run-up is never free)');
   const { car, ev } = res; NEED.fell = true;

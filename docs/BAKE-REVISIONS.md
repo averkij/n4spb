@@ -257,3 +257,28 @@ All CPU, none needs `node_modules`, a browser or git, unless marked. They live i
 4. **A dev server without a Referer** loses the live-tree hint and falls back to the generated constant. Not a production risk.
 5. **Without batching** a round still costs about 5 area-bakes. Further levers, not done: move `src/areas/north/hooks*` (imported by all five areas) and the 8 `landmarksTauride` files it pulls in out of the area directory,
    split `owns-table.js`, bake per product (field, roof, nav, street) with separate closures.
+
+## 12. Pages transport packing (2026-11-12)
+
+`assets/baked/<area>/` and its `.bin.gz` products remain the authoritative bake. The
+local build, per-area revision, manifest checks, and source loading use them without
+change. `node tools/pages-assets.mjs --assemble` makes a separate `dist/` copy for
+Pages. In that copy only, `tools/pages-bake-brotli.mjs` recodes large products to
+`.bin.br` when Brotli saves at least 64 KiB, replaces their manifest URLs, sizes
+and compressed SHA-256 values, and removes the copied gzip files. It also patches
+the copied `src/core/baked-codec.js` to select a Brotli stream for `.bin.br`; the
+committed source codec and every source bake remain byte-identical. Gzip products
+that do not benefit keep the existing native `DecompressionStream('gzip')` path.
+
+Chromium does not currently expose Brotli through `DecompressionStream`, so the
+deployment copy carries the vendored `brotli-dec-wasm` 2.3.2 decoder in the baked
+worker. It streams into the codec's declared final output buffer, including the
+main-thread diagnostic fallback. The decoder needs WebAssembly and a same-origin
+fetch of its `.wasm` file. `vendor/pages-bake-manifest.json` records source and
+deployment hashes, the decoded SHA-256 and length of every recoded product, and
+the exact codec/decoder/WASM hashes. `node tools/pages-bake-brotli-test.mjs`
+checks synthetic round trips, WASM streaming and corruption rejection;
+`node tools/pages-bake-brotli-test.mjs --actual` checks every deployed product
+against its canonical gzip source. The 1,000,000,000-byte site-size check runs
+after both this transform and the separate generated-data pack. Neither transform
+changes a source bake revision or authorizes a stale source manifest.

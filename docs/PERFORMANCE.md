@@ -3471,3 +3471,59 @@ All 17 canonical source/manifest/hash checks pass. The final package is
 5,059 files / 954,443,349 bytes, with all 832 modules / 33,336 actual imported
 exports retaining source equality. Audio, wildlife ambience, garage sound,
 imports, dependency closure and generated diagnostic pages pass.
+
+## 2026-11-12 — Komendantsky and Sampson (11.0.0)
+
+The two mapped northern areas add 53 and 69 play rectangles, respectively.
+Komendantsky's lake, aviation memorials and park entrance and Sampson's cathedral,
+garden and two Neva bridges were checked in normal, fully populated medium-quality
+screenshots. The Sampson HERO camera was moved to a clear garden path after a nearby
+pedestrian obscured the original view. The authored cathedral adds 8,298 triangles,
+11 meshes and 19 colliders; it has no per-frame update callback. The new area bakes
+contain 156 products / 73.4 MiB and 168 products / 75.0 MiB. The Google tag changes
+the HTML closure, so all 19 live area revisions and their bakes were regenerated.
+
+The following normal-loading eight-second drives used Edge 157 / RTX 3090 Ti / D3D11,
+1280×720, medium quality, with crowds, traffic, shadows and regional streaming active.
+GPU jobs were serial; no `--only`, `?baked=force`, profiler or mid-run screenshot was
+used. CDP memory was sampled after timing. The old Palace centre run starts at its
+normal station pose `(560,192)`; the new-area runs start on mapped road lanes.
+
+| Route | Load s | Mean / p50 / p95 / max ms | >40 / >80 ms frames | Mean draws | Distance m | Used heap / backing MiB |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| Palace centre, 10.1.1 baseline | 24.3 | 20.2 / 16.7 / 33.4 / 200.0 | 2 / 2 | 1,167 | 62.4 | 501 / 894 |
+| Palace centre, 11.0.0 | 27.9 | 24.8 / 16.7 / 33.4 / 266.8 | 9 / 2 | 1,167 | 56.6 | 508 / 1,138 |
+| Komendantsky, 11.0.0 | 16.5 | 18.2 / 16.7 / 16.8 / 283.2 | 4 / 2 | 795 | 169.5 | 583 / 595 |
+| Sampson, 11.0.0 | 19.1 | 16.7 / 16.7 / 16.8 / 33.3 | 0 / 0 | 908 | 284.6 | 662 / 762 |
+
+All four runs have zero failed regions. The centre result is about 40 FPS on this
+sample and still exceeds the 30 FPS comfort threshold, but its 267 ms hitch and
+higher mean time are real limitations. The old-centre backing-store reading rose
+in this run; this one comparison cannot attribute it to the new areas, which have
+separate pages and bakes. Traffic and endpoint differences also affect the centre
+comparison. Komendantsky ended after colliding with a truck at 33 km/h; Sampson's
+clear avenue reached 168 km/h. These are different traffic loads, so their frame
+times are not a direct speed comparison. The Komendantsky hitch is the next measured
+performance issue to investigate.
+
+Reproduce with:
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 8 --json --diagnostics --out shots/northern-final-centre
+node tools/drive-bench.mjs --area komendantsky --q medium --seconds 8 --start "-5323.9,-8723.5,30" --json --diagnostics --out shots/northern-final-kom
+node tools/drive-bench.mjs --area sampson --q medium --seconds 8 --start "-825,-5450,-168.6" --json --diagnostics --out shots/northern-final-sampson
+```
+
+The JSON and end-view screenshots are in `shots/northern-final-{centre,kom,sampson}*`;
+the normal Sampson entry image is `shots/northern-sampson-final-hero_0.png`.
+
+The Pages artifact assembly contains 5,535 files / 947,918,527 bytes, below the
+1,000,000,000-byte limit by 52,081,473 bytes. Deployment-only Brotli encoding of
+173 bake products saves 168,669,058 bytes; generated data packing saves another
+136,837,861 bytes. Source bake files and their canonical revisions stay unchanged.
+The actual deployed output passed equality and hash checks for all 173 recoded
+bake products and all 38,226 imported exports in 954 generated-data modules.
+Normal packed-browser loads completed in 13.8 s for Komendantsky and 19.0 s for
+Sampson, without page, module or region failures. The browser checks also verified
+one Google tag immediately after `<head>` and `dataLayer` initialization on both
+new pages.

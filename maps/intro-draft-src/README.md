@@ -9,6 +9,12 @@
 
 ## Rebuild
 
+The current live catalogue also includes Z Moskovskaya Zastava (6), N Narvsky
+(73), Q Komendantsky Aerodrom–Ozero Dolgoye (89), and L
+Sampsoniyevskoye–Lanskoye (52). The latter two scenes use 80 m play cells,
+the 600 m shore-water band, and filled enclosed raster pockets; their authored
+territories and handoffs are in the area registry.
+
 When only live scene metadata or registry territories/gates change, refresh the
 committed page from the repository root without fetching OSM or recalculating
 the planning polygons:
