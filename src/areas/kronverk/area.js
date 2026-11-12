@@ -37,7 +37,16 @@ export const MODULES = [
   "wildlife",
   "drive"
 ];
-export const LABELS = {"landmarksFortress":"Fortress","landmarksKronverk":"Kronverk","landmarksVladimir":"Vladimir","landmarksPetroCompletion":"PetroCompletion","landmarksPetrovskyStadium":"PetrovskyStadium","landmarksPetrovskyYacht":"PetrovskyYacht","landmarksPetrovskyWest":"PetrovskyWest","landmarksZhdanovka":"Zhdanovka"};
+export const LABELS = {
+  landmarksFortress: 'Петропавловская крепость',
+  landmarksKronverk: 'Кронверк и Артиллерийский музей',
+  landmarksVladimir: 'Князь-Владимирский собор',
+  landmarksPetroCompletion: 'Исторические здания Петроградской стороны',
+  landmarksPetrovskyStadium: 'Стадион «Петровский»',
+  landmarksPetrovskyYacht: 'Яхт-клуб Петровского острова',
+  landmarksPetrovskyWest: 'Запад Петровского острова',
+  landmarksZhdanovka: 'Набережная Ждановки',
+};
 export const NAMES = {
   place: 'Санкт-Петербург', placeEn: 'Saint Petersburg',
   square: 'площадь Восстания', squareEn: 'Vosstaniya Square',

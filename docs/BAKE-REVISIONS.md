@@ -263,8 +263,9 @@ All CPU, none needs `node_modules`, a browser or git, unless marked. They live i
 `assets/baked/<area>/` and its `.bin.gz` products remain the authoritative bake. The
 local build, per-area revision, manifest checks, and source loading use them without
 change. `node tools/pages-assets.mjs --assemble` makes a separate `dist/` copy for
-Pages. In that copy only, `tools/pages-bake-brotli.mjs` recodes large products to
-`.bin.br` when Brotli saves at least 64 KiB, replaces their manifest URLs, sizes
+Pages. In that copy only, `tools/pages-bake-brotli.mjs` considers products of at
+least 250 kB and recodes them to `.bin.br` when Brotli saves at least 64 KiB.
+It replaces their manifest URLs, sizes
 and compressed SHA-256 values, and removes the copied gzip files. It also patches
 the copied `src/core/baked-codec.js` to select a Brotli stream for `.bin.br`; the
 committed source codec and every source bake remain byte-identical. Gzip products

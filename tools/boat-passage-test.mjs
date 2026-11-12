@@ -36,7 +36,10 @@ const { WATER: WATER_TABLE } = await import('../src/world/lib/area-tables.js');
 const { LOW_CLEARANCE: LOW_CLEARANCE_BRIDGES } = await import('../src/world/bridges/piers.js');
 // The solid raster already includes a 2.2 m hull footprint. Narrow park canals
 // need 0.35 m extra margin, rather than requiring a 5.2 m wide navigation lane.
-const DEG = Math.PI / 180, R_FREE = Number(process.env.RFREE || (['kronverk','aptekarsky','islands'].includes(AREA)?.35:1.5)), HULL = SPEC_BOAT.hgt;
+// Avtovo's mapped Krasnenkaya narrows to a real boat-width channel; use the
+// same tight clearance as the northern canals while real handling still sails
+// every mapped crossing.
+const DEG = Math.PI / 180, R_FREE = Number(process.env.RFREE || (['kronverk','aptekarsky','islands','avtovo'].includes(AREA)?.35:1.5)), HULL = SPEC_BOAT.hgt;
 
 // ---------------------------------------------------------------- the 1 m grid of the play area
 const P = L.WORLD.play, RES = 1, X0 = Math.floor(P.x0), Z0 = Math.floor(P.z0), NX = Math.ceil(P.x1 - X0), NZ = Math.ceil(P.z1 - Z0);

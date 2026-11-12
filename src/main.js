@@ -153,6 +153,11 @@ function setProgress(frac, label) {
   const lab = $('loadlabel'); if (lab && label !== undefined) lab.textContent = label;   // '' clears the text (the 'Ready' line is CSS)
 }
 const LABELS = {
+  bridgesPetro: 'Мосты Петроградской стороны',
+  landmarksRiverfront: 'Архитектура на берегах Невы',
+  landmarksSouthernCrossings: 'Мосты и переправы южных районов',
+  landmarksTroitsky: 'Троицкий мост',
+  streetsLocalRepairs: 'Дорожные работы',
   environment: 'земля, набережные и деревья', streets: 'улицы, мостовые и провода', city: 'городские кварталы', rail: 'пути, платформы и поезда', landmarksA: 'Московский вокзал · площадь Восстания',
   landmarksNorth: 'Подписные Издания · дома улицы Маяковского',
   landmarksBelinsky: 'Цирк Чинизелли',
@@ -183,7 +188,7 @@ async function build() {
   };
   let i = 0;
   for (const name of list) {
-    setProgress(i / (list.length + 1), `${(A.LABELS && A.LABELS[name]) || LABELS[name] || name}…`);
+    setProgress(i / (list.length + 1), `${(A.LABELS && A.LABELS[name]) || LABELS[name] || 'Городские объекты'}…`);
     await new Promise(r => setTimeout(r, 0));
     const t0 = performance.now();
     try {

@@ -39,7 +39,17 @@ export const MODULES = [
   "wildlife",
   "drive"
 ];
-export const LABELS = {"landmarksTroitskaya":"Troitskaya","landmarksAurora":"Aurora","landmarksKamennoostrovsky":"Kamennoostrovsky","landmarksKarpovka":"Karpovka","landmarksBotanicalGreenhouses":"BotanicalGreenhouses","landmarksBotanicalGarden":"BotanicalGarden","landmarksTVTower":"TVTower","landmarksLETI":"LETI","landmarksTransfiguration":"Transfiguration"};
+export const LABELS = {
+  landmarksTroitskaya: 'Троицкая площадь и сквер',
+  landmarksAurora: 'Крейсер «Аврора»',
+  landmarksKamennoostrovsky: 'Каменноостровский проспект и дом Лидваля',
+  landmarksKarpovka: 'Набережные Карповки',
+  landmarksBotanicalGreenhouses: 'Оранжереи Ботанического сада',
+  landmarksBotanicalGarden: 'Ботанический сад',
+  landmarksTVTower: 'Петербургская телебашня',
+  landmarksLETI: 'Корпуса ЛЭТИ',
+  landmarksTransfiguration: 'Храм Преображения Господня и бункер Трибуца',
+};
 export const NAMES = {
   place: 'Санкт-Петербург', placeEn: 'Saint Petersburg',
   square: 'площадь Восстания', squareEn: 'Vosstaniya Square',

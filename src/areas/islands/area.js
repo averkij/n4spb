@@ -42,7 +42,20 @@ export const MODULES = [
   "wildlife",
   "drive"
 ];
-export const LABELS = {"landmarksKrestovsky":"Krestovsky","landmarksYelaginPalace":"YelaginPalace","landmarksYelaginKitchen":"YelaginKitchen","landmarksYelaginServices":"YelaginServices","landmarksYelaginRossi":"YelaginRossi","landmarksYelaginSpits":"YelaginSpits","landmarksYelaginPark":"YelaginPark","landmarksKamennyPalace":"KamennyPalace","landmarksKamennyChurch":"KamennyChurch","landmarksKamennyTheatre":"KamennyTheatre","landmarksKamennyDachasEast":"KamennyDachasEast","landmarksKamennyDachasWest":"KamennyDachasWest"};
+export const LABELS = {
+  landmarksKrestovsky: 'Крестовский остров',
+  landmarksYelaginPalace: 'Елагин дворец',
+  landmarksYelaginKitchen: 'Кухонный корпус Елагина острова',
+  landmarksYelaginServices: 'Служебные корпуса Елагина острова',
+  landmarksYelaginRossi: 'Павильоны Росси на Елагином острове',
+  landmarksYelaginSpits: 'Стрелки Елагина острова',
+  landmarksYelaginPark: 'Парк Елагина острова',
+  landmarksKamennyPalace: 'Каменноостровский дворец',
+  landmarksKamennyChurch: 'Церковь Рождества Иоанна Предтечи',
+  landmarksKamennyTheatre: 'Каменноостровский театр',
+  landmarksKamennyDachasEast: 'Дачи восточной части Каменного острова',
+  landmarksKamennyDachasWest: 'Дачи западной части Каменного острова',
+};
 export const NAMES = {
   place: 'Санкт-Петербург', placeEn: 'Saint Petersburg',
   square: 'площадь Восстания', squareEn: 'Vosstaniya Square',

@@ -2,9 +2,31 @@
 // The base is the planning map's B600 raster. Tiny transition refinements are
 // explicit cells, never a relaxed gate/dead-strip test or a water exclusion.
 import { mapData, rectsOfRings } from './area-shape.mjs';
-const CONFIG={ 'morskie-vorota':{k:71,prefix:'M'},okrug65:{k:100,prefix:'O'},komendantsky:{k:89,prefix:'Q'} };
+const CONFIG={ 'morskie-vorota':{k:71,prefix:'M'},okrug65:{k:100,prefix:'O'},komendantsky:{k:89,prefix:'Q'},avtovo:{k:70,prefix:'T'} };
 const CELL=80;
 export const COASTAL_REFINEMENTS={
+  // A detached northern water-overlap cluster belongs to the existing
+  // Kolomna/Narvsky coast, and cannot be reached across this area alone.
+  avtovo:{add:[
+    // The mapped Kirov Factory gate and Putilov square lie just across the
+    // planning-map raster edge. Keep their real street frontage walkable.
+    {x0:-5280,x1:-5040,z0:5760,z1:6080},
+    // The blockade tram on Stachek 114 sits in the same municipal district,
+    // but the B600 raster leaves its avenue verge outside the walkable cells.
+    {x0:-5440,x1:-5120,z0:7920,z1:8320},
+    // Two blocks of common railway-side ground let both Avtovo and Narvsky
+    // offer a gate with a 60 m-deep arrival, without an invisible wall.
+    {x0:-5760,x1:-5440,z0:6080,z1:6240},
+  ],remove:[
+    {x0:-6560,x1:-6160,z0:4160,z1:4640},
+    // The west tip of this single cell captures 2,832 m² of Ekateringofka
+    // without the rest of the river. Keep the connected land corridor east.
+    {x0:-6080,x1:-6000,z0:4240,z1:4320},
+    // Two incidental overlaps with Kolomna and Semyonovsky contain less than
+    // 1 km of working seam and belong to those existing districts.
+    {x0:-6000,x1:-5680,z0:4000,z1:4240},
+    {x0:-2960,x1:-2640,z0:5040,z1:5840},
+  ]},
   // The southern raster fringe is already the Islands scene's water reach.
   // Do not create an accidental three-cell area overlap with its E01 play cell.
   komendantsky:{add:[],remove:[{x0:-5600,x1:-5360,z0:-5840,z1:-5760}]},
@@ -32,7 +54,10 @@ export const COASTAL_REFINEMENTS={
     {x0:-7840,x1:-7680,z0:-4160,z1:-4080},
   ],remove:[{x0:-7600,x1:-7520,z0:-4160,z1:-4000}]},
 };
-const eachCell=(r,fn)=>{for(let x=r.x0/CELL;x<r.x1/CELL;x++)for(let z=r.z0/CELL;z<r.z1/CELL;z++)fn(x+','+z);};
+const eachCell=(r,fn)=>{
+  if([r.x0,r.x1,r.z0,r.z1].some(v=>v%CELL!==0))throw new Error(`Territory refinement is not on the ${CELL} m raster: ${JSON.stringify(r)}`);
+  for(let x=r.x0/CELL;x<r.x1/CELL;x++)for(let z=r.z0/CELL;z<r.z1/CELL;z++)fn(x+','+z);
+};
 export function coastalRects(id) {
   const c=CONFIG[id];if(!c)throw new Error('Unknown coastal territory '+id);
   const a=mapData().areas.find(a=>a.k===c.k),cells=new Set();

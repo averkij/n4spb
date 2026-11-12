@@ -1,6 +1,6 @@
 // Coastal OSM authoring: current mapped geometry, the established bake schema,
 // and the planning map's B600 territory. Raw HTTP responses stay in the OS temp.
-// node tools/marine-data.mjs --area morskie-vorota|okrug65|komendantsky [--fetch-only]
+// node tools/marine-data.mjs --area morskie-vorota|okrug65|komendantsky|avtovo [--fetch-only]
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,7 +14,7 @@ import { grow, clipParts, readPart, partFileText, facadeTextOf } from './strip-d
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2), arg = (n, d = null) => { const i = argv.indexOf(n); return i < 0 ? d : argv[i + 1]; };
 const id = arg('--area', 'morskie-vorota');
-const configs = { 'morskie-vorota': { k: 71, prefix: 'M' }, okrug65: { k: 100, prefix: 'O' }, komendantsky: { k: 89, prefix: 'Q' } };
+const configs = { 'morskie-vorota': { k: 71, prefix: 'M' }, okrug65: { k: 100, prefix: 'O' }, komendantsky: { k: 89, prefix: 'Q' }, avtovo: { k: 70, prefix: 'T' } };
 const cfg = configs[id]; if (!cfg) throw new Error('Unknown coastal area ' + id);
 const area = mapData().areas.find(a => a.k === cfg.k);
 const play = coastalRects(id);
@@ -148,6 +148,21 @@ for(const e of all.filter(e=>e.tags?.waterway==='dock'&&e.tags?.dock==='floating
   if(!parts.some(P=>P.arrays.get('PIERS').some(r=>r.id===id)))parts[part].arrays.get('PIERS').push({id,kind:'dock',name:e.tags.name||null,polys,pts:[]});
 }
 clipParts(parts,{extRects:ext,waterRing:600});
+if(id==='avtovo')for(const P of parts)for(const b of P.arrays.get('BUILDINGS')){
+  // These two mapped structures lie in Avtovo's common scenery band with
+  // Narvsky. Use the same reviewed physical envelopes as that area: a low
+  // industrial hall below WHSD and a roof over its covered ramp.
+  if(b.id==='w49629469')Object.assign(b,{h:9.9,hEst:9.9,hSrc:'height',kind:'shed',roof:'flat',roofH:0,roofLevels:0,
+    heightSource:'Visual estimate: low industrial hall in Esri World Imagery, inspected 2026-11-07; not surveyed OSM height.'});
+  if(b.id==='w685882720')Object.assign(b,{minH:11.025,h:11.345,hEst:11.345,hSrc:'height',levels:null,roof:'flat',roofH:0,roofLevels:0});
+}
+if(id==='avtovo'){
+  // The six mapped ATM nodes are inside the claimed Avtovo metro vestibule.
+  // They are real indoor amenities, but props/osm.js would project one as an
+  // exterior wall frame through the authored facade. Keep their POI records.
+  const indoorAtms=new Set(['n3493599134','n3493599146','n3493599148','n5475042374','n6018575167','n6484527470']);
+  for(const P of parts)P.arrays.set('FURNITURE',P.arrays.get('FURNITURE').filter(f=>!indoorAtms.has(f.id)));
+}
 // A complete outline can cross the scenery edge. Keep it only if its own
 // centroid belongs to an extent cell; the runtime's first-owner rule and the
 // area-data audit both use that representative point.
@@ -171,6 +186,10 @@ const represented=new Set(riverParts.flatMap(r=>(r.polys||[]).map(p=>JSON.string
 const inRing=(x,z,p)=>{let on=false;for(let i=0,j=p.length-2;i<p.length;j=i,i+=2)if((p[i+1]>z)!==(p[j+1]>z)&&x<(p[j]-p[i])*(z-p[i+1])/(p[j+1]-p[i+1])+p[i])on=!on;return on;};
 const inPolys=(x,z,ps)=>ps.some(p=>inRing(x,z,p.o)&&!(p.h||[]).some(h=>inRing(x,z,h)));
 for(const P of parts)for(const w of P.arrays.get('WATER')){
+  // OSM's named Duderhof Channel relation has natural=water but no `water=`
+  // subtype. The generic converter calls it a pond; its open polygon instead
+  // joins the Gulf and belongs to the navigable Neva datum.
+  if(id==='avtovo'&&w.id==='r1530921')w.kind='canal';
   // The urban Dolgoye Lake is an isolated basin, despite its generic OSM
   // natural=water/water=lake tags. Give it the pond datum, not a Neva join.
   const raw=rawById.get(w.id),pond=raw?.tags?.water==='pond'||(id==='komendantsky'&&w.id==='r6597846');

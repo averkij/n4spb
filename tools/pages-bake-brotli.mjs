@@ -14,7 +14,9 @@ export const MANIFEST_PATH = 'vendor/pages-bake-manifest.json';
 export const CODEC_PATH = 'src/core/baked-codec.js';
 export const DECODER_PATH = 'vendor/pages-bake-brotli.js';
 export const WASM_PATH = 'vendor/brotli-dec-wasm/brotli_dec_wasm_bg.wasm';
-export const MIN_BYTES = 1_000_000;
+// Sub-250 kB gzip products rarely clear the 64 KiB saving gate. Lowering the
+// previous 1 MB cutoff leaves room for additional mapped areas on Pages.
+export const MIN_BYTES = 250_000;
 const sha = b => createHash('sha256').update(b).digest('hex');
 const hashFile = p => sha(fs.readFileSync(p));
 const inside = (site, rel) => {

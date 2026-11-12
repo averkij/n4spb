@@ -1,5 +1,5 @@
 // Manual final deployment check after `node tools/pages-assets.mjs --assemble`.
-// Exercises the deployed WASM codec and normal loading of the two new pages.
+// Exercises the deployed WASM codec and normal loading of representative new pages.
 // GPU/browser work: run serially, not alongside other screenshot benchmarks.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -44,7 +44,7 @@ try {
   console.log(`PASS deployed browser Brotli codec: ${sample.area}/${sample.name}, ${sample.rawBytes} raw bytes`);
   await probe.close();
 
-  for (const [id, pageName] of [['sampson', 'sampson.html'], ['komendantsky', 'komendantsky.html']]) {
+  for (const [id, pageName] of [['sampson', 'sampson.html'], ['komendantsky', 'komendantsky.html'], ['avtovo', 'avtovo.html']]) {
     const html = fs.readFileSync(path.join(site, pageName), 'utf8').replace(/\r\n/g, '\n');
     assert(html.includes(`<head>\n${gtmTag}\n`), `${id}: exact GTM tag is not first after <head>`);
     assert.equal(html.split(gtmTag).length, 2, `${id}: GTM tag must occur exactly once`);
@@ -72,7 +72,7 @@ try {
     await page.goto(`http://127.0.0.1:${server.port}/${pageName}?q=medium`, { waitUntil: 'load', timeout: 120000 });
     await page.waitForFunction("document.body.classList.contains('loaded')", { timeout: 300000, polling: 250 });
     const state = await page.evaluate(() => ({ area: document.documentElement.dataset.area,
-      loaded: document.body.classList.contains('loaded'), bake: window.__baked?.manifest?.area || null,
+      loaded: document.body.classList.contains('loaded'), bake: window.__ctx?.baked?.manifest?.area || null,
       gtm: {
         first: document.head.firstElementChild?.outerHTML,
         count: [...document.querySelectorAll('script[src]')].filter(s => s.src.startsWith('https://www.googletagmanager.com/gtm.js?')).length,
@@ -80,6 +80,7 @@ try {
           e?.[0] === 'js' && e[1] instanceof Date),
       } }));
     assert.equal(state.area, id); assert(state.loaded);
+    assert.equal(state.bake, id, `${id}: normal load fell back to procedural construction`);
     assert.equal(state.gtm.first, `<script async="" src="${gtmURL}"></script>`, `${id}: GTM is not first head element`);
     assert.equal(state.gtm.count, 1, `${id}: GTM script count`);
     assert(state.gtm.initialized, `${id}: dataLayer initialization missing`);

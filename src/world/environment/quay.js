@@ -1043,7 +1043,11 @@ export function buildQuay(ctx, root) {
     // Owned crossings already have the bridge module's deck and rail colliders.
     // Legacy zone rectangles can reach far onto the approach roads (Palace
     // Passage), so their invisible fallback parapets must not be built there.
-    if (zn.own && (ctx.buildList || L.MODULE_KEYS || []).includes('bridges')) continue;
+    const built = ctx.buildList || L.MODULE_KEYS || [];
+    // Coastal mapped crossings have their own walk triangles and deck service,
+    // just as the hand-authored bridges do. A duplicate street-height fallback
+    // would close the water underneath a raised coastal span.
+    if (zn.own && (built.includes('bridges') || (zn.id.startsWith('coast-') && built.includes('coastalBridges')))) continue;
     if (zn.id === 'anichkov' || zn.auto || TRIPLE.has(zn.id)) continue;               // landmarksC closes the Fontanka; the Triple Bridge module draws its own walk decks (no invisible fallback deck); the east / north bridge modules draw their own decks
     if (!L.inPlay(zn.c[0], zn.c[1], -20)) continue;
     const a = zn.axis * Math.PI / 180;

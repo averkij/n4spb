@@ -56,10 +56,14 @@ jobs:
         run: node tools/landmarks-groups-check-test.mjs
       - name: Areas, registry, gate geometry
         run: node tools/areas-test.mjs
+      - name: Every preloader module label is Russian
+        run: node tools/loading-labels-test.mjs
       - name: Coastal area geography and open water
         run: |
           node tools/area.mjs morskie-vorota tools/coastal-area-test.mjs
           node tools/area.mjs okrug65 tools/coastal-area-test.mjs
+      - name: Avtovo mapped geography, water classes and building ownership
+        run: node tools/area.mjs avtovo tools/avtovo-area-test.mjs
       # M6 (docs/AREAS.md section 9). The tests below import no three.js; tools/north-height-test.mjs, the engine part of tools/north-keepout-test.mjs and the --scene part of
       # tools/north-people-hooks-test.mjs build the engine (three.js, 'npm ci'): they run locally with `npm run hooks:all` and in the 'engine' job below (this job has no 'npm ci' on purpose)
       - name: Layout golden of both areas (the hook set moves neither)
@@ -144,6 +148,13 @@ jobs:
         run: node tools/area.mjs aptekarsky tools/aurora-boarding-test.mjs --integrated
       - name: Physical walking triangles and bridge decks
         run: node tools/physics-triangle-test.mjs
+      - name: Avtovo water, boats, garage and building grade separation
+        run: |
+          node tools/area.mjs avtovo tools/water-reachable-test.mjs
+          node tools/area.mjs avtovo tools/boat-test.mjs
+          node tools/area.mjs avtovo tools/boat-passage-test.mjs
+          node tools/area.mjs avtovo tools/area-garage-check.mjs
+          node tools/area.mjs avtovo tools/claims-draw-audit.mjs --strict
 
   # Expensive city-wide regressions remain mandatory for PRs and manual full runs.
   engine:

@@ -3527,3 +3527,68 @@ Normal packed-browser loads completed in 13.8 s for Komendantsky and 19.0 s for
 Sampson, without page, module or region failures. The browser checks also verified
 one Google tag immediately after `<head>` and `dataLayer` initialization on both
 new pages.
+
+## 2026-11-12 — Avtovo (12.0.0)
+
+Avtovo adds 93 connected play rectangles (23.2000 km²), 3,234 mapped buildings
+and 7,899 roads. Two dedicated sightseeing modules model the Avtovo and Kirovsky
+Zavod metro pavilions, the Kirov Factory gate, and the Putilov, Marinesko, KV-85,
+DOT No. 930 and blockade tram memorials. The metro module adds 20,688 triangles,
+30 meshes and 75 colliders; the six-site module adds 8,160 triangles, 61 meshes
+and 12 colliders. Neither module registers a per-frame update. Four mapped
+building footprints are claimed by the authored architecture. The Avtovo bake
+contains 193 products (53,107,953 gzip bytes, 50.6 MiB) at revision
+`2f9e4ab25e7945ad6f17`.
+
+The normal-loading eight-second drives below used Edge 157 / RTX 3090 Ti / D3D11,
+1280×720, medium quality, with crowds, traffic, shadows and regional streaming
+active. GPU jobs were serial; no `--only`, `?baked=force`, profiler or mid-run
+screenshot was used. CDP memory was sampled after timing. The Palace centre run
+starts at the normal station pose `(560,192)`. Avtovo starts on a mapped
+Stachek lane near `(-5060,7260)`.
+
+| Route | Load s | Mean / p50 / p95 / max ms | >40 / >80 ms frames | Mean draws | Distance m | Used heap / backing MiB |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| Palace centre, 11.0.0 | 27.9 | 24.8 / 16.7 / 33.4 / 266.8 | 9 / 2 | 1,167 | 56.6 | 508 / 1,138 |
+| Palace centre, 12.0.0 | 28.5 | 26.5 / 33.2 / 33.4 / 266.7 | 10 / 2 | 1,167 | 54.6 | 506 / 1,151 |
+| Avtovo, 12.0.0 | 15.3 | 16.7 / 16.7 / 16.8 / 33.3 | 0 / 0 | 929 | 285.0 | 392 / 511 |
+
+All three runs have zero failed regions. Against 11.0.0, the centre mean rises
+1.7 ms and its median rises from 16.7 to 33.2 ms, while p95 stays at 33.4 ms.
+Traffic and streaming vary between runs, so this sample does not establish a
+cause for the change. The 267 ms centre hitch persists. Avtovo's
+clear Stachek run reaches 168 km/h without a measured frame above 40 ms. Its
+road speed and scene composition differ from the centre route, so the rows are
+not a direct area-to-area FPS comparison. Evidence is
+`shots/avtovo-final-{centre,drive}.json` and their end-view screenshots.
+
+Full Avtovo ownership, area and gate audits pass. All 17 water-reachability
+checks pass, including 1,676 connected long-pond samples and both walker and
+car bank entry. The harbour boat can be boarded, and all 26 boat-passage checks
+pass. The shared coastal-bridge floor fix removes hidden duplicate crossing
+floors; the affected area bakes were regenerated. The Russian loading-label
+check covers 376 module uses across all 22 area pages, including internal
+module names that formerly fell back to English identifiers.
+
+The final Pages artifact assembles 20 live bakes into 5,834 files / 903,341,118
+bytes, 96,658,882 bytes below the 1,000,000,000-byte limit. Deployment-only
+Brotli encoding of 838 bake products saves 268,954,108 bytes; generated-data
+packing saves another 141,631,266 bytes across 1,036 modules / 41,511 exports.
+The canonical source bakes retain their original files and revisions.
+
+The actual package passed source/output hash and imported-export equality checks.
+In the packaged-browser test, Sampson, Komendantsky and Avtovo loaded their own
+baked manifests in 20.4, 14.8 and 14.0 s respectively, without page or console
+errors. Each page had exactly one Google tag as the first element of `<head>`
+and initialized `dataLayer`.
+
+Reproduction (normal medium-quality load, serial GPU runs):
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 8 --json --diagnostics --out shots/avtovo-final-centre
+node tools/drive-bench.mjs --area avtovo --q medium --seconds 8 --start "-5063.6,7260.4,8.4" --json --diagnostics --out shots/avtovo-final-drive
+node tools/pages-assets.mjs --assemble
+node tools/pages-data-pack-test.mjs --actual
+node tools/pages-bake-brotli-test.mjs --actual
+node tools/pages-bake-browser-test.mjs
+```

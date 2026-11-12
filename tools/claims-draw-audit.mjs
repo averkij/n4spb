@@ -219,6 +219,14 @@ KNOWN_UNCLAIMED.moskovskaya = Object.fromEntries(['r8478034','r8478035','r847803
 KNOWN_UNCLAIMED.narvsky = {
   w49629469:{module:'coastalBridges',minY:19.35,why:'mapped WHSD slabs pass above the low industrial hall: drawn soffit 19.4 m (19.425 m collision floor), corrected estimated cornice 9.9 m; the 5 cm bound tolerance covers Float32 coordinates, and piers must still remain outside its footprint (docs/AREAS.md, release bridge overlaps)'},
 };
+// The same two real structures lie in Avtovo's common scenery band. Its
+// southern WHSD profile has a lower soffit, still 4.5 m above the corrected
+// low hall; the ramp is below the corrected canopy. Keep strict y limits so a
+// new support or an incorrectly raised deck becomes a fresh audit failure.
+KNOWN_UNCLAIMED.avtovo = {
+  w49629469:{module:'coastalBridges',minY:15.35,why:'mapped WHSD slabs clear the estimated 9.9 m low hall by over 4 m; Avtovo drawn soffit starts at 15.4 m, with no mapped support through the hall (docs/AREAS.md, Avtovo)'},
+  w685882720:{module:'coastalBridges',maxY:7.25,why:'mapped covered ramp remains below the canopy underside at 11.025 m; bridge geometry tops out at 7.16 m here (docs/AREAS.md, Avtovo)'},
+};
 
 // ---------------------------------------------------------------- engine
 const THREE = await import('three');
