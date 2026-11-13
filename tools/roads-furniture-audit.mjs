@@ -338,13 +338,18 @@ for (const c of colliders) {
     samples = samplesRect(cs.map(([lx, lz]) => [it.cx + lx * it.c + lz * it.s, it.cz - lx * it.s + lz * it.c])); ext = Math.max(2 * it.hw, 2 * it.hd);
   }
   objs.push({ src: 'collider', module: c.mod, file: site.file.replace(/^world\//, ''), line: site.line, chain: c.frames.slice(0, 4).map((f) => `${f.file.replace(/^world\//, '')}:${f.line}`).join(' < '),
-    cat: it.bridgeItem ? 'bridge_item' : catOfFile(site.file, site.line, h, it.type), shape: it.type, x: it.cx, z: it.cz, r: it.type === 'cyl' ? it.r : null, size: it.type === 'box' ? [+(2 * it.hw).toFixed(2), +(2 * it.hd).toFixed(2)] : null,
+    // Shared fence-bay code hides the owning bridge's name in the callsite.
+    // Its edge rails belong to that deck, including the raised approach ends.
+    cat: it.bridgeItem || (/bridges/i.test(c.mod) && /lib\/fence-bays\.js$/.test(site.file)) ? 'bridge_item' : catOfFile(site.file, site.line, h, it.type), shape: it.type, x: it.cx, z: it.cz, r: it.type === 'cyl' ? it.r : null, size: it.type === 'box' ? [+(2 * it.hw).toFixed(2), +(2 * it.hd).toFixed(2)] : null,
     h: it.y1 > 300 ? null : +it.y1.toFixed(2), ext, samples });
 }
 // B. instanced meshes (visible furniture, also where no collider exists)
 let instCount = 0, undergroundSkipped = 0, elevatedSkipped = 0;
 scene.traverse((o) => {
   if (!o.isInstancedMesh || o.count < 1 || o.count > 60000) return;
+  // Surveyed building trim/windows share the same building exclusion as wall
+  // colliders. They are architecture, not free-standing street furniture.
+  if (o.userData.buildingFacade === true) return;
   const name = o.name || (o.parent && o.parent.name) || 'unnamed';
   if (SKIP_MESH.test(name)) return;
   const bb = baseBox(o.geometry); if (!bb || bb.h < 0.45) return;

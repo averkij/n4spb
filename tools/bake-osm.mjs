@@ -607,7 +607,8 @@ for (const s of stations.filter((x) => x.kind === 'subway')) {
 // ---- z-fighting audit of the data (coplanar / duplicated geometry the renderer would flicker on):
 //  * OVERLAPS = pairs of VISIBLE buildings / parts (skip=0) whose footprints overlap by >= 25 % of the smaller one and are not parent / child
 //    ({a, b, frac, areaA, areaB, hA, hB, same}: same = 1 when the heights agree within 0.5 m, i.e. the roofs / walls are coplanar and WILL z-fight);
-//    b.dupOf = id of the building whose footprint it duplicates (>= 85 % overlap and similar area): drop one of them;
+//    b.dupOf = id of the building whose footprint AND vertical interval it duplicates
+//    (>= 85 % footprint overlap, similar area, comparable mapped bottom/top): drop one;
 //  * DUP_ROADS = road ways drawn twice (same end points and length within 1 m)
 const OVERLAPS = [];
 {
@@ -626,7 +627,14 @@ const OVERLAPS = [];
     if (!tot) continue; const frac = hit / tot; if (frac < 0.25) continue;
     const hA = A.h ?? A.hEst, hC = C.h ?? C.hEst;
     OVERLAPS.push({ a: A.id, b: C.id, frac: Math.round(frac * 100) / 100, areaA: A.area, areaB: C.area, hA: hA ?? null, hB: hC ?? null, same: (hA == null && hC == null) || (hA != null && hC != null && Math.abs(hA - hC) < 0.5) ? 1 : 0 });
-    if (frac >= 0.85 && Math.min(A.area, C.area) / Math.max(A.area, C.area) >= 0.7) { const later = A.id > C.id ? A : C; later.dupOf = (later === A ? C : A).id; }
+    // Equal plan outlines can describe separate stacked floors, not duplicate
+    // geometry (e.g. Europolis' 0–6.6, 6.6–9.9 and 9.9–13.2 m storeys).
+    // Unknown top heights are insufficient evidence to discard a building.
+    const loA = A.minH ?? 0, loC = C.minH ?? 0;
+    const sameInterval = Number.isFinite(hA) && Number.isFinite(hC) &&
+      Math.abs(loA - loC) < 0.5 && Math.abs(hA - hC) < 0.5 &&
+      Math.min(hA, hC) > Math.max(loA, loC);
+    if (sameInterval && frac >= 0.85 && Math.min(A.area, C.area) / Math.max(A.area, C.area) >= 0.7) { const later = A.id > C.id ? A : C; later.dupOf = (later === A ? C : A).id; }
   }
 }
 const dupRoads = [];

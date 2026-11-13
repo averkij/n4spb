@@ -1,5 +1,14 @@
 # Areas: one page per scene
 
+**Финляндский**, planning-map district **64**, badge **F**, is live as
+**finlyandsky.html**. Its 56 territory rectangles cover 16.4736 km², with
+Finland Station and Lenin Square, Kresty, the Visitation church, railway
+approaches and the Arsenal waterfront. Separate landmark specialists used
+multiple photo references. Fresh mapped geometry fills the old source's
+northern/eastern gaps. Three reciprocal neighbours are Palace–Liteyny,
+Smolninskoye and Sampsoniyevskoye–Lanskoye. See
+[the area guide](FINLYANDSKY-AREA.md) for sources and verification.
+
 Московская застава is live as **moskovskaya.html**, planning-map district **6**,
 badge **Z** (expanded in 10.0.0). Its 69 territory rectangles cover 22.0096 km²,
 reaching Ленинский проспект and улица Типанова, with reciprocal street transitions

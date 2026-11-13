@@ -1,6 +1,8 @@
 // End-to-end test of the drivable car in the REAL page (headless Edge / Chrome with GPU, not ?shot, so the HUD is drawn):
 //   load -> Start -> walk to the red car -> the "[E] Get in" prompt -> E -> accelerate (W) -> nitro (Shift) -> drift (A + Space) -> look around (mouse) -> brake -> E (get out) -> report.
 //   node tools/drive-test.mjs [--q medium|high|low] [--out shots/drive/test] [--only a,b,...] [--tod night] [--params "baked=force"] [--nofuzz] [--lenient-first-e] [--load-timeout ms] [--protocol-timeout ms]
+// --start "x,z,cameraYawDeg" tests controls on a verified road after real E entry
+// at the garage. The parked car's prompt/entry checks always run at its own pose.
 // Screenshots <out>_*.png are written at each stage. Exit code 1 on a page error, a module error or a failed check.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -74,6 +76,13 @@ try {
     if (s.active && args['lenient-first-e']) console.log('WARNING:', msg); else problems.push(msg);
   }
   await shot('1_seated');
+  if (args.start) {
+    const pose = args.start.split(',').map(Number);
+    if (pose.length !== 3 || !pose.every(Number.isFinite)) throw new Error('Invalid --start x,z,cameraYawDeg');
+    await page.evaluate(async a => { await window.__regions?.ensureAt(a[0], a[1]); window.__drive.place(...a); }, pose);
+    await sleep(500);
+    console.log('road start:', JSON.stringify(await st()));
+  }
   // ---- drive: gas
   await page.keyboard.down('KeyW'); await sleep(2500); s = await st(); console.log('gas 2.5 s:', JSON.stringify(s)); await shot('2_gas');
   const au = await page.evaluate(() => { const a = window.__ctx.audio, c = a.context; return { ready: a.ready, state: c ? c.state : 'none', meter: a.meter() }; }); console.log('audio:', JSON.stringify(au));
@@ -129,7 +138,9 @@ try {
   if (fz.bad.length) problems.push(`fuzz: the car was somewhere it must not be ${JSON.stringify(fz.bad.slice(0, 5))}`);
   // ---- the Anichkov Bridge: the car rides over the humped deck at the deck height and comes out on the other side
   const br = await page.evaluate(() => {
-    const d = window.__drive, c = window.__ctx.services.landmarksC.bridge, car = d.car, F = c.frame, th = F.theta;
+    const d = window.__drive, c = window.__ctx.services.landmarksC?.bridge;
+    if (!c) return { skipped: 'Anichkov Bridge is outside this area' };
+    const car = d.car, F = c.frame, th = F.theta;
     d.enter();
     const ux = Math.cos(th), uz = Math.sin(th);
     d.teleport(F.cx - ux * 40 + Math.sin(th) * 6, F.cz - uz * 40 - Math.cos(th) * 6, Math.atan2(ux, uz)); const y = []; let hitMax = 0;

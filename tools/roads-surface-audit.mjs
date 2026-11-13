@@ -67,6 +67,7 @@ const { AREAS, ROADS } = await imp('src/world/data/city.js');
 const { buildNet, DRIVE, segInfo } = await imp('src/world/streets/net.js');
 const { profMax } = await imp('src/world/streets/style.js');
 const { deckAt, setDecksEnabled } = await imp('src/world/streets/decks.js');
+const { northDeckHeight } = await imp('src/world/northBridges/sites.js');
 
 // ---------------------------------------------------------------- 1. the scene: triangle soup of the ground-level horizontal surfaces
 const ALL_MODULES = mainModules();            // the page's own list (src/main.js MODULES): never a stale copy
@@ -257,7 +258,9 @@ function sample(x, z, ctxInfo) {
   if(ctxInfo.kind==='carriageway'&&net.cover(x,z,{})<-.15){nOutsideFootprint++;return;}
   const stack = stackAt(x, z), top = topOf(stack);
   const key = top ? `${top.m.mod}/${top.m.name}/${top.m.mat}` : 'none';
-  if (deckAt(x, z, 0.3)) { nDeck++; deckMat[key] = (deckMat[key] || 0) + 1; return; }
+  // Raised Neva bridge slabs own their asphalt and approach ramps too. Use
+  // their actual travel-width profile, not a broad rectangle around the bridge.
+  if (deckAt(x, z, 0.3) || (BUILD.includes('northBridges') && northDeckHeight(x, z) != null)) { nDeck++; deckMat[key] = (deckMat[key] || 0) + 1; return; }
   nSamples++; okMat[key] = (okMat[key] || 0) + 1;
   if (top && isAsphalt(top.m)) return;
   const way = ctxInfo.way || null;

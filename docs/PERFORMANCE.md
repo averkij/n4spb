@@ -1,5 +1,87 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-13: Финляндский first release (13.0.0)
+
+The new independently loaded area covers 16.4736 km². Complete mapped northern
+and eastern streets replace the old source extract's missing territory. Two
+specialists authored Finland Station/Lenin Square and Kresty/Visitation church;
+the builders add 78,187 and 208,084 triangles before batching, with finite detail
+ranges and zero frame callbacks. Shared generators retain population, traffic,
+breakable objects, fountain animation and the navigable Neva.
+
+Only the new area's closure required baking. Revision `93cff4b53c71b1e1eb77`
+contains 145 products, 61.6 MiB compressed, baked in 99 s. Every other live bake
+is byte-unchanged and remains fresh; the manifest check passes all 21 live areas.
+
+Normal baked loading, Edge / ANGLE D3D11 / RTX 3090 Ti, 1280×720, medium,
+full traffic, population and shadows. Each drive is twelve seconds of W;
+no profiling or mid-drive screenshot, with CPU audits and other GPU jobs stopped.
+The centre baseline was recorded before the new area was integrated. The same
+centre source/bake revision is used before and after; its faster second run is
+single-run/cache variation, not an engine optimization claim.
+
+| Run | Ready s | Mean / p50 / p95 frame ms | Frames >80 ms | Mean calls | Distance m | CDP heap / backing MiB |
+|---|---:|---|---:|---:|---:|---|
+| Centre before | 34.1 | 29.0 / 33.3 / 33.4 | 4 | 1294 | 351 | 517 / 966 |
+| Centre after | 24.7 | 21.2 / 16.7 / 33.4 | 3 | 1286 | 351 | 470 / 736 |
+| Комсомола, new area | 15.9 | 17.4 / 16.7 / 16.8 | 2 | 747 | 386 | 517 / 559 |
+| Lenin Square walking | 15.3 | 17.0 / 16.7 / 16.8 | 0 | 887 | 42 | not sampled |
+
+The new-area drive averages 58 FPS and the walk 59 FPS on this hardware. The
+two drive hitches peak at 133.5 ms; this is a first-release baseline, not proof
+of hitch-free driving or performance on weaker devices. All runs report zero
+module errors and zero failed streaming regions. The centre's draw count remains
+within one percent and its route ends within one metre of the original endpoint.
+The new-area drive stops behind traffic after 386 m; its first verified 350 m
+follows the same clear asphalt corridor used for the initial measurement.
+Residual work remains in shared geometry submission and occasional region/GC
+stalls; no global renderer or simulation changes were made for this area.
+
+Reproduce (the drive start is **camera yaw**, not model bearing):
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 12 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/finlyandsky/centre-after
+node tools/drive-bench.mjs --area finlyandsky --q medium --seconds 12 --start "630.37626685,-2452.19726876,-77.19325117" --json --diagnostics --out shots/finlyandsky/district-drive
+node tools/drive-bench.mjs --area finlyandsky --q medium --walk --seconds 12 --start "270,-2484,164" --json --out shots/finlyandsky/walk
+node tools/drive-test.mjs --area finlyandsky --q medium --nofuzz --start "630.37626685,-2452.19726876,-77.19325117" --out shots/finlyandsky/controls-final
+```
+
+The controls run enters the actual parked Zhiguli with E, then uses a verified
+road for acceleration, nitro, drifting, camera changes, braking and E exit. The
+old test assumed every area contained Anichkov Bridge; it now reports that
+specific subcase as absent where appropriate. Water and bridge behavior are
+independently covered by this area's water-access and boat-passage tests.
+
+Road/marking audits pass: zero on-road furniture, 108 shared-generator surface
+residual samples within the existing 120 budget, zero wall strips across asphalt,
+five small ramp triangles within the ribbon budget, and full solid-plan paint
+coverage. The road audit now recognizes explicitly marked attached facade
+instances and the owning bridge's shared fence helper; the surface audit uses
+the actual claimed Neva-deck profile. It does not grant a new-area exemption.
+Station paving and rail detail are clipped off asphalt and contribute no surface
+offenders. The wall audit reports zero unexplained gaps, roof, floor, winding or
+claim issues. Viewpoints and garage clearance pass.
+
+Geography, layout, generated HTML, closure/runtime classification, 284 area-system
+checks and 97 gate checks pass. All 23 registered areas pass the water-level
+suite; the new area's water-access and boat-passage suites pass 17 and 26 checks.
+Focused landmark claims have no overlaps with unclaimed buildings. Visual reviews
+cover street views, close detail, aerials, the northern neighbourhoods, three road
+classes, and the Liteyny opening from boat height.
+Day/night fountain screenshots were reviewed. Final focused z-fighting probes
+report 59 / 4 / 4 noisy pixels (at most 0.006%, below the 0.02% target).
+The large angular roof seen from Marshal Blucher Avenue matches Europolis's
+mapped cantilevered canopy; it remains generic architecture rather than a new
+bespoke landmark model. Final review corrected the authoring converter's
+footprint-only duplicate filter: separate height intervals must survive.
+Exactly six records lost incorrect `dupOf` flags, including two upper Europolis
+storeys; all geometry, counts and snapshot dates otherwise remain unchanged.
+Nine geography regressions and the wall audit pass after regeneration.
+The older North-specific data audit limitations are recorded in
+[the geography dossier](research/finlyandsky-geography.md).
+Evidence is under `shots/finlyandsky/` (ignored); sources and recreation commands
+are in [the area guide](FINLYANDSKY-AREA.md).
+
 ## 2026-11-06: ordinary Fontanka quay road at the castle moat (9.21.4)
 
 Palace no longer claims or constructs the decorative `eng2` arch. The normal

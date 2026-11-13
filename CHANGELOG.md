@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **13.0.0** (2026-11-13, major): Add Finlyandsky district with Finland Station, Lenin Square fountains, Kresty, Mineralnaya church, mapped railway and Neva transitions
 - **12.0.0** (2026-11-12, major): Added mapped Avtovo with detailed metro and memorial sites, connected water, and Russian loading labels
 - **11.0.0** (2026-11-12, major): Added Komendantsky and Sampson areas, detailed landmarks, Google tag and packed Pages bakes
 - **10.1.1** (2026-11-07, patch): Remove construction sound synthesis entirely and quiet all bird layers by another 18 dB

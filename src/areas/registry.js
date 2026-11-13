@@ -4267,6 +4267,428 @@ REGISTRY["narvsky"] = {
 };
 // NARVSKY-AREA-END
 
+
+// FINLYANDSKY-AREA-BEGIN
+REGISTRY["finlyandsky"] = {
+  "id": "finlyandsky",
+  "page": "finlyandsky.html",
+  "bake": "baked/finlyandsky/",
+  "requireBake": true,
+  "title": "Финляндский",
+  "titleEn": "Finlyandsky",
+  "sights": [
+    "Финляндский вокзал",
+    "Площадь Ленина и фонтаны",
+    "Кресты",
+    "Храм Посещения Пресвятой Девой Марией Елизаветы",
+    "Арсенальная набережная"
+  ],
+  "approxMB": 65,
+  "dev": false,
+  "mapId": 64,
+  "remap": {
+    "src/world/data/city.js": "src/areas/finlyandsky/data/city.js",
+    "src/world/area.js": "src/areas/finlyandsky/area.js",
+    "src/world/city/known-data.js": "src/areas/finlyandsky/known-data.js",
+    "src/world/lib/owns-table.js": "src/areas/finlyandsky/owns-table.js"
+  },
+  "play": [
+    {
+      "name": "F01",
+      "x0": 160,
+      "x1": 400,
+      "z0": -6480,
+      "z1": -6400
+    },
+    {
+      "name": "F02",
+      "x0": 80,
+      "x1": 720,
+      "z0": -6400,
+      "z1": -6320
+    },
+    {
+      "name": "F03",
+      "x0": 0,
+      "x1": 800,
+      "z0": -6320,
+      "z1": -6240
+    },
+    {
+      "name": "F04",
+      "x0": -80,
+      "x1": 880,
+      "z0": -6240,
+      "z1": -6160
+    },
+    {
+      "name": "F05",
+      "x0": 2560,
+      "x1": 2720,
+      "z0": -6240,
+      "z1": -6160
+    },
+    {
+      "name": "F06",
+      "x0": -80,
+      "x1": 1120,
+      "z0": -6160,
+      "z1": -6080
+    },
+    {
+      "name": "F07",
+      "x0": 2480,
+      "x1": 2800,
+      "z0": -6160,
+      "z1": -6080
+    },
+    {
+      "name": "F08",
+      "x0": -80,
+      "x1": 1280,
+      "z0": -6080,
+      "z1": -6000
+    },
+    {
+      "name": "F09",
+      "x0": 2400,
+      "x1": 2880,
+      "z0": -6080,
+      "z1": -6000
+    },
+    {
+      "name": "F10",
+      "x0": 80,
+      "x1": 1360,
+      "z0": -6000,
+      "z1": -5920
+    },
+    {
+      "name": "F11",
+      "x0": 2400,
+      "x1": 3120,
+      "z0": -6000,
+      "z1": -5920
+    },
+    {
+      "name": "F12",
+      "x0": 80,
+      "x1": 1440,
+      "z0": -5920,
+      "z1": -5840
+    },
+    {
+      "name": "F13",
+      "x0": 2320,
+      "x1": 3280,
+      "z0": -5920,
+      "z1": -5840
+    },
+    {
+      "name": "F14",
+      "x0": 80,
+      "x1": 1600,
+      "z0": -5840,
+      "z1": -5760
+    },
+    {
+      "name": "F15",
+      "x0": 2240,
+      "x1": 3600,
+      "z0": -5840,
+      "z1": -5760
+    },
+    {
+      "name": "F16",
+      "x0": 160,
+      "x1": 1680,
+      "z0": -5760,
+      "z1": -5680
+    },
+    {
+      "name": "F17",
+      "x0": 2240,
+      "x1": 3920,
+      "z0": -5760,
+      "z1": -5680
+    },
+    {
+      "name": "F18",
+      "x0": 4160,
+      "x1": 4240,
+      "z0": -5760,
+      "z1": -5680
+    },
+    {
+      "name": "F19",
+      "x0": 160,
+      "x1": 1840,
+      "z0": -5680,
+      "z1": -5600
+    },
+    {
+      "name": "F20",
+      "x0": 2160,
+      "x1": 4320,
+      "z0": -5680,
+      "z1": -5600
+    },
+    {
+      "name": "F21",
+      "x0": 160,
+      "x1": 1920,
+      "z0": -5600,
+      "z1": -5520
+    },
+    {
+      "name": "F22",
+      "x0": 2160,
+      "x1": 4400,
+      "z0": -5600,
+      "z1": -5520
+    },
+    {
+      "name": "F23",
+      "x0": -160,
+      "x1": 4400,
+      "z0": -5520,
+      "z1": -5440
+    },
+    {
+      "name": "F24",
+      "x0": -560,
+      "x1": 4400,
+      "z0": -5440,
+      "z1": -5360
+    },
+    {
+      "name": "F25",
+      "x0": -640,
+      "x1": 4400,
+      "z0": -5360,
+      "z1": -5280
+    },
+    {
+      "name": "F26",
+      "x0": -720,
+      "x1": 4320,
+      "z0": -5280,
+      "z1": -5200
+    },
+    {
+      "name": "F27",
+      "x0": -720,
+      "x1": 4240,
+      "z0": -5200,
+      "z1": -5040
+    },
+    {
+      "name": "F28",
+      "x0": -720,
+      "x1": 4160,
+      "z0": -5040,
+      "z1": -4880
+    },
+    {
+      "name": "F29",
+      "x0": -640,
+      "x1": 4080,
+      "z0": -4880,
+      "z1": -4720
+    },
+    {
+      "name": "F30",
+      "x0": -640,
+      "x1": 4000,
+      "z0": -4720,
+      "z1": -4560
+    },
+    {
+      "name": "F31",
+      "x0": -640,
+      "x1": 3920,
+      "z0": -4560,
+      "z1": -4480
+    },
+    {
+      "name": "F32",
+      "x0": -560,
+      "x1": 3840,
+      "z0": -4480,
+      "z1": -4240
+    },
+    {
+      "name": "F33",
+      "x0": -560,
+      "x1": 3760,
+      "z0": -4240,
+      "z1": -4160
+    },
+    {
+      "name": "F34",
+      "x0": -480,
+      "x1": 3760,
+      "z0": -4160,
+      "z1": -3920
+    },
+    {
+      "name": "F35",
+      "x0": -480,
+      "x1": 3680,
+      "z0": -3920,
+      "z1": -3840
+    },
+    {
+      "name": "F36",
+      "x0": -400,
+      "x1": 3600,
+      "z0": -3840,
+      "z1": -3680
+    },
+    {
+      "name": "F37",
+      "x0": -400,
+      "x1": 3680,
+      "z0": -3680,
+      "z1": -3520
+    },
+    {
+      "name": "F38",
+      "x0": -400,
+      "x1": 3600,
+      "z0": -3520,
+      "z1": -3360
+    },
+    {
+      "name": "F39",
+      "x0": -320,
+      "x1": 3520,
+      "z0": -3360,
+      "z1": -3120
+    },
+    {
+      "name": "F40",
+      "x0": -240,
+      "x1": 3600,
+      "z0": -3120,
+      "z1": -2960
+    },
+    {
+      "name": "F41",
+      "x0": -320,
+      "x1": 3600,
+      "z0": -2960,
+      "z1": -2880
+    },
+    {
+      "name": "F42",
+      "x0": -400,
+      "x1": 3600,
+      "z0": -2880,
+      "z1": -2800
+    },
+    {
+      "name": "F43",
+      "x0": -400,
+      "x1": 3520,
+      "z0": -2800,
+      "z1": -2720
+    },
+    {
+      "name": "F44",
+      "x0": -400,
+      "x1": 3440,
+      "z0": -2720,
+      "z1": -2640
+    },
+    {
+      "name": "F45",
+      "x0": -400,
+      "x1": 1840,
+      "z0": -2640,
+      "z1": -2560
+    },
+    {
+      "name": "F46",
+      "x0": 2240,
+      "x1": 3360,
+      "z0": -2640,
+      "z1": -2560
+    },
+    {
+      "name": "F47",
+      "x0": -400,
+      "x1": 1760,
+      "z0": -2560,
+      "z1": -2480
+    },
+    {
+      "name": "F48",
+      "x0": 2400,
+      "x1": 3280,
+      "z0": -2560,
+      "z1": -2480
+    },
+    {
+      "name": "F49",
+      "x0": -400,
+      "x1": 1680,
+      "z0": -2480,
+      "z1": -2400
+    },
+    {
+      "name": "F50",
+      "x0": 2480,
+      "x1": 3120,
+      "z0": -2480,
+      "z1": -2400
+    },
+    {
+      "name": "F51",
+      "x0": -400,
+      "x1": 1600,
+      "z0": -2400,
+      "z1": -2320
+    },
+    {
+      "name": "F52",
+      "x0": 2560,
+      "x1": 3040,
+      "z0": -2400,
+      "z1": -2320
+    },
+    {
+      "name": "F53",
+      "x0": -400,
+      "x1": 1440,
+      "z0": -2320,
+      "z1": -2240
+    },
+    {
+      "name": "F54",
+      "x0": 2800,
+      "x1": 2960,
+      "z0": -2320,
+      "z1": -2240
+    },
+    {
+      "name": "F55",
+      "x0": -400,
+      "x1": 1360,
+      "z0": -2240,
+      "z1": -2160
+    },
+    {
+      "name": "F56",
+      "x0": -400,
+      "x1": 1280,
+      "z0": -2160,
+      "z1": -1680
+    }
+  ]
+};
+// FINLYANDSKY-AREA-END
+
 /**
  * Gates between areas: { id, from, to, seg: [[x,z],[x,z]] (the border segment in the FROM area), inward: [nx,nz] (unit vector pointing from the border into the FROM area), zone (m: depth of the
  * prompt zone, walking), arrive: { x0, x1, z0, z1 } (where the player may land in the TO area), reverse (id of the gate back) }.
@@ -4393,6 +4815,15 @@ export const GATES = [
   { id: 'at-avtovo-narvsky', kind: 'edge', from: 'avtovo', to: 'narvsky', zone: 40, reverse: 'at-narvsky-avtovo' },
   { id: 'at-narvsky-avtovo', kind: 'edge', from: 'narvsky', to: 'avtovo', zone: 40, reverse: 'at-avtovo-narvsky' },
   // AVTOVO-GATES-END
+  // FINLYANDSKY-GATES-BEGIN
+  // Generated by tools/connect-finlyandsky-areas.mjs from all live overlaps.
+  { id: 'fy-finlyandsky-palace', kind: 'edge', from: 'finlyandsky', to: 'palace', zone: 40, reverse: 'fy-palace-finlyandsky' },
+  { id: 'fy-palace-finlyandsky', kind: 'edge', from: 'palace', to: 'finlyandsky', zone: 40, reverse: 'fy-finlyandsky-palace' },
+  { id: 'fy-finlyandsky-smolny', kind: 'edge', from: 'finlyandsky', to: 'smolny', zone: 40, reverse: 'fy-smolny-finlyandsky' },
+  { id: 'fy-smolny-finlyandsky', kind: 'edge', from: 'smolny', to: 'finlyandsky', zone: 40, reverse: 'fy-finlyandsky-smolny' },
+  { id: 'fy-finlyandsky-sampson', kind: 'edge', from: 'finlyandsky', to: 'sampson', zone: 40, reverse: 'fy-sampson-finlyandsky' },
+  { id: 'fy-sampson-finlyandsky', kind: 'edge', from: 'sampson', to: 'finlyandsky', zone: 40, reverse: 'fy-finlyandsky-sampson' },
+  // FINLYANDSKY-GATES-END
   // g0 - the dev loop (?devgates=1): a gate across the Nevsky approach to Vosstaniya Square (a vertical segment at x = 470, the strip east of it is the "own area") that leads back to the SAME page at
   // the same pose. It exercises the whole hand-off (prompt, preflight, veil, navigation, arrival, memory) before a second area exists, and stays as a test fixture afterwards.
   { id: 'g0', dev: true, from: 'strip', to: 'strip', seg: [[470, 100], [470, 240]], inward: [1, 0], zone: 30, arrive: { x0: 440, x1: 700, z0: 80, z1: 260 }, reverse: 'g0' },
@@ -5814,3 +6245,48 @@ for (const [from, ids] of Object.entries(AVTOVO_GATE_ORDER)) {
   ordered.forEach((row, i) => { GATES[slots[i]] = row; });
 }
 // AVTOVO-GATE-ORDER-END
+
+// FINLYANDSKY-GATE-ORDER-BEGIN
+// Exact priority search uses createGateMachine and the same working run-ups as
+// gates-test. Keep the source rows stable; apply only their per-area priority.
+const FINLYANDSKY_GATE_ORDER = {
+  "finlyandsky": [
+    "fy-finlyandsky-palace",
+    "fy-finlyandsky-smolny",
+    "fy-finlyandsky-sampson"
+  ],
+  "palace": [
+    "e3",
+    "e5",
+    "e39",
+    "e37",
+    "e11",
+    "ns-palace-sampson",
+    "fy-palace-finlyandsky",
+    "e1"
+  ],
+  "sampson": [
+    "ns-sampson-komendantsky",
+    "ns-sampson-palace",
+    "ns-sampson-okrug65",
+    "ns-sampson-aptekarsky",
+    "ns-sampson-islands",
+    "fy-sampson-finlyandsky"
+  ],
+  "smolny": [
+    "e2",
+    "e7",
+    "fy-smolny-finlyandsky"
+  ]
+};
+for (const [from, ids] of Object.entries(FINLYANDSKY_GATE_ORDER)) {
+  const slots = [];
+  for (let i = 0; i < GATES.length; i++) if (GATES[i].kind === 'edge' && GATES[i].from === from) slots.push(i);
+  const rows = new Map(slots.map(i => [GATES[i].id, GATES[i]]));
+  // A later island-area commit may add rows before this generator is rerun.
+  // Preserve every new row exactly once, then rerun the priority search.
+  const ordered = ids.map(id => rows.get(id)).filter(Boolean);
+  for (const i of slots) if (!ids.includes(GATES[i].id)) ordered.push(GATES[i]);
+  ordered.forEach((row, i) => { GATES[slots[i]] = row; });
+}
+// FINLYANDSKY-GATE-ORDER-END
