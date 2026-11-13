@@ -5,7 +5,7 @@ const { rects } = JSON.parse(fs.readFileSync(`src/areas/${id}/territory.json`, '
 const row = {
   id, page: `${id}.html`, bake: `baked/${id}/`, requireBake: true,
   title: 'Финляндский', titleEn: 'Finlyandsky',
-  sights: ['Финляндский вокзал', 'Площадь Ленина и фонтаны', 'Кресты', 'Храм Посещения Пресвятой Девой Марией Елизаветы', 'Арсенальная набережная'],
+  sights: ['Финляндский вокзал', 'Площадь Ленина и фонтаны', 'Кресты', 'Храм Посещения Пресвятой Девой Марией Елизаветы', 'Парадный спуск к Неве', 'Арсенальная и Свердловская набережные', 'Пристань с гротом и сфинксами'],
   approxMB: 65, dev: false, mapId: 64,
   remap: {
     'src/world/data/city.js': `src/areas/${id}/data/city.js`,

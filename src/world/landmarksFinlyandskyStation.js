@@ -2,7 +2,7 @@
 // and Evseev's Lenin monument. Sources/estimates: research/finlyandsky-station.md.
 import * as THREE from 'three';
 import { BUILDINGS, MONUMENTS, PLATFORMS, RAILS } from './data/city.js';
-import { Parts } from './landmarksD/kit.js';
+import { Parts, ringEdges, onEdge } from './landmarksD/kit.js';
 import { MeshBuilder, addPrism, addPolyColliders } from './lib/massing.js';
 import { human, cached } from './lib/figures.js';
 import { registerLOD } from '../core/spatial.js';
@@ -22,13 +22,15 @@ function instances(ctx, name, geo, mat, spots, far) {
   mesh.name = name; mesh.castShadow = true; mesh.receiveShadow = true; mesh.computeBoundingBox(); mesh.computeBoundingSphere(); ctx.addStatic(mesh); registerLOD(mesh, far); return mesh;
 }
 
-function label(K, text, u, y, v, w, h, id = 'r2123616') {
-  const { ctx, fine: P, decals } = K, p = stationPoint(u, v);
-  if (!ctx.tex?.sign || !ctx.services.labels.reserve(id, p.x, y, p.z, w, h, s, c, 'landmark')) return;
-  const roof = y > 15;
-  const texture = ctx.tex.sign({ text, bg: roof ? 'rgba(0,0,0,0)' : '#414b50', fg: '#deded2', w: 2048, h: 128, font: 'sans' });
+function facadeLabel(K, text, p, y, rot, w, h, id, roof = false) {
+  const { ctx, fine: P, decals } = K;
+  if (!ctx.tex?.sign || !ctx.services.labels.reserve(id, p.x, y, p.z, w, h, Math.sin(rot), Math.cos(rot), 'landmark')) return;
+  const texture = ctx.tex.sign({ text, bg: roof ? 'rgba(0,0,0,0)' : '#414b50', fg: '#deded2', w: 1024, h: 128, font: 'sans' });
   const mat = ctx.mat.decal('#ffffff', { map: texture, alphaTest: roof ? .4 : 0 }); decals.add(mat);
-  P.push(p.x, y, p.z, FRONT.rot); P.quad(mat, [-w / 2, -h / 2, 0], [w / 2, -h / 2, 0], [w / 2, h / 2, 0], [-w / 2, h / 2, 0], [0, 0, 1]); P.pop();
+  P.push(p.x, y, p.z, rot); P.quad(mat, [-w / 2, -h / 2, 0], [w / 2, -h / 2, 0], [w / 2, h / 2, 0], [-w / 2, h / 2, 0], [0, 0, 1]); P.pop();
+}
+function label(K, text, u, y, v, w, h, id = 'r2123616') {
+  facadeLabel(K, text, stationPoint(u, v), y, FRONT.rot, w, h, id, y > 15);
 }
 
 function relief(P, M, u, n) {
@@ -106,9 +108,9 @@ function station(K) {
     D.pop(); F.pop();
   }
   P.col(M.silver, 0, 0, 29.02, 59.0, .22, .035, 8);
-  const star = new THREE.Shape();
-  for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .23 : .65; if (i) star.lineTo(Math.cos(a) * r, 59.35 + Math.sin(a) * r); else star.moveTo(Math.cos(a) * r, 59.35 + Math.sin(a) * r); } star.closePath();
-  P.extrude(M.silver, star, -.05, .10, 1, 1);
+  // The station has a needle spire, not the five-pointed finial of Vosstaniya's
+  // obelisk. Reference photographs do not show a star here.
+  P.col(M.silver, 0, 0, 59.0, 59.9, .035, 0, 8);
   for (const p of [P, D, F]) p.pop();
   label(K, 'ФИНЛЯНДСКИЙ ВОКЗАЛ', -28.0, 16.65, .26, 35, .95);
   label(K, 'Finlyandskiy Railway Station', 29.5, 16.65, .26, 34, .88);
@@ -117,6 +119,82 @@ function station(K) {
   svc.houses.push({ id: 'r2123616', name: 'Финляндский вокзал', x: FRONT.x, z: FRONT.z, h: 16.08 });
   svc.monuments.push({ id: 'w314291447', name: 'Башня Финляндского вокзала', x: tx, z: tz, h: 60 });
   svc.entrances.push(...[-5.25, 0, 5.25].map(u => ({ ...stationPoint(u, 1.5), width: 2.8, name: 'Финляндский вокзал' })));
+  stationRear(K, rec);
+}
+
+function stationRear(K, rec) {
+  const { ctx, shell: P, medium: D, fine: F, M, svc } = K;
+  if (!rec) return;
+  // The 2022 platform-side photograph shows seven monumental glazed bays,
+  // clerestory transoms, paired doors and the low ticket-hall barrel roof.
+  // Place this face on the actual rear edge of the 40 m central concourse.
+  for (const p of [P, D, F]) p.push(FRONT.x, 0, FRONT.z, FRONT.rot);
+  D.box(M.granite, -20.0, 19.9, .10, .85, -58.49, -58.40);
+  D.box(M.trim, -20.1, 20.0, 10.2, 10.65, -58.59, -58.36);
+  for (let i = 0; i < 7; i++) {
+    const u = -17.1 + i * 5.7, hw = 2.35;
+    D.box(M.window, u - hw, u + hw, .85, 8.55, -58.57, -58.45);
+    D.box(M.window, u - hw, u + hw, 9.0, 10.05, -58.57, -58.45);
+    for (const side of [-1, 1]) D.box(M.trim, u + side * (hw + .09) - .10, u + side * (hw + .09) + .10, .75, 10.1, -58.68, -58.42);
+    for (const yy of [3.0, 5.9, 8.55, 9.0]) F.box(M.metal, u - hw, u + hw, yy, yy + .07, -58.66, -58.56);
+    F.box(M.metal, u - .035, u + .035, .85, 10.05, -58.66, -58.56);
+    if (i > 0 && i < 6) {
+      for (const a of [-1, 1]) {
+        D.box(M.door, u + a * .76 - .67, u + a * .76 + .67, .3, 2.85, -58.75, -58.58);
+        F.box(M.silver, u + a * .76 - .025, u + a * .76 + .025, 1.15, 1.75, -58.80, -58.73);
+      }
+    }
+  }
+  // Low curved roof over the ticket hall; closed soffit/end faces keep the
+  // barrel connected to its mapped concourse rather than a floating outline.
+  for (let i = 0; i < 16; i++) {
+    const a = Math.PI * i / 16, b = Math.PI * (i + 1) / 16;
+    const x0 = -7 * Math.cos(a), x1 = -7 * Math.cos(b), y0 = 10.65 + 2.15 * Math.sin(a), y1 = 10.65 + 2.15 * Math.sin(b);
+    P.quad(M.roof, [x0, y0, -58.75], [x1, y1, -58.75], [x1, y1, -42.0], [x0, y0, -42.0], [0, 1, 0]);
+    P.fan(M.stone, [[x0, 10.6, -58.77], [x1, 10.6, -58.77], [x1, y1, -58.77], [x0, y0, -58.77]], [0, 0, -1]);
+  }
+  for (let i = 0; i < 7; i++) {
+    const u = -5.55 + i * 1.85, top = 10.65 + 2.15 * Math.sqrt(Math.max(0, 1 - (u / 7) ** 2));
+    D.box(M.window, u - .64, u + .64, 10.92, Math.max(11.1, top - .3), -58.84, -58.78);
+  }
+  for (const p of [P, D, F]) p.pop();
+  facadeLabel(K, 'САНКТ-ПЕТЕРБУРГ', stationPoint(-11.4, -58.74), 11.25, FRONT.rot + Math.PI, 16.0, .85, rec.id, true);
+  facadeLabel(K, 'SAINT PETERSBURG', stationPoint(11.4, -58.74), 11.25, FRONT.rot + Math.PI, 16.0, .85, rec.id, true);
+  facadeLabel(K, 'ВЫХОД В ГОРОД', stationPoint(0, -58.83), 3.28, FRONT.rot + Math.PI, 9.0, .40, rec.id);
+
+  // Continue the mapped rear/side wings with two-storey window rhythms, stone
+  // plinths and cornices. Window/frame pieces are instanced, not one material
+  // or an individual mesh per bay. The front face already has bespoke glazing.
+  const trim = [], glass = [], seams = [];
+  const add = (out, e, u, y, w, h, d, off) => {
+    const x = e.a[0] + (e.b[0] - e.a[0]) * u / e.len + e.n[0] * off;
+    const z = e.a[1] + (e.b[1] - e.a[1]) * u / e.len + e.n[1] * off;
+    out.push({ x, y, z, sx: w, sy: h, sz: d, rot: Math.atan2(e.n[0], e.n[1]) });
+  };
+  for (const poly of rec.polys) for (const e of ringEdges(poly)) {
+    const mx = (e.a[0] + e.b[0]) / 2, mz = (e.a[1] + e.b[1]) / 2;
+    const u = (mx - FRONT.x) * c - (mz - FRONT.z) * s, v = (mx - FRONT.x) * s + (mz - FRONT.z) * c;
+    if (v > -2 || (Math.abs(u) < 21 && v > -60) || e.len < 7) continue;
+    onEdge(D, e, len => {
+      D.box(M.granite, 0, len, .05, .65, 0, .055);
+      D.box(M.trim, -.04, len + .04, 9.95, 10.5, 0, .18);
+      D.box(M.trim, 0, len, 5.05, 5.25, 0, .095);
+    });
+    const n = Math.floor((e.len - 1.6) / 4.3);
+    for (let i = 0; i < n; i++) for (const y of [2.75, 7.55]) {
+      const a = (i + .5) * e.len / n;
+      add(trim, e, a, y, 2.38, 3.35, .11, .09);
+      add(glass, e, a, y + .04, 1.98, 2.93, .06, .17);
+      add(seams, e, a, y + .04, .055, 2.93, .08, .23);
+      add(seams, e, a, y - .33, 1.98, .055, .08, .23);
+    }
+  }
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  for (const [name, mat, spots, far] of [['trim', M.trim, trim, 650], ['glazing', M.window, glass, 650], ['mullions', M.metal, seams, 240]]) {
+    const mesh = instances(ctx, `finlyandsky-station-facade-${name}`, geo, mat, spots, far);
+    if (mesh) mesh.userData.buildingFacade = true;
+  }
+  svc.rearFacade = { bays: 7, sideWindows: glass.length, barrelRoof: true };
 }
 
 function lenin(K) {
@@ -200,19 +278,54 @@ function platforms(K) {
     flush(1);
   }
   instances(ctx, 'finlyandsky-track-sleepers', new THREE.BoxGeometry(2.4, .10, .21), M.sleeper, sleepers, 430);
-  // Island canopies follow the long platform fingers rather than covering
-  // the whole railway yard with one invented rectangular station hall.
-  for (const u of [-8, 8, 24, 40, 56]) {
-    const p = stationPoint(u, -160), rot = FRONT.rot;
+  // The actual two mapped passenger shelters are only ~45 m long. The first
+  // release's five 192 m bare canopies incorrectly roofed the open track fan.
+  // Surveyed roof outlines control width/length; the 2015 reference supplies
+  // white walls, broad opaque soffits, dark casement windows and open bays.
+  const canopyIds = ['w158544503', 'w158544582'];
+  const canopyRows = [];
+  for (const id of canopyIds) {
+    const rec = BUILDINGS.find(b => b.id === id), poly = rec?.polys?.[0];
+    if (!poly) continue;
+    const local = poly.o.reduce((a, x, i, o) => {
+      if (i % 2) return a;
+      const dx = x - FRONT.x, dz = o[i + 1] - FRONT.z;
+      a.push([dx * c - dz * s, dx * s + dz * c]); return a;
+    }, []);
+    const us = local.map(p => p[0]), vs = local.map(p => p[1]);
+    const u0 = Math.min(...us), u1 = Math.max(...us), v0 = Math.min(...vs), v1 = Math.max(...vs);
+    const u = (u0 + u1) / 2, v = (v0 + v1) / 2, half = (u1 - u0) / 2, len = v1 - v0, p = stationPoint(u, v), rot = FRONT.rot;
     P.push(p.x, 0, p.z, rot); D.push(p.x, 0, p.z, rot);
-    P.box(M.roof, -3.1, 3.1, 4.65, 4.88, -96, 96);
-    for (const v of [-80, -40, 0, 40, 80]) {
-      D.box(M.metal, -.13, .13, .16, 4.68, v - .13, v + .13);
-      D.box(M.metal, -2.8, 2.8, 4.35, 4.56, v - .10, v + .10);
+    P.box(M.trim, -half, half, 4.43, 4.63, -len / 2, len / 2);
+    for (const side of [-1, 1]) {
+      P.quad(M.roof, [side * half, 4.63, -len / 2], [side * half, 4.63, len / 2], [0, 4.95, len / 2], [0, 4.95, -len / 2], [side * .1, 1, 0]);
+      P.box(M.trim, side * half - .055, side * half + .055, 4.43, 4.78, -len / 2, len / 2);
+    }
+    for (const end of [-1, 1]) P.fan(M.trim, [[-half, 4.63, end * len / 2], [half, 4.63, end * len / 2], [0, 4.95, end * len / 2]], [0, 0, end]);
+    for (let d = -len / 2 + 1; d <= len / 2; d += 5.5) D.box(M.silver, -half + .06, half - .06, 4.34, 4.43, d - .065, d + .065);
+    for (const d of [-len / 2 + .2, -11, 0, 11, len / 2 - .2]) {
+      P.box(M.trim, -.18, .18, .16, 4.44, d - .18, d + .18);
+      D.box(M.trim, -half + .15, half - .15, 4.02, 4.35, d - .10, d + .10);
+      const q = stationPoint(u, v + d);
+      ctx.physics.addBox(q.x, q.z, .36, .36, rot, .16, 4.44);
+    }
+    const panels = [[-18.5, -11.5], [-10.4, -3.4], [3.4, 10.4], [11.5, 18.5]];
+    for (const [a, b] of panels) {
+      P.box(M.trim, -.12, .12, .16, 1.2, a, b);
+      P.box(M.trim, -.12, .12, 3.45, 4.36, a, b);
+      D.box(M.window, -.14, .14, 1.28, 3.35, a + .18, b - .18);
+      for (let d = a + .2; d <= b; d += 1.1) D.box(M.metal, -.17, .17, 1.23, 3.42, d - .035, d + .035);
+      D.box(M.metal, -.17, .17, 2.72, 2.78, a + .12, b - .12);
+      // These are the shelter's fixed wall panels, not unbreakable street
+      // furniture. The broad 6.8 m centre opening stays physically open.
+      const q = stationPoint(u, v + (a + b) / 2);
+      ctx.physics.addBox(q.x, q.z, .24, b - a, rot, .16, 4.36);
     }
     P.pop(); D.pop();
+    facadeLabel(K, 'ВЫХОД В ГОРОД', stationPoint(u, v1 + .035), 4.12, FRONT.rot, Math.min(half * 2 - .6, 5.5), .32, id);
+    canopyRows.push({ id, width: u1 - u0, length: len, x: p.x, z: p.z });
   }
-  svc.platforms = { id: 'r12715182', canopies: 5, sleepers: sleepers.length, railSegments };
+  svc.platforms = { id: 'r12715182', canopies: canopyRows.length, shelters: canopyRows, sleepers: sleepers.length, railSegments };
 }
 
 function commuter(K) {

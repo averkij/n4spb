@@ -26,6 +26,24 @@ cross-shaped blocks, barred windows, roof church, five domes and boiler chimney.
 The church on Mineralnaya has arched windows, a rose window and an octagonal spire.
 Inferred heights and simplified sculpture detail are identified in the dossiers.
 
+The 13.1.0 detail pass reconstructs the right-bank lower promenade along about
+2.1 km of the mapped Arsenalnaya–Sverdlovskaya shore. The retaining tier changes
+to a grass slope near Vatutin; seven mapped access flights, a maintenance ramp
+and its diagonal footpath meet the lower walk. Drawn slopes and terrain heights
+agree, old flat ground/paving is cut away, and each low parapet bay is breakable.
+The 136 m Lenin Square descent has its five mapped flights and curved end
+platforms. Bezborodko's landing has two side flights, a hollow vaulted grotto,
+four inward-facing sphinxes, six vases and breakable scrollwork/gate panels.
+See [waterfront research and reconstruction limits](research/finlyandsky-waterfront.md).
+The lower walk is 1.4 m above the shared Neva level; this vertical section is a
+photographic estimate, while plan positions follow the survey. Keys **6–8**
+visit the ceremonial descent, sphinx landing and lower promenade.
+
+The same review corrects the station's rear glazing and mapped platform
+shelters, Kresty's cross centres and low wings, and the Visitation church's
+pitched roofs, gables and buttresses. Underground grotto claims are verified
+at their actual elevation rather than an above-street building band.
+
 The existing mapped-fountain builder supplies live spray, droplets, ripples and
 evening illumination. Shared generators retain traffic, people, street plates,
 trees and movable/breakable furniture. One purple Zhiguli follows the garage rule;
@@ -36,12 +54,14 @@ Regeneration and focused checks:
 
 ```powershell
 node tools/prepare-finlyandsky-area.mjs --api-map
+node tools/area.mjs finlyandsky tools/prepare-finlyandsky-banks.mjs
 node tools/configure-finlyandsky-area.mjs
 node tools/connect-finlyandsky-area.mjs
 node tools/owns-table.mjs
 node tools/gen-area-html.mjs --area finlyandsky
 node maps/intro-draft-src/refresh-live.mjs
 node tools/finlyandsky-area-test.mjs
+node tools/area.mjs finlyandsky tools/finlyandsky-waterfront-test.mjs
 node tools/areas-test.mjs --area finlyandsky
 node tools/area.mjs finlyandsky tools/layout-test.mjs
 node tools/area.mjs finlyandsky tools/views-check.mjs

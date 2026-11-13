@@ -61,17 +61,22 @@ function towardWater(r) {
   return null;
 }
 /** is the corridor around the segment (x0, z0) -> (x1, z1) free of every solid except `except` (a Set of colliders) at standing height ? (radius r) */
-function corridorFree(x0, z0, x1, z1, r, y0, y1, except) {
+function corridorFree(x0, z0, x1, z1, r, y0, y1, except, followGround = false) {
   const n = Math.max(2, Math.ceil(hyp(x1 - x0, z1 - z0) / 0.6));
   for (let i = 0; i <= n; i++) {
     const x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n;
+    // An open approach can descend onto a lower promenade before reaching the
+    // water. Its low parapet still blocks a walker standing on that promenade.
+    // Fence-knock tests pass an explicit height and keep their fixed corridor.
+    const feet = followGround ? ph.groundHeight(x, z, 30, false) : y0, head = feet + y1 - y0;
+    if (!Number.isFinite(feet)) return false;
     for (const it of ph.querySolids(x, z, r + 1)) {
       if (except && except.has(it)) continue;
       if (it.type === 'hole') continue;
-      if (it.type === 'walk' || it.type === 'ramp') { const top = it.type === 'walk' ? it.top : Math.max(it.yA, it.yB); if (top <= y0 + 0.45) continue; }
+      if (it.type === 'walk' || it.type === 'ramp') { const top = it.type === 'walk' ? it.top : Math.max(it.yA, it.yB); if (top <= feet + 0.45) continue; }
       const hi = it.type === 'walk' ? it.top : it.type === 'ramp' ? Math.max(it.yA, it.yB) : it.y1;
-      if (hi <= y0 + 0.45 || it.y0 >= y1) continue;
-      const q = { x, z }; const moved = (() => { const c = { x, z }; ph.resolve(c, r, y0, 1.7); return hyp(c.x - x, c.z - z) > 0.02; })();
+      if (hi <= feet + 0.45 || it.y0 >= head) continue;
+      const q = { x, z }; const moved = (() => { const c = { x, z }; ph.resolve(c, r, feet, y1 - y0); return hyp(c.x - x, c.z - z) > 0.02; })();
       if (moved) { corridorFree.last = it; return false; }
       void q; break;
     }
@@ -190,7 +195,7 @@ function openEdges() {
       const px = s.ax + (s.bx - s.ax) * u / len, pz = s.az + (s.bz - s.az) * u / len, sx = px + s.nx * 3.0, sz = pz + s.nz * 3.0, ex = px - s.nx * 0.6, ez = pz - s.nz * 0.6;
       if (!L.inPlay(sx, sz, 8) || L.insideBuilding(sx, sz, 1) || L.insideBuilding(px, pz, 1)) continue;
       if (waterAt(px - s.nx * 1.0, pz - s.nz * 1.0) === null) continue;              // the water must start right behind the wall line
-      if (!corridorFree(sx, sz, ex, ez, 0.35, 0, 1.7, null)) continue;
+      if (!corridorFree(sx, sz, ex, ez, 0.35, 0, 1.7, null, true)) continue;
       if (Math.abs(ph.groundHeight(sx, sz, 30, false)) > 0.6 || ph.groundHeight(px - s.nx * 1.0, pz - s.nz * 1.0, 30, false) > waterAt(px - s.nx * 1.0, pz - s.nz * 1.0) - 0.3) continue;      // a street-level start, and no deck / landing stage over the water edge (a bridge approach is no quay edge)
       out.push({ sx, sz, dx: -s.nx, dz: -s.nz, key: s.key, px, pz });
     }
@@ -204,7 +209,7 @@ function openEdgesScan() {
     const a = k * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a); let d = 1; while (d < 16 && waterAt(c.x + dx * d, c.z + dz * d) !== null) d++;
     if (d >= 16) continue;
     const bx = c.x + dx * (d - 0.5), bz = c.z + dz * (d - 0.5), lx = c.x + dx * d, lz = c.z + dz * d, sx = lx + dx * 3, sz = lz + dz * 3;
-    if (!L.inPlay(sx, sz, 8) || L.insideBuilding(sx, sz, 1) || waterAt(sx, sz) !== null || !corridorFree(sx, sz, bx, bz, 0.35, 0, 1.7, null)) continue;
+    if (!L.inPlay(sx, sz, 8) || L.insideBuilding(sx, sz, 1) || waterAt(sx, sz) !== null || !corridorFree(sx, sz, bx, bz, 0.35, 0, 1.7, null, true)) continue;
     if (ph.groundHeight(bx, bz, 30, false) > waterAt(bx, bz) - 0.3 || Math.abs(ph.groundHeight(sx, sz, 30, false)) > 0.6) continue;       // a deck / a landing stage over the water edge is no edge
     out.push({ sx, sz, dx: -dx, dz: -dz, key: c.key, px: lx, pz: lz });
   }

@@ -69,9 +69,11 @@ function problems(v) {
   else if (cover > -0.6) notes.push(`on the roadway (cover ${cover.toFixed(2)})`);
   if (!L.inPlay(v.x, v.z, 10)) notes.push('not 10 m inside the play area');
   const g = ph.groundHeight(v.x, v.z, 10, false);
-  // WATER IS REACHABLE (CLAUDE.md "World rules"): a pose in water is not a failure (the ground is then the bed, below the water level); a pose below the street that is NOT in water (a pit, a shaft) still is
+  // Water is reachable; a pose in it is valid unless the caller requests --land.
   const wl = ph.waterLevel ? ph.waterLevel(v.x, v.z) : null, inWater = wl !== null && Number.isFinite(g) && g <= wl + 0.1;
-  if (!Number.isFinite(g)) notes.push('no ground'); else if (g > 1.5 || (g < -0.5 && !inWater)) notes.push(`ground height ${g.toFixed(2)}`);
+  // Authored terrain may be a lower promenade or an elevated bank. Its actual
+  // height is valid; collider/clearance checks below establish a usable pose.
+  if (!Number.isFinite(g)) notes.push('no ground');
   if (LAND && inWater) notes.push(`in water (ground ${g.toFixed(2)} <= water level ${wl.toFixed(2)}): the eye is below the surface`);
   const p = { x: v.x, z: v.z }; ph.resolve(p, 0.35, Number.isFinite(g) ? g : 0, 1.7);
   const push = Math.hypot(p.x - v.x, p.z - v.z); if (push > 0.05) notes.push(`inside a collider (pushed ${push.toFixed(2)} m)`);

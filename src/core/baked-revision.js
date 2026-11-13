@@ -4,7 +4,7 @@ export const BAKED_REVISIONS = {
   aptekarsky: 'ed9f9f73e82c79b2d716',
   avtovo: '2f9e4ab25e7945ad6f17',
   dekabristov: '0f2dd223e89ab191e7af',
-  finlyandsky: '93cff4b53c71b1e1eb77',
+  finlyandsky: '5fd940d17fbdc61696f3',
   gavan: 'f0e30b71443bde56f6cc',
   islands: '716b7d9d9c242ec9ee09',
   kolomna: 'fa3196f3f9dcb44aaf9b',

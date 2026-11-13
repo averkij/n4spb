@@ -5,7 +5,7 @@
   "canvasLabel": "Walkable Saint Petersburg — Finlyandsky",
   "intro": {"kicker": "Санкт-Петербург · Saint Petersburg", "title": "Финляндский"},
   "heavy": {"ramGB": 1.5, "ru": "3D-сцена: ~{mb} МБ загрузки и ~{ram} ГБ памяти.", "en": "3D scene: ~{mb} MB download and ~{ram} GB memory."},
-  "places": {"title": "Места области · Area views: 1–5; R — вернуться на старт"},
+  "places": {"title": "Места области · Area views: 1–8; R — вернуться на старт"},
   "help": {"walk": "<kbd>WASD</kbd> идти · <kbd>E</kbd> транспорт · <kbd>R</kbd> на старт · <kbd>F</kbd> полёт", "air": "<kbd>WASD</kbd> лететь · <kbd>F</kbd> пешком · <kbd>R</kbd> на старт"},
   "sights": [],
   "facts": [

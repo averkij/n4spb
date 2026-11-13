@@ -46,9 +46,25 @@ Vertical dimensions are **photographic modelling estimates**, not claimed
 surveys: cell-block eaves 18.7 m, pitched ridges 22.2–22.35 m, observation crowns
 29.35 m, roof church approximately 43.5 m including cross, chimney 62 m.
 The real planar footprints and compass orientation are mapped; roof ridges and
-small moulding dimensions are inferred from the inspected views. The western
-lower-rise part is retained within the parent shell; its exact storey transition
-is simplified. Auxiliary interior buildings stay under the generic city builder.
+small moulding dimensions are inferred from the inspected views. The review
+corrected the eastern cross centre to **(793.8, −2359.2)** from the centre lines
+between its opposite mapped arm edges; its previous centre was 7.1 m too far
+north. The western centre is (665.5, −2380). This offset, and the earlier guessed
+rectangular roof spans, had left broad flat-looking roof strips.
+
+The roofs now clip to the complete mapped outline. Convex pieces are split at
+ridge/valley equations before height is applied, producing actual planar slopes,
+closed eaves and brick gable faces. The roof church has its own longitudinal and
+transverse ridges fitted to its nave and projecting gable, taller arched glazing,
+nested brick mouldings and window bars. There is no unsupported rectangular
+roof overhang above the river facade. Ridge chimneys supply the small roofline
+rhythm visible in the aerial reference.
+
+The mapped western child `r17026342` is restored to its **9.9 m** eaves, and the
+round exercise-yard child `r17026340` to **3.3 m**. The latter has open radial
+partition tops and a low centre, rather than the previous five-storey circular
+mass. The yard surface stays below shared asphalt, preserving mapped service
+access. Auxiliary interior buildings stay under the generic city builder.
 
 Suggested review cameras (x, eye-y, z, yaw, pitch):
 
@@ -75,6 +91,13 @@ The tower's mapped position is `(1022,-3774.95)`. The module builds the exact
 lower shell, tall arched window frames and mullions, grey sills, arcaded cornice,
 rose-window spokes, transverse gable, square entrance tower, octagonal clock
 and bell stages, ribbed eight-sided spire and small cross. No flagpole is added.
+The detail review adds projecting stepped buttresses with grey weathering caps,
+the lower round-headed plinth windows, gable tooth courses and the bell-stage
+cornice. Its large hall, crossing rose-window gable and narrower narthex now
+have separate fitted pitched surfaces. The transverse gable has a supported
+roof behind it; the nave no longer uses a broad floating rectangle. The small
+tower-footprint rim is closed and the height change to the narthex has a solid
+gable wall.
 
 Vertical dimensions are **inferred from photographs and mapped footprint scale**:
 nave eaves 16.5 m, roof ridge 20.1 m, tower cornice 35.65 m, spire 46.4 m,
@@ -85,8 +108,8 @@ silhouette remains to 2100 m. Review at `1040,1.7,-3725,47,17`.
 ## Verification
 
 `node tools/area.mjs finlyandsky tools/check.mjs landmarksFinlyandsky` passes:
-approximately 208,084 triangles including close barred-window instances,
-30 meshes, ten instanced meshes, twelve materials, no canvas textures and
+approximately 203,345 triangles including close barred-window instances,
+35 meshes, eleven instanced meshes, twelve materials, no canvas textures and
 no update callbacks. The area lead performs integrated visual, road, claims,
 loading, driving and final bake verification. This headless result is not an FPS
 measurement. All authored geometry is static and receives normal batching,
@@ -96,3 +119,9 @@ movable furniture is built here; the area's shared generators retain that work.
 The focused strict draw audit also passes with all twelve claimed records drawn
 and no geometry intruding deeply into an unclaimed building:
 `node tools/area.mjs finlyandsky tools/claims-draw-audit.mjs --modules landmarksFinlyandsky --strict`.
+
+The roof review also raycast the actual built, upward-facing geometry from
+above: **1,934** sampled Kresty interior roof points and **764** Visitation
+points have complete roof coverage. A probe on the western low wing gives
+11.60 m (its pitched roof), rather than the former 18.7 m body height. These
+are CPU geometry checks, with real-renderer review and final bake by the lead.

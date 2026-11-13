@@ -1,5 +1,70 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-13: Финляндский waterfront review (13.1.0)
+
+Replaced the uniform right-bank treatment with a surveyed lower promenade,
+retaining tier, grass slopes, seven access flights and a draped maintenance
+ramp/path. Two specialists refined the station and Kresty/Visitation; a separate
+waterfront specialist built Lenin Square's five-flight ceremonial descent and
+the Bezborodko grotto/sphinx landing from multiple references. All new barriers
+are knockable, immutable terrain uses `ctx.addStatic`, and the new builders have
+no frame callbacks. Detail ranges are finite. Vertical bank dimensions remain
+photographic estimates; mapped plan positions and the official 136 m ceremonial
+frontage are the firmer constraints.
+
+Only Финляндский required rebaking: `5fd940d17fbdc61696f3`, 145 products,
+61.6 MiB compressed, 118 seconds. All 21 live manifests pass; other areas retain
+their existing source/bake closures. Normal baked loading, RTX 3090 Ti / Edge
+ANGLE D3D11, 1280×720, medium quality, traffic/population/shadows enabled.
+GPU jobs were serial and CPU audits stopped during timed runs.
+
+| Run | Ready s | Mean / p50 / p95 frame ms | Frames >80 ms | Mean calls | Distance m | CDP heap / backing MiB |
+|---|---:|---|---:|---:|---:|---|
+| Комсомола before | 18.1 | 17.3 / 16.7 / 16.8 | 2 | 748 | 385 | 535 / 558 |
+| Комсомола after | 16.4 | 17.7 / 16.7 / 16.8 | 2 | 759 | 386 | 506 / 568 |
+| Lower promenade walking | 16.3 | 16.7 / 16.7 / 16.8 | 0 | 575 | 43 | 515 / 585 |
+| Existing centre, unchanged bake | 28.9 | 29.7 / 33.3 / 33.5 | 6 | 1283 | 352 | 506 / 1105 |
+
+The drive averages 57 FPS versus 58 in the baseline, with 1.6% more draw calls.
+Both runs stop behind traffic at the same place (about one metre apart) and
+retain two long frames; the new maximum is 250 ms. This is comparable steady
+rendering with existing loading/GC hitches, not a hitch-free performance claim.
+The new lower walk averages 60 FPS, with no frame above 17 ms and no long tasks.
+Every run reports zero failed streaming regions. The lower-walk benchmark begins
+on the actual -2 m surface and covers 43 m without a collision or terrain snag.
+The existing centre remains on revision `981e023210cc8d52a715`; its 34 FPS
+sample is close to the first-release 29.0 ms baseline, with the same approximate
+draw count and endpoint. The area-content change does not change that closure.
+Its six >80 ms frames remain a shared renderer/streaming limitation; one run
+does not establish a performance improvement or regression.
+
+The focused waterfront regression passes seven checks: 286 independently
+ray-tested path/slope positions, 4,243 continuity probes, 205 physical walkboxes,
+1,077 independently breakable bank bays, both boarding openings and a real
+Player stopped by a parapet before knocking it into the Neva. All 23 area
+water-level suites pass, as do the district's 17 water-access and 24 boat-passage
+checks. Road furniture has zero offenders; the 108 shared surface residuals
+remain within the existing 120 budget, and all 46,287 marking samples pass.
+Views, garage, layout, geography, 284 area-system checks, HTML generation and
+closure/runtime classification pass. Shoreline, landing, station and church
+screenshots were inspected in context. Four final depth probes report
+8 / 11 / 8 / 23 noisy pixels (at most 0.002%, below the 0.02% target).
+Focused strict claims pass for all 64 waterfront/bank IDs. The audit now uses
+below-ground structural geometry for explicitly underground records and exact
+owner-triangle coverage for short ways whose centroids miss a broad landing.
+Removing the grotto or one short path from the audit still fails as expected.
+The full-area strict audit retains four pre-existing Liteyny bridge/nearby
+building overlap reports; that bridge and its data are unchanged in this round.
+
+Reproduce; local screenshots, logs and JSON are in `shots/finlyandsky-review/`:
+
+```powershell
+node tools/drive-bench.mjs --area finlyandsky --q medium --seconds 12 --start "630.37626685,-2452.19726876,-77.19325117" --json --diagnostics --out shots/finlyandsky-review/after
+node tools/drive-bench.mjs --area finlyandsky --q medium --walk --seconds 12 --start "2152.0192,-3013.6575,-98.8553" --json --diagnostics --out shots/finlyandsky-review/coast-walk
+node tools/drive-bench.mjs --area palace --q medium --seconds 12 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/finlyandsky-review/centre
+node tools/area.mjs finlyandsky tools/finlyandsky-waterfront-test.mjs
+```
+
 ## 2026-11-13: Финляндский first release (13.0.0)
 
 The new independently loaded area covers 16.4736 km². Complete mapped northern

@@ -21,6 +21,10 @@
 //      overhang stay (the building drawn by nobody, or by the neighbour next to it): the audit must go red, and with --loose-rule1 it does not (the proof that the old rule was fooled);
 //      `--mutant citydraw:<id>` moves those centroids to `city` (the claimed building drawn by the generic module instead of its owner): red by rule 1 and rule 2.
 //      Mapped building=ruins uses a 1 cm minimum own-geometry height: a low surviving base or authored ground patch counts, while zero-height ground, foliage and an undraw mutant do not.
+//      A negative layer / underground building is graded below ground instead: mapped negative minH / top bound its owner band when supplied; missing dimensions never become invented depths.
+//      The top 1 cm below grade is excluded so an unrelated ground plane cannot stand in for the underground structure. Rules 2 and 3 keep their above-ground intrusion band.
+//      A claimed way with no centroid hit also checks actual owner surface triangles at three surveyed centreline samples. A short footway on a broad slab can miss every centroid;
+//      only upward-facing non-foliage geometry at every sample qualifies, respecting mapped vertical bounds / underground layer. This fallback never satisfies a building claim.
 //   2. GENERIC DRAWS NOTHING of a claimed BUILDING: `city`, `streets` and `props` have no triangle centroid higher than --above m inside the polygon shrunk by --inset m that is not also inside
 //      an UNCLAIMED building (inset 0: the data has overlapping outlines, OVERLAPS). The inset is what makes the test honest: a neighbour's cornice, balcony or name plate overhangs the shared
 //      outline by up to a metre, a blockout of the claimed building has walls and a roof deep inside it. Claimed polygons that are not buildings (a park, a paving area, a pond) and claimed ways
@@ -327,7 +331,8 @@ const hiddenAggregate = b => {
     children.every(p => p.part && p.polys?.length && p.polys.every(q => q.o?.length >= 6));
 };
 for (const b of D.BUILDINGS) { if (claimedBy.has(b.id)) continue; const fp = footprintOf(b); if (fp) targets.push({ id: b.id, fp, claim: null, building: true, rec: b, hiddenAggregate: hiddenAggregate(b), suppressedDuplicate: suppressedDuplicate(b) }); }
-for (const id of [...undrawIds, ...citydrawIds]) { const t = targets.find((q) => q.id === id); if (!t || !t.claim || !t.building) { console.log(`--mutant undraw / citydraw:${id}: not a claimed building of area ${AREA}`); process.exit(2); } }
+for (const id of undrawIds) { const t = targets.find((q) => q.id === id); if (!t || !t.claim || !(t.building || t.fp.kind === 'line')) { console.log(`--mutant undraw:${id}: not a claimed building or way of area ${AREA}`); process.exit(2); } }
+for (const id of citydrawIds) { const t = targets.find((q) => q.id === id); if (!t || !t.claim || !t.building) { console.log(`--mutant citydraw:${id}: not a claimed building of area ${AREA}`); process.exit(2); } }
 for (const id of WHERE) if (!targets.some((t) => t.id === id)) { console.log(`--where ${id}: no footprint (not claimed and not a building of area ${AREA})`); process.exit(2); }
 // a grid over the footprint bboxes (10 m cells) so a centroid tests only the footprints whose bbox covers its cell
 const CELL = 10, grid = new Map();
@@ -348,7 +353,30 @@ for (const child of targets) if (child.building && child.claim && ownsKey(child.
 }
 /** the deepest point of a footprint (a 12 x 12 sampling of its bbox): decides how much of the band of rule 2 / 3 a small building can bear */
 function maxDepthOf(fp) { let best = 0; const [x0, z0, x1, z1] = fp.bbox; for (let a = 0; a <= 12; a++) for (let b = 0; b <= 12; b++) { const d = depthIn(fp, x0 + (x1 - x0) * a / 12, z0 + (z1 - z0) * b / 12); if (d > best) best = d; } return best; }
-for (const t of targets) { t.inset = INSET; t.above = ABOVE; if (t.building && t.claim) { t.maxDepth = maxDepthOf(t.fp); t.inset = Math.min(INSET, 0.3 * t.maxDepth); const h = Number(t.rec.hEst || t.rec.h); if (h > 0 && h < ABOVE / 0.4) t.above = 0.4 * h; if (t.rec.kind === 'ruins') t.above = Math.min(t.above, .01); } }
+function ownerHeightBand(r) {
+  const top = Number.isFinite(r.hEst) ? r.hEst : Number.isFinite(r.h) ? r.h : null;
+  const bottom = Number.isFinite(r.minH) ? r.minH : 0;
+  const underground = r.layer < 0 || r.underground || (bottom < 0 && (top === null || top <= 0));
+  if (underground) {
+    // Layer is an ordering tag, not a metre offset. Use only real negative
+    // bounds; with no depth measurement any structural geometry below grade
+    // counts, but a surface decal / pavement at zero does not.
+    const ceiling = Math.min(0, top ?? 0);
+    const above = bottom < ceiling ? bottom + Math.min(ABOVE, .4 * (ceiling - bottom)) : -Infinity;
+    return { above, below: ceiling - .01 };
+  }
+  let above = top > 0 && top < ABOVE / .4 ? .4 * top : ABOVE;
+  if (r.kind === 'ruins') above = Math.min(above, .01);
+  return { above, below: Infinity };
+}
+const inOwnerHeightBand = (t, y) => y > t.above && y < t.below;
+for (const t of targets) {
+  t.inset = INSET; t.above = ABOVE; t.below = Infinity;
+  if (t.building && t.claim) {
+    t.maxDepth = maxDepthOf(t.fp); t.inset = Math.min(INSET, .3 * t.maxDepth);
+    Object.assign(t, ownerHeightBand(t.rec));
+  }
+}
 const unclaimedBuildings = targets.filter((t) => !t.claim).length;
 console.log(`claims-draw-audit area ${AREA}: ${claimedBy.size} claimed ids (${targets.length - unclaimedBuildings} with a record and a footprint, ${missing.length} without a record: ${missing.join(', ') || '-'}), ${unclaimedBuildings} unclaimed buildings; modules ${names.join(', ')}${mutantIds.size ? `; MUTANT unclaimed by the audit: ${[...mutantIds].join(', ')}` : ''}${undrawIds.size ? `; MUTANT undraw (the owner's own geometry of the building left out): ${[...undrawIds].join(', ')}` : ''}${citydrawIds.size ? `; MUTANT citydraw (the owner's own geometry moved to city): ${[...citydrawIds].join(', ')}` : ''}${LOOSE_RULE1 ? '; rule 1 graded LOOSE (the pre-M7-polish rule)' : ''}`);
 
@@ -450,17 +478,17 @@ for (const name of names) {
       // rule 1: the centroid is "the building itself" when it is not a plant, stands in the band of rule 2 / 3 and is not deeper inside a building of another claim group
       let own = false, why = null;
       if (t.claim && t.building) {
-        if (meshFoliage[owners[q]]) why = 'fol'; else if (y <= t.above) why = 'low'; else if (d < t.inset) why = 'shallow';
+        if (meshFoliage[owners[q]]) why = 'fol'; else if (!inOwnerHeightBand(t, y)) why = 'low'; else if (d < t.inset) why = 'shallow';
         else { own = true; for (let h2 = 0; h2 < hits.length; h2 += 2) { const j = hits[h2]; if (j !== i && targets[j].building && !targets[j].suppressedDuplicate && !isAncestor(targets[j].id, t.id) && hits[h2 + 1] > d && groupOf(targets[j]) !== groupOf(t)) { own = false; why = 'stolen'; break; } } }
       }
-      if (own && t.claim && name === t.claim.module && undrawIds.has(t.id)) continue;                       // --mutant undraw: the owner's own geometry of this building is left out of the audit's view
+      if (t.claim && name === t.claim.module && undrawIds.has(t.id) && (own || (!t.building && t.fp.kind === 'line'))) continue; // --mutant undraw: omit the owner's building / way geometry
       if (own && t.claim && name === t.claim.module && citydrawIds.has(t.id) && names.includes('city')) { bump('city', i, { y, hi, deep: y > ABOVE && d >= DEEP, overlap: false, own, why }); continue; }          // --mutant citydraw: ... and counted as city's
       // A child facade/cornice can extend slightly beyond its mapped outline
       // while lying deep inside its larger parent. Its bounded apron follows
       // the existing ornament band; the rest of the parent is never delegated.
       let delegated = false;
       if (!t.claim && !meshFoliage[owners[q]]) for (const child of t.claimedDescendants || []) {
-        if (child.claim.module === name && y > child.above && withinChildApron(child.fp,x,z)) { delegated = true; break; }
+        if (child.claim.module === name && inOwnerHeightBand(child, y) && withinChildApron(child.fp,x,z)) { delegated = true; break; }
       }
       // city.js discards the panorama's generic walls/decks, while retaining
       // arch interiors, cornices and small mapped details. Those streams are
@@ -479,8 +507,52 @@ for (const name of names) {
 
 // ---------------------------------------------------------------- grade
 const get = (m, i) => counts.get(m + '|' + i) || { n: 0, hi: 0, deep: 0, overlap: 0, own: 0, fol: 0, low: 0, shallow: 0, stolen: 0 };
+const wayMeshes = new Map(), wayRay = new THREE.Raycaster(), wayNormal = new THREE.Vector3(), wayNormalMatrix = new THREE.Matrix3();
+wayRay.ray.direction.set(0, -1, 0);
+function centrelineSamples(fp) {
+  const segments = []; let length = 0;
+  for (let i = 2; i < fp.pts.length; i += 2) {
+    const ax = fp.pts[i - 2], az = fp.pts[i - 1], bx = fp.pts[i], bz = fp.pts[i + 1], n = Math.hypot(bx - ax, bz - az);
+    if (n > 0) { segments.push({ ax, az, bx, bz, n, start: length }); length += n; }
+  }
+  if (!length) return [];
+  return [.2, .5, .8].map(f => {
+    const at = length * f, s = segments.find(s => at <= s.start + s.n) || segments.at(-1), t = (at - s.start) / s.n;
+    return { x: s.ax + (s.bx - s.ax) * t, z: s.az + (s.bz - s.az) * t };
+  });
+}
+function waySurfaceCoverage(t) {
+  const owner = t.claim.module;
+  if (undrawIds.has(t.id)) return null; // a mutant cannot recover its omitted way through the fallback
+  if (!wayMeshes.has(owner)) wayMeshes.set(owner, (moduleMeshes.get(owner) || []).filter(p =>
+    attachedToScene(p.mesh) && !FOLIAGE_RE.test(p.chain + ' ' + describeMesh(p.mesh).chain)).map(p => p.mesh));
+  const meshes = wayMeshes.get(owner), samples = centrelineSamples(t.fp);
+  if (!meshes.length || !samples.length) return null;
+  const rec = t.rec, top = Number.isFinite(rec.hEst) ? rec.hEst : Number.isFinite(rec.h) ? rec.h : Infinity;
+  const bottom = Number.isFinite(rec.minH) ? rec.minH : -Infinity;
+  const underground = rec.layer < 0 || rec.underground;
+  const low = rec.layer > 0 ? Math.max(.01, bottom - .01) : bottom - .01;
+  const high = underground ? Math.min(-.01, top + .01) : top + .01;
+  const heights = [];
+  for (const p of samples) {
+    // Exact ray/triangle intersection tests projected coverage and interpolated
+    // world height. Both authored LODs are tested, as in the centroid path.
+    wayRay.ray.origin.set(p.x, 1e5, p.z);
+    const hit = wayRay.intersectObjects(meshes, false).find(hit => {
+      if (hit.point.y < low || hit.point.y > high || !hit.face) return false;
+      if (hit.instanceId !== undefined) {
+        hit.object.getMatrixAt(hit.instanceId, tmpM); M.multiplyMatrices(hit.object.matrixWorld, tmpM);
+      } else M.copy(hit.object.matrixWorld);
+      wayNormalMatrix.getNormalMatrix(M);
+      return wayNormal.copy(hit.face.normal).applyNormalMatrix(wayNormalMatrix).y > .35;
+    });
+    if (!hit) return null;
+    heights.push(hit.point.y);
+  }
+  return { samples: samples.length, minY: Math.min(...heights), maxY: Math.max(...heights) };
+}
 const skips = OWNER_SKIPS[AREA] || {}, known = KNOWN_UNCLAIMED[AREA] || {};
-const why = (m, i) => { const c = get(m, i); return `${c.fol} foliage, ${c.stolen} taken by a deeper neighbour of another claim, ${c.shallow} within ${INSET} m of the outline, ${c.low} below the height band`; };
+const why = (m, i) => { const c = get(m, i); return `${c.fol} foliage, ${c.stolen} taken by a deeper neighbour of another claim, ${c.shallow} within ${INSET} m of the outline, ${c.low} outside the height band`; };
 const covered = [];    // parts without a centroid of their own, covered by a drawn parent
 const rows = [];       // per claimed target
 for (let i = 0; i < targets.length; i++) {
@@ -490,6 +562,13 @@ for (let i = 0; i < targets.length; i++) {
   const tinyB = t.building && Number(t.rec.area) > 0 && Number(t.rec.area) < MIN_AREA;
   const parentI = t.rec.parent ? targetIdx.get(t.rec.parent) : undefined, viaParent = parentI !== undefined && targets[parentI].claim && targets[parentI].claim.module === owner && get(owner, parentI).own > 0;
   let drawn = t.building && !tinyB && !LOOSE_RULE1 ? own > 0 : oc > 0;       // a building of some size: its OWN geometry (rule 1); a point, a way, a lawn, a tiny part: any centroid inside
+  if (!drawn && !t.building && t.fp.kind === 'line' && names.includes(owner)) {
+    const coverage = waySurfaceCoverage(t);
+    if (coverage) {
+      drawn = true;
+      notes.push(`${owner} / ${t.claim.key}: ${t.id} has no triangle centroid in its short ribbon, but actual owner surface triangles cover all ${coverage.samples} surveyed centreline samples (y ${coverage.minY.toFixed(3)}..${coverage.maxY.toFixed(3)})`);
+    }
+  }
   if (!drawn && t.building && viaParent) { drawn = true; covered.push(`${t.id} (${t.rec.area} m2) <- ${t.rec.parent} (${owner} / ${t.claim.key})`); }
   const gen = {}; for (const m of GENERIC) if (names.includes(m)) gen[m] = get(m, i);
   rows.push({ i, t, owner, owned, oc, own, drawn, gen });
@@ -500,7 +579,7 @@ for (let i = 0; i < targets.length; i++) {
     // keep the generic modules off it (the castle's footways, the garden woods) is a warning
     const tiny = t.building && Number(t.rec.area) > 0 && Number(t.rec.area) < MIN_AREA;
     if (t.building && !tiny) { failed = true; problems.push(`${owner} / ${t.claim.key}: owns the building ${what} but ${oc ? `draws none of its own geometry inside its footprint (${oc} centroids lie in it, none of them the building: ${why(owner, i)}; the old rule counted them)` : 'draws nothing inside its footprint'}${undrawIds.has(t.id) ? ' (the --mutant undraw)' : ''}${citydrawIds.has(t.id) ? ' (the --mutant citydraw: city draws it)' : ''}`); }
-    else warnings.push(`${owner} / ${t.claim.key}: owns ${what}${tiny ? ` of ${t.rec.area} m2` : ''} but draws nothing ${t.fp.kind === 'point' ? `within ${DISC_R} m of it` : 'inside its footprint'}`);
+    else warnings.push(`${owner} / ${t.claim.key}: owns ${what}${tiny ? ` of ${t.rec.area} m2` : ''} but draws nothing ${t.fp.kind === 'point' ? `within ${DISC_R} m of it` : 'inside its footprint'}${undrawIds.has(t.id) ? ' (the --mutant undraw)' : ''}`);
   }
   if (!t.building) continue;                   // the generic modules inside a claimed park / paving / way / point: reported only (see the header)
   for (const [m, c] of Object.entries(gen)) {

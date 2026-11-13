@@ -41,6 +41,24 @@ second fountain model laid over it.
    Fresh OSM geometry is supplied by the area's geography generator. These
    surveyed footprints control positioning rather than coordinates estimated
    from photographs. Attribution: OpenStreetMap contributors, ODbL.
+7. [Oleg-BY, platform-facing terminal, photographed 28 July 2022](https://railwayz.info/photolines/photo/135420).
+   The actual full photograph was downloaded and inspected during the detail
+   review. It resolves the seven tall rear glazing bays, narrow upper transoms,
+   paired entrance doors, low curved ticket-hall roof, and two roof names:
+   «САНКТ-ПЕТЕРБУРГ» and «SAINT PETERSBURG». The first release's featureless
+   platform-facing wall was therefore replaced with these architectural parts.
+8. [Passenger canopy and city exit, 23 August 2015](https://railwayz.info/photolines/photo/63290).
+   Downloaded and inspected. The roof covers a white windowed shelter, with
+   broad opaque soffits and transverse ribs, not a line of bare steel poles.
+   Its surveyed OSM roof dimensions are used; facade details and height are
+   photo-derived estimates. No tunnel or staircase absent from the model is
+   implied as a functioning route.
+9. [Buildings beside the first platform, 23 August 2015](https://railwayz.info/photolines/photo/63280)
+   and [cross-platform forecourt, 9 July 2011](https://railwayz.info/photolines/photo/19261).
+   Both full photographs were downloaded and inspected. They establish the
+   two-storey rhythm of the older platform wing, pale window surrounds and
+   cornices, plus the open track fan. The photographs are architectural references;
+   no historical railway logos, advertising or flags are copied.
 
 ## Position and measurements
 
@@ -50,16 +68,22 @@ station facade is the actual straight footprint edge from `(236,-2584.6)` to
 Y rotation is `-atan2(27.5,97.4)`. The front normal points southwest. Tower
 footprint centre: `(286.9,-2578.1)`, approximately 8 x 8 m. Main station relation
 `r2123616`; elevated parts `w158544845`, `w158544862`, `w314291447`, `w820662808`.
-The full irregular rear wing is retained from the map. Actual low canopy
-buildings `w158544503` and `w158544582` are integrated into the longer canopy
-rows; the twenty-five slender canopy supports have architectural proportions.
+The full irregular rear wing is retained from the map and has instanced window
+surrounds, glazing and mullions. Its platform-facing central edge runs from
+local u −20.1 to +19.9 at v −58.4 m, carrying seven glazed bays and a low barrel
+roof. Actual low canopy buildings `w158544503` and `w158544582` control the two
+white windowed shelters. In the station facade frame their roof bounds are
+u −10.9..−4.3 and +22.6..+30.6, v −199.4..−154.2 m, approximately 45.2 m long.
 
 The model's 15.8 m main facade, roughly 13 m of glass tower above it, 30 m
 tapering spire and approximately 2.74 m clock radius are **modelling estimates**
 informed by the photographs, with the clock's published 5.5 m diameter as a
 scale check. OSM's coarse building `height=10` cannot describe both the
-facade and tower. Canopy length/height (192 m / 4.88 m), number and proportions
-are photo-derived approximations aligned to the actual platform fingers.
+facade and tower. The main spire terminates in a simple needle; the unsupported
+five-pointed star of the first release was removed after photographic review.
+Shelter lengths/widths are mapped, with roof heights (4.43–4.95 m) and small
+window/door dimensions inferred from the platform photographs. The earlier
+five invented 192 m canopy rows were removed, preserving the real open track fan.
 Reliefs are varied low-poly processions/railway workers rather than exact
 reproductions of every historical sculpture.
 
@@ -83,8 +107,12 @@ props own forecourt paving, trees, breakable lamps/benches and fountains.
 There are no flags, flagpoles, sirens or corporate logos.
 
 `node tools/area.mjs finlyandsky tools/check.mjs landmarksFinlyandskyStation`
-passes with fresh area data: 78,187 triangles including 4,034 instances,
-32 pre-batch meshes, 40 architectural/vehicle colliders, zero update functions.
+passes after the detail review with fresh area data: 89,889 triangles including
+4,786 instances, 40 pre-batch meshes, 58 architectural/vehicle colliders, zero
+update functions. Sign textures are at most 1024×128; repeated side-wing windows
+are ordinary static instances marked as attached building facades. The strict
+focused claims audit draws all nine claims and finds no intrusion into another
+owner or unclaimed building.
 Platform paving is clipped with the shared convex subtraction helper against
 expanded actual carriageway segments and junction fillets. Railway metal and
 sleepers also leave road-clear gaps. The human kit's coat-fold parameter is a
