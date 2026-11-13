@@ -15,9 +15,11 @@ export function setNorthDecksEnabled(on) { enabled = !!on; }
 export function deckProfile(b,d) { return Math.max(.035,b.h*Math.min(1,(d+b.ramp)/b.ramp,(b.len+b.ramp-d)/b.ramp)); }
 /** Height of the actual triangulated deck, including both approach ramps.
  * The short segments straddling a bank interpolate between profile samples. */
-export function northDeckHeight(x,z) {
+export function northDeckHeight(x,z,tx=null,tz=null) {
   if (!enabled) return null;
   for (const b of decks) {
+    // A road crossing below the approach shares its X/Z, not its elevation.
+    if(tx!==null&&Math.abs(tx*b.tx+tz*b.tz)<.75)continue;
     const dx=x-b.x,dz=z-b.z,d=dx*b.tx+dz*b.tz,u=dx*b.tz-dz*b.tx;
     if(d < -b.ramp || d > b.len+b.ramp || Math.abs(u)>b.width/2-2.3) continue;
     const a=-b.ramp+Math.floor((d+b.ramp)/b.step)*b.step;
@@ -31,6 +33,8 @@ export function northDeckCuts(a,b) {
   if(!enabled) return [];
   const out=[];
   for(const d of decks){
+    const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz);
+    if(len<1e-9||Math.abs((dx*d.tx+dz*d.tz)/len)<.75)continue;
     const s0=(a.x-d.x)*d.tx+(a.z-d.z)*d.tz,s1=(b.x-d.x)*d.tx+(b.z-d.z)*d.tz;
     if(Math.max(s0,s1)<-d.ramp || Math.min(s0,s1)>d.len+d.ramp || Math.abs(s1-s0)<1e-9)continue;
     const midX=(a.x+b.x)/2-d.x,midZ=(a.z+b.z)/2-d.z;

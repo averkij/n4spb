@@ -42,7 +42,7 @@ const oldRoute = (N,E,adj,comp,nn) => { const nav = {};
   return nav.route;
 };
 const source = fs.readFileSync(new URL('../src/world/people/nav.js',import.meta.url),'utf8');
-const routeFactory = new Function('N','E','adj','comp','nn', 'const nav={};'+source.slice(source.indexOf('  const gS ='),source.indexOf('  /** the edge between'))+'return nav.route;');
+const routeFactory = new Function('N','E','adj','comp','nn', 'const nav={},hyp=(a,b)=>Math.sqrt(a*a+b*b);'+source.slice(source.indexOf('  const gS ='),source.indexOf('  /** the edge between'))+'return nav.route;');
 const current = routeFactory(N,E,adj,comp,nn);
 const reference = oldRoute(N,original,lists,comp,nn);
 let seed=1827, checked=0;

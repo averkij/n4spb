@@ -6,12 +6,15 @@ import { SURFACES,FRAMES,STAIR_SITES,ACCESS_ROADS,ACCESS_PATHS,LOWER_Y,bankHeigh
 import { BANK_RINGS as LANDINGS } from './finlyandskyWaterfront/sites.js';
 import { knockBays,faceLeft,unitBox } from './lib/fence-bays.js';
 import { registerLOD } from '../core/spatial.js';
+import { makeMats } from './finlyandskyWaterfront/materials.js';
 export const OWNS_GROUPS=true;
 const inRing=(x,z,p)=>{let q=false;for(let i=0,j=p.length-1;i<p.length;j=i++)if((p[i][1]>z)!==(p[j][1]>z)&&x<(p[j][0]-p[i][0])*(z-p[i][1])/(p[j][1]-p[i][1])+p[i][0])q=!q;return q;};
 export function build(ctx){
   const P=new Parts(),root=new THREE.Group();root.name='finlyandsky-banks';
   const stone=ctx.mat.toon('#a49b90',{paint:.035}),asphalt=ctx.mat.toon('#686d70'),grass=ctx.mat.toon('#608b44'),coping=ctx.mat.toon('#b6ac9d'),dirt=ctx.mat.toon('#a88f76',{paint:.06});
-  const mats={wall:stone,retaining:stone,walk:asphalt,upper:asphalt,grass};
+  // Same repeating granite material as the Lenin descent: no extra atlas or
+  // per-apron texture is needed for the continuous upper approach.
+  const mats={wall:stone,retaining:stone,walk:asphalt,upper:asphalt,grass,apron:makeMats(ctx,'finlyandsky-lenin-bank').floor};
   for(const s of SURFACES){const [a,b,c]=s.p,ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2],n=s.walk?[0,1,0]:[uy*vz-uz*vy,uz*vx-ux*vz,ux*vy-uy*vx];P.fan(mats[s.kind],s.p,n);}
   const bays=[];
   for(let i=0;i+1<FRAMES.length;i++){

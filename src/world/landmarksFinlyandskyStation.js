@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { BUILDINGS, MONUMENTS, PLATFORMS, RAILS } from './data/city.js';
 import { Parts, ringEdges, onEdge } from './landmarksD/kit.js';
 import { MeshBuilder, addPrism, addPolyColliders } from './lib/massing.js';
-import { human, cached } from './lib/figures.js';
+import { sculptLenin } from './landmarksFinlyandskyStation/lenin.js';
+import { square } from './landmarksFinlyandskyStation/square.js';
 import { registerLOD } from '../core/spatial.js';
 import { makeLabels } from './streets/labels.js';
 import { triangulateRing, subtractConvex, ccw, boxOfPoly } from './environment/clip.js';
@@ -210,11 +211,9 @@ function lenin(K) {
   P.col(M.blackGranite, 0, -.35, 4.7, 6.0, 1.65, 1.65, 12);
   P.box(M.blackGranite, -2.6, -1.1, 4.9, 5.35, -.7, -.1);
   P.fan(M.blackGranite, [[-1.7, 3.2, 1.65], [1.7, 3.2, 1.65], [2.15, 5.1, 1.65], [-2.15, 5.1, 1.65]], [0, 0, 1]);
-  const figure = cached('finlyandsky-evseev-lenin', () => human({ detail: .72, body: { bulk: 1.04, shoulders: 1.02 },
-    pose: { legs: { L: { foot: [.12, 0, -.04] }, R: { foot: [-.12, 0, .10] } }, spine: [-.04, -.07, .02], head: [-.06, .12, 0],
-      arms: { L: { hand: [.24, 1.18, .26], pole: [.7, 1.25, 0], grip: 'hold' }, R: { hand: [-.30, 1.82, .53], pole: [-.6, 1.4, .25], grip: 'point' } } },
-    outfit: { torso: 'coat', hem: .56, flare: .16, folds: .035, open: .3, collar: 'fall', sleeves: 'long', trousers: 'long', buttons: true }, face: { hair: 'bald', beard: 'goatee', age: .7, brow: .7 } }));
-  figure.place(D, { main: M.bronze, dark: M.bronzeDark, accent: M.bronze, trim: M.bronze }, 0, 6.0, -.35, 0, 2.35);
+  D.push(0,6.0,-.35);F.push(0,6.0,-.35);
+  sculptLenin(D,F,M);
+  D.pop();F.pop();
   F.box(M.joint, -.025, .025, .7, 3.65, 1.81, 1.83);
   for (const yy of [1.5, 2.65, 3.65]) F.box(M.joint, -1.35, 1.35, yy, yy + .02, 1.805, 1.82);
   for (const p of [P, D, F]) p.pop();
@@ -370,10 +369,10 @@ function commuter(K) {
 
 export function build(ctx) {
   ctx.services.labels ||= makeLabels();
-  const M = Object.fromEntries(Object.entries({ stone: '#d8d2bf', trim: '#e4dfd0', granite: '#777771', roof: '#8e9797', window: '#304953', metal: '#8e9e9d', silver: '#c4c8bd', relief: '#bcb8a6', reliefShadow: '#6b716b', joint: '#b5b1a4', door: '#34474b', clock: '#3a4247', blackGranite: '#424b46', bronze: '#44564a', bronzeDark: '#28382e', platform: '#8d8980', sleeper: '#888981', rail: '#8f9796', train: '#b3b7b4', trainRed: '#b4453b' }).map(([key, color]) => [key, ctx.mat.toon(color, { paint: .025 })]));
+  const M = Object.fromEntries(Object.entries({ stone: '#d8d2bf', trim: '#e4dfd0', granite: '#777771', roof: '#8e9797', window: '#304953', metal: '#8e9e9d', silver: '#c4c8bd', relief: '#bcb8a6', reliefShadow: '#6b716b', joint: '#b5b1a4', door: '#34474b', clock: '#3a4247', blackGranite: '#424b46', bronze: '#454e42', bronzeDark: '#28352c', bronzeLight:'#56604d', platform: '#8d8980', sleeper: '#888981', rail: '#8f9796', train: '#b3b7b4', trainRed: '#b4453b' }).map(([key, color]) => [key, ctx.mat.toon(color, { paint: .025 })]));
   const root = new THREE.Group(); root.name = 'landmarksFinlyandskyStation';
   const K = { ctx, M, root, shell: new Parts(), medium: new Parts(), fine: new Parts(), decals: new Set(), svc: { houses: [], monuments: [], entrances: [], photoSpots: [], triangles: 0 } };
-  station(K); lenin(K); platforms(K); commuter(K);
+  station(K); lenin(K); square(K,stationPoint); platforms(K); commuter(K);
   for (const [p, far, name] of [[K.shell, 2600, 'silhouette'], [K.medium, 650, 'architecture'], [K.fine, 240, 'reliefs']]) {
     for (const m of p.build(root, { name: `finlyandsky-${name}` })) { if (K.decals.has(m.material)) ctx.noOutline(m); m.updateMatrixWorld(true); registerLOD(m, far); }
     K.svc.triangles += p.tris;

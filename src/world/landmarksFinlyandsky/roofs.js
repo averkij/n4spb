@@ -43,7 +43,7 @@ export function clippedPieces(pieces, a, b, inside = true) {
 
 // A profile is a pitched ridge running along the other coordinate: v profile
 // = east/west nave; u profile = its transverse gable. `run` is half the width.
-export function fittedRoof(P, mat, pieces, { x, z, rot, eave, profiles, boundary = [], wallMat = mat }) {
+export function fittedRoof(P, mat, pieces, { x, z, rot, eave, profiles, boundary = [], wallMat = mat, shadeMat = null }) {
   const c = Math.cos(rot), s = Math.sin(rot);
   const local = ([px, pz]) => [(px - x) * c - (pz - z) * s, (px - x) * s + (pz - z) * c];
   const planes = [[0, 0, eave]];
@@ -80,7 +80,8 @@ export function fittedRoof(P, mat, pieces, { x, z, rot, eave, profiles, boundary
       if (n[1] < 0) n = n.map(v => -v);
       const len = Math.hypot(...n); if (len < 1e-7) continue;
       n = n.map(v => v / len);
-      P.fan(mat, pts, n); P.fan(mat, pts.map(([u, y, v]) => [u, y - .16, v]), n.map(v => -v));
+      const topMat=shadeMat&&(n[0]+n[2])<-.01?shadeMat:mat;
+      P.fan(topMat, pts, n); P.fan(mat, pts.map(([u, y, v]) => [u, y - .16, v]), n.map(v => -v));
       for (let i = 0; i < part.length; i++) {
         const a = part[i], b = part[(i + 1) % part.length];
         if (!onBorder((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;

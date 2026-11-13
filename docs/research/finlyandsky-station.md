@@ -17,7 +17,7 @@ second fountain model laid over it.
    Downloaded and inspected. This distinguishes the rear western wing from
    the main transverse terminal and shows long narrow island canopies and the
    open track fan; a single broad shed would be inaccurate.
-3. [Mark Hughes, Lenin at Finland Station](https://www.markgh.co.uk/Russia/SaintPetersburg/Lenin.html)
+3. [Mark G. Harrison, Lenin at Finland Station](https://www.markgh.co.uk/Russia/SaintPetersburg/Lenin.html)
    and [the large close-up used](https://www.markgh.co.uk/Russia/SaintPetersburg/FinlandStation1.jpg).
    Downloaded and inspected. The monument is a standing overcoated figure
    gesturing with his right arm, above an abstract black granite armoured-car
@@ -87,9 +87,10 @@ five invented 192 m canopy rows were removed, preserving the real open track fan
 Reliefs are varied low-poly processions/railway workers rather than exact
 reproductions of every historical sculpture.
 
-Lenin monument: `(233.4,-2407.8)`, mapped `r8850275`, about 10.7 m model height
-including its stepped support. Figure pose comes from the inspected close-up,
-using the shared articulated human sculpture kit. Plinth dimensions and height
+Lenin monument: `(233.4,-2407.8)`, mapped `r8850275`, roughly 10.3 m drawn height
+including its stepped support; the service retains a conservative 10.7 m bound.
+Figure pose comes from the inspected close-ups,
+using the dedicated sculptural builder described below. Plinth dimensions and height
 are visual estimates. A three-car unbranded suburban electric set stands on
 mapped terminal track `w1076914002`; car placement follows its exact tangent.
 The railway continues north toward Kushelevka as cheap mapped strips, with
@@ -102,20 +103,83 @@ All geometry is immutable, `ctx.addStatic`-submitted, with finite LOD ranges:
 silhouettes 2600 m, architecture/rails 650 m, reliefs and facade labels 240 m,
 sleepers 430 m, commuter windows 500 m. The central clock hands are a static
 non-alarm architectural detail. This builder adds **zero frame callbacks**.
-Repeated sleepers and commuter glazing use instancing. Existing streets and
-props own forecourt paving, trees, breakable lamps/benches and fountains.
+Repeated sleepers and commuter glazing use instancing. The module owns the
+designed square floor; existing streets and props retain trees, breakable
+lamps/benches and fountains.
 There are no flags, flagpoles, sirens or corporate logos.
 
 `node tools/area.mjs finlyandsky tools/check.mjs landmarksFinlyandskyStation`
-passes after the detail review with fresh area data: 89,889 triangles including
-4,786 instances, 40 pre-batch meshes, 58 architectural/vehicle colliders, zero
+passes in isolation after the square/statue review with fresh area data: 106,286 triangles including
+4,786 instances, 50 pre-batch meshes, 189 architectural/walk/vehicle colliders, zero
 update functions. Sign textures are at most 1024×128; repeated side-wing windows
 are ordinary static instances marked as attached building facades. The strict
-focused claims audit draws all nine claims and finds no intrusion into another
+focused claims audit draws all 56 owned IDs, including the 47 square ways,
+and finds no intrusion into another
 owner or unclaimed building.
 Platform paving is clipped with the shared convex subtraction helper against
 expanded actual carriageway segments and junction fillets. Railway metal and
-sleepers also leave road-clear gaps. The human kit's coat-fold parameter is a
-metre amplitude (`.035`), not a fold count; the final statue's body bounds are
-about five metres high and 1.9 metres across, without a stretched coat sheet.
+sleepers also leave road-clear gaps. The former generic human-kit figure is
+replaced by a dedicated roughly 4.2 m high bronze body with explicit coat
+panels, anatomy and hands. The focused strict ownership audit passes with
+zero warnings.
 Final integrated screenshot/bake evidence belongs to the lead's area report.
+
+## Square and statue revision from the owner's photographs
+
+The owner's 13 November 2026 aerial photograph establishes the designed red
+and pale grey geometry of the square: a broad central axis, transverse paths,
+individual lawn panels around the fountain rows, clipped tree avenues and the
+long narrow flower parterre below Lenin. `square.js` replaces the generic
+blotchy ground appearance inside that forecourt with restrained slab paving
+and deliberate lawns. The exact twenty mapped basin/pond rings remain holes;
+their water, nozzles and animation stay with the existing builders. Quiet
+one-metre stone joints use two 256×256 repeating textures, not per-slab meshes.
+The outer floor is clipped against actual street sections and junction fillets.
+Its physical triangulation uses those water holes directly; in the isolated
+check the square adds 131 walk triangles rather than a large lattice of
+overlapping boxes. Integrated road clipping can change the number of pieces.
+A separate
+plain grey apron also covers the forecourt directly against the terminal,
+stopping before the Komsomola carriageways.
+
+The review also exposed a source-tag ambiguity in the central rectangular
+pool. OpenStreetMap records it as pond relation `r8850268` and a separate
+fountain nozzle node `n11073120673`. Previously the node's empty geometry made
+the shared fountain builder invent a 1.4 m disk while the remainder of the
+54 m pool showed the generic patchy ground. The area facade and its preparation
+tool now attach the relation's exact pool outline to that existing nozzle
+record. The inventory remains 31 fountains; one shared live effect covers the
+central pool, with no duplicate water or jet controller. The square floor keeps
+the whole basin open. The focused runtime test verifies 11 moving jets spread
+across 47.5 m, matching physical water and a reachable basin floor at every
+nozzle: `node tools/area.mjs finlyandsky tools/finlyandsky-square-test.mjs`.
+
+Forty-seven mapped footway/step records inside the redesigned square remain
+in the pedestrian network but are claimed by its surface owner. Their old flat
+brick ribbons no longer cross the rose/grey pattern or overwrite basin lawns.
+Pure `square-layout.js` exports distinguish the hardscape from the deliberate
+lawns, allowing the area to reject generic trees on paving and loose tufts
+throughout the square while keeping the tree avenues.
+
+Both full-size Mark Harrison photographs were re-inspected: the frontal
+[`FinlandStation2.jpg`](https://www.markgh.co.uk/Russia/SaintPetersburg/FinlandStation2.jpg)
+and three-quarter
+[`FinlandStation1.jpg`](https://www.markgh.co.uk/Russia/SaintPetersburg/FinlandStation1.jpg).
+They resolve an error in the generic figure: Lenin's right hand gestures with
+curled fingers and an extended thumb, his left hand gathers the coat lapel, and the
+cap is tucked into the right coat pocket. It is not held in his left hand.
+The [Russian Museum's collection record](https://rusmuseumvrm.ru/data/collections/drawings/rs-1784/index.php)
+provides the roughly four-metre figure/five-metre pedestal scale check. The
+scene retains its earlier six-metre support estimate; its vertical dimensions
+are not a surveyed reconstruction. The
+[Saint Petersburg monument inventory](https://www.encspb.ru/object/2855753790?dv=2853931022&lc=ru)
+identifies the abstract armoured-car pedestal and its dedication.
+
+`lenin.js` now builds a dedicated sculpture instead of an articulated generic
+pedestrian: separated planted boots and trouser cuffs; a continuous wind-pulled
+coat shell and open tails; jacket, waistcoat, tie and buttons; turned collars,
+raised lapels and pocket cap; bent sleeves with cuffs; individually modelled
+fingers and thumb; bald cranium, cheekbones, brows, eye sockets, nose, moustache
+and pointed goatee. The three bronze shades are shared materials. Cloth and
+facial reliefs have a 240 m authored range; the body shares the 650 m architecture
+range. This is a photograph-informed sculptural approximation, not a scan.

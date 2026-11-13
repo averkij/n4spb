@@ -87,6 +87,12 @@ dimensions. The general flag prohibition continues to apply elsewhere.
 
 ## Look rules (short)
 
+**Ground surfaces (owner, 2026-11-13).** Use the default blotchy grass/asphalt/
+paver ground mix less in authored areas. Squares, promenades and landmark
+courtyards need coherent paving fields and deliberate lawn boundaries, based
+on references. Keep restrained wear within each material; avoid large random
+islands of unrelated surfaces or narrow flat ribbons across them.
+
 Materials only from `ctx.mat` (toon / decal / emissive / glass / foliage / facade); outlines are automatic; chunky readable silhouettes; blue-grey shadows; albedo <= ~0.92; no PBR.
 Scale: door 2.1 x 0.9 m, storey 3.6-4.5 m (pre-1917 houses), person 1.5-1.85 m, car 4.5 x 1.8 m, lamp post 5-9 m. Pavements are +0.12 m and kerbs +0.15 m visually only; the ground the player walks on is y = 0.
 Everything repeated more than ~40 times is an `InstancedMesh`. Never use `Math.random()` (use `ctx.rng(seed)`); animation = pure function of `t`.

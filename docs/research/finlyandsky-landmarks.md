@@ -64,13 +64,96 @@ The mapped western child `r17026342` is restored to its **9.9 m** eaves, and the
 round exercise-yard child `r17026340` to **3.3 m**. The latter has open radial
 partition tops and a low centre, rather than the previous five-storey circular
 mass. The yard surface stays below shared asphalt, preserving mapped service
-access. Auxiliary interior buildings stay under the generic city builder.
+access. The full-compound review below replaces the previously generic
+auxiliary buildings with authored historic shells.
 
 Suggested review cameras (x, eye-y, z, yaw, pitch):
 
 - `729,1.7,-2248,10.3,14`: riverfront church and brick ensemble.
 - `770,110,-2180,6,-31`: both complete crosses and the surrounding streets.
 - `719,2.4,-2270,0,10`: carriageway-height frontage and roof details.
+
+## Full-compound review from the supplied street and aerial views
+
+The user's street photograph exposes the missing hierarchy: the low brick
+screen, the entrance building with guards' flats (7, letter K), its tall centre
+and paired arched windows, and the substantial spruces between it and the roof
+church. The user's aerial view shows service buildings and coherent court
+surfaces around both crosses. These are now treated as an ensemble rather than
+two decorated large blocks surrounded by generic houses.
+
+Two additional photographs were downloaded to the temporary reference folder
+and visually inspected:
+
+- [Entrance building, close frontal view](https://kanoner.com/pics/2025/12/arsenalnaja-naberezhnaja-dom-7-lytera-k-vhodnoe-zdanye.jpg):
+  the nested brick portal, paired upper arches, blind-arch cornice, corbelled
+  corners, stone footing and zinc downpipes.
+- [Whole river facade in winter](https://s0.rbk.ru/v6_top_pics/media/img/8/45/756695502298458.jpg):
+  different heights of the three guards' houses, low connecting wall, raised
+  entrance centre and the roof church's relation to the enclosing buildings.
+
+The [city heritage authority's ensemble description](https://www.gov.spb.ru/gov/otrasl/c_govcontrol/news/308595/)
+and the [owner's published preservation list](https://kvsspb.ru/novosti/sovet-po-sokhraneniyu-kulturnogo-naslediya-utverdil-klyuchevye-parametry-proekta-restavratsii-kresto/)
+identify the entrance, church, crosses, guards' houses, kitchen/laundry, bath
+and hospital/service buildings as elements of one historic complex. The model
+preserves that historic ensemble; the unbuilt glass additions and redevelopment
+renders are not used as existing geometry.
+
+Twelve additional mapped building records are authored, with exact perimeters:
+`w60557319`, `w60557331`, `w60557332`, `w60557312`, `w60557335`,
+`w60557412`, `w1239726592`, `w1239726595`, `w1538997281`, `w60557323`,
+`w60557390` and `w60557409`. They have individually estimated low eaves and
+fitted pitched roofs, arched barred windows and brick courses. A single
+512-square procedural bonded-brick texture adds close detail to the shells;
+short-range instanced corbel teeth avoid a material or texture per facade.
+The full-compound visual review adds standing seams down the actual main-cross
+slopes and a restrained second metal tone on the opposite-facing planes. CPU
+rays through the real triangles measure 22.250 m at the western roof ridge and
+19.447 m at 6 m across it: a physical pitch of about 25 degrees, rather than a
+flat deck suggested by the former uniform colour. The entrance's upper trim
+is restricted to its raised centre and the side cap has full brick support;
+there is no blue-sky gap between a floating cornice and the side-wing wall.
+The neighbouring clinic quadrangle `r17026344` retains its separate identity
+and courtyard roof rather than receiving a fictitious single pitched ridge.
+
+The replacement ground ring follows the mapped wall chain and street-building
+line. Its **41,488 m²** is an authoring coverage footprint, not a legal parcel
+area. It spans `(602.5..868, -2493.2..-2285.1)`. One quiet asphalt finish and ten
+deliberate lawn shapes replace the default mottled grass/asphalt mix. Lawns are
+cut out of the paving, avoiding coincident flat planes at an aerial distance. The seven
+replaced short front-court ways retain their surveyed centrelines with the same
+neutral finish. Ordinary road asphalt is above this surface and remains intact.
+The 22 curated mature conifers/broadleaf trees fit the visible yard pockets; each
+trunk is checked against building footprints. Lawn edges and tree positions are
+photographic reconstruction estimates, not a tree survey. The pure
+`compound-plan.js` ring also supplies the area tree/tuft/prop rejection hook so
+the generic generator does not plant a second landscape through this layout.
+
+The five mapped masonry wall ways and three short street iron runs are rebuilt
+as independently breakable bays. Every collider belongs to its knock
+record. Architectural retaining/brick finishes do not leave a permanent
+invisible wall after the bay falls. No frame callbacks, flags or flashing
+effects are added. The authoring source check and focused strict claims audit
+pass, with all **39** module-owned records drawn and no unclaimed building
+intrusions. The lead performs integrated screenshot, road, bake and performance
+checks before committing.
+
+Boundary placement respects the real street-network asphalt, including parking
+width. Where it reaches beyond the old wall survey the wall is moved to the
+first clear line inside the grounds; shared corners keep one correction vector
+so their joins remain continuous. Every bay corner is tested with a 0.22 m
+clearance margin. Mapped service approaches retain openings, including the
+rear drive off Komsomola and the east riverfront entry. This is a geometry fix,
+not a new road-audit exemption.
+
+An independent CPU index of the actual upward-facing roof triangles samples
+**3,651** points inside the twelve newly authored auxiliary footprints: every
+point has a roof, with no hole or missing slope. It uses built world geometry,
+not the roof builder's own height function.
+
+Additional review cameras: `722,1.7,-2279,0,14` (entrance),
+`770,110,-2180,6,-31` (entire compound), and
+`705,3,-2318,180,5` (inside the front court).
 
 ## Mineralnaya Visitation church reference set
 
@@ -108,15 +191,16 @@ silhouette remains to 2100 m. Review at `1040,1.7,-3725,47,17`.
 ## Verification
 
 `node tools/area.mjs finlyandsky tools/check.mjs landmarksFinlyandsky` passes:
-approximately 203,345 triangles including close barred-window instances,
-35 meshes, eleven instanced meshes, twelve materials, no canvas textures and
+approximately 350,495 triangles including close barred-window instances,
+61 meshes, 20 instanced meshes, 19 materials, 278,528 canvas pixels and
 no update callbacks. The area lead performs integrated visual, road, claims,
 loading, driving and final bake verification. This headless result is not an FPS
 measurement. All authored geometry is static and receives normal batching,
-cell splitting and authored LOD handling. No new fence, lamp, bench or other
-movable furniture is built here; the area's shared generators retain that work.
+cell splitting and authored LOD handling. The compound's fence/wall bays
+use the shared knock system. Ordinary street lamps, benches and other furniture
+remain with the area's shared generators.
 
-The focused strict draw audit also passes with all twelve claimed records drawn
+The focused strict draw audit also passes with all 39 claimed records drawn
 and no geometry intruding deeply into an unclaimed building:
 `node tools/area.mjs finlyandsky tools/claims-draw-audit.mjs --modules landmarksFinlyandsky --strict`.
 

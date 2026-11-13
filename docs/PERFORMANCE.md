@@ -1,5 +1,113 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-13: Reported floors, layered roads and landmark follow-up (13.2.0)
+
+The two supplied promenade positions exposed different defects. Polygonal
+upper landing floors were sticky walk triangles, which the car's generic low
+walk-box shortcut does not follow over a water cut. A bounded area deck service
+now publishes those actual physical floors. The landward water-cut edge also
+sat at the exact slab edge while the street builder kept a 0.45 m clearance,
+leaving a blue slit. The cut now ends beneath solid paving. Dense edge probes
+and two actual car runs verify the curve rather than only large face centroids.
+The ordinary descent opposite Kresty has a continuous, dry granite apron.
+
+Kresty now owns twelve additional mapped auxiliary buildings, the complete
+gate/enclosure, coherent courts/lawns, 22 mature trees and readable pitched
+metal roofs. All boundary bays are checked against real asphalt and service
+access openings. Lenin is a dedicated sculpture. The square has geometric
+rose/grey paving, deliberate lawns and a 25% local population factor reduction.
+Its long central pool was mapped as a pond plus a point-only fountain: the
+area now reconciles those records into one full-size live fountain, preserving
+the count of 31. Eleven live nozzles span 47.5 m.
+
+The bridge bugs needed shared rules. Traffic sampling and marking heights now use road
+direction to distinguish the embankment from the deck above it. Longitudinal
+paint, arrows, bars and zebras stay on their own surface; two claimed northern
+one-way bridge halves also receive their shared divider. Paint visibility
+ignores asphalt/zebras at another level in both directions. Coverage uses each
+nearby segment's local tangent and fillet arms, with a consistent height
+tolerance relative to asphalt; curved roads are not reduced to their endpoints.
+The final tests cover Finlyandsky, Palace and Smolny input, including actual
+transverse roads and mapped crossings. A rendered traffic probe sampled 1,263
+vehicle poses at the Liteyny underpass: minimum pitch cosine 0.9972, no steep
+or vertical vehicles. The normal ramps account for the remaining small pitch.
+
+Aurora's generic-house appearance and the floating tier stack were in Sampson
+after a transition. A ship-only adapter reuses the maintained detailed cruiser,
+far mass and breakable railings in both overlapping areas. Its 36.5k triangles
+have finite ranges and no own frame updates. The three false `dupOf` flags
+on Orenburgskaya 2 are removed without changing heights or footprints.
+
+Focused results: promenade 10/10, square live-basin test, Aurora 3/3 in
+Finlyandsky and 5/5 in Sampson, all 23 registered water-level suites, views,
+garage, geography, layout and strict landmark claims pass. Finlyandsky's full
+road audit has zero furniture offenders and 108 existing surface residuals
+within the 120 budget. The final strict marking-geometry audit covers all
+46,552 of 46,552 solid plan samples. Shared-regression comparisons keep older failures
+visible: Palace has the exact same 13 furniture rows and one missing
+Kuznechny stop bar / one geometric marking sample as the HEAD baseline.
+Sampson's boat suite has the same five failures with Aurora omitted (76/81
+versus 74/79 checks); its remote pockets and components are unchanged.
+See the overlap dossier for exact failure IDs and the controlled comparison.
+
+The generic high-deck parking probe now requires continuous support under a
+car-sized footprint. A former candidate straddled Aurora's real 2.7 m
+forecastle break; treating its centre triangle as a flat parking platform was
+an invalid fixture. Actual placement and idle tests still run on continuous
+deck patches, with no area or object exemption.
+
+All 21 live areas were rebuilt after the shared changes: 2,715 complete
+products, 1,095.5 MiB compressed; the manifest and closure checks pass.
+Finlyandsky is `585110673dca39047122` (145 products, 61.5 MiB, 100 s),
+Sampson `dc95a66807a381c2c45c` (168, 75.0 MiB, 125 s), and Palace
+`456d40d96185c8746c34` (108, 55.6 MiB, 105 s).
+
+Normal baked loading, Edge / ANGLE D3D11 / RTX 3090 Ti, 1280×720, medium,
+full traffic, population and shadows. GPU jobs were serial and CPU audits
+stopped during the timed intervals. Baselines are the matching 13.1.0 runs
+recorded below; each drive holds W for twelve seconds, with no profiling or mid-shot.
+
+| Run | Ready s | Mean / p50 / p95 frame ms | Frames >80 ms | Mean calls | Distance m | CDP heap / backing MiB |
+|---|---:|---|---:|---:|---:|---|
+| Komsomola, 13.1 baseline | 16.4 | 17.7 / 16.7 / 16.8 | 2 | 759 | 386 | 506 / 568 |
+| Komsomola, 13.2 | 17.0 | 17.5 / 16.7 / 16.8 | 2 | 786 | 387 | 543 / 602 |
+| Centre, 13.1 baseline | 28.9 | 29.7 / 33.3 / 33.5 | 6 | 1283 | 352 | 506 / 1105 |
+| Centre, 13.2 | 29.0 | 27.3 / 33.2 / 33.4 | 4 | 1280 | 353 | 504 / 1197 |
+| Lenin Square walking, 13.2 | 17.4 | 16.7 / 16.7 / 16.8 | 0 | 940 | 42 | 535 / 583 |
+
+Every run reports zero failed regions and no module errors. The district
+drive remains about 57 FPS with 3.5% more calls; the square walk holds 60 FPS
+with a 17 ms maximum and no long tasks. The centre sample averages 37 FPS,
+but one run does not establish an improvement. Both held-throttle drives
+end in ordinary collisions near their baseline endpoints; these are matched
+route samples, not uninterrupted open-road runs. The 250/300 ms drive maxima,
+four remaining centre hitches and higher centre backing-storage snapshot
+remain limitations. Shared rendering/streaming and memory work is still needed
+before claiming consistently comfortable driving.
+
+The final normal-load review inspected all supplied positions, the complete
+square, Kresty and both Aurora angles. Sampson was ready in 18.9 s. The final
+45 s traffic probe at the bridge sampled 1,584 vehicle poses, minimum pitch
+cosine 0.9972, with no steep or vertical pose.
+
+The normal-load car control test passes entry, acceleration, nitro, drift,
+camera modes and exit. Its high-speed drift ends in a collision, so braking
+was separately checked with a healthy car: 59.4 km/h to 0.085 km/h in 0.732 s,
+zero damage, stable 0.03 m floor height and successful exit. Four final depth
+probes report 7 / 1 / 22 / 1 noisy pixels (maximum 0.002%, below the 0.02%
+target), with identical-frame difference zero. The evening square view also
+confirms illuminated live fountain jets.
+
+Reproduce; final JSON, screenshots and logs are in `shots/finlyandsky-followup/`:
+
+```powershell
+node tools/drive-bench.mjs --area finlyandsky --q medium --seconds 12 --start "630.37626685,-2452.19726876,-77.19325117" --json --diagnostics --out shots/finlyandsky-followup/final-drive
+node tools/drive-bench.mjs --area palace --q medium --seconds 12 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/finlyandsky-followup/final-centre
+node tools/drive-bench.mjs --area finlyandsky --q medium --walk --seconds 12 --start "270,-2484,164" --json --diagnostics --out shots/finlyandsky-followup/final-square-walk
+node tools/drive-test.mjs --area finlyandsky --q medium --nofuzz --start "630.37626685,-2452.19726876,-77.19325117" --out shots/finlyandsky-followup/final-controls
+node tools/bake-manifest-check.mjs
+```
+
 ## 2026-11-13: Финляндский waterfront review (13.1.0)
 
 Replaced the uniform right-bank treatment with a surveyed lower promenade,

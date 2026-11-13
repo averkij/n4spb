@@ -9,8 +9,12 @@ export function point(site,u,v){const c=Math.cos(site.rot),s=Math.sin(site.rot);
 export const LENIN_BACK=[[-68,-13.4],[-60,-14.6],[-52,-15.7],[-44,-16.5],[-36,-17],[68,-17]];
 const leninOutline=[...LENIN_BACK,[67,-11],[66,-4],[64,0],[60,3.2],[55.3,4.6],[35.9,4.3],[35.9,6],[-40.6,6],[-40.6,4.25],[-55,4.25],[-60,3.7],[-64,1],[-67,-3],[-68,-11]];
 const ring=s=>s===LENIN?leninOutline.map(p=>point(s,...p)):[point(s,-s.half,s.back),point(s,s.half,s.back),point(s,s.half,s.front),point(s,-s.half,s.front)];
-export const WATER_RINGS=[LENIN,GROTTO].map(s=>({id:s.id,key:'neva',ring:ring(s)}));
-export const BANK_RINGS=WATER_RINGS;
+// The water/ground cut ends UNDER the upper stone apron. Street paving keeps
+// 0.45m clear of that cut; a0.75m dry overlap joins it to the slab instead of
+// leaving a blue slit next to the kerb. The visible granite outline stays exact.
+const waterRing=s=>s===LENIN?[...LENIN_BACK.map(([u,v])=>point(s,u,v+.75)),...leninOutline.slice(LENIN_BACK.length).map(p=>point(s,...p))]:[point(s,-s.half,s.back+.75),point(s,s.half,s.back+.75),point(s,s.half,s.front),point(s,-s.half,s.front)];
+export const WATER_RINGS=[LENIN,GROTTO].map(s=>({id:s.id,key:'neva',ring:waterRing(s)}));
+export const BANK_RINGS=[LENIN,GROTTO].map(s=>({id:s.id,ring:ring(s)}));
 export const KEEP_OUT=[LENIN,GROTTO].map(s=>({id:s.id,c:[s.x,s.z],ax:[Math.cos(s.rot),-Math.sin(s.rot)],hl:s.half+1,hw:Math.max(Math.abs(s.back),s.front)+1}));
 export const GROUPS_LIST=[
   {key:'finlyandsky-lenin-descent',name:'Парадный спуск площади Ленина',nameEn:'Lenin Square ceremonial landing',ids:[],osm:['w1151087787','w1151087788','w1151087789','w1151087790','w1151087791','w1151087792','w1192940641','w1192940642','w1192940643','w1192940644','w1192940645','w1192940646','w1192940647','w1192940648'],at:[LENIN.x,LENIN.z]},

@@ -1,5 +1,42 @@
 # Finlyandsky waterfront detail review
 
+## Follow-up: upper promenade support and paving
+
+The reported car drop at `(176.3, -2314)` had a different cause from a missing
+walking floor. The polygonal upper apron used exact `addWalkTriangle` colliders,
+which Physics represents as sticky ramps. The car's generic low-floor branch
+accepts ordinary walk boxes, so it ignored those triangles and used the Neva
+bed beneath the upper platform. The waterfront now publishes a bounded deck
+service over its actual floor handles, and the area lists that service beside
+the Neva bridges. The service uses the same physical slabs/treads as walkers;
+it does not invent a flat collision plane across the stair holes.
+
+The thin blue kerb slit was caused by the hydraulic/ground cut ending exactly
+at the upper granite edge. Generic street paving correctly keeps 0.45 m clear
+of such an edge, exposing water beside the slab. Only the cut's landward edge
+now ends 0.75 m inside the solid upper apron. The visible granite/road boundary
+and its asphalt clearance stay exact, while the street and apron overlap on
+dry ground. The same dry overlap is applied at the grotto's upper approach.
+
+The second reported location, above the generic Kresty descent near
+`(1000.58, -2325.73)`, exposed the default ground mix between the mapped quay
+and street paving. A continuous granite approach follows the surveyed bank
+from x = 857.7 to x = 1162.6, including the small mapped landing notches. Its width
+is 6.5–8 m, constrained by the road, with a top at 0.14 m: two centimetres above
+the old pavement so that old path ribbons cannot show through it. Exact dry
+ground cuts and the matching terrain-height triangles retain every stair and
+water opening. It reuses the Lenin descent's material and textures, has a
+finite render range and adds no callbacks or fixed above-ground barriers.
+
+The expanded focused regression passes ten checks. It adds 1,568 samples
+at no more than 0.35 m intervals along the curved street/slab join, checking
+actual rendered coverage, physical support and absence of a wet slit. Two
+four-second real car runs cover 35.4 m and 22.6 m across the upper platform,
+at wheel heights 0.03–0.13 m with zero falling frames. Another 118 probes prove
+the Kresty upper approach agrees with drawn triangles, terrain, Physics and
+dry water classification. The earlier lower-walk continuity, boarding and
+breakable-parapet tests continue to pass.
+
 Research and implementation: 13 November 2026. Scope: the right Neva bank at
 Lenin Square and the Bezborodko grotto landing. The regular Pirogovskaya,
 Arsenalnaya and Sverdlovskaya bank remains owned by the environment and the
@@ -62,7 +99,7 @@ new geometry from sitting on top of a second generic wall or stair.
 ### Lenin Square
 
 The frame centre is `(203.1, -2291.05)`, tangent approximately `(0.980, 0.200)`.
-The official frontage is 136m. The three mapped transverse stair centre lines
+The official frontage is 136 m. The three mapped transverse stair centre lines
 are `w1151087787`, `w1192940644` and `w1192940647`. The longitudinal side
 flights are `w1151087788` and `w1151087791`. Their lower promenade is
 `w1151087789`. Curved end platforms follow `w1151087790` and `w1151087792`;
@@ -79,7 +116,7 @@ the Neva owner ring, so no terrain cut enters that carriageway.
 
 The front grotto face is centred at `(2711.95, -2883.85)`, tangent approximately
 `(0.925, 0.381)`. Building `r7357196` is the mapped underground grotto, about
-70m². Its surveyed front endpoints are `(2707.7, -2885.6)` and
+70 m². Its surveyed front endpoints are `(2707.7, -2885.6)` and
 `(2716.2, -2882.1)`; the rear is around z=-2891. The roof is a real walkable slab
 over a chamber with an arched hole, side/rear retaining walls and a dark
 interior. The iron arch gate is a separate knockable object.
@@ -122,11 +159,11 @@ Low parapet bays are independently knockable with finite render ranges; the
 module has no update callbacks. Generic trees and loose props are rejected
 inside the replacement terrain rather than left floating above the slope.
 
-All connected water uses `NAVIGABLE_WATER_Y=-3.4m`. Both lower promenades are
-at `Neva+1.4m=-2.0m`, matching the area-wide lower promenade; the upper paving
-is at0.10m. These street-relative heights, individual tread counts, slab
+All connected water uses `NAVIGABLE_WATER_Y = -3.4 m`. Both lower promenades are
+at `Neva + 1.4 m = -2.0 m`, matching the area-wide lower promenade; the upper paving
+is at 0.10 m. These street-relative heights, individual tread counts, slab
 thicknesses and sculpture dimensions are reconstruction estimates rather
-than a published elevation survey. Mapped plan positions and official 136m
+than a published elevation survey. Mapped plan positions and official 136 m
 frontage are stronger constraints than those estimates. Side flight widths
 are fitted to the surveyed statue/vase piers and photographs.
 
@@ -144,31 +181,32 @@ actual waterline, rather than a dark stripe across dry promenade walls.
 ## Verification
 
 `node tools/area.mjs finlyandsky tools/check.mjs finlyandskyWaterfront` passes.
-Latest measured cost: approximately77k triangles,37 authored meshes including
-20 instanced meshes,17 materials,1,048,576 canvas pixels,314 colliders and no
+Latest measured cost: approximately 77k triangles, 37 authored meshes including
+20 instanced meshes, 17 materials, 1,048,576 canvas pixels, 314 colliders and no
 frame callbacks. Bays of the same type are consolidated before registration;
-142 knockable bays own every fence collider. Finite authored LOD is1450m for
-stone masses,450m for masonry detail,620m for granite parapets,320m for iron
-panels/vases and360m for sphinxes.
+142 knockable bays own every fence collider. Finite authored LOD is 1450 m for
+stone masses, 450 m for masonry detail, 620 m for granite parapets, 320 m for iron
+panels/vases and 360 m for sphinxes.
 
 A CPU probe of the real area layout and physics sampled all seven stair
-centre lines at847 positions. Every flight descends continuously from upper
-to lower level, with maximum adjacent height change below0.17m. It caught and
+centre lines at 847 positions. Every flight descends continuously from upper
+to lower level, with maximum adjacent height change below 0.17 m. It caught and
 fixed a rotated tread/landing numerical seam and a narrow upper-platform
 sliver at a side-flight exit. A real street-net coverage probe found no upper
-stone face centroid on asphalt (closest margin approximately0.54m clear).
-All142 fence boxes were verified against the knock registry.
+stone face centroid on asphalt (closest margin approximately 0.54 m clear).
+All 142 fence boxes were verified against the knock registry.
 
 The integration regression
 `node tools/area.mjs finlyandsky tools/finlyandsky-waterfront-test.mjs`
-passes seven checks against the real built scene, Physics, Player and knock
-registry. Its 185 lower-walk and 101 green-slope probes compare visible
+now passes ten checks against the real built scene, Physics, Player and knock
+registry. In addition to the upper-promenade checks described above, its
+185 lower-walk and 101 green-slope probes compare visible
 triangles with terrain/physics, and reject old flat environment ground or
-street ribbons over the depression. Another 4,243 probes at <=0.5m spacing
+street ribbons over the depression. Another 4,243 probes at ≤0.5 m spacing
 check continuous support through the whole lower walk and both end ramps.
 All 205 actual walk boxes match drawn floors and have valid vertical volumes;
 all 1,077 shoreline bays are independently breakable. A real walker reaches
-the Neva bed through both boarding gaps (2.60m depth). On the green bank the
+the Neva bed through both boarding gaps (2.60 m depth). On the green bank the
 same walk is blocked by a standing parapet, then enters the water after that
 one bay is knocked down. Logs are in `shots/finlyandsky-review/`.
 
@@ -213,7 +251,7 @@ Removing a short way with `--mutant undraw:w1192940642` also correctly fails
 strict mode with one warning: the exact-surface fallback cannot recover
 omitted owner geometry (`waterfront-claims-line-undraw.log`).
 
-Integration review cameras: Lenin from river `(203,-2241)`, yaw0°, pitch9°;
-grotto from river `(2698,-2822)`, yaw-12.7°, pitch7°. The parent integration
+Integration review cameras: Lenin from river `(203,-2241)`, yaw 0°, pitch 9°;
+grotto from river `(2698,-2822)`, yaw -12.7°, pitch 7°. The parent integration
 pass owns GPU screenshots, integrated water/boat checks, source version and
 bake revision updates.

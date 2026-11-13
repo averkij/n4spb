@@ -82,6 +82,14 @@ check('stacked Europolis storeys remain visible and duplicate tags require the s
     assert(Math.min(top, otherTop) > Math.max(b.minH || 0, other.minH || 0), `${b.id}: disjoint stacked intervals marked duplicate`);
   }
 });
+check('the Singing Fountains nozzle uses its complete mapped central pool instead of a point disk', () => {
+  assert.equal(D.FOUNTAINS.length,31,'Mapped fountain inventory remains31; no duplicated central effect');
+  const fountain=D.FOUNTAINS.find(f=>f.id==='n11073120673'),pool=D.WATER.find(w=>w.id==='r8850268');
+  assert(fountain&&pool,'Central fountain node/pool records missing');
+  assert.deepEqual(fountain.polys,pool.polys,'Central fountain must use the surveyed pool outline');
+  const p=fountain.polys[0].o,xs=p.filter((_,i)=>!(i%2)),zs=p.filter((_,i)=>i%2);
+  assert(Math.hypot(Math.max(...xs)-Math.min(...xs),Math.max(...zs)-Math.min(...zs))>50,'Central pool truncated to a nozzle disk');
+});
 check('provenance names the complete live map snapshot and inspected original source', () => {
   const source = JSON.parse(fs.readFileSync(new URL('../src/areas/finlyandsky/source-info.json', import.meta.url), 'utf8'));
   assert.equal(source.mapOsm, 1181903);

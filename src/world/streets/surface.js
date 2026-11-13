@@ -208,7 +208,7 @@ export function addArrow(P, a, col = WHITE) {
   const { x, z, dx, dz, y } = a, nx = -dz, nz = dx;
   const V = (u, v, tu, tv) => {
     const px=x+dx*u+nx*v,pz=z+dz*u+nz*v;
-    return P.vert(px,(northDeckHeight(px,pz)??y)+LIFT,pz,tu,tv,UP,col);
+    return P.vert(px,(northDeckHeight(px,pz,dx,dz)??y)+LIFT,pz,tu,tv,UP,col);
   };
   const s0 = V(-1.8, -0.08, 0, 0), s1 = V(-1.8, 0.08, 1, 0), s2 = V(0.6, 0.08, 1, 0.6), s3 = V(0.6, -0.08, 0, 0.6);
   P.quad(s0, s1, s2, s3);
@@ -230,14 +230,14 @@ export function buildCrossings(net, P) {
       const p = x00 + (k - 0.5) * 1.0; if (p < x0 - 0.3 || p > x1 + 0.3) continue;
       const wear = 0.85 + 0.15 * hash2(c.x * 0.31 + k, c.z * 0.43), col = [ZEBRA_RED[0] * wear, ZEBRA_RED[1] * wear, ZEBRA_RED[2] * wear];
       const bx = c.x + c.nx * p, bz = c.z + c.nz * p;
-      const q = (du, dv, tu, tv) => { const x=bx+c.tx*du+c.nx*dv,z=bz+c.tz*du+c.nz*dv;return P.vert(x,(northDeckHeight(x,z)??ROAD_Y)+LIFT,z,tu,tv,UP,col); };
+      const q = (du, dv, tu, tv) => { const x=bx+c.tx*du+c.nx*dv,z=bz+c.tz*du+c.nz*dv;return P.vert(x,(northDeckHeight(x,z,c.tx,c.tz)??ROAD_Y)+LIFT,z,tu,tv,UP,col); };
       P.quad(q(-half, -0.25, 0, 0), q(half, -0.25, 1, 0), q(half, 0.25, 1, 1), q(-half, 0.25, 0, 1));
     }
     for (let k = 0; k < n; k++) {
       const p = x00 + k * 1.0, wear = 0.82 + 0.18 * hash2(c.x * 0.37 + k, c.z * 0.51);
       const col = [WHITE[0] * wear, WHITE[1] * wear, WHITE[2] * wear];
       const bx = c.x + c.nx * p, bz = c.z + c.nz * p;
-      const q = (du, dv, tu, tv) => { const x=bx+c.tx*du+c.nx*dv,z=bz+c.tz*du+c.nz*dv;return P.vert(x,(northDeckHeight(x,z)??ROAD_Y)+LIFT,z,tu,tv,UP,col); };
+      const q = (du, dv, tu, tv) => { const x=bx+c.tx*du+c.nx*dv,z=bz+c.tz*du+c.nz*dv;return P.vert(x,(northDeckHeight(x,z,c.tx,c.tz)??ROAD_Y)+LIFT,z,tu,tv,UP,col); };
       P.quad(q(-half, -0.25, 0, 0), q(half, -0.25, 1, 0), q(half, 0.25, 1, 1), q(-half, 0.25, 0, 1));
       stats.stripes++;
     }

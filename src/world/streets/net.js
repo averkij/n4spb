@@ -8,6 +8,7 @@
 import { ROADS, CROSSINGS, CROSSING_NODES, SIGNALS, BUS_STOPS, TRAMWAYS, EXTENT } from '../data/city.js';
 import { facadeDist } from './bld.js';
 import { deckAt } from './decks.js';
+import { northDeckHeight } from '../northBridges/sites.js';
 import { pairs, segClosest, clamp, TAU, wrapPI, sstep, PointGrid } from './util.js';
 
 /** A TRAM RESERVATION is no road. The paved bed of a double tram track beside a carriageway (Kronverksky pr. along the Alexander Park) is mapped as a service road for emergency vehicles only
@@ -408,6 +409,7 @@ function cover(net, px, pz, o) {
     for (let q = 0; q < list.length; q++) {
       const e = list[q]; if (e.st === st) continue; e.st = st;
       const w = e.w; if (w === skip || w === skip2 || (o.skipSet && o.skipSet.has(w)) || (minRank && w.rank < minRank) || (noBed && w.tramBed)) continue;
+      if(o.skipDirection&&o.skipDirection(e.dx/e.l,e.dz/e.l))continue;
       if (own && w === own.w && Math.abs(w.s[e.i] + e.l / 2 - own.s) < own.d) continue;
       // (segInfo without the allocations and without Math.hypot: this loop runs for every lamp / parking slot / signal candidate)
       const ax = e.ax, az = e.az, dx = e.dx, dz = e.dz, l2 = e.l2;
@@ -423,6 +425,9 @@ function cover(net, px, pz, o) {
   if (best < 0.4 && !o.noFillets) for (const f of filletsAt(net, px, pz)) {
     if (px < f.box[0] || px > f.box[1] || pz < f.box[2] || pz > f.box[3]) continue;
     if (f.ways[0] === o.skip && f.ways[1] === o.skip2) continue;
+    // A fillet joining different road levels cannot hide either level's
+    // markings. Use its actual local arms, like the segment coverage above.
+    if(o.skipDirection&&f.arms.some(a=>o.skipDirection(a.dx,a.dz)))continue;
     if (inRing(f.poly, px, pz)) best = Math.max(best, 0.6);
   }
   return best;
@@ -659,7 +664,10 @@ function buildKerbRuns(net) {
  *  that merely run side by side stay apart. */
 function fillMedians(net, L) {
   const fill = new Map();
-  const cand = net.ways.filter((w) => w.oneway && w.rank >= 1 && !w.bridge && w.L >= 3 && (w.name || w.rank >= 2));       // (an unnamed carriageway counts from rank 2: links, unnamed tertiary pairs)
+  // North bridges delegate paint to the street plan. Their two mapped
+  // one-way carriageways need the same shared divider as their approaches.
+  const north = w => w.bridge && northDeckHeight(w.x[0],w.z[0])!==null;
+  const cand = net.ways.filter((w) => w.oneway && w.rank >= 1 && (!w.bridge||north(w)) && w.L >= 3 && (w.name || w.rank >= 2));       // (an unnamed carriageway counts from rank 2: links, unnamed tertiary pairs)
   /** the partner of w across its left edge at the point (px, pz) (the left edge of the asphalt, tangent t, left normal n): { gap, v } or null */
   const partnerAt = (w, px, pz, tx, tz, nxL, nzL) => {
     let best = null;
@@ -668,7 +676,7 @@ function fillMedians(net, L) {
       const list = net.grid.get((cx + 300) * 2048 + (cz + 300)); if (!list) continue;
       for (let q = 0; q < list.length; q++) {
         const e = list[q]; if (e.st === st) continue; e.st = st;
-        const v = e.w; if (v === w || !v.oneway || v.rank < 1 || v.bridge) continue;
+        const v = e.w; if (v === w || !v.oneway || v.rank < 1 || v.bridge!==w.bridge || (v.bridge&&!north(v))) continue;
         if ((e.dx * tx + e.dz * tz) / e.l > -0.85) continue;                  // must run the opposite way
         const dx = e.dx, dz = e.dz, l2 = e.l2;
         let t = l2 < 1e-12 ? 0 : ((px - e.ax) * dx + (pz - e.az) * dz) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t;
@@ -679,7 +687,7 @@ function fillMedians(net, L) {
         if (!(gap > -1.4 && gap < 7.5) || (best && gap >= best.gap)) continue;
         if (v.name !== w.name && v.name && w.name && !(w.rank >= 3 && v.rank >= 3) && !(gap < 3 && w.rank >= 2 && v.rank >= 2)) continue;     // pairing guard: the same street (or an unnamed twin), two arterials, or two carriageways closer than 3 m (never a boulevard)
         const mx = (px + cxp) / 2, mz = (pz + czp) / 2;
-        if (L && L.inRiver && L.inRiver(mx, mz)) continue;                                   // across the water (two embankments): no median to fill
+        if (L && L.inRiver && L.inRiver(mx, mz) && !(north(w)&&north(v))) continue;          // two embankments stay apart; two halves on one owned deck are one road
         if (L && L.insideBuilding && L.insideBuilding(mx, mz, 0)) continue;                  // a block between two streets, not a median
         best = { gap, v };
       }

@@ -107,6 +107,15 @@ const known = spawnSync(process.execPath, [path.join(root, 'tools/strip-data-kno
   '--facade', path.join(root, 'src/areas/finlyandsky/data/city.js'),
   '--out', path.join(root, 'src/areas/finlyandsky/known-data.js')], { cwd: root, stdio: 'inherit' });
 if (known.status !== 0) process.exit(known.status || 1);
+// The central Singing Fountains pool is mapped as a pond relation plus one
+// amenity=fountain nozzle node. Give that existing fountain record the real
+// basin geometry: otherwise the shared builder invents a 1.4m disk on the
+// generic ground, and the rest of the 54m pool remains dry painted terrain.
+const basinFacadeFile = path.join(dataDir, 'city.js');
+let basinFacade = fs.readFileSync(basinFacadeFile, 'utf8');
+basinFacade = basinFacade.replace('export const FOUNTAINS = ', 'const RAW_FOUNTAINS = ');
+basinFacade += `\n// The mapped nozzle and central pool describe one fountain, retaining31 records.\nexport const FOUNTAINS = RAW_FOUNTAINS.map(f => f.id === 'n11073120673' ? {...f, basinId:'r8850268', polys:WATER.find(w => w.id === 'r8850268')?.polys || f.polys} : f);\n`;
+fs.writeFileSync(basinFacadeFile, basinFacade);
 const info = JSON.parse(fs.readFileSync(path.join(scratch, 'source-info.json'), 'utf8'));
 const queryInfo = JSON.parse(fs.readFileSync(path.join(scratch, 'mapped-query.json'), 'utf8'));
 if (queryInfo.source) {

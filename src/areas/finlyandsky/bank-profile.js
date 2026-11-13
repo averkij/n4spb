@@ -46,10 +46,23 @@ for(let i=0;i+1<FRAMES.length;i++){
     add('upper',[at(a,wa,0),at(b,wb,0),at(b,b.width,0),at(a,a.width,0)]);
   }
 }
+// Surveyed right-bank approach to the mapped Kresty descent. A continuous
+// granite apron replaces the exposed patchwork between street and parapet.
+// The two short outward notches are the actual mapped landing outlines.
+const apronLine=[[857.7,-2281.3],[896.1,-2289.4],[929.9,-2300.3],[959.9,-2312],[983.6,-2322.2],[985.3,-2318.7],[1007.9,-2329.1],[1008.8,-2330.4],[1008.3,-2334],[1162.6,-2408]];
+const adx=apronLine.at(-1)[0]-apronLine[0][0],adz=apronLine.at(-1)[1]-apronLine[0][1],al=Math.hypot(adx,adz),anx=adz/al,anz=-adx/al,ap=[];
+for(let i=0;i+1<apronLine.length;i++){const a=apronLine[i],b=apronLine[i+1],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/6);for(let j=0;j<n;j++)ap.push([a[0]+(b[0]-a[0])*j/n,a[1]+(b[1]-a[1])*j/n]);}ap.push(apronLine.at(-1));
+export const APRON_Y=.14;
+export const APRON_FRAMES=ap.map(([x,z])=>{const near=roads.filter(r=>Math.min(r.a[0],r.b[0])<x+30&&Math.max(r.a[0],r.b[0])>x-30&&Math.min(r.a[1],r.b[1])<z+30&&Math.max(r.a[1],r.b[1])>z-30);let width=1;for(let d=1;d<=8;d+=.25){if(!near.every(r=>dist(x+anx*d,z+anz*d,r.a,r.b)>r.half+1.2))break;width=d;}return{x,z,nx:anx,nz:anz,width,y:APRON_Y};});
+export const APRON_RINGS=[];
+for(let i=0;i+1<APRON_FRAMES.length;i++){
+  const a=APRON_FRAMES[i],b=APRON_FRAMES[i+1],q=[at(a,0,APRON_Y),at(b,0,APRON_Y),at(b,b.width,APRON_Y),at(a,a.width,APRON_Y)];
+  add('apron',q);const ring=q.map(v=>[v[0],v[2]]);APRON_RINGS.push(ring);GROUND_CUTS.push(ring);
+}
 const cell=32,grid=new Map();
 for(const s of SURFACES.filter(s=>s.walk)){const xs=s.p.map(p=>p[0]),zs=s.p.map(p=>p[2]);for(let x=Math.floor(Math.min(...xs)/cell);x<=Math.floor(Math.max(...xs)/cell);x++)for(let z=Math.floor(Math.min(...zs)/cell);z<=Math.floor(Math.max(...zs)/cell);z++){const k=x+','+z;if(!grid.has(k))grid.set(k,[]);grid.get(k).push(s);}}
 export function bankHeight(x,z){if(!outsideLandings(x,z))return null;let height=null;for(const {p:[a,b,c]}of grid.get(Math.floor(x/cell)+','+Math.floor(z/cell))||[]){const den=(b[2]-c[2])*(a[0]-c[0])+(c[0]-b[0])*(a[2]-c[2]);if(Math.abs(den)<1e-9)continue;const u=((b[2]-c[2])*(x-c[0])+(c[0]-b[0])*(z-c[2]))/den,v=((c[2]-a[2])*(x-c[0])+(a[0]-c[0])*(z-c[2]))/den;if(u>=-1e-5&&v>=-1e-5&&u+v<=1.00001){const h=u*a[1]+v*b[1]+(1-u-v)*c[1];height=height===null?h:Math.max(height,h);}}return height;}
-export const HEIGHT_PATCH={id:'sverdlovskaya-promenade',box:[1100,2950,-3150,-2350],at:bankHeight};
+export const HEIGHT_PATCH={id:'sverdlovskaya-promenade',box:[840,2950,-3150,-2270],at:bankHeight};
 export const STAIR_SITES=STEPS.flatMap(s=>{if(!s.pts?.length)return[];const x=(s.pts[0]+s.pts.at(-2))/2,z=(s.pts[1]+s.pts.at(-1))/2;let best=null,dd=Infinity;for(const f of FRAMES){const d=Math.hypot(x-f.x,z-f.z);if(d<dd){dd=d;best=f;}}return dd<22&&best.green&&outsideLandings(x,z)?[{id:s.id,f:best}]:[];}).filter((s,i,a)=>a.findIndex(q=>Math.abs(q.f.s-s.f.s)<12)===i);
 // Only replaced ways are claimed; through streets keep their original asphalt.
 export const OWNED_WAYS=[...new Set([...ROADS.filter(r=>['footway','path','steps'].includes(r.hw)&&r.pts.length>=4&&r.pts.every((v,i)=>i%2||bankHeight(v,r.pts[i+1])!==null)).map(r=>r.id),...STAIR_SITES.map(s=>s.id),...ACCESS_ROADS.map(r=>r.id),...ACCESS_PATHS.map(r=>r.id)])];

@@ -186,7 +186,18 @@ export function planMarkings(net, graph, o = {}) {
     return pairs.get(partner);
   };
   /** why a point carries no paint: 'gate' (the rule itself does not ask for it there), 'deck' (a bridge deck of the bridges module), 'cross' (zebra bars), 'cover' (another carriageway's asphalt) or '' */
-  const hidOf = (w, skip2, gate) => (p) => (gate && gate(p) ? 'gate' : deckAt(p.x, p.z, 0.3) ? 'deck' : nearCrossing(net, p.x, p.z, RULES.zebraClear) ? 'cross' : net.cover(p.x, p.z, { skip: w, skip2, skipSet: skipsOf(w, skip2) }) > 0.2 ? 'cover' : '');
+  const hidOf = (w, skip2, gate) => (p) => {
+    if(gate&&gate(p))return 'gate';
+    if(deckAt(p.x,p.z,.3))return 'deck';
+    const level=northDeckHeight(p.x,p.z,p.nz,-p.nx);
+    const crossing=nearCrossing(net,p.x,p.z,RULES.zebraClear);
+    if(crossing&&Math.abs((northDeckHeight(p.x,p.z,crossing.tx,crossing.tz)??ROAD_Y)-(level??ROAD_Y))<.25)return 'cross';
+    // Test nearby covering segments with their local tangent. A curved way's
+    // endpoint-to-endpoint bearing can belong to a different bridge level.
+    const skipDirection=(northDeckHeight(p.x,p.z)??ROAD_Y)-ROAD_Y>.25?
+      (tx,tz)=>Math.abs((northDeckHeight(p.x,p.z,tx,tz)??ROAD_Y)-(level??ROAD_Y))>.25:null;
+    return net.cover(p.x,p.z,{skip:w,skip2,skipSet:skipsOf(w,skip2),skipDirection})>.2?'cover':'';
+  };
   /** ask for a line of `kind` along w between arclengths lo and hi at the lateral position latFn(q): dashed (1 m / 3 m from `anchor`), or solid at the offsets `offs` (a double line = two thin lines);
    *  o.hid tells where there is no paint. Records the rule (what was asked / drawn / hidden by what) and pushes the drawn pieces. */
   const ask = (kind, w, lo, hi, latFn, width, o) => {
@@ -333,7 +344,7 @@ export function strip(B, pts, width, col, lift, uvLen = 3) {
   pts.forEach((p, i) => {
     if (i) s += Math.hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z);
     const ax=p.x+p.nx*width/2,az=p.z+p.nz*width/2,bx=p.x-p.nx*width/2,bz=p.z-p.nz*width/2;
-    const a = B.vert(ax, (northDeckHeight(ax,az)??ROAD_Y)+lift, az, 0, s / uvLen, UP, col), b = B.vert(bx, (northDeckHeight(bx,bz)??ROAD_Y)+lift, bz, 1, s / uvLen, UP, col);
+    const a = B.vert(ax, (northDeckHeight(ax,az,p.nz,-p.nx)??ROAD_Y)+lift, az, 0, s / uvLen, UP, col), b = B.vert(bx, (northDeckHeight(bx,bz,p.nz,-p.nx)??ROAD_Y)+lift, bz, 1, s / uvLen, UP, col);
     if (prev) B.quad(prev[0], prev[1], b, a);
     prev = [a, b];
   });
@@ -346,7 +357,7 @@ export function drawPlan(plan, P) {
   for (const b of plan.bars) {
     const rx = -b.tz, rz = b.tx, V = (u, c, tu, tv) => {
       const x=b.x+b.tx*u+rx*c,z=b.z+b.tz*u+rz*c;
-      const northY=northDeckHeight(x,z);
+      const northY=northDeckHeight(x,z,b.tx,b.tz);
       const y=northY!==null?northY+LIFT:b.longDeck?(longDeckHeight(x,z)??ROAD_Y)+.03:b.y??ROAD_Y+LIFT;
       return P.vert(x,y,z,tu,tv,UP,WHITE);
     };

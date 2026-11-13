@@ -6,6 +6,7 @@ import { Parts, archPath } from './landmarksD/kit.js';
 import { ringFromFlat, signedArea } from './lib/massing.js';
 import { registerLOD } from '../core/spatial.js';
 import { roofPieces, clippedPieces, fittedRoof, insideRecord } from './landmarksFinlyandsky/roofs.js';
+import { compoundMats, compoundGround, compoundWalls, entranceDetail } from './landmarksFinlyandsky/compound.js';
 
 export const OWNS_GROUPS = true;
 const ROT=.1875;
@@ -34,7 +35,7 @@ function shell(P,M,rec,y0,y1,ctx,collide=true,cap=true){
   for(const poly of rec.polys){
     for(const e of edges(poly)){
       const[a,b]=[e.a,e.b],top=typeof y1==='function'?y1((a[0]+b[0])/2,(a[1]+b[1])/2):y1;
-      P.quad(M,[a[0],y0,a[1]],[b[0],y0,b[1]],[b[0],top,b[1]],[a[0],top,a[1]],[e.nx,0,e.nz]);
+      P.quad(M,[a[0],y0,a[1]],[b[0],y0,b[1]],[b[0],top,b[1]],[a[0],top,a[1]],[e.nx,0,e.nz],[[0,y0/2.56],[e.len/4.16,y0/2.56],[e.len/4.16,top/2.56],[0,top/2.56]]);
       if(collide)ctx.physics.addBox((a[0]+b[0])/2,(a[1]+b[1])/2,e.len,.4,Math.atan2(- (b[1]-a[1]),b[0]-a[0]),y0,top);
     }
     if(cap)P.cap(M,ringFromFlat(poly.o),y1,true,4,(poly.h||[]).map(ringFromFlat));
@@ -48,29 +49,38 @@ class Repeat {
 function trimAlong(R,mat,e,y,h,depth=.12,far=700){R.box(mat,(e.a[0]+e.b[0])/2+e.nx*.08,y,(e.a[1]+e.b[1])/2+e.nz*.08,e.len,h,depth,e.rot,far);}
 function kresty(ctx,root,M,svc){
   const records=L.groupMembers('finlyandsky-kresty');if(!records.length)return;
+  M=compoundMats(ctx,M);
   const P=new Parts(),D=new Parts(),R=new Repeat();
   const main=records.find(b=>b.id==='r17026343'),chapel=records.find(b=>b.id==='r17026341');
   const low=records.find(b=>b.id==='r17026342'),yards=records.find(b=>b.id==='r17026340');
   const mainHeight=(x,z)=>insideRecord(low,x,z)?9.9:insideRecord(yards,x,z)?3.3:18.7;
+  const heights={r17026336:9.7,r17026337:10.6,r17026338:9.7,r17026339:9.7,r17026344:12.4,w60557313:7.5,w60557319:6.0,w60557331:7.2,w60557332:7.8,w60557312:8.4,w60557335:6.5,w60557412:6.5,w1239726592:3.4,w1239726595:3.6,w1538997281:3.5,w60557323:4.8,w60557390:7.8,w60557409:4.8};
+  compoundGround(ctx,root,M,records,svc);compoundWalls(ctx,M,svc);
   // The complete 5-storey parent includes both cruciform cell blocks. Its
   // partial lower-rise parts are already inside that footprint, not duplicate shells.
   for(const rec of records.filter(b=>!b.part&&!b.skip)){
-    const isMain=rec===main,h=isMain?18.7:rec.id==='w60557313'?7.5:rec.id==='r17026344'?12.4:rec.id==='r17026337'?12.0:rec.id==='r17026338'?6.3:9.7;
+    const isMain=rec===main,h=isMain?18.7:heights[rec.id]||9.7;
     shell(P,M.brick,rec,0,isMain?mainHeight:h,ctx,true,false);
     for(const poly of rec.polys)for(const e of edges(poly)){
-      const h=isMain?mainHeight((e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2):rec.id==='w60557313'?7.5:rec.id==='r17026344'?12.4:rec.id==='r17026337'?12.0:rec.id==='r17026338'?6.3:9.7;
+      if(rec.id==='r17026337'&&e.nz>.85&&Math.hypot((e.a[0]+e.b[0])/2-721.9,(e.a[1]+e.b[1])/2+2291.05)<11)continue; // bespoke entrance centre below
+      const h=isMain?mainHeight((e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2):heights[rec.id]||9.7;
       trimAlong(R,M.darkBrick,e,.52,.65,.14,900);trimAlong(R,M.lightBrick,e,h-.25,.45,.30,900);
       for(let y=3.65;y<h-1;y+=3.25)trimAlong(R,M.lightBrick,e,y,.13,.12,550);
-      const count=Math.floor((e.len-.8)/3.35);if(count<1)continue;
+      const count=Math.floor((e.len-.8)/(isMain?3.35:3.05));if(count<1)continue;
       for(let j=0;j<count;j++){
         const t=(j+.5)/count,x=e.a[0]+(e.b[0]-e.a[0])*t,z=e.a[1]+(e.b[1]-e.a[1])*t;
         const width=isMain?.92:1.10;
-        for(let y=1.65;y<h-1;y+=3.25){
-          R.box(M.lightBrick,x+e.nx*.09,y+.02,z+e.nz*.09,width+.30,1.65,.11,e.rot,600);
-          R.box(M.window,x+e.nx*.17,y+.02,z+e.nz*.17,width,1.38,.11,e.rot,600);
+        const levels=[];if(rec.id==='r17026337')levels.push(1.7,6.5);else for(let y=1.65;y<h-1;y+=3.25)levels.push(y);
+        for(const y of levels){
+          const tall=rec.id==='r17026337'&&y>4;
+          // The small cell windows have shallow arched heads; the auxiliary
+          // facades use broader semicircular openings below their brickwork.
+          D.push(x+e.nx*.11,0,z+e.nz*.11,e.rot);
+          D.face(M.lightBrick,arch(width+.30,tall?1.95:isMain?.95:1.04,y-.67),0,2.56,5);
+          D.face(M.window,arch(width,tall?1.9:isMain?.90:.99,y-.60),.07,1,5);D.pop();
           R.box(M.stone,x+e.nx*.23,y-.80,z+e.nz*.23,width+.35,.13,.36,e.rot,600);
           // Close bars are short-range immutable instances; no animation work.
-          for(const u of[-.27,0,.27])R.box(M.iron,x+e.nx*.25+Math.cos(e.rot)*u,y+.02,z+e.nz*.25-Math.sin(e.rot)*u,.035,1.38,.05,e.rot,170);
+          for(const u of[-.27,0,.27])R.box(M.iron,x+e.nx*.25+Math.cos(e.rot)*u,y+(tall?.38:.02),z+e.nz*.25-Math.sin(e.rot)*u,.035,tall?2.12:1.38,.05,e.rot,170);
         }
       }
       // Brick pilaster stacks separate the high wall bays, as in Tomishko's
@@ -78,8 +88,20 @@ function kresty(ctx,root,M,svc){
       for(let j=0;j<=Math.floor(e.len/8);j++){
         const t=j/Math.max(1,Math.floor(e.len/8));R.box(M.lightBrick,e.a[0]+(e.b[0]-e.a[0])*t+e.nx*.1,h/2,e.a[1]+(e.b[1]-e.a[1])*t+e.nz*.1,.35,h-.8,.22,e.rot,650);
       }
+      // Continuous corbel/tooth frieze is the entrance and wings' strongest
+      // close-range brick motif. Repeated teeth stay in short-range instances.
+      const teeth=Math.floor(e.len/.68);for(let j=0;j<teeth;j++){
+        const t=(j+.5)/teeth;R.box(M.darkBrick,e.a[0]+(e.b[0]-e.a[0])*t+e.nx*.14,h-.65,e.a[1]+(e.b[1]-e.a[1])*t+e.nz*.14,.24,.32,.19,e.rot,260);
+      }
     }
-    if(!isMain){for(const poly of rec.polys)P.cap(M.roof,ringFromFlat(poly.o),h+.06,true,4,(poly.h||[]).map(ringFromFlat));}
+    if(!isMain){
+      const pts=rec.polys.flatMap(p=>ringFromFlat(p.o)),c=Math.cos(ROT),s=Math.sin(ROT),us=pts.map(p=>(p[0]-rec.cx)*c-(p[1]-rec.cz)*s),vs=pts.map(p=>(p[0]-rec.cx)*s+(p[1]-rec.cz)*c);
+      const du=Math.max(...us)-Math.min(...us),dv=Math.max(...vs)-Math.min(...vs),axis=du>dv?'v':'u',run=Math.max(2,(axis==='v'?dv:du)/2),rise=Math.min(2.4,run*.25);
+      // Clinic r17026344 is a distinct neighbouring quadrangle; retain its
+      // existing flat roof instead of imposing one ridge across its courtyard.
+      if(rec.id==='r17026344')for(const poly of rec.polys)P.cap(M.roof,ringFromFlat(poly.o),h+.06,true,4,(poly.h||[]).map(ringFromFlat));
+      else fittedRoof(P,M.roof,roofPieces(rec),{x:rec.cx,z:rec.cz,rot:ROT,eave:h,profiles:[{axis,run,rise}],boundary:[rec],wallMat:M.brick,shadeMat:M.roofShade});
+    }
     svc.houses.push({id:rec.id,name:'Исторический комплекс «Кресты»',x:rec.cx,z:rec.cz,h});
   }
   if(main){
@@ -88,10 +110,24 @@ function kresty(ctx,root,M,svc){
     const pieces=roofPieces(main,[low,yards,chapel]);
     for(const [side,x,z]of[[true,665.5,-2380.0],[false,793.8,-2359.2]]){
       const half=clippedPieces(pieces,[729,-3000],[729,-2000],side);
-      fittedRoof(P,M.roof,half,{x,z,rot:ROT,eave:18.7,profiles:[{axis:'v',run:8.0,rise:3.55},{axis:'u',run:7.6,rise:3.55}],boundary:[main,low,yards,chapel],wallMat:M.brick});
+      const roofAt=fittedRoof(P,M.roof,half,{x,z,rot:ROT,eave:18.7,profiles:[{axis:'v',run:8.0,rise:3.55},{axis:'u',run:7.6,rise:3.55}],boundary:[main,low,yards,chapel],wallMat:M.brick,shadeMat:M.roofShade});
+      // Standing seams run down the real slope; they make the metal roof's
+      // pitch readable from the river instead of one uniform brown plate.
+      const point=(u,v)=>[x+Math.cos(ROT)*u+Math.sin(ROT)*v,z-Math.sin(ROT)*u+Math.cos(ROT)*v];
+      const eligible=p=>insideRecord(main,...p,0)&&![low,yards,chapel].some(r=>insideRecord(r,...p,0));
+      for(const axis of['u','v'])for(let along=-54;along<=54;along+=2.2){
+        if(Math.abs(along)<9)continue;
+        const at=across=>axis==='u'?point(along,across):point(across,along),centre=at(0);
+        if(!eligible(centre))continue;
+        for(const sign of[-1,1]){
+          let reach=0;for(let d=.5;d<=8;d+=.5){if(!eligible(at(d*sign)))break;reach=d;}
+          if(reach<.5)continue;
+          const end=at(reach*sign);D.cyl(M.darkBrick,[centre[0],roofAt(...centre)+.035,centre[1]],[end[0],roofAt(...end)+.035,end[1]],.024,.024,4);
+        }
+      }
     }
     if(low){
-      fittedRoof(P,M.roof,roofPieces(low),{x:616.7,z:-2411.8,rot:-.055,eave:9.9,profiles:[{axis:'u',run:6.1,rise:1.7}],boundary:[low],wallMat:M.brick});
+      fittedRoof(P,M.roof,roofPieces(low),{x:616.7,z:-2411.8,rot:-.055,eave:9.9,profiles:[{axis:'u',run:6.1,rise:1.7}],boundary:[low],wallMat:M.brick,shadeMat:M.roofShade});
     }
     if(yards){
       // The aerial reference shows an open low circular exercise yard with
@@ -152,6 +188,7 @@ function kresty(ctx,root,M,svc){
   P.col(M.darkBrick,766.0,-2410.4,0,61.5,3.05,2.05,14);P.col(M.lightBrick,766,-2410.4,60.5,62.0,2.25,2.2,14);
   ctx.physics.addCylinder(766,-2410.4,3.05,0,62);
   for(const y of[4,20,38,56])D.col(M.lightBrick,766,-2410.4,y,y+.22,3.1-y*.016,3.1-y*.016,14);
+  entranceDetail(ctx,root,M,svc);
   R.flush(root);for(const[p,far]of[[P,2600],[D,650]])for(const m of p.build(root,{name:'finlyandsky-kresty'}))registerLOD(m,far);
   svc.triangles+=P.tris+D.tris+R.tris;
   svc.photoSpots.push({name:'Кресты · Арсенальная набережная',x:729,z:-2248,yaw:10.3,pitch:14});

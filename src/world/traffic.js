@@ -59,6 +59,7 @@ import { createFleet, CULL_R } from './traffic/fleet.js';
 import { planParked } from './traffic/parking.js';
 import { ARCH, MODEL_KINDS, archOf, TAXI_WHITE, ROUTE_BY_REF } from './traffic/fleetdata.js';
 import { STATIONS } from './data/city.js';
+import { northDeckHeight } from './northBridges/sites.js';
 
 const DBG = (typeof location !== 'undefined' && new URLSearchParams(location.search).get('tr')) || '';
 const TAU = Math.PI * 2;
@@ -96,7 +97,7 @@ export async function build(ctx) {
   // the Anichkov Bridge is a humped deck (+0.06 m at the abutments, +1.5 m at the crown): vehicles on it ride at the deck height and pitch with its slope (landmarksC.bridge.deckY)
   const westDeckY = bridgeDeck(ctx), SV = ctx.services;
   // the east bridges (Smolninskoye: the Alexander Nevsky Bridge) publish their own deck-height service, asked first (as in the source); without it the chain is exactly the west one
-  const deckY = SV.eastBridges ? (x, z) => SV.eastBridges.deckY(x, z) ?? (westDeckY ? westDeckY(x, z) : null) : westDeckY;
+  const deckY = SV.eastBridges ? (x, z, rot) => SV.eastBridges.deckY(x, z) ?? (westDeckY ? westDeckY(x, z, rot) : null) : westDeckY;
   const sim = DBG.includes('nomove') || DBG.includes('gallery') ? null : createSim(st, () => ctx.rng('traffic-sim'), {
     trams: !DBG.includes('notram'), tramStops: STATIONS.filter((q) => q.kind === 'tram'),
     // a road that the data extent cuts in the middle of a river crossing ends on the last dry metre (outside the play area only: inside it every crossing has its deck)
@@ -147,7 +148,7 @@ export async function build(ctx) {
   /** rec.y / cp / sp (cos / sin of the nose-up angle) from the road height under the two axles of a vehicle at (x, z) heading rot (wb = wheelbase) */
   function lift(rec, x, z, rot, wb) {
     const h = wb / 2, fx = Math.sin(rot) * h, fz = Math.cos(rot) * h;
-    const yf = deckY(x + fx, z + fz), yr = deckY(x - fx, z - fz);
+    const yf = deckY(x + fx, z + fz, rot), yr = deckY(x - fx, z - fz, rot);
     if (yf === null && yr === null) { rec.y = GROUND; rec.cp = 1; rec.sp = 0; return; }
     const a = yf === null ? GROUND : yf, b = yr === null ? GROUND : yr, d = Math.hypot(wb, a - b) || 1;
     rec.y = (a + b) / 2 + GROUND; rec.cp = wb / d; rec.sp = (a - b) / d;
@@ -243,7 +244,13 @@ function westBridgeDeck(ctx) {
 function bridgeDeck(ctx) {
   const west = westBridgeDeck(ctx), nb = ctx.services.northBridges && ctx.services.northBridges.deckY;
   if (!nb) return west;
-  return west ? (x, z) => { const d = nb(x, z); return d !== null && d !== undefined ? d : west(x, z); } : nb;
+  // Embankment traffic can pass beneath a Neva bridge at the same X/Z. Only
+  // vehicles aligned with its road axis ride the deck; test both axles alike.
+  return (x,z,rot) => {
+    const aligned=rot===undefined||northDeckHeight(x,z,Math.sin(rot),Math.cos(rot))!==null;
+    const d=aligned?nb(x,z):null;
+    return d!==null&&d!==undefined?d:west?west(x,z):null;
+  };
 }
 
 /** the Palace Bridge (docs/research/vo-roster-metro.md 3.1, OSM 2026 mapper state [L]): street (lane name) -> [trolleybus refs, bus refs] of the flow that runs to Vasilievsky Island (the stop data of the bridge knows only a few relations) */

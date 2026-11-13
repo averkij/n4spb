@@ -4691,6 +4691,9 @@ REGISTRY["finlyandsky"] = {
   ]
 };
 // FINLYANDSKY-AREA-END
+// Landmarks visible on both sides of this independently loaded overlap.
+REGISTRY.sampson.sights=['Сампсониевский собор','Сампсониевский сад','Строгановский парк','Крейсер «Аврора»'];
+REGISTRY.finlyandsky.sights.push('Крейсер «Аврора»');
 
 /**
  * Gates between areas: { id, from, to, seg: [[x,z],[x,z]] (the border segment in the FROM area), inward: [nx,nz] (unit vector pointing from the border into the FROM area), zone (m: depth of the

@@ -44,6 +44,25 @@ shelters, Kresty's cross centres and low wings, and the Visitation church's
 pitched roofs, gables and buttresses. Underground grotto claims are verified
 at their actual elevation rather than an above-street building band.
 
+The 13.2.0 follow-up fixes the car support and blue slit at the ceremonial
+landing's curved street edge, and gives the ordinary descent opposite Kresty
+a coherent granite apron. Real car runs and dense rendered/physical edge
+probes cover the supplied positions. Kresty's complete compound now includes
+twelve formerly generic auxiliary buildings, its detailed street gate,
+surveyed walls with road-access gaps, pitched metal roofs, deliberate court
+paving and lawns, and mature trees. Square paving follows the supplied aerial
+reference; Lenin uses a dedicated sculpture, and local pedestrian density is
+reduced by 25% with a gradual transition outside the square.
+
+The long central fountain was a mapped pond plus a point-only fountain node.
+The area reconciles those records into one full basin with eleven live jets;
+all 31 fountain records remain. The bridge fix separates transverse embankment
+traffic/paint from the raised road and restores its paired-carriageway divider.
+Aurora is visible from both independent areas using the existing detailed ship
+builder, and three wrongly suppressed lower tiers of Orenburgskaya 2 are
+restored in the Sampson overlap. See the
+[overlap diagnosis and repair](research/finlyandsky-aurora-overlap.md).
+
 The existing mapped-fountain builder supplies live spray, droplets, ripples and
 evening illumination. Shared generators retain traffic, people, street plates,
 trees and movable/breakable furniture. One purple Zhiguli follows the garage rule;
@@ -62,6 +81,10 @@ node tools/gen-area-html.mjs --area finlyandsky
 node maps/intro-draft-src/refresh-live.mjs
 node tools/finlyandsky-area-test.mjs
 node tools/area.mjs finlyandsky tools/finlyandsky-waterfront-test.mjs
+node tools/area.mjs finlyandsky tools/finlyandsky-square-test.mjs
+node tools/area.mjs finlyandsky tools/finlyandsky-aurora-test.mjs
+node tools/area.mjs sampson tools/finlyandsky-aurora-test.mjs
+node tools/repair-sampson-vertical-duplicates.mjs
 node tools/areas-test.mjs --area finlyandsky
 node tools/area.mjs finlyandsky tools/layout-test.mjs
 node tools/area.mjs finlyandsky tools/views-check.mjs

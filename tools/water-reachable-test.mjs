@@ -520,7 +520,10 @@ if (AREA === 'palace') {
 {
   const chain = (x, z) => { for (const n of HOOKS.deckServices || []) { const d = ctx.services[n]?.deckY?.(x, z); if (Number.isFinite(d)) return d; } return ctx.services.landmarksC?.bridge?.deckY?.(x, z) ?? ctx.services.bridges?.deckY(x, z) ?? null; };      // (the order of drive/handling.js)
   const R = L.WORLD.play, high = [];
-  for (let x = R.x0; x < R.x1; x += 8) for (let z = R.z0; z < R.z1; z += 8) { const d = chain(x, z); if (d !== null && d > 1.3 && L.inPlay(x, z, 8) && [[3.5, 0], [-3.5, 0], [0, 3.5], [0, -3.5], [2.5, 2.5], [-2.5, 2.5], [2.5, -2.5], [-2.5, -2.5]].every(([a, b]) => chain(x + a, z + b) !== null)) high.push([x, z, d]); }      // (not at a deck edge: a rail collider there pushes the car off the deck)
+  for (let x = R.x0; x < R.x1; x += 8) for (let z = R.z0; z < R.z1; z += 8) { const d = chain(x, z); if (d !== null && d > 1.3 && L.inPlay(x, z, 8) && [[3.5, 0], [-3.5, 0], [0, 3.5], [0, -3.5], [2.5, 2.5], [-2.5, 2.5], [2.5, -2.5], [-2.5, -2.5]].every(([a, b]) => {const h=chain(x+a,z+b);return h!==null&&Math.abs(h-d)<=STUNT.dropMax;})) high.push([x, z, d]); }
+  // A car-sized continuous footprint is needed for the idle assertion. A
+  // point beside a real deck-height break may have floor on all sides while
+  // its front/rear axles straddle a drop; that is not a flat parking place.
   const spread = (a, n) => a.filter((_, i) => i % Math.max(1, Math.floor(a.length / n)) === 0).slice(0, n);
   const idle = { thr: 0, brk: 0, steer: 0, hand: false, nitro: false };
   check('8 a car PLACED on a bridge deck higher than 1.2 m (the raised Liteyny / Bolsheokhtinsky decks, the Troitsky approach and leaf: drive.place / arrive / respawn = car.reset) stands on the deck and stays on it, also after a stay on a trench bed', () => {

@@ -6,11 +6,12 @@ import { buildWorld } from './lib/headless-world.mjs';
 
 assert.equal(process.env.AREA, 'finlyandsky', 'run through tools/area.mjs finlyandsky');
 const { ctx, L, THREE, marks, errors } = await buildWorld();
-const { FRAMES, WALK_WIDTH, bankHeight } = await import('../src/areas/finlyandsky/bank-profile.js');
-const { LENIN, GROTTO, point } = await import('../src/world/finlyandskyWaterfront/sites.js');
+const { FRAMES, WALK_WIDTH, bankHeight, APRON_FRAMES, APRON_Y } = await import('../src/areas/finlyandsky/bank-profile.js');
+const { LENIN, LENIN_BACK, GROTTO, point } = await import('../src/world/finlyandskyWaterfront/sites.js');
 const { UPPER_Y, LOWER_Y } = await import('../src/world/finlyandskyWaterfront/kit.js');
 const { NAVIGABLE_WATER_Y } = await import('../src/world/environment/water-level.js');
 const { Player } = await import('../src/core/player.js');
+const { createHandling } = await import('../src/world/drive/handling.js');
 const ph = ctx.physics, owned = name => ph.items.slice(...marks[name]);
 const bankItems = owned('finlyandskyBanks'), landingItems = owned('finlyandskyWaterfront');
 let passed = 0, failed = 0;
@@ -35,7 +36,7 @@ function indexMesh(mesh, group) {
     t.push(den);
     const x0 = Math.min(t[0], t[3], t[6]), x1 = Math.max(t[0], t[3], t[6]), z0 = Math.min(t[2], t[5], t[8]), z1 = Math.max(t[2], t[5], t[8]);
     // Only the two landing districts and the continuous bank need indexing.
-    if (!((x1 > 120 && x0 < 290 && z1 > -2340 && z0 < -2240) || (x1 > 1100 && x0 < 2950 && z1 > -3150 && z0 < -2350))) continue;
+    if (!((x1 > 120 && x0 < 290 && z1 > -2340 && z0 < -2240) || (x1 > 840 && x0 < 2950 && z1 > -3150 && z0 < -2270))) continue;
     for (let x = Math.floor(x0 / cell); x <= Math.floor(x1 / cell); x++) for (let z = Math.floor(z0 / cell); z <= Math.floor(z1 / cell); z++) {
       const key = x + ',' + z; let bucket = grid.get(key); if (!bucket) grid.set(key, bucket = []); bucket.push(t);
     }
@@ -63,6 +64,51 @@ function drawnAt(group, x, z, ceiling = Infinity) {
 check('the real bank and both landing modules build without errors', () => {
   assert.equal(errors.length, 0, errors.join('\n')); assert(bankItems.length > 500); assert(landingItems.length > 100);
   assert.equal(ctx.services.finlyandskyWaterfront.sites.length, 2);
+});
+
+check('the curved Lenin upper apron meets the street without a wet slit or unsupported strip', () => {
+  let n=0;
+  for(let i=0;i+1<LENIN_BACK.length;i++){
+    const a=LENIN_BACK[i],b=LENIN_BACK[i+1],steps=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.35);
+    for(let j=0;j<steps;j++)for(const off of[-.18,.05,.3,.55]){
+      const t=(j+.5)/steps,[x,z]=point(LENIN,a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t+off);
+      const drawn=Math.max(drawnAt('paving',x,z,.3),drawnAt('landing',x,z,.3),drawnAt('base',x,z,.3));
+      assert(drawn>=-.01&&drawn<=.2,`uncovered kerb join ${x.toFixed(3)},${z.toFixed(3)}: ${drawn}`);
+      assert(ph.groundHeight(x,z,.3,false)>=-.01,`unsupported kerb join ${x},${z}`);
+      if(off<.3)assert.equal(ph.waterLevel(x,z),null,`water slit at dry upper edge ${x},${z}`);
+      n++;
+    }
+  }
+  console.log(`  ${n} street/slab join probes at<=0.35m intervals`);
+});
+
+check('the real car follows polygonal upper slabs instead of dropping to the Neva bed', () => {
+  const car=createHandling(ctx),forward=LENIN.rot-Math.PI/2;
+  for(const v of[-14,-16]){
+    const start=point(LENIN,-28,v);car.reset(...start,forward);let min=car.y,max=car.y,falls=0;
+    for(let i=0;i<240;i++){car.step(1/60,{thr:.3,brk:0,steer:0,hand:false,nitro:false});min=Math.min(min,car.y);max=Math.max(max,car.y);if(car.fall)falls++;}
+    const distance=Math.hypot(car.x-start[0],car.z-start[1]);
+    assert(distance>8,`car failed to travel the upper apron: ${distance}`);
+    assert(min>=-.05&&max<.25&&falls===0,`car dropped through visible paving at v${v}: y${min}..${max}, ${falls} fall frames`);
+    console.log(`  upper-apron car row ${v}: ${distance.toFixed(1)}m, y${min.toFixed(3)}..${max.toFixed(3)}, no fall`);
+  }
+  close(car.groundAt(176.3,-2314,.2),.03,'reported kerb coordinate remains supported',.12);
+  assert(car.groundAt(176.3,-2311,.2)>=.08,'polygon slab next to reported kerb is ignored by car handling');
+});
+
+check('the Kresty descent approach has continuous dry granite above the old patchwork', () => {
+  let n=0;
+  for(let i=1;i+2<APRON_FRAMES.length;i++){
+    const a=APRON_FRAMES[i],b=APRON_FRAMES[i+1];
+    for(const d of[1.25,Math.min(a.width,b.width)-.8]){
+      const x=(a.x+b.x)/2+a.nx*d,z=(a.z+b.z)/2+a.nz*d;
+      close(drawnAt('bank',x,z,.3),APRON_Y,`upper granite at ${x.toFixed(2)},${z.toFixed(2)}`);
+      close(L.heightAt(x,z),APRON_Y,'upper granite terrain');close(ph.groundHeight(x,z,.3,false),APRON_Y,'upper granite physics');
+      assert(drawnAt('base',x,z,.3)<=APRON_Y-.01,'old painted ground covers the apron');
+      assert.equal(ph.waterLevel(x,z),null,'dry granite is classified as water');n++;
+    }
+  }
+  assert(n>90);console.log(`  ${n} independently drawn dry-granite approach probes`);
 });
 
 check('lower walk and green slope agree with visible triangles, terrain and Physics; no flat ground covers them', () => {

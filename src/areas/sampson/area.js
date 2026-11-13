@@ -1,6 +1,7 @@
 // Planning map 52: the Vyborg Side from Sampson Cathedral to Lanskaya.
 // The mapped Bolshaya Nevka and Chyornaya Rechka remain reachable terrain.
-import { RIVER, ROADS } from './data/city.js';
+import { RIVER, ROADS, BUILDINGS } from './data/city.js';
+import { GROUPS_LIST as AURORA_GROUPS } from '../../world/landmarksAurora/groups.js';
 import { GROUPS as PETRO_BRIDGES } from '../petro/bridge-groups.js';
 import { scopeGroups } from '../petro/groups.js';
 import { SHADES } from '../petro/zones.js';
@@ -13,6 +14,7 @@ export const MODULES = [
   'streets',
   'city',
   'landmarksSampson',
+  'finlyandskyAurora',
   'bridges',
   'props',
   'traffic',
@@ -21,11 +23,13 @@ export const MODULES = [
   'drive',
 ];
 export const LABELS = { landmarksSampson: 'Сампсониевский собор и Выборгская сторона', bridges: 'Сампсониевский и Гренадерский мосты', drive: 'Машина и катер' };
+LABELS.finlyandskyAurora='Крейсер «Аврора»';
 export const NAMES = { place: 'Санкт-Петербург', placeEn: 'Saint Petersburg', square: 'Сампсониевский сад', squareEn: 'Sampsoniyevsky Garden', station: 'Выборгская', stationEn: 'Vyborgskaya', streets: { nevsky: 'Большой Сампсониевский проспект', fontanka: 'Большая Невка', moika: 'Чёрная речка', griboedov: 'Лесной проспект' } };
 export const SQUARE = { x: -450, z: -4080, name: NAMES.square, nameEn: NAMES.squareEn };
 export const OBELISK = { x: -450, z: -4080, h: 0 };
 export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, tower: { x: 602.1, z: 246.4 } };
 export const GROUPS = {
+  finlyandskyAurora:AURORA_GROUPS.filter(g=>g.key==='aurora-ship'),
   landmarksSampson: [{ key: 'sampson-cathedral', name: 'Сампсониевский собор', nameEn: 'Sampson Cathedral', ids: [
     'r9907863', 'r9907861', 'r9907862', 'r9907864',
     'w50802817', 'w498843964', 'w498843965', 'w498843966', 'w712549226',
@@ -93,10 +97,12 @@ export const WATER = {
   isolatedKeys: { moat: 'Mapped isolated park ponds.' }, isolatedLevels: { moat: { water: -1.2, bed: -2.4 } },
   bridgeZones: BRIDGE_FLOORS,
   bridgeShades: SHADES.filter(z => z.id === 'sampsonievsky-deck'),
+  keepOut:[{id:'aurora-berth',c:[-753.05,-2561.8],ax:[.4168,.9090],hl:76,hw:20}],
 };
 export const ZONES = { peopleDensity: { west: { scale: 1, platforms: 1, off: true }, mars: { scale: 1, zones: [], off: true } }, peopleHot: [[-500, -4010, 1, 30], [-320, -6030, .7, 25]], crowHaunts: [], farCentres: [{ x: -1700, z: -5700, bias: 500 }] };
 export const GARAGE = { poses: { lada: { x: -556, z: -4092, yaw: 0 } }, spawn: { x: -556, z: -4092, yaw: 0 }, boats: [{ id: 'boat-sampson', dock: 'sampson-nevka', x: -1040, z: -2860, yaw: -Math.PI / 2 }] };
 export const PRUNE_SERVICES = ['city', 'landmarksSampson'];
-export const HOOKS = { deckServices: ['bridges'] };
+export const OPEN_GROUND_BUILDING_IDS=BUILDINGS.filter(b=>b.id==='r3272566'||b.parent==='r3272566').map(b=>b.id);
+export const HOOKS = { deckServices: ['bridges','finlyandskyAurora'] };
 export const HEIGHT_PATCHES = [];
 export const CROSS_PLACES = [];
