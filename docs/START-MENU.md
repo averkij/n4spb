@@ -15,7 +15,8 @@ press Enter/Space, or use the previous/next arrows below the map.
 The visible menu contains only the Saint City title, Start button, selected district,
 sound icon and version. Error/loading messages appear only when needed. Oswald
 and Manrope are served locally, with their OFL licenses in `assets/menu/fonts/`.
-The condensed ivory title and simple ivory Start button use pink/lilac accents.
+The condensed ivory title uses pink/lilac accents. Start is a simple black button
+with white lettering (14.1.3 owner refinement).
 Hover and keyboard focus softly lighten a district's fill without changing its
 border. The Start label is centered; there is no decorative rule, arrow, skew or shadow.
 District arrows occupy fixed columns, independent of the name's width; portrait
