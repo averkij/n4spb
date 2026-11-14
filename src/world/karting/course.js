@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { MeshBuilder, addCap } from '../lib/massing.js';
 import { knockBays, splitBays } from '../lib/fence-bays.js';
-import { COURSE, PIT_LANE, START_FINISH, SPEED_CHECK, WALK_IN, distSqToLine, relief } from './site.js';
+import { COURSE, COURSE_LAWN, KERB_RUNS, PIT_LANE, START_FINISH, SPEED_CHECK, WALK_IN, distSqToLine, relief } from './site.js';
 
 const spline = (points, closed) => new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), closed);
 export const racingLine = spline(COURSE, true);
@@ -113,18 +113,29 @@ export function buildCourse(ctx, root) {
     ribbon(white, circuit, normals, i => at(i) - .057, i => at(i) + .057, .009, relief);
   }
 
-  const kerbs = [
+  const tyreRuns = [
     [2, 14, -1], [106, 168, 1], [193, 227, -1], [276, 310, 1], [327, 377, -1],
     [380, 423, 1], [441, 482, -1], [521, 554, -1], [567, 592, 1],
     [609, 636, -1], [708, 748, 1], [752, 774, -1], [785, length, 1],
   ];
+  for (const [from, to, side] of KERB_RUNS) {
+    const start = Math.floor(from / length * (circuit.length - 1));
+    const end = Math.min(circuit.length - 1, Math.ceil(to / length * (circuit.length - 1)));
+    const at = i => side * (cornerWidth(i) - .06);
+    for (let i = start; i < end; i++) {
+      const edge = corner(circuit[i], normals[i], at(i), 0, relief);
+      if (distSqToLine(edge[0], edge[2], lane2D) < 6.25) continue;
+      const color = (i - start) % 4 < 2 ? red : white;
+      ribbon(color, circuit, normals, at, j => at(j) + side * .49, .015, relief, i, i + 1, .108);
+    }
+  }
+
   const bays = [];
-  for (const [from, to, side] of kerbs) {
+  for (const [from, to, side] of tyreRuns) {
     const start = Math.floor(from / length * (circuit.length - 1));
     const end = Math.min(circuit.length - 1, Math.ceil(to / length * (circuit.length - 1)));
     for (let i = start; i < end; i++) {
       const at = j => side * (cornerWidth(j) - .06);
-      ribbon((i - start) % 4 < 2 ? red : white, circuit, normals, at, j => at(j) + side * .49, .015, relief, i, i + 1, .108);
       if ((i - start) % 3 === 0) {
         const a = corner(circuit[i], normals[i], at(i) + side * 1.48, 0, relief);
         const j = Math.min(i + 3, end);
@@ -156,11 +167,7 @@ export function buildCourse(ctx, root) {
   const floor = new MeshBuilder();
   ribbon(floor, paving, offsets(paving, false), () => -1.45, () => 1.45, .022, () => 0);
   const lawn = new MeshBuilder();
-  addCap(lawn, { o: [
-    -4746,3489, -4716,3479, -4701,3507, -4688,3543, -4669,3548, -4656,3582,
-    -4657,3606, -4636,3618, -4610,3626, -4598,3644, -4600,3661, -4624,3677,
-    -4661,3694, -4681,3686, -4696,3672, -4723,3680, -4748,3674, -4772,3590, -4773,3566, -4757,3539,
-  ], h: [] }, () => .012);
+  addCap(lawn, { o: COURSE_LAWN.flat(), h: [] }, () => .012);
   mesh(root, lawn, ctx.mat.toon('#64794d'), 'narvskaya-lawn');
   mesh(root, pavingPad(), ctx.mat.toon('#625f65'), 'pit-paddock');
   mesh(root, grass, ctx.mat.toon('#63784c'), 'circuit-graded-verges');

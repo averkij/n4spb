@@ -4,7 +4,9 @@ import { GROUPS_LIST as CLUB } from '../../world/landmarksNarvsky/constructivism
 import { COASTAL_BRIDGE_GROUPS, COASTAL_BRIDGE_ZONES } from './bridge-sites.js';
 import { RIVER } from './data/city.js';
 
-import { STADIUM_GROUP, STADIUM_IDS, WALK_IN, withKartingHooks } from '../../world/karting/site.js';
+import { KARTING_GROUND_CLAIMS, STADIUM_GROUP, STADIUM_IDS, WALK_IN, withKartingHooks } from '../../world/karting/site.js';
+
+export const PAVED_RINGS = KARTING_GROUND_CLAIMS;
 
 export const ID = 'narvsky';
 export const BAKE_DIR = 'baked/narvsky/';

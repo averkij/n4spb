@@ -21,9 +21,33 @@ export const COURSE = [
   [-4729.3, 3506.3], [-4726, 3504.9], [-4722.2, 3504.6], [-4718.9, 3506.6],
 ];
 
+// Metres along the mapped clockwise centreline. +1 faces the right of travel.
+// These are the visible kerb runs on the reference satellite image.
+export const KERB_RUNS = [
+  [4, 18, 1], [36, 52, -1],
+  [108, 158, 1], [168, 196, 1],
+  [195, 216, -1], [208, 251, 1],
+  [270, 300, -1], [288, 352, 1], [323, 348, -1],
+  [355, 391, -1], [380, 417, 1],
+  [420, 481, -1], [433, 455, 1],
+  [500, 557, 1], [548, 568, -1],
+  [569, 596, -1], [600, 631, 1],
+  [666, 693, -1], [705, 738, 1], [738, 758, -1],
+  [765, 789, 1], [790, 807, 1],
+];
+
+// Use the same boundary for the authored turf and the environment's claim mask.
+export const COURSE_LAWN = [
+  [-4746,3489], [-4716,3479], [-4701,3507], [-4688,3543], [-4669,3548], [-4656,3582],
+  [-4657,3606], [-4636,3618], [-4610,3626], [-4598,3644], [-4600,3661], [-4624,3677],
+  [-4661,3694], [-4681,3686], [-4696,3672], [-4723,3680], [-4748,3674], [-4772,3590],
+  [-4773,3566], [-4757,3539],
+];
+export const KARTING_GROUND_CLAIMS = [{ module: 'kartingNarvskaya', rings: [COURSE_LAWN] }];
+
 const SITE_WAYS = new Set(['w385655517', 'w564316332', 'w564319999', 'w564320000']);
 export const STADIUM_IDS = ['w222657246', 'w1344693627', 'w222938662', 'w222938686', 'w1344693628'];
-export const STADIUM_GROUP = { key: 'kirovets-karting', name: 'Стадион «Кировец»', nameEn: 'Kirovets Stadium', ids: STADIUM_IDS, osm: ['w1229866327', 'w1229866359'], at: [-4591, 3512] };
+export const STADIUM_GROUP = { key: 'kirovets-karting', name: 'Стадион «Кировец»', nameEn: 'Kirovets Stadium', ids: STADIUM_IDS, osm: ['w1229866327', 'w1229866328', 'w1229866329', 'w1229866330', 'w1229866359'], at: [-4591, 3512] };
 export const START_FINISH = [[-4716.448, 3559.705], [-4683.267, 3548.288]];
 export const SPEED_CHECK = [-4731.8, 3518];
 

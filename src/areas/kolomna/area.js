@@ -11,7 +11,9 @@ import { GROUPS_LIST as BALTIC } from '../../world/landmarksBaltic/groups.js';
 import { YEKATERINGOFKA_RINGS, PARK_POND_RINGS } from './rings.js';
 import { makeHooks, makeHeightPatches } from '../north/hooks.js';
 
-import { STADIUM_GROUP, STADIUM_IDS, WALK_IN, withKartingHooks } from '../../world/karting/site.js';
+import { KARTING_GROUND_CLAIMS, STADIUM_GROUP, STADIUM_IDS, WALK_IN, withKartingHooks } from '../../world/karting/site.js';
+
+export const PAVED_RINGS = KARTING_GROUND_CLAIMS;
 
 export const ID = 'kolomna';
 export const BAKE_DIR = 'baked/kolomna/';
