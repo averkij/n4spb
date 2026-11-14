@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **14.1.2** (2026-11-14, patch): Balance the portrait start menu, rename Saint City and its district labels, anchor navigation arrows, simplify Start and add background scanlines with six artwork previews
 - **14.1.1** (2026-11-14, patch): Polish district hover and Start button; preserve menu, launch and shared-view state in mobile deployment; decode mobile Brotli assets correctly; complete release bakes
 - **14.1.0** (2026-11-14, minor): Refine start menu with borderless fixed map and cinematic typography
 - **14.0.0** (2026-11-14, major): Add city start menu, area sightseeing preloaders and shareable camera views

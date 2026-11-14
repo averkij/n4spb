@@ -22,9 +22,12 @@ if (process.argv.includes('--inspect')) {
     names['Крестовский—Каменный—Елагин']='Крестовский остров';
     fs.writeFileSync(namesPath,JSON.stringify(names,null,2)+'\n');
   }
+  // Player-facing menu labels are authored separately from inferred municipal
+  // names, so rebuilding the planning map never overwrites them.
+  const labels=JSON.parse(fs.readFileSync('assets/menu/labels.json','utf8'));
   const catalogue = live.map(r=>{
     const a=data.areas.find(a=>a.k===r.mapId);
-    return {id:r.id,page:r.page,mapId:r.mapId,name:r.id==='palace'?'Площадь Восстания':names[r.title]||r.title,images:Array.from({length:5},(_,i)=>`assets/splash/${r.id}/${i+1}.jpg`)};
+    return {id:r.id,page:r.page,mapId:r.mapId,name:labels[r.id]||names[r.title]||r.title,images:Array.from({length:5},(_,i)=>`assets/splash/${r.id}/${i+1}.jpg`)};
   });
   fs.mkdirSync('assets/menu',{recursive:true});
   for(const row of catalogue)if(/^№/.test(row.name))row.name='Округ '+row.name;

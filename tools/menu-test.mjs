@@ -24,7 +24,8 @@ const browser=await puppeteer.launch({executablePath:'C:/Program Files (x86)/Mic
 try{
  const page=await browser.newPage(),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
  await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.waitForSelector('#menu-start:not([disabled])');
- assert.equal(await page.$eval('#selected-name',e=>e.textContent),'Площадь Восстания');assert.ok(!requests.some(u=>/src\/main.js|assets\/baked|three.*\.js/.test(u)),'menu must not load scene');
+ assert.equal(await page.title(),'Saint City');assert.equal(await page.$eval('#start-menu h1',e=>e.textContent),'Saint City');
+ assert.equal(await page.$eval('#selected-name',e=>e.textContent),'Центр');assert.ok(!requests.some(u=>/src\/main.js|assets\/baked|three.*\.js/.test(u)),'menu must not load scene');
  await page.evaluate(()=>document.fonts.ready);
  assert.equal(await page.$eval('#start-menu h1',e=>getComputedStyle(e).fontFamily),'MenuDisplay, sans-serif');
  assert.equal(await page.$eval('.menu-map',e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
@@ -58,11 +59,32 @@ try{
  assert.equal(await page.evaluate(()=>localStorage.getItem('piter.menuMute')),'1');
  await page.click('#menu-sound');
  await page.$eval('#menu-sound',b=>b.blur());await page.mouse.move(1,1);
- for(const [label,width,height] of [['desktop',1440,900],['concept',1672,941],['wide',2048,1080],['mobile',390,844]]){
+ for(const [label,width,height] of [['desktop',1440,900],['wide',2048,1080],['mobile',390,844],['small',320,568],['phone',430,932],['reference',735,1414],['portrait-concept',1067,1475],['landscape',844,390]]){
    await page.setViewport({width,height});await page.evaluate(()=>document.fonts.ready);
    await page.screenshot({path:path.join(os.tmpdir(),`n4spb-menu-${label}.png`),fullPage:true});
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label+' has no horizontal overflow');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),label+' fits in the viewport');
    assert.ok(await page.$eval('#city-map',svg=>{const v=svg.viewBox.baseVal;return [...svg.querySelectorAll('.live')].every(p=>{const b=p.getBBox();return b.x>=v.x&&b.y>=v.y&&b.x+b.width<=v.x+v.width&&b.y+b.height<=v.y+v.height;});}),label+' frames all playable districts');
+   if(height>=width&&width<=1100){
+     const layout=await page.evaluate(()=>{
+       const box=s=>{const r=document.querySelector(s).getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,center:r.x+r.width/2};};
+       return {title:box('#start-menu h1'),map:box('#city-map'),district:box('.area-navigation'),start:box('#menu-start'),width:innerWidth,height:innerHeight};
+     });
+     assert.ok(layout.title.bottom<=layout.map.top&&layout.map.bottom<=layout.district.top&&layout.district.bottom<=layout.start.top,label+' follows title, map, district, Start order');
+     assert.ok(Math.abs(layout.start.center-width/2)<1&&Math.abs(layout.district.center-width/2)<1,label+' centers the bottom controls');
+     assert.ok(layout.start.bottom<height&&layout.start.left>=0&&layout.start.right<=width,label+' keeps the complete Start button visible');
+   }
+   // Repeated clicks must hit the same arrow even when the district name wraps.
+   const arrowPositions=()=>page.$$eval('.area-navigation button',buttons=>buttons.map(b=>{const r=b.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
+   const fixedArrows=await arrowPositions();
+   const nextPoint={x:fixedArrows[1][0]+22,y:fixedArrows[1][1]+22};
+   const seen=new Set();
+   for(let i=0;i<map.catalogue.length;i++){
+     await page.mouse.click(nextPoint.x,nextPoint.y);
+     seen.add(await page.$eval('#city-map .chosen',p=>p.dataset.area));
+     assert.deepEqual(await arrowPositions(),fixedArrows,label+' keeps arrows fixed for every district');
+   }
+   assert.equal(seen.size,map.catalogue.length,label+' cycles all districts from one pointer position');
  }
  await page.goto(`http://127.0.0.1:${server.address().port}/?menu=1#view=bad`);await page.waitForSelector('#menu-start:not([disabled])');assert.match(await page.$eval('#menu-status',e=>e.textContent),/недействительна/);
  await page.$eval('#city-map [data-area="aptekarsky"]',e=>e.focus());await page.keyboard.press('Enter');

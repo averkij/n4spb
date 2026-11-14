@@ -12,12 +12,29 @@ rivers reveal the background, without a card or opaque water layer. Framing is
 fixed; there are no pan, zoom or reset controls. Click a district, focus it and
 press Enter/Space, or use the previous/next arrows below the map.
 
-The visible menu contains only the city title, Start button, selected district,
+The visible menu contains only the Saint City title, Start button, selected district,
 sound icon and version. Error/loading messages appear only when needed. Oswald
 and Manrope are served locally, with their OFL licenses in `assets/menu/fonts/`.
-The condensed ivory title and angled plum Start button use pink/lilac accents.
+The condensed ivory title and simple ivory Start button use pink/lilac accents.
 Hover and keyboard focus softly lighten a district's fill without changing its
-border. The Start label is centered; there is no decorative rule or arrow.
+border. The Start label is centered; there is no decorative rule, arrow, skew or shadow.
+District arrows occupy fixed columns, independent of the name's width; portrait
+also reserves the name row's height so wrapping cannot move either arrow.
+Fine horizontal scanlines sit above the background artwork and below all menu
+controls and map geometry. They are CSS, not baked into the images.
+
+Portrait screens use one centered column: the single-line title, the playable
+city, the selected district and the Start button. The map has a fixed portrait
+frame around the live districts, with subdued surrounding areas. The controls
+fit the viewport with safe-area spacing; landscape keeps the split composition.
+These names and layout changes belong only to the root start menu, not the
+regular scene preloaders.
+
+`menu-variants.html` is a local review page with six original painted backgrounds,
+desktop and phone previews of the actual menu, an image-only view and a scanline
+toggle. It modifies only its embedded preview: the main game retains the original
+background until the owner selects a replacement. Artwork files, prompts and
+cinema references are documented in [MENU-ART-VARIANTS.md](MENU-ART-VARIANTS.md).
 
 The Pages transform loads the same menu entry. On mobile it supplies the lighter
 scene destination, but the entry follows that route only for Start or an explicit
@@ -28,9 +45,11 @@ and shared viewpoints before importing the scene.
 `node tools/menu-data.mjs` regenerates `assets/menu/map.json`. Names of merged
 territories use the largest original municipal polygon from the planning map's
 cached OSM geometry. The resolved names are committed in `assets/menu/names.json`
-so regeneration does not require that ignored cache. Planning suggestions in
+so regeneration does not require that ignored cache. Authored player-facing
+overrides in `assets/menu/labels.json` take priority and survive regeneration.
+Planning suggestions in
 `mergeGroup` are deliberately not treated as implemented mergers. The central
-area is presented as **Площадь Восстания**; technical IDs and boundaries stay intact.
+area is presented as **Центр**; technical IDs and boundaries stay intact.
 
 The soft hover/click cues use Web Audio, enabled after the first gesture. The menu
 sound preference is remembered locally and applied to gameplay on entry.
@@ -117,6 +136,41 @@ The copy diff found no extra marketing text. Selection by mouse, keyboard and
 arrows, sound preference, static framing and Start routing are browser-checked.
 
 ## Checks
+
+### Portrait and artwork review (14.1.2)
+
+Browser plugin runtime was unavailable in this session. Verification used the
+repository's Puppeteer/Edge harness; no new browser dependency was installed.
+The portrait concept is
+`C:/Users/user/.codex/generated_images/01a1d94f-1fa4-7020-8499-5b0fbc485352/exec-0ed96bc8-fb7d-4945-b0d6-5e8bd06a380e.png`.
+The concept and latest rendered screenshots were inspected with `view_image`,
+including its native 1067 × 1475 dimensions. Other menu checks used 1440 × 900,
+2048 × 1080, 390 × 844, 320 × 568, 430 × 932, 735 × 1414 and 844 × 390.
+
+| Comparison | Result / intentional difference |
+| --- | --- |
+| Copy | Saint City and the 11 owner-supplied district labels applied only to menu. No new menu slogans or hints. |
+| Composition | Portrait title, fixed city map, district and Start form a centered column, all within the viewport. |
+| Typography | Local Oswald remains; title is one line in portrait and two on desktop. |
+| Navigation | Fixed arrow columns and reserved portrait name height; all 21 names cycled at the same pointer coordinates on every tested viewport. |
+| Button | Owner's latest instruction replaces the concept's angled outlined button with a plain ivory rectangle. |
+| Geography | Actual city polygons replace generated shapes; grey surrounding districts remain per the owner's original requirement. |
+| Artwork | Six original candidates retain plum/pink tones; two show sky bounded on all sides by courtyard walls. Main-game background awaits selection. |
+| Treatment | Subtle CSS scanlines affect artwork, below sharp map geometry and controls. |
+
+`menu-variants.html` was checked at 1440 × 1100 and 390 × 844. The review flow
+selects each of six candidates, switches desktop/phone/image-only modes, toggles
+scanlines and reloads the selected hash. Fixed thumbnail aspect ratios and a lazy
+iframe startup race found during review. No missing images, console errors or
+scene imports remain. Review screenshots are in the OS temp folder as
+`n4spb-variants-{desktop,mobile,twilight}.png`; menu screenshots use
+`n4spb-menu-{desktop,mobile,portrait-concept,...}.png`.
+
+Menu selection, keyboard activation, hover fill, sound preference and Start's
+destination routing passed. Closure lint, version synchronization, generated
+diagnostic checks and the bake plan passed; all 21 shipping bakes remain fresh.
+Scene preloader content and artwork were not changed. These menu-only changes
+were not used to justify a new full-scene performance run.
 
 - `node tools/menu-test.mjs --assets`: codec, catalogue, image existence, lazy
   startup, selection, invalid links, desktop/mobile layout and browser errors.

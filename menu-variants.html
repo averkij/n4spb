@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="./assets/icons/apple-touch-icon.png">
+  <title>Saint City — варианты фона</title>
+  <style>
+    @font-face{font-family:Manrope;src:url('./assets/menu/fonts/Manrope.ttf');font-weight:200 800;font-display:swap}
+    *{box-sizing:border-box}
+    :root{color-scheme:dark;font-family:Manrope,sans-serif;color:#fff0d5;background:#17111d}
+    body{margin:0;padding:24px clamp(16px,3vw,48px) 32px}
+    main{max-width:1680px;margin:auto}
+    header,.toolbar,.modes,.options{display:flex;align-items:center;gap:12px}
+    header{justify-content:space-between;margin-bottom:20px;flex-wrap:wrap}
+    h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.04em}
+    header p{margin:5px 0 0;color:#b7a9bf;font-size:12px}
+    a{color:#dfb8ed;text-underline-offset:4px;font-size:12px}
+    button{font:inherit;cursor:pointer;color:inherit}
+    button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #e9bcff;outline-offset:4px}
+    .toolbar{justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+    .modes{gap:4px;flex-wrap:wrap}
+    .modes button{padding:10px 14px;font-size:12px;background:transparent;border:1px solid transparent;border-radius:4px}
+    .modes button[aria-pressed=true]{background:#35253e;border-color:#765888}
+    .modes button:hover{background:#302337}
+    .options{font-size:12px;color:#cfc0d5;gap:18px}
+    .options label{display:flex;align-items:center;gap:8px;cursor:pointer}
+    input{accent-color:#cb8aef;width:16px;height:16px}
+    #stage{position:relative;display:grid;place-items:center;height:clamp(420px,65vh,900px);overflow:hidden;background:#100c14;border:1px solid #382a40;border-radius:6px}
+    #preview-wrap{position:relative;overflow:hidden;flex:none}
+    iframe{display:block;border:0;transform-origin:top left}
+    #art{display:none;max-width:100%;max-height:100%;object-fit:contain}
+    #stage[data-mode=art] #preview-wrap{display:none}
+    #stage[data-mode=art] #art{display:block}
+    .caption{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:16px 0 20px}
+    #current-name{font-size:17px;font-weight:600;margin:0}
+    #current-note{font-size:12px;line-height:1.6;color:#b7a9bf;margin:4px 0 0}
+    #choices{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+    .choice{display:block;text-align:left;padding:0;background:transparent;border:0;border-radius:3px;min-width:0}
+    .choice img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:3px;outline:2px solid transparent;outline-offset:3px;opacity:.65;transition:opacity .15s}
+    .choice[aria-pressed=true] img{outline-color:#d6a4ed;opacity:1}
+    .choice:hover img{opacity:1}
+    .choice span{display:block;font-size:12px;line-height:1.5;margin-top:10px;color:#cbbbd3}
+    .choice[aria-pressed=true] span{color:#fff0d5}
+    @media(max-width:900px){#choices{grid-template-columns:repeat(3,minmax(0,1fr))}#stage{height:62vh;min-height:380px}.options{gap:12px}.caption{align-items:center}}
+    @media(max-width:480px){body{padding-top:18px}h1{font-size:20px}header{gap:10px;margin-bottom:16px}.toolbar{gap:8px}.modes button{padding:9px 10px}#stage{height:66svh;min-height:400px}#choices{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.caption{align-items:flex-start}#current-name{font-size:15px}.caption a{white-space:nowrap}}
+    @media(prefers-reduced-motion:reduce){.choice img{transition:none}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>Saint City / Варианты фона</h1><p>Выберите картинку и сравните её в меню. Основной фон игры пока прежний.</p></div>
+    <a href="./index.html" target="_blank" rel="noopener">Открыть игру</a>
+  </header>
+  <div class="toolbar">
+    <div class="modes" role="group" aria-label="Режим просмотра">
+      <button type="button" data-mode="desktop" aria-pressed="true">Компьютер</button>
+      <button type="button" data-mode="mobile" aria-pressed="false">Телефон</button>
+      <button type="button" data-mode="art" aria-pressed="false">Только фон</button>
+    </div>
+    <div class="options"><label><input id="scanlines" type="checkbox" checked>Полосы в меню</label><span id="dimensions">1440 × 900</span></div>
+  </div>
+  <section id="stage" data-mode="desktop" aria-label="Предпросмотр">
+    <div id="preview-wrap"><iframe id="preview" title="Меню Saint City с выбранным фоном" src="./index.html?menu=1"></iframe></div>
+    <img id="art" alt="">
+  </section>
+  <div class="caption">
+    <div aria-live="polite"><h2 id="current-name"></h2><p id="current-note"></p></div>
+    <a id="original" target="_blank" rel="noopener">Оригинал фона</a>
+  </div>
+  <nav id="choices" aria-label="Варианты фона"></nav>
+</main>
+<script type="module">
+  const variants = [
+    {id:'courtyard',name:'01 / Проходной двор',note:'Мокрая брусчатка, арка и тёплый свет окон.'},
+    {id:'tram',name:'02 / Трамвайное депо',note:'Старый трамвай, провода и отражения на рельсах.'},
+    {id:'embankment',name:'03 / Набережная',note:'Гранит, тихая вода и розовый вечер над мостом.'},
+    {id:'well-sky',name:'04 / Двор-колодец · Небо',note:'Взгляд вертикально вверх. Прямоугольник неба замкнут фасадами со всех сторон.'},
+    {id:'well-twilight',name:'05 / Двор-колодец · Сумерки',note:'Тесный двор, косой ракурс вверх и тёмные стены вокруг неба.'},
+    {id:'rooftops',name:'06 / Петербургские крыши',note:'Мокрая жесть, дымоходы и чердачные окна в сумерках.'}
+  ];
+  const $ = id => document.getElementById(id);
+  const iframe = $('preview'), stage = $('stage'), wrap = $('preview-wrap');
+  let selected = variants.find(v => '#'+v.id === location.hash) || variants[3];
+  let mode = innerWidth < 600 ? 'mobile' : 'desktop';
+  const asset = v => new URL('./assets/menu/backgrounds/'+v.id+'.jpg',location.href).href;
+  function applyBackground() {
+    const root = iframe.contentDocument?.getElementById('start-menu');
+    if (!root) return;
+    root.style.backgroundImage = `url("${asset(selected)}")`;
+    root.style.backgroundPosition = 'center';
+    root.style.setProperty('--menu-scanlines-opacity',$('scanlines').checked ? '1' : '0');
+    root.dataset.previewBackground = selected.id;
+  }
+  function select(variant) {
+    selected = variant;
+    history.replaceState(null,'','#'+variant.id);
+    document.querySelectorAll('.choice').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.variant === variant.id)));
+    $('current-name').textContent = variant.name;
+    $('current-note').textContent = variant.note;
+    $('art').src = asset(variant); $('art').alt = variant.note;
+    $('original').href = asset(variant);
+    applyBackground();
+  }
+  function resize() {
+    const [width,height] = mode === 'mobile' ? [390,844] : [1440,900];
+    const scale = Math.min((stage.clientWidth-2)/width,(stage.clientHeight-2)/height,1);
+    iframe.style.width = width+'px'; iframe.style.height = height+'px';
+    iframe.style.transform = `scale(${scale})`;
+    wrap.style.width = width*scale+'px'; wrap.style.height = height*scale+'px';
+    $('dimensions').textContent = mode === 'art' ? 'Полное изображение' : `${width} × ${height}`;
+  }
+  function setMode(next) {
+    mode = next; stage.dataset.mode = mode;
+    document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.mode === mode)));
+    $('scanlines').disabled = mode === 'art';
+    resize();
+  }
+  for (const variant of variants) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'choice'; button.dataset.variant = variant.id;
+    button.setAttribute('aria-pressed','false');
+    const img = document.createElement('img'); img.src = asset(variant); img.alt = ''; img.width = 1672; img.height = 941;
+    const label = document.createElement('span'); label.textContent = variant.name;
+    button.append(img,label); button.onclick = () => select(variant); $('choices').append(button);
+  }
+  // Same-origin iframe renders the real responsive menu; variants are review-only.
+  iframe.addEventListener('load',() => {
+    const doc = iframe.contentDocument;
+    if (doc.getElementById('start-menu')) { applyBackground(); return; }
+    // The menu is a lazy module and can appear after the iframe's load event.
+    const observer = new MutationObserver(() => {
+      if (doc.getElementById('start-menu')) { applyBackground(); observer.disconnect(); }
+    });
+    observer.observe(doc.documentElement,{childList:true,subtree:true});
+  });
+  $('scanlines').onchange = applyBackground;
+  document.querySelectorAll('.modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  new ResizeObserver(resize).observe(stage);
+  setMode(mode); select(selected);
+</script>
+</body>
+</html>
