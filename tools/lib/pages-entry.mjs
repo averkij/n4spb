@@ -12,16 +12,16 @@ function boot(diagnosticPage) {
       bakedworker: '1', earlycompile: '1', test: 'scene-js-gzip', diagshadows: '0', diagatlas: '0',
       diagtexture: '256', diagground: 'plain', diagsignatlas: '1024', diagcanvasupload: 'pixels',
       diaguploader: 'staged', diagpack: '1', diaggeometry: 'lean', supercells: '0', nd: '0' })) target.searchParams.set(key, value);
-    try { sessionStorage.setItem('n4spb.diagnostic-arrival', target.href); } catch { /* Fresh navigation also works without storage. */ }
-    location.replace(target.href);
-    return; // Never request the ordinary scene alongside the mobile scene.
+    // The menu entry decides whether the visitor actually wants a scene. Keep
+    // mobile visitors on the start screen until Start, a handoff or a shared view.
+    globalThis.__mobileSceneEntry = target.href;
   }
-  const script = document.createElement('script'); script.type = 'module'; script.src = './src/main.js';
+  const script = document.createElement('script'); script.type = 'module'; script.src = './src/menu/entry.js';
   document.body.append(script);
 }
 
 export function publishedEntry(source, diagnosticPage) {
-  const main = '<script type="module" src="./src/main.js"></script>';
+  const main = '<script type="module" src="./src/menu/entry.js"></script>';
   assert.equal(source.split(main).length, 2, 'published area must have exactly one main entry');
   assert(/^diagnostics(?:-[a-z0-9-]+)?\.html$/.test(diagnosticPage), 'safe generated mobile destination');
   return source.replace(main, `<script data-pages-entry>(${boot.toString()})(${JSON.stringify(diagnosticPage)});</script>`);

@@ -119,7 +119,7 @@ export function generatePage(templateHtml, row, page) {
   // the facts script
   html = once(html, /^( *const SIGHTS = )\[[^\]\n]*\];[^\n]*$/m, (m, a) => `${a}[${page.sights.map(jsStr).join(', ')}];      // assets/splash/<name>.jpg${page.sights.length ? '' : ' (this area has no splash pictures: the splash keeps its plain colour)'}`, 'SIGHTS');
   html = once(html, /^( *const FACTS = \[[^\n]*\n)[\s\S]*?\n( *\];)$/m, (m, head, tail) => `${head}${page.facts.map((f) => `      [${f.map(jsStr).join(', ')}],`).join('\n')}\n${tail}`, 'FACTS');
-  if (!page.sights.length) {
+  if (!page.sights.length && !html.includes('const show = () =>')) {
     // pick(SIGHTS) of an empty list is undefined: do not request assets/splash/undefined.jpg
     html = once(html, /^( *)(document\.getElementById\('intro'\)\.style\.setProperty\('--art', `url\("\.\/assets\/splash\/\$\{sight \|\| pick\(SIGHTS\)\}\.jpg"\)`\);)$/m, (m, ind, stmt) => `${ind}if (sight || SIGHTS.length) ${stmt}`, 'splash picture line');
   }

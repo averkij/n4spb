@@ -273,7 +273,7 @@ check('generator fixture: a valid page.json validates, a short fact list / a "<"
     assert.deepEqual(idsOf(out), idsOf(stripHtml));
     assert.deepEqual(classesOf(out), classesOf(stripHtml));
     assert.deepEqual(scriptOpeners(out), scriptOpeners(stripHtml));
-    assert(out.includes('<script type="module" src="./src/main.js"></script>'));
+    assert(out.includes('<script type="module" src="./src/menu/entry.js"></script>'));
   });
   check('generator fixture: SIGHTS and FACTS are the page.json data, quoted so that the script parses', () => {
     const sights = new Function('return ' + /const SIGHTS = (\[[^\n]*?\]);/.exec(out)[1])();
@@ -285,7 +285,7 @@ check('generator fixture: a valid page.json validates, a short fact list / a "<"
   check('generator fixture: no splash pictures -> the splash does not request assets/splash/undefined.jpg', () => {
     const e = generatePage(stripHtml, FIX_ROW, { ...FIX_PAGE, sights: [], facts: FIX_PAGE.facts.map((f) => [f[0]]) });
     assert(e.includes('const SIGHTS = [];') && e.includes('if (sight || SIGHTS.length) document.getElementById'));
-    assert(!generatePage(stripHtml, FIX_ROW, FIX_PAGE).includes('if (sight || SIGHTS.length)'));
+    assert(generatePage(stripHtml, FIX_ROW, FIX_PAGE).includes('if (sight || SIGHTS.length)'), 'legacy parked-area splash is always guarded; live areas load their own catalogue');
   });
   check('generator fixture: an anchor that moved in strip.html stops the generator (it never writes a half-replaced page)', () => {
     assert.throws(() => generatePage(stripHtml.replace('<div class="kicker">', '<div class="kicker2">'), FIX_ROW, FIX_PAGE), /anchor "intro kicker"/);

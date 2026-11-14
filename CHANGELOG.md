@@ -2,6 +2,9 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **14.1.1** (2026-11-14, patch): Polish district hover and Start button; preserve menu, launch and shared-view state in mobile deployment; decode mobile Brotli assets correctly; complete release bakes
+- **14.1.0** (2026-11-14, minor): Refine start menu with borderless fixed map and cinematic typography
+- **14.0.0** (2026-11-14, major): Add city start menu, area sightseeing preloaders and shareable camera views
 - **13.2.1** (2026-11-14, patch): Fix raised bridge wire clearance and connect Sampson cathedral drums to the roof
 - **13.2.0** (2026-11-13, minor): Repair promenade floors and bridge road levels; refine Kresty and Lenin Square, restore Aurora and missing Sampson building tiers
 - **13.1.0** (2026-11-13, minor): Refine Finlyandsky waterfront with lower promenades, green banks, monumental landings and corrected landmark details

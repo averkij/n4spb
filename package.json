@@ -1,10 +1,12 @@
 {
   "name": "n4spb-nevsky",
-  "version": "13.2.1",
+  "version": "14.1.1",
   "description": "A walkable anime cel-shaded 3D strip of Saint Petersburg: Moscow Railway Station, Nevsky Prospekt, the district around it, Palace Square, the Hermitage and the Admiralty, with seven metro stations, cars, people, trains, boats and a drivable car; plain three.js, static deploy",
   "private": true,
   "type": "module",
   "scripts": {
+    "menu:test": "node tools/menu-test.mjs --assets",
+    "share:test": "node tools/shared-view-test.mjs",
     "start": "node tools/serve.mjs",
     "serve": "node tools/serve.mjs",
     "dev:area": "node tools/area-dev.mjs",

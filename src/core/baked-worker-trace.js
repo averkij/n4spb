@@ -20,7 +20,9 @@ globalThis.onmessage = async ({ data: { id, url, rawBytes, gzipJS } }) => {
     trace(id, 'headers', `HTTP ${response.status}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     let buffer;
-    if (gzipJS) {
+    // Pages may ship Brotli products. Those use the deployment codec's WASM
+    // stream; the JS gzip option applies only to gzip transport.
+    if (gzipJS && !response.url.split(/[?#]/)[0].endsWith('.bin.br')) {
       trace(id, 'download-compressed');
       const compressed = new Uint8Array(await response.arrayBuffer());
       trace(id, 'import-js-inflater', `${compressed.byteLength} compressed bytes`);

@@ -370,6 +370,9 @@
   }
   addEventListener('error', e => event('error', e.message || `Resource failed: ${labelURL(e.target?.src || e.target?.href || '')}`), true);
   addEventListener('unhandledrejection', e => event('unhandledrejection', e.reason?.message || e.reason));
+  addEventListener('scene-entry-error', e => {
+    if (run && sceneTest()) { run.status = 'Main module failed'; event('module:error', e.detail?.message || 'Scene import failed'); }
+  });
   addEventListener('webglcontextlost', () => { if (run) run.status = 'Graphics context lost'; event('webglcontextlost'); }, true);
   addEventListener('piter-fatal', e => { if (run) run.status = 'Scene failed'; event('fatal', e.detail?.message); });
   addEventListener('piter-diagnostic-build', e => {
@@ -651,7 +654,7 @@
         query.set('diagscene', '1');
         if (mobileEntry) query.set('mobileprofile', '1');
         if (mobileEntry || (params.get('diagscene') === '1' && params.has('ho') && params.has('cam'))) {
-          for (const name of ['ho', 'cam', 'fly', 'tod', 'look']) if (params.has(name)) query.set(name, params.get(name));
+          for (const name of ['ho', 'cam', 'fly', 'tod', 'look', 'play', 'touch']) if (params.has(name)) query.set(name, params.get(name));
         }
       }
       if (!$('shadows').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagshadows', '0');
@@ -666,7 +669,7 @@
       }
       if ($('uploader').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diaguploader', 'staged');
       if ($('pack').checked && ['scene', 'scene-staged', 'scene-js-gzip'].includes(test)) query.set('diagpack', '1');
-      history.replaceState(null, '', location.pathname + '?' + query);
+      history.replaceState(null, '', location.pathname + '?' + query + location.hash);
       run = { id: Date.now().toString(36), page: { ...pageIdentity }, started: new Date().toISOString(), startMs: performance.now(), status: 'Loading', test, diagnosticsVersion,
         deviceNote: $('device').value.slice(0, 120), userAgent: navigator.userAgent, platform: navigator.platform,
         hardwareConcurrency: navigator.hardwareConcurrency, deviceMemoryGiB: navigator.deviceMemory,

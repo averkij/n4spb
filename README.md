@@ -60,7 +60,7 @@ An internet connection is needed for three.js (jsDelivr) and the fonts (Google F
 node tools/serve.mjs        # or:  npm start        (port 5176)
 ```
 
-Open <http://localhost:5176> and press **«В Питер»** (or Enter). Any static file server works too (ES modules need HTTP, not `file://`): see [`docs/STRIP.md`](docs/STRIP.md) section 7 for the deployment whitelist and the static-host requirements.
+Open <http://localhost:5176>, select a district on the city map, and press **«Начать»**. The scene loads only after Start. Any static file server works too (ES modules need HTTP, not `file://`): see [`docs/STRIP.md`](docs/STRIP.md) section 7 for the deployment whitelist and the static-host requirements. Menu and shared-view details: [`docs/START-MENU.md`](docs/START-MENU.md).
 Note that the page loads fast only while the shipping bake in `assets/baked/` matches the source: after an edit that reaches the closure of an area (every area has its own bake revision, docs/BAKE-REVISIONS.md) that area has to be rebuilt (`node tools/bake-scene.mjs --plan` shows which, `npm run bake` rebakes the stale ones, then `npm run bakecheck`), otherwise the page builds everything procedurally and takes minutes.
 
 ### Controls
@@ -77,6 +77,7 @@ Note that the page loads fast only while the shipping bake in `assets/baked/` ma
 | Street map (bottom left) | A round heading-up map that labels the named streets and a pill above it that names the street you are on (hidden underground and in the metro, **H** hides it with the rest of the UI) |
 | T | Time of day: 15:20 **day** → 19:10 **golden evening** → 00:20 **white night** (never black, lit windows and lamps) → 11:20 **overcast** ("Petersburg milk") |
 | L | Copy the current pose `x,y,z,yaw,pitch` to the clipboard (paste it into `?cam=` or `tools/shot.mjs --cams`) |
+| P | Copy a link to the current viewpoint, including area, position, viewing angle, field of view and lighting |
 | H | Hide the UI |
 | M | Mute |
 | R | Reset to the start view (while driving: teleports the car there) |

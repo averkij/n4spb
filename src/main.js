@@ -1,3 +1,4 @@
+import { installSharedView } from './menu/shared-view.js';
 import { openBakedWorld, installBaker, bakedData, setBakeDir } from './core/baked-world.js';
 import { createRegionStreamer } from './core/region-streamer.js';
 // Bootstrap: renderer, sky, context, module build, batching, main loop, HUD. (adapted from the Sakuragaoka Station engine)
@@ -64,6 +65,9 @@ export const MODULES = [
 const MODULE_LIST = A.MODULES || MODULES;
 
 const params = new URLSearchParams(location.search);
+const sharedView = window.__sharedView || null;
+let sharedHold = !!sharedView;
+let sharedControls;
 const SHOT = params.has('shot');
 const ONLY = params.get('only') ? params.get('only').split(',').map(s => s.trim()).filter(Boolean) : null;
 const $ = (id) => document.getElementById(id);
@@ -415,7 +419,7 @@ function frame(now) {
   if (SHOT || ctx.travelPending || (ctx.regions && !ctx.regions.readyAt(player.pos.x, player.pos.z))) dt = 0;
   simT += dt;
   player.time = simT;
-  if (!SHOT || player.ride) player.update(dt);        // screenshots do not walk, but a rider follows its frame (dt = 0)
+  if (!sharedHold && (!SHOT || player.ride)) player.update(dt);        // screenshots do not walk, but a rider follows its frame (dt = 0)
   // depth precision (z-fighting of roads / roofs): the 24-bit buffer resolves ~z^2/(near*2^24), so the near plane grows with the eye height (0.25 m on foot, 6 m at 200 m)
   if (!window.__fixedNear) { const ny = player.ride ? 0.12 : THREE.MathUtils.clamp(0.25 + Math.max(0, camera.position.y - 4) * 0.03, 0.25, 6);      /* riding: the car wall is 0.4 m from the eye */ if (Math.abs(ny - camera.near) > 0.005) { camera.near = ny; camera.updateProjectionMatrix(); } }
   ctx.physics.refreshDynamic();
@@ -427,7 +431,7 @@ function frame(now) {
   try { audio.update(camera, dt); } catch (e) { if (!audio.__err) { audio.__err = 1; console.error('audio', e); } }
   ctx.interact.update();
   zones.update(dt);
-  tod.update(dt);
+  tod.update(sharedHold ? 0 : dt);
   sky.update(simT, camera);
   renderer.info.reset();
   pipeline.render(scene, camera, sunDir, simT);
@@ -446,6 +450,8 @@ if (TELEPORTS) document.documentElement.classList.add('teleports'); else { const
 /** auto: the page started by itself after a seamless hand-off (no user gesture: no pointer lock, which the first click takes; no area toast; the audio waits for the first key / pointer, see main()) */
 function start(auto) {
   if (started) { if (!auto) player.requestLock(); return; }
+  sharedHold = false;
+  sharedControls?.release();
   started = true;
   player.enabled = true;
   document.body.classList.add('playing');
@@ -508,6 +514,13 @@ async function main() {
   if (ctx.handoff) { const p = ctx.handoff.pose; if (p.y !== null) player.setPose(p.x, p.z, p.yaw, p.pitch, p.y); else player.setPose(p.x, p.z, p.yaw, p.pitch); }
   else if (params.get('cam')) parseCam(params.get('cam')); else player.setPose(L.HERO.x, L.HERO.z, L.HERO.yaw, L.HERO.pitch);
   if (params.has('fly') && !(ctx.handoff && ctx.handoff.pose.y === null)) player.fly = true;
+  if (sharedView) {
+    camera.position.fromArray(sharedView.pos);
+    camera.rotation.set(...sharedView.rot, 'YXZ');
+    camera.fov=sharedView.fov; camera.updateProjectionMatrix();
+    tod.set(sharedView.tod,true); tod.setVariant(sharedView.look);
+    document.body.classList.toggle('noui',sharedView.noui);
+  }
   player.time = simT;
   const TS = performance.now();
   if (simT > 0) window.__sim(simT, SHOT ? 1 / 30 : 0.1); else stepUpdates(0, 0);      // the start state is simulated in 0.1 s steps (the longest frame step of the loop)
@@ -550,6 +563,8 @@ async function main() {
   const seamless = document.documentElement.classList.contains('seam-in') && !!ctx.handoff;
   if (!seamless && document.documentElement.classList.contains('seam-in')) seam.remove();
   const go = $('go'); if (go) { go.disabled = false; if (ctx.handoff && !seamless) { go.textContent = 'Продолжить · Continue'; guard.arrivalLink(); } if (!seamless) go.focus(); go.addEventListener('click', () => start()); }
+  sharedControls = installSharedView({camera, tod, player, audio, area:A.ID, registry:REGISTRY, toast:showToast, start, held:sharedHold, canShare:()=>started&&!ctx.ui.modalOpen&&!ctx.gates?.traveling});
+  if (params.get('play')==='1' && !sharedView) start(true);
   canvas.addEventListener('click', () => { if (started) player.requestLock(); });
   document.addEventListener('pointerlockchange', () => { document.body.classList.toggle('locked', document.pointerLockElement === canvas); });
   addEventListener('keydown', (e) => {

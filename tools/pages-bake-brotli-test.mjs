@@ -5,7 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { encodeBaked } from '../src/core/baked-codec.js';
 import { packBakedProducts, verifyBakedProducts, patchedCodec, MANIFEST_PATH } from './pages-bake-brotli.mjs';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -19,13 +20,15 @@ const site = path.join(dir, 'dist');
 const put = (p, data) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, data); };
 const hash = b => createHash('sha256').update(b).digest('hex');
 try {
+  put(path.join(site, 'package.json'), JSON.stringify({ type: 'module' }));
   const rel = 'assets/baked/alpha/field.abcdef.bin.gz';
-  const raw = Buffer.alloc(8 * 1024 * 1024);
+  const payload = Buffer.alloc(8 * 1024 * 1024);
   let seed = 0x12345678;
   const pool = Array.from({ length: 128 }, () => Buffer.alloc(4096).map(() => {
     seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed & 255;
   }));
-  for (let i = 0; i < raw.length / 4096; i++) pool[(i * 97) % pool.length].copy(raw, i * 4096);
+  for (let i = 0; i < payload.length / 4096; i++) pool[(i * 97) % pool.length].copy(payload, i * 4096);
+  const raw = Buffer.from(encodeBaked({ payload: new Uint8Array(payload) }));
   const gz = gzipSync(raw, { level: 6 });
   put(path.join(dir, rel), gz); put(path.join(site, rel), gz);
   const manifest = { format: 1, scheme: 2, area: 'alpha', revision: 'abcdef', files: { field: path.basename(rel) },
@@ -34,7 +37,7 @@ try {
   put(path.join(site, 'assets/baked/alpha/manifest.json'), JSON.stringify(manifest));
   const codec = fs.readFileSync(path.join(repo, 'src/core/baked-codec.js'));
   put(path.join(dir, 'src/core/baked-codec.js'), codec); put(path.join(site, 'src/core/baked-codec.js'), codec);
-  for (const p of ['vendor/pages-bake-brotli.js', 'vendor/brotli-dec-wasm/decoder.js', 'vendor/brotli-dec-wasm/brotli_dec_wasm_bg.wasm'])
+  for (const p of ['vendor/pages-bake-brotli.js', 'vendor/brotli-dec-wasm/decoder.js', 'vendor/brotli-dec-wasm/brotli_dec_wasm_bg.wasm', 'vendor/fflate/fflate.module.js', 'src/core/baked-worker-trace.js', 'src/core/baked-gzip-js.js'])
     put(path.join(site, p), fs.readFileSync(path.join(repo, p)));
   const registry = { alpha: { id: 'alpha', bake: 'baked/alpha/' } };
   const result = await packBakedProducts(dir, site, { registry, minBytes: 0 });
@@ -47,13 +50,35 @@ try {
   const output = path.join(site, record.entries[0].output), good = fs.readFileSync(output);
   // Exercise the same WASM streaming helper used by the deployment worker.
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async input => input instanceof URL && input.protocol === 'file:'
-    ? new Response(fs.readFileSync(fileURLToPath(input)), { headers: { 'Content-Type': 'application/wasm' } })
-    : originalFetch(input);
+  globalThis.fetch = async input => {
+    const url = new URL(input);
+    if (url.protocol !== 'file:') return originalFetch(input);
+    const response = new Response(fs.readFileSync(fileURLToPath(url)), { headers: { 'Content-Type': url.pathname.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream' } });
+    Object.defineProperty(response, 'url', { value: url.href });
+    return response;
+  };
   try {
     const { brotliReadable } = await import('../vendor/pages-bake-brotli.js');
     const decoded = Buffer.from(await new Response(await brotliReadable(new Blob([good]).stream())).arrayBuffer());
     assert.equal(decoded.compare(raw), 0, 'WASM stream reproduces the baked payload');
+    // Run the actual mobile traced worker with its JS gzip option. A Brotli
+    // transport must select the deployed codec instead of the gzip inflater.
+    const originalPost = globalThis.postMessage, originalInterval = globalThis.setInterval, originalMessage = globalThis.onmessage;
+    const messages = [];
+    try {
+      globalThis.postMessage = data => messages.push(data);
+      globalThis.setInterval = () => 0;
+      await import(pathToFileURL(path.join(site, 'src/core/baked-worker-trace.js')));
+      globalThis.setInterval = originalInterval;
+      for (const [id, file] of [[1, output], [2, path.join(dir, rel)]]) {
+        await globalThis.onmessage({ data: { id, url: pathToFileURL(file).href, rawBytes: raw.length, gzipJS: true } });
+        const reply = messages.find(m => m.id === id && !m.loadingDiagnostic);
+        assert(reply && !reply.error, `mobile worker ${path.extname(file)}: ${reply?.error}`);
+        assert.equal(Buffer.from(reply.value.payload).compare(payload), 0, 'mobile worker decodes the complete payload');
+      }
+    } finally {
+      globalThis.postMessage = originalPost; globalThis.setInterval = originalInterval; globalThis.onmessage = originalMessage;
+    }
   } finally { globalThis.fetch = originalFetch; }
   fs.appendFileSync(output, Buffer.from([0]));
   await assert.rejects(verifyBakedProducts(dir, site), /sha256|integrity|Expected values to be strictly equal/);

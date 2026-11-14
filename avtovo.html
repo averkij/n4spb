@@ -9,6 +9,8 @@
   gtag('js', new Date());
 </script>
 <meta charset="utf-8">
+<link rel="stylesheet" href="./src/menu/menu.css">
+<script>if(document.documentElement.dataset.area==='palace'&&!location.hash.startsWith('#view=')&&![...new URLSearchParams(location.search).keys()].some(k=>!['q','touch','menu'].includes(k)))document.documentElement.classList.add('menu-mode');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Автово · Saint Petersburg</title>
 <meta name="theme-color" content="#0b1230">
@@ -283,7 +285,13 @@
       ['Проспект Стачек связывает Автово с Кировским заводом и Нарвской заставой.'],
     ];
     const [fact, sight] = pick(FACTS);
-    if (sight || SIGHTS.length) document.getElementById('intro').style.setProperty('--art', `url("./assets/splash/${sight || pick(SIGHTS)}.jpg")`);
+    if (!document.documentElement.classList.contains('menu-mode') && !new URLSearchParams(location.search).has('shot') && !new URLSearchParams(location.search).has('bake')) {
+      const area = document.documentElement.dataset.area;
+      let slide = Math.floor(Math.random()*5);
+      const show = () => document.getElementById('intro').style.setProperty('--art', `url("./assets/splash/${area}/${slide+1}.jpg")`);
+      if (!['strip','north'].includes(area)) { show(); }
+      else if (sight || SIGHTS.length) document.getElementById('intro').style.setProperty('--art', `url("./assets/splash/${sight || pick(SIGHTS)}.jpg")`);
+    }
     document.getElementById('fact').textContent = fact;
   }
 </script>
@@ -293,7 +301,7 @@
   // It never kills the load: "keep waiting" re-arms it, "reload" restarts.
   (function () {
     var last = '', t0 = Date.now(), el = document.getElementById('stall'), veilNoted = false;
-    if (!el) return;
+    if (!el || document.documentElement.classList.contains('menu-mode')) return;
     function text(id) { var n = document.getElementById(id); return n ? n.textContent : ''; }
     function show() {
       var started = !!window.__mainStarted;
@@ -350,6 +358,6 @@
 <div class="hud" id="coords">x 0 · z 0</div>
 <div id="stats" hidden></div>
 
-<script type="module" src="./src/main.js"></script>
+<script type="module" src="./src/menu/entry.js"></script>
 </body>
 </html>

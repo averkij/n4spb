@@ -3,7 +3,7 @@
 // here (or a line in closure-orphans.txt): tools/closure-lint.mjs enforces it in the CI.
 
 /** Files the bake revision never hashes though the scan may reach them: runtime-only (docs/AREAS.md: gates, hand-off codec, version, registry; tools/runtime-only-lint.mjs) ... */
-export const RUNTIME_ONLY = ['src/core/gates.js', 'src/core/handoff.js', 'src/core/version.js', 'src/areas/registry.js'];
+export const RUNTIME_ONLY = ['src/core/gates.js', 'src/core/handoff.js', 'src/core/version.js', 'src/areas/registry.js', 'src/menu/entry.js', 'src/menu/menu.js', 'src/menu/share-codec.js', 'src/menu/shared-view.js', 'src/menu/loading-photos.js'];
 /** ... and the generated revision map itself (it is written by the bake from the revision, so it cannot be an input of it). */
 export const EXCLUDED = ['src/core/baked-revision.js'];
 
@@ -39,6 +39,7 @@ export const DYNAMIC_IMPORTS = {
  * A row whose literal is gone from its file is a hard error; so is an asset-looking literal without a row.
  */
 export const RUNTIME_ASSETS = {
+  'src/menu/menu.js': { './assets/menu/map.json': { path:'assets/menu/map.json',hash:false,why:'lightweight menu geography, never scene geometry' } },
   'vendor/brotli-dec-wasm/decoder.js': {
     'brotli_dec_wasm_bg.wasm': { path: null, hash: false, why: 'deployment-only Brotli decoder resolves its adjacent WASM; the Pages pack manifest verifies its exact SHA-256' },
   },
@@ -65,8 +66,8 @@ export const RUNTIME_ASSETS = {
 
 /** Paths the bake-time served-file audit accepts outside the closure (bake-scene.mjs): exact paths and prefixes (a prefix ends with '/'). Everything else served from the repository must be in the closure. */
 export const ALLOW_SERVED = {
-  exact: ['src/core/baked-revision.js', 'manifest.webmanifest', 'favicon.ico'],
-  prefix: ['node_modules/three/', 'assets/baked/', 'assets/icons/', 'assets/splash/', '__'],
+  exact: ['src/core/baked-revision.js', 'src/menu/menu.css', 'manifest.webmanifest', 'favicon.ico'],
+  prefix: ['node_modules/three/', 'assets/baked/', 'assets/icons/', 'assets/splash/', 'assets/menu/', '__'],
 };
 /** true when the served repository path (POSIX, no leading slash) is allowed by ALLOW_SERVED */
 export function isAllowedServed(rel) {
@@ -78,6 +79,10 @@ export function isAllowedServed(rel) {
  * The count is exact, so a new fetch( in the same file fails the lint until somebody reads it.
  */
 export const RUNTIME_CALLS = {
+  'src/menu/loading-photos.js': { 'fetch(': {count:1,why:'area sightseeing captions and camera manifest, only at runtime'} },
+  'src/menu/menu.js': { 'fetch(': {count:1,why:'menu geography only'} },
+  'src/menu/entry.js': { 'new URL(': {count:1,why:'shared view destination page'} },
+  'src/menu/share-codec.js': { 'new URL(': {count:1,why:'share link resolved against deployment base'} },
   'src/core/loading-diagnostics.js': {
     'new URL(': { count: 4, why: 'redacts request labels, selects the traced worker, resolves a probe product in the selected area bake directory, and restores the mobile walking pose in the current page URL' },
     'fetch(': { count: 1, why: 'standalone assets-only test reads the selected area shipping manifest' },

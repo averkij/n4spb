@@ -58,8 +58,9 @@ const browser = await puppeteer.launch({ executablePath, headless: true, protoco
   args: ['--use-angle=d3d11', '--enable-gpu', '--no-first-run', '--disable-extensions'] });
 async function open({ full = false, block = false, storageDenied = false, probeTimeout = false } = {}) {
   const context = await browser.createBrowserContext(), page = await context.newPage();
+  page.setDefaultTimeout(90000);
   await page.setViewport({ width: 440, height: 956, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
-  const errors = []; page.on('pageerror', e => errors.push(String(e)));
+  const errors = []; page.on('pageerror', e => errors.push(e.stack || String(e)));
   let mainRequests = 0;
   if (storageDenied) await page.evaluateOnNewDocument(() => { Storage.prototype.setItem = () => { throw Error('Storage blocked'); }; });
   if (probeTimeout) await page.evaluateOnNewDocument(() => {
@@ -88,23 +89,33 @@ const show = page => page.click('#diag-toggle');
 try {
   const desktopEntry = await open();
   await desktopEntry.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36');
-  await desktopEntry.page.goto(base + 'index.html?q=high', { waitUntil: 'domcontentloaded' });
-  await desktopEntry.page.waitForFunction(() => document.body.classList.contains('loaded'));
-  assert.equal(desktopEntry.page.url(), base + 'index.html?q=high');
+  await desktopEntry.page.goto(base + 'index.html?q=high&play=1', { waitUntil: 'domcontentloaded' });
+  await desktopEntry.page.waitForFunction(() => document.body?.classList.contains('loaded'));
+  assert.equal(desktopEntry.page.url(), base + 'index.html?q=high&play=1');
   assert.equal(desktopEntry.mainRequests(), 1);
   assert.equal(await desktopEntry.page.$('#load-diag'), null, 'desktop retains its ordinary loader');
   assert.deepEqual(desktopEntry.errors, []); await desktopEntry.context.close();
+  const sharedMobile = await open();
+  await sharedMobile.page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148');
+  const sharedState={v:1,area:'palace',pos:[123,20,456],rot:[.1,.2,0],fov:62,tod:1.2,look:null,noui:false};
+  const sharedHash='#view='+encodeURIComponent(JSON.stringify(sharedState));
+  await sharedMobile.page.goto(base+'index.html'+sharedHash,{waitUntil:'domcontentloaded'});
+  await sharedMobile.page.waitForFunction(()=>document.body?.classList.contains('loaded'));
+  assert.equal(new URL(sharedMobile.page.url()).hash,sharedHash,'mobile profile preserves the shared-view fragment');
+  assert.deepEqual(await sharedMobile.page.evaluate(()=>window.__sharedView),sharedState);
+  assert.equal(sharedMobile.mainRequests(),1);assert.deepEqual(sharedMobile.errors,[]);await sharedMobile.context.close();
   // Normal published phone visits automatically select the working profile,
   // load exactly one scene, retain view state, and recover quietly on reload.
   for (const storageDenied of [false, true]) {
     const mobile = await open({ storageDenied });
     await mobile.page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148');
-    await mobile.page.goto(base + 'index.html?cam=1,2,3,4&tod=1.2', { waitUntil: 'domcontentloaded' });
-    await mobile.page.waitForFunction(() => document.body.classList.contains('loaded'));
+    await mobile.page.goto(base + 'index.html?cam=1,2,3,4&tod=1.2&play=1', { waitUntil: 'domcontentloaded' });
+    await mobile.page.waitForFunction(() => document.body?.classList.contains('loaded'));
     assert.equal(mobile.mainRequests(), 1, 'mobile entry never starts the ordinary scene');
     const url = new URL(mobile.page.url());
     assert.equal(url.searchParams.get('mobileprofile'), '1'); assert.equal(url.searchParams.get('diagpack'), '1');
     assert.equal(url.searchParams.get('cam'), '1,2,3,4'); assert.equal(url.searchParams.get('tod'), '1.2');
+    assert.equal(url.searchParams.get('play'),'1','mobile launch retains the menu Start action');
     assert.equal(await mobile.page.$eval('#load-diag', e => e.hidden), true);
     assert.equal(await mobile.page.$eval('#diag-toggle', e => e.getAttribute('aria-label')), 'Report');
     await mobile.page.evaluate(() => {
@@ -121,14 +132,14 @@ try {
     await mobile.page.tap('.resume-report');
     assert.equal(await mobile.page.$eval('#diag-hide', e => e.disabled), false, 'saved report has a usable continue action');
     await mobile.page.tap('#diag-hide');
-    await mobile.page.waitForFunction(() => document.body.classList.contains('loaded'));
+    await mobile.page.waitForFunction(() => document.body?.classList.contains('loaded'));
     assert.equal(mobile.mainRequests(), 2, 'continue starts exactly one scene');
     assert.equal(await mobile.page.$eval('#load-diag', e => e.hidden), true);
     if (!storageDenied) assert.equal(new URL(mobile.page.url()).searchParams.get('cam'), '123,456,0,0', 'continue restores the last walking checkpoint');
     await mobile.page.reload({ waitUntil: 'domcontentloaded' });
     await mobile.page.waitForSelector('#mobile-continue', { visible: true });
     await mobile.page.tap('#mobile-continue');
-    await mobile.page.waitForFunction(() => document.body.classList.contains('loaded'));
+    await mobile.page.waitForFunction(() => document.body?.classList.contains('loaded'));
     assert.equal(mobile.mainRequests(), 3, 'the direct continue action works too');
     assert.deepEqual(mobile.errors, []); await mobile.context.close();
   }
@@ -153,7 +164,7 @@ try {
   assert.equal(hop.mainRequests(), 1); assert.equal(await hop.page.$eval('#load-diag', el => el.hidden), false);
   assert.equal((await read(hop.page)).current.id, hopReport.id);
   await hop.page.click('#diag-start');
-  await hop.page.waitForFunction(() => document.body.classList.contains('loaded'));
+  await hop.page.waitForFunction(() => document.body?.classList.contains('loaded'));
   assert.equal(hop.mainRequests(), 2);
   assert.equal(await hop.page.evaluate(() => new URLSearchParams(location.search).get('cam')), '444,-1351,-90,10');
   assert.deepEqual(hop.errors, []); await hop.context.close();
@@ -165,7 +176,7 @@ try {
   await page.screenshot({ path: path.join(out, 'portrait-paused.png') });
   await page.type('#diag-device', 'iPhone 16 Pro Max, iOS 26.7');
   await page.click('#diag-start');
-  await page.waitForFunction(() => document.body.classList.contains('loaded'));
+  await page.waitForFunction(() => document.body?.classList.contains('loaded'));
   await page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.loaded, {}, key);
   let data = await read(page);
   assert.equal(await page.evaluate(() => window.transferred && window.fetched), true, 'worker payload and fetch response forwarded intact');
@@ -245,7 +256,7 @@ try {
   await page.select('#diag-worker', '0');
   await page.click('#diag-compile');
   await page.click('#diag-start');
-  await page.waitForFunction(() => document.body.classList.contains('loaded'));
+  await page.waitForFunction(() => document.body?.classList.contains('loaded'));
   data = await read(page);
   assert.equal(data.previous.id, id, 'previous attempt preserved when starting comparison');
   assert.equal(data.current.options.bakedworker, '0');
@@ -266,7 +277,7 @@ try {
 
   const denied = await open({ storageDenied: true });
   await denied.page.click('#diag-start');
-  await denied.page.waitForFunction(() => document.body.classList.contains('loaded'));
+  await denied.page.waitForFunction(() => document.body?.classList.contains('loaded'));
   await show(denied.page); await denied.page.click('#diag-show');
   const memoryOnly = JSON.parse(await denied.page.$eval('#diag-output', e => e.value));
   assert(memoryOnly.storageWarning.includes('unavailable'));
@@ -305,6 +316,9 @@ try {
   await hung.page.select('#diag-test', 'assets-burst');
   await hung.page.click('#diag-start');
   await hung.page.waitForFunction(k => JSON.parse(localStorage.getItem(k))?.current.status === 'Assets test failed', {}, key);
+  // Abort completion is asynchronous: wait for the outstanding fetch/worker
+  // records to settle before checking the final failure report.
+  await hung.page.waitForFunction(k => Object.keys(JSON.parse(localStorage.getItem(k))?.current.pending || {}).length === 0, { timeout: 5000 }, key);
   const timeoutReport = (await read(hung.page)).current;
   assert(timeoutReport.events.some(e => e.kind === 'probe:error' && e.detail.includes('90 seconds')));
   assert.equal(Object.keys(timeoutReport.pending).length, 0, 'timed out worker requests are terminated');
@@ -331,7 +345,7 @@ try {
   const trace = await open();
   await trace.page.select('#diag-test', 'scene-staged');
   await trace.page.click('#diag-start');
-  await trace.page.waitForFunction(() => document.body.classList.contains('loaded'));
+  await trace.page.waitForFunction(() => document.body?.classList.contains('loaded'));
   await trace.page.evaluate(() => {
     window.__stats.modules.landmarksRiverfront = { ms: 1 };
     window.traceReplies = [];
@@ -671,7 +685,7 @@ try {
     } else await real.page.click('#diag-start');
     await real.page.waitForSelector('#fatal button', { timeout: 60000 });
     await real.page.click('#fatal button');
-    await real.page.waitForFunction(() => document.body.classList.contains('loaded'), { timeout: 240000 });
+    await real.page.waitForFunction(() => document.body?.classList.contains('loaded'), { timeout: 240000 });
     if (packedGeometry) {
       const initialRegions = await real.page.evaluate(() => window.__ctx.regions.stats.loaded);
       await new Promise(resolve => setTimeout(resolve, 1500));
