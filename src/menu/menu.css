@@ -1,6 +1,8 @@
 @font-face{font-family:MenuDisplay;src:url('../../assets/menu/fonts/Oswald.ttf') format('truetype');font-weight:200 700;font-display:swap}
 @font-face{font-family:MenuUI;src:url('../../assets/menu/fonts/Manrope.ttf') format('truetype');font-weight:200 800;font-display:swap}
 :root{--menu-pink:#ff499d;--menu-purple:#b646ef;--menu-ivory:#fff0d5;--menu-lilac:#d6a4ed}
+#intro .kicker{display:none}
+html:not([data-area=strip]):not([data-area=north]) #intro .title:not([data-ready]),html:not([data-area=strip]):not([data-area=north]) #fact:not([data-ready]){visibility:hidden}
 html.menu-mode{overflow:auto;height:auto}html.menu-mode body{height:auto;min-height:100svh;overflow:auto;background:#24132e}
 html.menu-mode #intro,html.menu-mode .hud,html.menu-mode #scene,html.menu-mode #stats{display:none!important}
 #start-menu{position:relative;isolation:isolate;box-sizing:border-box;min-height:100svh;overflow:hidden;color:var(--menu-ivory);font-family:MenuUI,sans-serif;background:url('../../assets/menu/petersburg-dusk.jpg') center/cover}

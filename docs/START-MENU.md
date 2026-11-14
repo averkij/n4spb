@@ -28,8 +28,9 @@ Portrait screens use one centered column: the single-line title, the playable
 city, the selected district and the Start button. The map has a fixed portrait
 frame around the live districts, with subdued surrounding areas. The controls
 fit the viewport with safe-area spacing; landscape keeps the split composition.
-These names and layout changes belong only to the root start menu, not the
-regular scene preloaders.
+The Saint City branding and responsive menu layout belong to the root start
+menu. From 14.1.4, scene preloaders share the menu's clean district labels and
+show only that label above their image, without a kicker or city-name prefix.
 
 `menu-variants.html` is a local review page with six original painted backgrounds,
 desktop and phone previews of the actual menu, an image-only view and a scanline
@@ -48,6 +49,8 @@ territories use the largest original municipal polygon from the planning map's
 cached OSM geometry. The resolved names are committed in `assets/menu/names.json`
 so regeneration does not require that ignored cache. Authored player-facing
 overrides in `assets/menu/labels.json` take priority and survive regeneration.
+The same generator writes `src/menu/area-labels.js` for preloader headings, so
+menu and loader names have one source of truth.
 Planning suggestions in
 `mergeGroup` are deliberately not treated as implemented mergers. The central
 area is presented as **Центр**; technical IDs and boundaries stay intact.
@@ -59,8 +62,12 @@ sound preference is remembered locally and applied to gameplay on entry.
 
 Each live area's `views.json` defines five camera views and captions in
 `assets/splash/<area>/`, alongside the five JPEG screenshots captured from its
-shipping bake (105 images across 21 areas). Loading cycles them every 4.5 seconds
-and stops once gameplay is visible. Only destination images are requested.
+shipping bake (105 images across 21 areas). One random screenshot
+is preserved for the whole load. Only destination images
+are requested. A separate `facts.json` contains twenty short Russian facts for
+each live area (420 total). One is picked randomly per load and stays fixed;
+there are no image or fact rotation timers. Sight captions never overwrite it.
+See [PRELOADER-FACTS.md](PRELOADER-FACTS.md) for the content files and sources.
 
 `node tools/capture-menu-sights.mjs --prepare` prepares the camera manifests from
 authored viewpoints and landmark groups. Review these before capture. Run

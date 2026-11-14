@@ -3,7 +3,7 @@
 // here (or a line in closure-orphans.txt): tools/closure-lint.mjs enforces it in the CI.
 
 /** Files the bake revision never hashes though the scan may reach them: runtime-only (docs/AREAS.md: gates, hand-off codec, version, registry; tools/runtime-only-lint.mjs) ... */
-export const RUNTIME_ONLY = ['src/core/gates.js', 'src/core/handoff.js', 'src/core/version.js', 'src/areas/registry.js', 'src/menu/entry.js', 'src/menu/menu.js', 'src/menu/share-codec.js', 'src/menu/shared-view.js', 'src/menu/loading-photos.js'];
+export const RUNTIME_ONLY = ['src/core/gates.js', 'src/core/handoff.js', 'src/core/version.js', 'src/areas/registry.js', 'src/menu/entry.js', 'src/menu/menu.js', 'src/menu/share-codec.js', 'src/menu/shared-view.js', 'src/menu/loading-photos.js', 'src/menu/area-labels.js'];
 /** ... and the generated revision map itself (it is written by the bake from the revision, so it cannot be an input of it). */
 export const EXCLUDED = ['src/core/baked-revision.js'];
 
@@ -79,7 +79,7 @@ export function isAllowedServed(rel) {
  * The count is exact, so a new fetch( in the same file fails the lint until somebody reads it.
  */
 export const RUNTIME_CALLS = {
-  'src/menu/loading-photos.js': { 'fetch(': {count:1,why:'area sightseeing captions and camera manifest, only at runtime'} },
+  'src/menu/loading-photos.js': { 'fetch(': {count:2,why:'destination sightseeing manifest and twenty Russian facts; presentation only, never scene geometry'} },
   'src/menu/menu.js': { 'fetch(': {count:1,why:'menu geography only'} },
   'src/menu/entry.js': { 'new URL(': {count:1,why:'shared view destination page'} },
   'src/menu/share-codec.js': { 'new URL(': {count:1,why:'share link resolved against deployment base'} },
