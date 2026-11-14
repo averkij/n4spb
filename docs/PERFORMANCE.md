@@ -3884,3 +3884,31 @@ and a higher view show clear overheads (594 / 606 calls); the cathedral's street
 and roof views show continuous drum-to-roof joins (877 / 847 calls). Evidence:
 `shots/liteyny-fix/final.load.json`, `shots/liteyny-fix/final_*`,
 `shots/sampson-fix/final.load.json`, `shots/sampson-fix/final_*`.
+
+Final-bake driving smoke measurements (same Edge/RTX 3090 Ti, medium, 1280x720,
+8 s W input, no profiler or mid-shot):
+
+| Route | Load s | Mean / p50 / p95 ms | >40 / >80 ms | Mean calls | Travel m | CDP heap / backing MiB |
+| --- | ---: | --- | --- | ---: | ---: | --- |
+| Vosstaniya / Nevsky | 30.63 | 27.0 / 33.3 / 33.5 | 6 / 0 | 1313 | 267 | 497.6 / 1192.7 |
+| Liteyny south approach onto span | 29.80 | 16.7 / 16.7 / 16.8 | 0 / 0 | 479 | 263 | 520.4 / 1199.6 |
+
+Both runs had zero long tasks and zero failed regions. The bridge car remained
+on its raised deck with 100% body condition. These are final-state smoke runs;
+no matched driving baseline was taken, so they establish no performance gain.
+
+The bridge-start control test passed entry, acceleration, boost, drift, braking,
+exit and the Anichkov deck traversal. Drifting through the breakable parapet
+retained car/walker access to the water. The initial default station-route test
+aborted with `__drive` unavailable after reaching the district handoff; its
+nitro screenshot shows the nearby-area-boundary message. The bridge-start rerun
+kept this check on the affected route and completed successfully.
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 8 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/liteyny-fix/centre-drive
+node tools/drive-bench.mjs --area palace --q medium --seconds 8 --start "-121,-1940,-6.8" --json --diagnostics --out shots/liteyny-fix/bridge-drive
+node tools/area.mjs palace tools/north-wires-test.mjs
+node tools/area.mjs finlyandsky tools/north-wires-test.mjs
+node tools/area.mjs smolny tools/north-wires-test.mjs
+node tools/drive-test.mjs --area palace --q medium --nofuzz --start "-121,-1940,-6.8" --out shots/liteyny-fix/bridge-controls
+```
