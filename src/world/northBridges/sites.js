@@ -13,6 +13,20 @@ const decks = SITES.filter(b => claimed.has('north-' + b.key)).map(b => {
 let enabled = true;
 export function setNorthDecksEnabled(on) { enabled = !!on; }
 export function deckProfile(b,d) { return Math.max(.035,b.h*Math.min(1,(d+b.ramp)/b.ramp,(b.len+b.ramp-d)/b.ramp)); }
+// Overhead crossings must clear the raised approach too. Carry its lift out
+// to facade anchors with a gentle lateral falloff, rather than a vertical step
+// at the carriageway edge. The road surface query remains narrowly bounded.
+export function northWireLift(x,z) {
+  if (!enabled) return 0;
+  let lift=0;
+  for (const b of decks) {
+    const dx=x-b.x,dz=z-b.z,d=dx*b.tx+dz*b.tz,u=Math.abs(dx*b.tz-dz*b.tx);
+    if(d < -b.ramp || d > b.len+b.ramp) continue;
+    const fade=Math.max(0,Math.min(1,(b.width/2+30-u)/30));
+    lift=Math.max(lift,deckProfile(b,d)*fade);
+  }
+  return lift;
+}
 /** Height of the actual triangulated deck, including both approach ramps.
  * The short segments straddling a bank interpolate between profile samples. */
 export function northDeckHeight(x,z,tx=null,tz=null) {

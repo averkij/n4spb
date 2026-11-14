@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **13.2.1** (2026-11-14, patch): Fix raised bridge wire clearance and connect Sampson cathedral drums to the roof
 - **13.2.0** (2026-11-13, minor): Repair promenade floors and bridge road levels; refine Kresty and Lenin Square, restore Aurora and missing Sampson building tiers
 - **13.1.0** (2026-11-13, minor): Refine Finlyandsky waterfront with lower promenades, green banks, monumental landings and corrected landmark details
 - **13.0.0** (2026-11-13, major): Add Finlyandsky district with Finland Station, Lenin Square fountains, Kresty, Mineralnaya church, mapped railway and Neva transitions

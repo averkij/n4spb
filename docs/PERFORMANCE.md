@@ -3847,3 +3847,40 @@ node tools/pages-data-pack-test.mjs --actual
 node tools/pages-bake-brotli-test.mjs --actual
 node tools/pages-bake-browser-test.mjs
 ```
+
+# 2026-11-14: bridge overhead clearance and Sampson roof connections (13.2.1)
+
+Liteyny's southern approach now lifts street overhead strands, hangers, facade
+anchors, mast tops and the traffic wire service together. The lift follows the
+raised deck and tapers across the adjacent ground. Sampson's five drum shells
+start inside the nave instead of all starting at ridge height; the four outer
+drums now meet the sloping roof. This changes static placement only and adds no
+per-frame work or cathedral triangles (8,298 triangles, 11 meshes, 19 colliders;
+CPU build 64 ms). Palace CPU checks: northBridges 156,216 triangles / 206 ms,
+streets 1,029,980 triangles / 9,825 ms; both passed their build checks.
+
+`north-wires-test.mjs` samples the actual emitted segments at <= 1 m intervals:
+Palace 3,102 samples, minimum deck clearance 5.32 m; Finlyandsky 2,512 / 5.80 m;
+Smolny 1,390 / 5.50 m. Cross-span endpoints meet their published physical
+supports, and raised facade rosettes remain below the building tops. The
+existing wire test reports zero free ends / floating groups and identical
+wiring with and without knockable masts. Roads, markings and closure lint pass.
+The north bridge marking regression passes: the double solid divider and lane
+dashes follow the slab, while transverse embankment paint stays at street level.
+No marking source change was needed for the reported approach view.
+
+Integrated procedural review at the reported Liteyny camera and a second ramp
+camera passed (medium, 1280x720, RTX 3090 Ti, 627 / 575 calls). These are visual
+checks, not loading or driving performance measurements. Sampson's isolated
+two-view depth probe found one noisy pixel per frame (rounded 0.000%), with no
+offender. Screenshots: `shots/liteyny-fix/review_*` and
+`shots/sampson-fix/review_*`; depth evidence: `shots/sampson-fix/depth_*`.
+
+All 21 live areas were rebaked: the manifest check passes for 2,715 products
+(1,095.5 MiB gzip). Normal medium-quality loading, without a forced or disabled
+bake, passed both integrated screenshot reviews: Palace ready in 32.01 s and
+Sampson in 21.85 s, no module/asset errors. The exact reported bridge camera
+and a higher view show clear overheads (594 / 606 calls); the cathedral's street
+and roof views show continuous drum-to-roof joins (877 / 847 calls). Evidence:
+`shots/liteyny-fix/final.load.json`, `shots/liteyny-fix/final_*`,
+`shots/sampson-fix/final.load.json`, `shots/sampson-fix/final_*`.

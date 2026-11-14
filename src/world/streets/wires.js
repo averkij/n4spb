@@ -33,6 +33,7 @@ import * as L from '../layout.js';
 import * as PALACE_FR from '../landmarksPalaceBridge/frame.js';          // (pure frames of the two bascule bridges: toUV and the pier faces, for the span cut below)
 import * as TROITSKY_FR from '../landmarksTroitsky/frame.js';
 import { longDeckHeight } from './decks.js';
+import { northDeckHeight, northWireLift } from '../northBridges/sites.js';
 
 const H0 = 5.8;                                  // contact wire height above the road
 const WIRE = '#1d1f22', SPANC = '#2a2d31';
@@ -87,7 +88,8 @@ export function buildWires(ctx, net, lamps, opts = {}) {
   // Streets build before bridges, so query their shared pure deck profile.
   // Lift every connected strand and its published traffic service equally;
   // moving only the visible mast would leave its anchor and collider below it.
-  const raised = p => [p[0],p[1]+(longDeckHeight(p[0],p[2])??0),p[2]];
+  const liftAt = (x,z) => Math.max(longDeckHeight(x,z)??0,northWireLift(x,z));
+  const raised = p => [p[0],p[1]+liftAt(p[0],p[2]),p[2]];
   const spanCut = service.cut = {}; for (const z of zones) spanCut[z.id] = [];
   const zoneAt = (x, z) => { for (const q of zones) { const p = q.toUV(x, z); if (p.u > q.u0 + 0.01 && p.u < q.u1 - 0.01 && Math.abs(p.v) < q.hv) return q; } return null; };
   const add = (pts, width, color, kind, grp) => {
@@ -475,12 +477,14 @@ export function buildWires(ctx, net, lamps, opts = {}) {
     if (zones.length && zoneAt(P[0], P[1])) return;                          // nothing stands on a moving bascule span (no mast, no collider)
     if (pole) {
       // plain black mast with a short bracket
-      const base=longDeckHeight(P[0],P[1])??0;
+      const base=longDeckHeight(P[0],P[1])??northDeckHeight(P[0],P[1])??0;
+      const height=P[2]+liftAt(P[0],P[1])-base;
       const item = ctx.physics.addCylinder(P[0], P[1], 0.22, base, base+4);
-      if (knockMasts && (!deck || base)) mastSpots.push({ x: P[0], y: base+WALK_Y, z: P[1], rotY: 0, s: P[2] / MAST_H, item });
-      else if (poles) { poles.cyl(0.11, 0.17, P[2], '#25282b', [P[0], base+0.12 + P[2] / 2, P[1]], null, 6, null, true); poles.box(0.3, 0.3, 0.3, '#3a3d42', [P[0], base+0.12 + P[2], P[1]]); }
-      stats.masts++; service.masts.push({ x: P[0], z: P[1], y:base+0.12, h: P[2] });
+      if (knockMasts && (!deck || base)) mastSpots.push({ x: P[0], y: base+WALK_Y, z: P[1], rotY: 0, s: height / MAST_H, item });
+      else if (poles) { poles.cyl(0.11, 0.17, height, '#25282b', [P[0], base+0.12 + height / 2, P[1]], null, 6, null, true); poles.box(0.3, 0.3, 0.3, '#3a3d42', [P[0], base+0.12 + height, P[1]]); }
+      stats.masts++; service.masts.push({ x: P[0], z: P[1], y:base+0.12, h: height });
     } else {
+      P=[P[0],P[1],P[2]+liftAt(P[0],P[1])];
       // rosette: a round plate on the facade (white-grey) + a short eye with an insulator
       if (poles) {
         poles.cyl(0.13, 0.13, 0.05, '#bfc2c4', [P[0] + nx * 0.02, P[2], P[1] + nz * 0.02], [Math.PI / 2, Math.atan2(nx, nz), 0], 6);
@@ -581,7 +585,7 @@ export function buildWires(ctx, net, lamps, opts = {}) {
       const x = E[0] + ex * X.t, z = E[1] + ez * X.t;
       if (done.some((d) => Math.hypot(d[0] - x, d[1] - z) < 1.6)) continue;
       done.push([x, z]);
-      const ang = Math.atan2(ex, ez),base=longDeckHeight(x,z)??0;
+      const ang = Math.atan2(ex, ez),base=liftAt(x,z);
       poles.box(0.12, 0.07, 1.1, '#2d3034', [x, base+H0 + 0.04, z], [0, ang, 0]); poles.box(0.12, 0.07, 1.1, '#2d3034', [x, base+H0 + 0.04, z], [0, Math.atan2(fx, fz), 0]);
       poles.cyl(0.05, 0.05, 0.12, '#e8e8e4', [x, base+H0 + 0.13, z], null, 5, null, true);
       stats.frogs++;

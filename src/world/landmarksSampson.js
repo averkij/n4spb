@@ -90,12 +90,14 @@ function church(shell, detail, M, ctx) {
   detail.box(M.door, -26.35, -26.27, 1.0, 6.2, -1.5, 1.5);
   // OSM dome parts place the five crowns within a roughly 12 m square.
   const cx = 4.7, cz = 0;
-  shell.cyl(M.blueWall, [cx, 15.6, cz], [cx, 23.6, cz], 2.8, 2.8, 8);
+  shell.cyl(M.blueWall, [cx, 12.1, cz], [cx, 23.6, cz], 2.8, 2.8, 8);
   shell.cyl(M.white, [cx, 15.55, cz], [cx, 16.05, cz], 2.98, 2.98, 8);
   shell.cyl(M.white, [cx, 23.3, cz], [cx, 24.0, cz], 3.02, 3.02, 8);
   onion(shell, M, cx, cz, 24.0, 1.75, 31.0);
   for (const [du, dv] of [[-4.4, -4.1], [4.4, -4.1], [-4.4, 4.1], [4.4, 4.1]]) {
-    shell.cyl(M.blueWall, [cx + du, 15.6, cz + dv], [cx + du, 20.8, cz + dv], 1.65, 1.65, 8);
+    // Start inside the nave: the roof slopes down away from the ridge, so
+    // starting every drum at ridge height left the four outer ones airborne.
+    shell.cyl(M.blueWall, [cx + du, 12.1, cz + dv], [cx + du, 20.8, cz + dv], 1.65, 1.65, 8);
     shell.cyl(M.white, [cx + du, 20.5, cz + dv], [cx + du, 21.1, cz + dv], 1.82, 1.82, 8);
     onion(shell, M, cx + du, cz + dv, 21.1, 1.15, 27.8);
   }
