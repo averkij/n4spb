@@ -12,7 +12,7 @@ rivers reveal the background, without a card or opaque water layer. Framing is
 fixed; there are no pan, zoom or reset controls. Click a district, focus it and
 press Enter/Space, or use the previous/next arrows below the map.
 
-The visible menu contains only the Saint City title, Start button, selected district,
+The visible menu contains only the «Питер» title, Start button, selected district,
 sound icon and version. Error/loading messages appear only when needed. Oswald
 and Manrope are served locally, with their OFL licenses in `assets/menu/fonts/`.
 The condensed ivory title uses pink/lilac accents. Start is a simple black button
@@ -28,14 +28,16 @@ Portrait screens use one centered column: the single-line title, the playable
 city, the selected district and the Start button. The map has a fixed portrait
 frame around the live districts, with subdued surrounding areas. The controls
 fit the viewport with safe-area spacing; landscape keeps the split composition.
-The Saint City branding and responsive menu layout belong to the root start
+The «Питер» branding and responsive menu layout belong to the root start
 menu. From 14.1.4, scene preloaders share the menu's clean district labels and
 show only that label above their image, without a kicker or city-name prefix.
 
 `menu-variants.html` is a local review page with six original painted backgrounds,
 desktop and phone previews of the actual menu, an image-only view and a scanline
-toggle. It modifies only its embedded preview: the main game retains the original
-background until the owner selects a replacement. Artwork files, prompts and
+toggle. It modifies only its embedded preview. From 14.1.5, the main menu randomly
+chooses one of the three owner-selected images (well-sky, tram, rooftops) on each
+opening. Only that image is requested and it stays fixed during menu interaction.
+Artwork files, prompts and
 cinema references are documented in [MENU-ART-VARIANTS.md](MENU-ART-VARIANTS.md).
 
 The Pages transform loads the same menu entry. On mobile it supplies the lighter
@@ -145,6 +147,17 @@ arrows, sound preference, static framing and Start routing are browser-checked.
 
 ## Checks
 
+### Selected backgrounds and title (14.1.5)
+
+Only the start-menu heading and its browser title become «Питер». Area loading
+cards retain their clean district headings. The selected image is assigned before
+the menu enters the document, so the old artwork does not flash or download.
+Browser checks cover all three random choices, a single background request,
+stability during district selection and resizing, and the existing eight viewport
+sizes. All three backgrounds were visually reviewed at 1440 × 900 and 390 × 844;
+screenshots are `n4spb-menu-{well-sky,tram,rooftops}-{desktop,mobile}.png` in the
+OS temp folder. The horizontal scanlines and black Start button remain.
+
 ### Portrait and artwork review (14.1.2)
 
 Browser plugin runtime was unavailable in this session. Verification used the
@@ -181,7 +194,10 @@ Scene preloader content and artwork were not changed. These menu-only changes
 were not used to justify a new full-scene performance run.
 
 - `node tools/menu-test.mjs --assets`: codec, catalogue, image existence, lazy
-  startup, selection, invalid links, desktop/mobile layout and browser errors.
+  startup, selection, all three menu backgrounds, invalid links, desktop/mobile
+  layout and browser errors.
+- `node tools/preloader-content-test.mjs`: clean titles, 420 facts, stable random
+  content per load, metadata failure fallbacks and published mobile preloaders.
 - `node tools/shared-view-test.mjs`: real integrated direct loading, exact held
   camera/light restoration, copying, clipboard rejection and resuming exploration.
 - Existing area HTML, closure, runtime-only, handoff and gate checks still apply.

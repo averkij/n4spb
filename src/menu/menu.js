@@ -4,11 +4,14 @@ const arrow = direction => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d=
 const speaker = `<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 11h5l6-5v16l-6-5H4z"/><path class="sound-waves" d="M19 9a8 8 0 0 1 0 10m4-14a14 14 0 0 1 0 18"/><path class="sound-off" d="m20 11 6 6m0-6-6 6"/></svg>`;
 
 export async function showMenu(invalid = false) {
-  document.title = 'Saint City';
+  document.title = 'Питер';
   const root = document.createElement('main');
   root.id = 'start-menu';
+  const backgrounds = ['well-sky', 'tram', 'rooftops'];
+  const background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+  root.style.backgroundImage = `url("./assets/menu/backgrounds/${background}.jpg")`;
   root.innerHTML = `<header class="menu-utilities"><small>v${VERSION}</small><button id="menu-sound" aria-pressed="false">${speaker}</button></header>
-    <section class="menu-copy"><h1><span>Saint</span> <span>City</span></h1><button id="menu-start" disabled><span>Начать</span></button><p id="menu-status" role="status">${invalid ? 'Ссылка на вид недействительна. Выберите район.' : 'Загрузка карты…'}</p></section>
+    <section class="menu-copy"><h1>Питер</h1><button id="menu-start" disabled><span>Начать</span></button><p id="menu-status" role="status">${invalid ? 'Ссылка на вид недействительна. Выберите район.' : 'Загрузка карты…'}</p></section>
     <section class="menu-map" aria-label="Выбор района"><svg id="city-map" viewBox="-28000 -11000 44000 24000" aria-label="Районы Санкт-Петербурга" role="group"></svg><nav class="area-navigation" aria-label="Выбрать район"><button id="area-prev" aria-label="Предыдущий район">${arrow('left')}</button><h2 id="selected-name" aria-live="polite">—</h2><button id="area-next" aria-label="Следующий район">${arrow('right')}</button></nav></section>`;
   document.body.append(root);
   const $ = id => document.getElementById(id);

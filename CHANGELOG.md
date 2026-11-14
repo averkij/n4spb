@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **14.1.5** (2026-11-14, patch): Rename the start menu to Piter and randomly choose one of three selected backgrounds
 - **14.1.4** (2026-11-14, patch): Give every area twenty Russian facts, keep one random fact and image per load, share clean menu names and remove preloader kickers
 - **14.1.3** (2026-11-14, patch): Use a black Start button with white lettering on the city menu
 - **14.1.2** (2026-11-14, patch): Balance the portrait start menu, rename Saint City and its district labels, anchor navigation arrows, simplify Start and add background scanlines with six artwork previews

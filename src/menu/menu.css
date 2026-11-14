@@ -5,14 +5,14 @@
 html:not([data-area=strip]):not([data-area=north]) #intro .title:not([data-ready]),html:not([data-area=strip]):not([data-area=north]) #fact:not([data-ready]){visibility:hidden}
 html.menu-mode{overflow:auto;height:auto}html.menu-mode body{height:auto;min-height:100svh;overflow:auto;background:#24132e}
 html.menu-mode #intro,html.menu-mode .hud,html.menu-mode #scene,html.menu-mode #stats{display:none!important}
-#start-menu{position:relative;isolation:isolate;box-sizing:border-box;min-height:100svh;overflow:hidden;color:var(--menu-ivory);font-family:MenuUI,sans-serif;background:url('../../assets/menu/petersburg-dusk.jpg') center/cover}
+#start-menu{position:relative;isolation:isolate;box-sizing:border-box;min-height:100svh;overflow:hidden;color:var(--menu-ivory);font-family:MenuUI,sans-serif;background:#24132e center/cover}
 #start-menu:before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#160d2670,transparent 58%),linear-gradient(0deg,#190c2560,transparent 30%);pointer-events:none}
 #start-menu:after{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:var(--menu-scanlines-opacity,1);background:repeating-linear-gradient(0deg,#11091e17 0 1px,transparent 1px 4px)}
 #start-menu *{box-sizing:border-box}#start-menu button{font:inherit;cursor:pointer}#start-menu button:disabled{cursor:wait;opacity:.6}#start-menu button:focus-visible{outline:2px solid var(--menu-ivory);outline-offset:7px}
 .menu-utilities{position:absolute;top:4vh;right:4vw;z-index:3;display:flex;align-items:center;gap:24px}.menu-utilities small{font-size:9px;letter-spacing:.18em;opacity:.5}
 #menu-sound{display:grid;place-items:center;width:44px;height:44px;border:0;background:none;color:var(--menu-ivory)}#menu-sound svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}#menu-sound:hover{color:var(--menu-pink)}.sound-off{display:none}#menu-sound[aria-pressed=true] .sound-off{display:block}#menu-sound[aria-pressed=true] .sound-waves{display:none}
 .menu-copy{position:absolute;z-index:2;left:5.6vw;top:26%;width:33%}
-#start-menu h1{font-family:MenuDisplay,sans-serif;font-size:clamp(72px,10.5vw,174px);font-weight:650;line-height:.98;letter-spacing:-.035em;text-transform:uppercase;transform:skewX(-8deg) scaleX(.94);transform-origin:left center;margin:0 0 7vh;text-shadow:2px 3px 0 #dc629857,0 8px 36px #170b2250}#start-menu h1 span{display:block}
+#start-menu h1{font-family:MenuDisplay,sans-serif;font-size:clamp(72px,10.5vw,174px);font-weight:650;line-height:.98;letter-spacing:-.035em;text-transform:uppercase;transform:skewX(-8deg) scaleX(.94);transform-origin:left center;margin:0 0 7vh;text-shadow:2px 3px 0 #dc629857,0 8px 36px #170b2250}
 #menu-start{position:relative;display:flex;align-items:center;justify-content:center;width:76%;max-width:340px;height:clamp(56px,7vh,72px);padding:0 24px;border:0;border-radius:3px;background:#08070a;color:#fff;transition:background .18s}
 #menu-start span{font-family:MenuDisplay,sans-serif;font-size:clamp(22px,2vw,30px);font-weight:500;letter-spacing:.12em;padding-left:.12em;text-transform:uppercase}
 #menu-start:hover{background:#201824}#menu-start:active{background:#302038}#menu-status{font-size:12px;line-height:1.6;color:#f4c4e6;max-width:88%;margin:18px 0 0}#menu-status:empty{display:none}
@@ -26,7 +26,7 @@ html.menu-mode #intro,html.menu-mode .hud,html.menu-mode #scene,html.menu-mode #
   #start-menu{height:100svh;min-height:540px;display:grid;grid-template-rows:44px auto minmax(0,1fr) auto auto;gap:clamp(12px,2svh,28px);padding:max(12px,env(safe-area-inset-top)) clamp(20px,5vw,64px) max(28px,env(safe-area-inset-bottom));background-position:45% center}
   .menu-utilities{position:static;grid-row:1;justify-content:space-between;align-self:center;width:100%;gap:0}.menu-utilities small{font-size:clamp(9px,1.3vw,14px)}
   .menu-copy,.menu-map{display:contents}
-  #start-menu h1{grid-row:2;min-width:0;margin:0;text-align:center;white-space:nowrap;font-size:clamp(54px,min(16vw,10svh),160px);line-height:1.05;transform-origin:center;transform:skewX(-8deg) scaleX(.96)}#start-menu h1 span{display:inline}
+  #start-menu h1{grid-row:2;min-width:0;margin:0;text-align:center;white-space:nowrap;font-size:clamp(54px,min(16vw,10svh),160px);line-height:1.05;transform-origin:center;transform:skewX(-8deg) scaleX(.96)}
   #city-map{grid-row:3;width:100%;height:100%;min-height:0;align-self:stretch;mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent),linear-gradient(0deg,transparent,#000 5%,#000 95%,transparent)}
   #city-map .unavailable{fill-opacity:.28;stroke-opacity:.45}
   .area-navigation{grid-row:4;justify-self:center;align-self:center;gap:8px;width:100%;max-width:640px;margin:0;height:64px;min-height:64px}

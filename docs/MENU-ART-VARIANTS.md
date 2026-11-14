@@ -1,7 +1,9 @@
 # Start-menu background studies
 
-Six original illustrations generated using the built-in Image Gen tool. These
-are review candidates, not a chosen replacement. Open
+Six original illustrations generated using the built-in Image Gen tool. From
+14.1.5, the owner-selected **well-sky**, **tram** and **rooftops** versions form
+the random background pool for the «Питер» start menu: one image per opening,
+unchanged while choosing an area. All six remain available for review. Open
 [menu-variants.html](../menu-variants.html) through the local development server.
 All JPEGs live in `assets/menu/backgrounds/`; PNG originals remain in
 `C:/Users/user/.codex/generated_images/01a1d94f-1fa4-7020-8499-5b0fbc485352/`.

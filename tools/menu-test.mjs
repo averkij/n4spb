@@ -23,8 +23,25 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await puppeteer.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:['--no-first-run'],defaultViewport:{width:1440,height:900}});
 try{
  const page=await browser.newPage(),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
- await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.waitForSelector('#menu-start:not([disabled])');
- assert.equal(await page.title(),'Saint City');assert.equal(await page.$eval('#start-menu h1',e=>e.textContent),'Saint City');
+ for(const [i,background] of ['well-sky','tram','rooftops'].entries()){
+   const fixedRandom=await page.evaluateOnNewDocument(value=>{Math.random=()=>value;},(i+.5)/3);
+   const firstRequest=requests.length;
+   await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.waitForSelector('#menu-start:not([disabled])');
+   await page.removeScriptToEvaluateOnNewDocument(fixedRandom.identifier);
+   assert.equal(await page.title(),'Питер');assert.equal(await page.$eval('#start-menu h1',e=>e.textContent),'Питер');
+   const artwork=await page.$eval('#start-menu',e=>getComputedStyle(e).backgroundImage);
+   assert.ok(artwork.endsWith(`/assets/menu/backgrounds/${background}.jpg")`),'selected artwork is used');
+   await page.evaluate(async()=>{await document.fonts.ready;const image=new Image();image.src=getComputedStyle(document.querySelector('#start-menu')).backgroundImage.slice(5,-2);await image.decode();});
+   assert.deepEqual([...new Set(requests.slice(firstRequest).filter(u=>/assets\/menu\/.*\.jpg$/.test(u)).map(u=>new URL(u).pathname))],[`/assets/menu/backgrounds/${background}.jpg`],'only the selected background loads');
+   await page.click('#area-next');await page.click('#area-prev');
+   assert.equal(await page.$eval('#start-menu',e=>getComputedStyle(e).backgroundImage),artwork,'area selection preserves the background');
+   for(const [label,width,height] of [['desktop',1440,900],['mobile',390,844]]){
+     await page.setViewport({width,height});
+     await page.screenshot({path:path.join(os.tmpdir(),`n4spb-menu-${background}-${label}.png`),fullPage:true});
+     assert.equal(await page.$eval('#start-menu',e=>getComputedStyle(e).backgroundImage),artwork,'resizing preserves the background');
+   }
+   await page.setViewport({width:1440,height:900});
+ }
  assert.equal(await page.$eval('#selected-name',e=>e.textContent),'Центр');assert.ok(!requests.some(u=>/src\/main.js|assets\/baked|three.*\.js/.test(u)),'menu must not load scene');
  await page.evaluate(()=>document.fonts.ready);
  assert.equal(await page.$eval('#start-menu h1',e=>getComputedStyle(e).fontFamily),'MenuDisplay, sans-serif');
