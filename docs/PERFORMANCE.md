@@ -4226,3 +4226,22 @@ node tools/area.mjs finlyandsky tools/north-wires-test.mjs
 node tools/area.mjs smolny tools/north-wires-test.mjs
 node tools/drive-test.mjs --area palace --q medium --nofuzz --start "-121,-1940,-6.8" --out shots/liteyny-fix/bridge-controls
 ```
+
+## Pit-Stop Narvskaya, 14.2.0
+
+The final local bakes loaded in the ordinary game path on Chrome 157,
+Apple M1 Pro, 1280 × 720, Performance. The kart run used the back straight
+from X −4745.35, Z 3639.61. The centre smoke test used the Palace build and the
+normal first driving view. It encountered traffic, so its distance and
+frame timings are not directly comparable to the kart run.
+
+| Run | Load | Mean / p50 / p95 frame | Frames >40 ms | Mean draw calls | Distance |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Narvsky, club SR5 | 8.0 s | 16.7 / 16.7 / 16.7 ms | 0 | 628 | 34 m in 4 s |
+| Palace, street car | 15.1 s | 17.0 / 16.7 / 16.8 ms | 1 | 1100 | 42 m in 6 s |
+
+The measurements are post-change smoke tests. A matching pre-change
+capture was not taken. Both Narvsky and Kolomna also loaded their final
+bakes without module errors. Twenty kart departures per district produced
+no impacts. The route clearance, speed targets, road markings and water
+levels passed in both areas.

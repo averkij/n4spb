@@ -245,6 +245,7 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
     const dv = drive(), car = dv && dv.active ? dv.car : null, tgt = ctx.interact ? ctx.interact.target : null;
     const vis = {
       interact: (mode === 'walk' || mode === 'ride') && !!tgt,
+      nitro: mode === 'drive' && !dv?.vehicle?.def?.hud?.noBoost,
       hop: mode === 'drive' && hasHop(dv && dv.vehicle), flip: mode === 'drive' && hasHop(dv && dv.vehicle),
       arrowL: mode === 'drive' && settings.steerMode === 'arrows', arrowR: mode === 'drive' && settings.steerMode === 'arrows',
       recentre: mode === 'drive' && settings.steerMode === 'tilt',

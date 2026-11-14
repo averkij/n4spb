@@ -81,7 +81,15 @@ export async function build(ctx) {
       boats.push({ id: def.id, kind: 'boat', def, model, car, parked: { x: p.x, z: p.z, yaw: p.yaw, y: car.y }, damage: noDamage(), spec: def.spec, box: null });
     }
   } catch (e) { console.warn(`[drive] the boats are not available (${e.message}); the cars go on without them`); boats.length = 0; }
-  const vehicles = fleet.concat(boats), wake = boats.length ? createWake(ctx) : null;
+  const karts = (ctx.services.kartingNarvskaya?.loadVehicles() ?? []).map(def => {
+    const model = def.makeModel();
+    ctx.add(model.root);
+    const car = createHandling(ctx, def.tuning);
+    const parked = { ...def.parked, y: car.groundAt(def.parked.x, def.parked.z) };
+    car.reset(parked.x, parked.z, parked.yaw);
+    return { id: def.id, kind: def.kind, def, model, car, parked, damage: noDamage(), spec: def.spec, box: null };
+  });
+  const vehicles = fleet.concat(boats, karts), wake = boats.length ? createWake(ctx) : null;
   let V = fleet[0], car = V.car, model = V.model, damage = V.damage, parked = V.parked, SPEC = V.spec, EYE = V.spec.eye;
   const sound = createCarSound(ctx.audio);
   const fx = createFx(ctx);
@@ -278,6 +286,10 @@ export async function build(ctx) {
       if (state.active && v === V) { v.model.root.visible = true; continue; }
       parkedPhysics.sync(v);
       const p = v.parked, dx = p.x - camera.position.x, dz = p.z - camera.position.z, near = dx * dx + dz * dz < 70 * 70;
+      if (v.def.far && dx * dx + dz * dz > v.def.far ** 2) {
+        v.model.root.visible = false;
+        continue;
+      }
       let seen = near;
       if (!seen) {
         if (!frustum) { _vm.compose(camera.position, camera.quaternion, _one).invert(); _pm.multiplyMatrices(camera.projectionMatrix, _vm); cullF.setFromProjectionMatrix(_pm); frustum = true; }
@@ -522,7 +534,7 @@ export async function build(ctx) {
     // also a car model name. Older hand-offs omit kind and mean a car.
     const incoming = spec.kind==='traffic' ? vehicles.find(v=>v.kind==='traffic'&&v.id===spec.id)||promoteTraffic({...spec,x,z,rotY:yawDeg*DEG+Math.PI},false) : spec.kind === 'boat'
       ? boats.find((v) => v.def.carried && v.def.carriedFrom === spec.id) || boats.find((v) => spec.dock && v.def.dock === spec.dock) || boats.find((v) => v.id === spec.id && (!spec.dock || !v.def.dock))
-      : fleet.find((v) => v.id === spec.id);
+      : fleet.concat(karts).find((v) => v.id === spec.id);
     if (!incoming || !enter(incoming)) return false;
     if (!placeVehicle(x, z, yawDeg)) {
       exit(true);
@@ -555,7 +567,7 @@ export async function build(ctx) {
     /** the garage: one vehicle per car { id, def, model, car (handling state), parked, damage, spec, box }; `vehicle` is the current / last driven one; enter('truck') gets into a car by id */
     fleet, get vehicle() { return V; }, vehicleById: (id) => vehicles.find((f) => f.id === id),
     /** the motor boats ({ id: 'boat', kind: 'boat', def, model, car, parked, damage (empty), spec, box }), docs/AREAS.md "The motor boat"; `vehicles` = the cars and the boats */
-    boats, vehicles, wake,
+    boats, karts, vehicles, wake,
     setView(i) { view.mode = i; model.setView(i === 2); damage.hideDetached(); if (i !== 2) cockpitNear(false); view.snap = true; if (i !== 2) view.camYaw = car.yaw; },
     /** test hook: step the physics for `seconds` with a fixed input ({ thr, brk, steer, hand, nitro, jump (X hop), flip (C barrel hop) }) in 1/60 s frames, then refresh the model / camera / player */
     sim(seconds, inp = {}, frames = null) {

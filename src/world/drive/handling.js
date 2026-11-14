@@ -304,12 +304,12 @@ export function createHandling(ctx, tuning = null) {
     const thr = clamp(inp.thr, 0, 1), brk = clamp(inp.brk, 0, 1);
     // an empty tank locks the nitro until the key is released: otherwise the refill switched it on and off every frame while Shift stayed down (the flames blinked)
     if (car.boost <= 0.005) car.nitroLock = true; else if (!inp.nitro) car.nitroLock = false;
-    const boosting = !!inp.nitro && !car.nitroLock && thr > 0.05 && vF > -1 && !aloft;
+    const boosting = !T.noBoost && !!inp.nitro && !car.nitroLock && thr > 0.05 && vF > -1 && !aloft;
     // the thrust builds over nitroRamp seconds (the valve lag of the cold-gas nozzles) instead of switching on; no nitroRamp = the full push at once
     if (T.nitroRamp) car.surge = boosting ? car.surge + (1 - car.surge) * Math.min(1, h / T.nitroRamp) : 0;
     const vmax = T.vmax * (boosting ? T.nitroVmax : 1);
     let a = 0;
-    if (thr > 0 && vF > -0.3) { a = T.acc * thr * Math.max(0, 1 - Math.pow(Math.max(vF, 0) / vmax, 1.7)) * (boosting ? (T.nitroRamp ? 1 + (T.nitroAcc - 1) * car.surge : T.nitroAcc) : 1); if (vF > vmax) a = -8; }
+    if (thr > 0 && vF > -0.3) { a = T.acc * thr * Math.max(0, 1 - Math.pow(Math.max(vF, 0) / vmax, T.engineFalloff ?? 1.7)) * (boosting ? (T.nitroRamp ? 1 + (T.nitroAcc - 1) * car.surge : T.nitroAcc) : 1); if (vF > vmax) a = -8; }
     else if (thr > 0) a = T.brake * 0.8 * thr;                                  // throttle while rolling backwards: brake first
     if (brk > 0) { if (vF > 0.8) a -= T.brake * brk; else a -= T.revAcc * brk * clamp(1 + vF / T.vrev, 0, 1); }
     if (!thr && !brk) a -= Math.sign(vF) * (T.engBrake + T.drag * vF * vF);   // engine braking + air drag

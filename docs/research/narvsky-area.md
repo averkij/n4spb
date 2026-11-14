@@ -159,3 +159,26 @@ or per-frame work. The actual physics column from6.1 to10.9m remains clear.
 streets/city/landmarksNarvsky/coastalBridges modules on these two source records and verifies drawn
 buffers, wall colliders, the clear covered-ramp column, and the measured bridge
 envelope. It is a focused CPU geometry test, not a loading/FPS benchmark.
+
+## Pit-Stop Narvskaya and Kirovets Stadium
+
+Both Narvsky and Kolomna build the same site in their overlap. The 808 m
+in-game centreline follows OSM way `w385655517` and was checked against the
+submitted overhead image and TrackTakTak telemetry. The club gives a nominal
+track length of 815 m. The pedestrian route begins at Perekopskaya Street and
+passes the gatehouse and stadium arch before reaching the two kart rows.
+The grass verges, kerb heights and track elevations are approximations from
+the available references.
+
+The TrackTakTak clockwise start/finish gate is the finite line from
+(59.900469928, 30.266926778) to (59.900572405, 30.267520222). The painted line
+uses its intersection with the mapped track. The speed reference is separate,
+at approximately X −4731.8, Z 3518, before the left turn marked by the owner.
+A repeatable full-throttle run through the reference sector at a 43.2 km/h
+entry speed measured 65.4–66.4 km/h across the ten rental karts and
+71.5–72.6 km/h across the ten club karts at that point. These are simulation
+measurements and depend on the line and throttle.
+
+References [track and photos](https://kartingpitstop.ru/trassy/narvskaya/),
+[driver footage](https://www.youtube.com/watch?v=Bs-fz2zajrI), and
+[Sodi SR5 technical drawings](https://www.sodikart.com/en-gb/karts/rental/sr5-30.html).

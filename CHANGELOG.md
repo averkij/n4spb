@@ -7,6 +7,7 @@ Newest first. One line per version; rules in CLAUDE.md (Versioning).
 - **15.1.1** (2026-11-15, patch): Fix bus bridge crossings, mosque overlap, fountain benches, door poses and damaged-roof character clearance
 - **15.1.0** (2026-11-15, minor): Add drivable buses and fix character ground contact, third-person aim dot, solid door interiors and closing sounds
 - **15.0.0** (2026-11-15, major): Playable characters with saved selection, animated vehicle takeovers, persistent traffic and firmer vehicle collisions; 50% stronger cars without repairs
+- **14.2.0** (2026-11-14, minor): Пит-Стоп Нарвская: картодром, стадион «Кировец» и двадцать управляемых Sodi SR5
 - **14.1.5** (2026-11-14, patch): Rename the start menu to Piter and randomly choose one of three selected backgrounds
 - **14.1.4** (2026-11-14, patch): Give every area twenty Russian facts, keep one random fact and image per load, share clean menu names and remove preloader kickers
 - **14.1.3** (2026-11-14, patch): Use a black Start button with white lettering on the city menu
