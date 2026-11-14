@@ -8,3 +8,9 @@ for(const mutant of [false,true]){
   if(mutant)assert(r.stdout.includes('panorama claim does not match its registered source group'));
 }
 console.log('PASS panorama extent audit: registered source claims pass; displaced source claims fail');
+for(const mutant of [false,true]){
+  const r=spawnSync(process.execPath,['tools/area.mjs','finlyandsky','tools/landmarks-groups-check.mjs',...(mutant?['--mutant-ship']:[])],{encoding:'utf8'});
+  assert.equal(r.status,mutant?1:0,r.stdout+r.stderr);
+  if(mutant)assert(r.stdout.includes('scenic ship does not match the maintained Aurora frame'));
+}
+console.log('PASS scenic ship audit: the maintained Aurora frame passes; a displaced empty claim fails');

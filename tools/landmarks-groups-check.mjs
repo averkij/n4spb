@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveTest } from './lib/area-test-data.mjs';
 import { riverfrontSourceOf } from './lib/riverfront-groups.mjs';
+import { SHIP } from '../src/world/landmarksAurora/frame.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CITY = await import(pathToFileURL(path.join(root, 'src/world/data/city.js')).href);
 const L = await import(pathToFileURL(path.join(root, 'src/world/layout.js')).href);
@@ -31,18 +32,26 @@ for (const mod of KEPT) {
   const groups = L.GROUPS[mod];
   if (!groups) { bad(`${mod}: no GROUPS entry in layout.js`); continue; }
   for (const group of groups) {
-    const g=process.argv.includes('--mutant-panorama')&&mod==='landmarksRiverfront'?{...group,at:[group.at[0]+1,group.at[1]]}:group;
+    const g=(process.argv.includes('--mutant-panorama')&&mod==='landmarksRiverfront'||process.argv.includes('--mutant-ship')&&mod==='finlyandskyAurora')?{...group,at:[group.at[0]+1,group.at[1]]}:group;
     // The opposite-bank panorama deliberately retains complete architectural
     // families beyond the playable data cut. Verify their provenance and all
     // claimed IDs, rather than applying the local footprint extent to them.
     // A forged scenery tag cannot exempt an ordinary or modified group.
-    const scenery=mod==='landmarksRiverfront'&&!!riverfrontSourceOf(g);
-    if(mod==='landmarksRiverfront'&&!scenery)bad(`${mod}/${g.key}: panorama claim does not match its registered source group`);
+    const panorama=mod==='landmarksRiverfront'&&!!riverfrontSourceOf(g);
+    // Finlyandsky draws the maintained Aurora model across the water overlap.
+    // Its local extract has no ship records (see finlyandsky-aurora-overlap.md).
+    // Recognize only this exact empty claim at the real ship frame; a scenery
+    // label, another group, invented IDs or a moved anchor cannot bypass checks.
+    const shipOwner=A.ID==='finlyandsky'&&mod==='finlyandskyAurora';
+    const shipScenery=shipOwner&&g.key==='aurora-ship'&&!g.ids.length&&!g.osm.length&&g.at?.[0]===SHIP.x&&g.at?.[1]===SHIP.z;
+    const scenery=panorama||shipScenery;
+    if(mod==='landmarksRiverfront'&&!panorama)bad(`${mod}/${g.key}: panorama claim does not match its registered source group`);
+    if(shipOwner&&!shipScenery)bad(`${mod}/${g.key}: scenic ship does not match the maintained Aurora frame`);
     const missIds = g.ids.filter((id) => !byId.has(id));
     const missOsm = g.osm.filter((id) => !known.has(id));
     if (missIds.length) bad(`${mod}/${g.key}: building ids missing from the data: ${missIds.join(', ')}`);
     if (missOsm.length) bad(`${mod}/${g.key}: osm ids missing from the data: ${missOsm.join(', ')}`);
-    if (!g.ids.length && !g.osm.length) bad(`${mod}/${g.key}: claims nothing`);
+    if (!shipScenery && !g.ids.length && !g.osm.length) bad(`${mod}/${g.key}: claims nothing`);
     if (!g.at || !scenery && !inRects(CITY.EXTENT_RECTS, g.at[0], g.at[1])) bad(`${mod}/${g.key}: 'at' ${JSON.stringify(g.at)} is outside the data extent`);
     // geometry of the members (ids + parts): vertices inside the play rectangles / the extent
     let n = 0, inPlay = 0, inExt = 0;
