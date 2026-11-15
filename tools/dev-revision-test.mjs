@@ -99,9 +99,9 @@ console.log('a real http server on the real tree:');
 resetDevRevisionCache();
 const expected = revisionsOf(root);
 const real = await serverOf(root);
-const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'moskovskaya', 'narvsky', 'kronverk', 'aptekarsky', 'islands'];
+const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'moskovskaya', 'komendantsky', 'sampson', 'avtovo', 'narvsky', 'finlyandsky', 'kronverk', 'aptekarsky', 'islands'];
 const PAGE = Object.fromEntries(liveAreas(root).map(row => [row.id, row.page === 'index.html' ? '/' : `/${row.page}`]));
-await check('all seventeen live areas: one server, seventeen Referers, seventeen answers equal to revisionOf(area)', async () => {
+await check('all live areas: one server, distinct Referers and answers equal to revisionOf(area)', async () => {
   assert.deepEqual(Object.keys(PAGE), LIVE, 'the real-tree revision test covers every live registry page');
   const seen = new Set();
   for (const id of LIVE) {
@@ -110,7 +110,7 @@ await check('all seventeen live areas: one server, seventeen Referers, seventeen
     const j = JSON.parse(r.body); assert.equal(j.revision, expected[id].revision, id); assert.equal(j.area, id);
     assert(/^[0-9a-f]{20}$/.test(j.revision)); seen.add(j.revision);
   }
-  assert.equal(seen.size, 17, 'seventeen different revisions: an answer that ignores the page would give one');
+  assert.equal(seen.size, LIVE.length, 'one distinct revision per live area: an answer that ignores the page would give one');
 });
 await check('the parked areas answer too (their pages are registry pages): strip, north', async () => {
   for (const id of ['strip', 'north']) { const r = await get(real.port, ENDPOINT, { Referer: `http://h/${id}.html` }); assert.equal(r.status, 200); assert.equal(JSON.parse(r.body).revision, expected[id].revision, id); }

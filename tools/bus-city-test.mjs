@@ -7,11 +7,12 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
 import puppeteer from 'puppeteer-core';
+import {handleBakedRevision,ENDPOINT} from './lib/dev-revision.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),args={};
 for(let i=2;i<process.argv.length;i++){const k=process.argv[i];if(k==='--normal')args.normal=true;else if(k==='--keep-open')args.keepOpen=true;else if(['--base','--out'].includes(k)){const value=process.argv[++i];if(!value||value.startsWith('--'))throw Error(`${k} needs a value`);args[k.slice(2)]=value;}else throw Error(`Unknown option ${k}`);}
 const normal=!!(args.normal||args.base),out=path.resolve(root,args.out||'shots/bus-city');fs.mkdirSync(out,{recursive:true});
 const types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.png':'image/png','.jpg':'image/jpeg'};
-const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://local'),file=path.join(root,url.pathname==='/'?'index.html':decodeURIComponent(url.pathname));fs.readFile(file,(err,data)=>{res.writeHead(err?404:200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(err?'':data);});});
+const server=http.createServer((req,res)=>{if(handleBakedRevision(req,res,root))return;const url=new URL(req.url,'http://local'),file=path.join(root,url.pathname==='/'?'index.html':decodeURIComponent(url.pathname));fs.readFile(file,(err,data)=>{res.writeHead(err?404:200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(err?'':data);});});
 if(!args.base)await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const url=new URL(args.base||`http://127.0.0.1:${server.address().port}/index.html`);
 if(!['http:','https:'].includes(url.protocol))throw Error('--base must be HTTP(S)');
@@ -31,7 +32,7 @@ try{
  await page.setRequestInterception(true);page.on('request',req=>{const m=/^https:\/\/cdn\.jsdelivr\.net\/npm\/three@[^/]+\/(.+)$/.exec(req.url());if(!args.base&&m){const f=path.join(root,'node_modules','three',m[1].split('?')[0]);if(fs.existsSync(f))return req.respond({status:200,contentType:'text/javascript',headers:{'Access-Control-Allow-Origin':'*'},body:fs.readFileSync(f)});}if(/^https:\/\/fonts\.(googleapis|gstatic)\.com/.test(req.url()))return req.abort();req.continue();});
  page.on('pageerror',e=>errors.push(e.stack||e.message));
  page.on('console',message=>{if(message.type()==='error'&&!message.text().startsWith('Failed to load resource'))errors.push(message.text());});
- page.on('response',response=>{const pathname=new URL(response.url()).pathname;if(response.status()===404&&(pathname.endsWith('/favicon.ico')||pathname.endsWith('/__baked_revision')))return;if(response.status()>=400)errors.push(`${response.status()} ${response.url()}`);});
+ page.on('response',response=>{const pathname=new URL(response.url()).pathname;if(response.status()===404&&(pathname.endsWith('/favicon.ico')||args.base&&pathname.endsWith(ENDPOINT)))return;if(response.status()>=400)errors.push(`${response.status()} ${response.url()}`);});
  await page.goto(url.href,{waitUntil:'load',timeout:180000});
  await page.waitForFunction(()=>document.body.classList.contains('loaded')&&window.__ctx?.characters?.ready&&__ctx.services.traffic?.nearestEnterable,{timeout:180000});
  if(normal)assert(await page.evaluate(()=>!!__ctx.baked),'normal/deployed run requires baked world');
