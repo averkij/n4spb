@@ -7,6 +7,7 @@ Newest first. One line per version; rules in CLAUDE.md (Versioning).
 - **15.1.1** (2026-11-15, patch): Fix bus bridge crossings, mosque overlap, fountain benches, door poses and damaged-roof character clearance
 - **15.1.0** (2026-11-15, minor): Add drivable buses and fix character ground contact, third-person aim dot, solid door interiors and closing sounds
 - **15.0.0** (2026-11-15, major): Playable characters with saved selection, animated vehicle takeovers, persistent traffic and firmer vehicle collisions; 50% stronger cars without repairs
+- **14.4.1** (2026-11-15, patch): Исправить руление картов задним ходом и потери скорости на неровном покрытии
 - **14.4.0** (2026-11-15, minor): Обратный хронометраж, уточнённая динамика и профили кербов на Нарвской
 - **14.3.2** (2026-11-15, patch): Плавный увод шин Sodi SR5 при торможении в повороте
 - **14.3.1** (2026-11-15, patch): Смягчить рабочий тормоз Sodi SR5

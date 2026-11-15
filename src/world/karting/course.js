@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { KERB_PROFILE, createKerbIndex } from './kerbs.js';
+import { KERB_PROFILE, createTrackSurfaceIndex } from './kerbs.js';
 import { MeshBuilder, addCap } from '../lib/massing.js';
 import { knockBays, splitBays } from '../lib/fence-bays.js';
 import { COURSE, COURSE_LAWN, KERB_RUNS, PIT_LANE, START_FINISH, SPEED_CHECK, WALK_IN, distSqToLine, relief } from './site.js';
@@ -11,6 +11,17 @@ const length = racingLine.getLength();
 const circuit = racingLine.getSpacedPoints(Math.ceil(length / 1.35));
 const circuit2D = circuit.map(p => [p.x, p.z]);
 const clamp = THREE.MathUtils.clamp;
+const PAD = [[-4682.5, .073, 3555.4], [-4668.5, .073, 3550.1], [-4657.7, .073, 3581.5], [-4670.2, .073, 3587.2]];
+const TERRAIN_ROUGHNESS = { grass: 1, gravel: .8, setts: .35 };
+function onCourseLawn(x, z) {
+  if (x < -4773 || x > -4598 || z < 3479 || z > 3694) return false;
+  let inside = false;
+  for (let i = 0, j = COURSE_LAWN.length - 1; i < COURSE_LAWN.length; j = i++) {
+    const [ax, az] = COURSE_LAWN[j], [bx, bz] = COURSE_LAWN[i];
+    if ((az > z) !== (bz > z) && x < ax + (bx - ax) * (z - az) / (bz - az)) inside = !inside;
+  }
+  return inside;
+}
 const cornerWidth = (i) => {
   const p = circuit[i], next = circuit[(i + 5) % (circuit.length - 1)], prev = circuit[(i - 5 + circuit.length - 1) % (circuit.length - 1)];
   const a = Math.atan2(p.z - prev.z, p.x - prev.x), b = Math.atan2(next.z - p.z, next.x - p.x);
@@ -95,11 +106,13 @@ function markingAt(builder, line, precision) {
 
 export function buildCourse(ctx, root) {
   const normals = offsets(circuit, true);
-  const kerbs = createKerbIndex();
+  const kerbs = createTrackSurfaceIndex();
+  const paved = createTrackSurfaceIndex();
+  paved.addFace(PAD);
   const asphalt = new MeshBuilder(), shoulder = new MeshBuilder(), white = new MeshBuilder(), red = new MeshBuilder();
   const grass = new MeshBuilder(), rubber = new MeshBuilder();
   const left = i => -cornerWidth(i), right = i => cornerWidth(i);
-  ribbon(asphalt, circuit, normals, left, right, 0, relief);
+
   // A graded, narrow verge meets the site's base grade, so the raised asphalt has no floating edges.
   // The far ends of the strips stay below the authored lawn overlay.
   for (let i = 0; i < circuit.length - 1; i++) {
@@ -164,7 +177,11 @@ export function buildCourse(ctx, root) {
     }
   }
   const laneNormal = offsets(lane, false);
-  ribbon(shoulder, lane, laneNormal, () => -2.18, () => 2.18, .004, relief);
+  for (let i = 0; i < lane.length - 1; i++) {
+    const points = face(lane, laneNormal, i, () => -2.18, () => 2.18, relief, .004);
+    quad(shoulder, points);
+    paved.addFace(points);
+  }
   for (const side of [-1, 1]) ribbon(white, lane, laneNormal, () => side * 1.97 - .043, () => side * 1.97 + .043, .013, relief, 5, lane.length - 5);
 
   const start = markingAt(white, START_FINISH, .34);
@@ -186,18 +203,22 @@ export function buildCourse(ctx, root) {
   mesh(root, pavingPad(), ctx.mat.toon('#625f65'), 'pit-paddock');
   mesh(root, grass, ctx.mat.toon('#63784c'), 'circuit-graded-verges');
   mesh(root, floor, ctx.mat.toon('#ada192'), 'kirovets-walking-approach');
-  mesh(root, asphalt, ctx.mat.toon('#42464d'), 'narvskaya-asphalt');
   mesh(root, shoulder, ctx.mat.toon('#51535a'), 'narvskaya-pit-lane');
   mesh(root, white, ctx.mat.toon('#e8e5d8'), 'narvskaya-whites');
   mesh(root, red, ctx.mat.toon('#c4443c'), 'narvskaya-red-kerbs');
   mesh(root, rubber, ctx.mat.toon('#353941'), 'narvskaya-tyre-marks');
 
-  // The same road triangles support foot traffic. Vehicle suspension samples the same relief.
+  // Match the rendered asphalt, pedestrian support and tyre contact to one surface.
   for (let i = 0; i < circuit.length - 1; i++) {
-    const [a, b, c, d] = face(circuit, normals, i, left, right, relief);
+    const points = face(circuit, normals, i, left, right, relief);
+    quad(asphalt, points);
+    paved.addFace(points);
+    const [a, b, c, d] = points;
     ctx.physics.addWalkTriangle([a, b, c], .1);
     ctx.physics.addWalkTriangle([a, c, d], .1);
   }
+
+  mesh(root, asphalt, ctx.mat.toon('#42464d'), 'narvskaya-asphalt');
 
   const tyre = new THREE.TorusGeometry(.24, .088, 5, 10).rotateX(Math.PI / 2);
   knockBays(ctx, {
@@ -213,13 +234,17 @@ export function buildCourse(ctx, root) {
 
   return {
     deckY: (x, z) => kerbs.at(x, z)?.height(x, z) ?? deckY(x, z),
+    roughnessAt: (x, z) => {
+      if (paved.at(x, z)) return 0;
+      if (onCourseLawn(x, z)) return 1;
+      return TERRAIN_ROUGHNESS[ctx.services.environment?.kindAt(x, z)] ?? 0;
+    },
     kerbAt: kerbs.at, startFinish: START_FINISH, start, speedCheck: SPEED_CHECK, racingLine, length };
 }
 
 function pavingPad() {
   const pad = new MeshBuilder();
-  const p = [[-4682.5, 3555.4], [-4668.5, 3550.1], [-4657.7, 3581.5], [-4670.2, 3587.2]];
-  quad(pad, p.map(([x, z]) => [x, .073, z]));
+  quad(pad, PAD);
   return pad;
 }
 

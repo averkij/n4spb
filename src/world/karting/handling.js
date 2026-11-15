@@ -2,10 +2,11 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const G = 9.81;
 const FRONT_SHARE = .42;
 
-function kerbContacts(car, step, tuning, sy, cy) {
+function wheelContacts(car, step, tuning, sy, cy) {
   const at = tuning.kerbAt;
-  if (!at) return null;
-  let front = 0, rear = 0, kick = 0, lift = 0, roll = 0;
+  const roughnessAt = tuning.roughnessAt;
+  if (!at && !roughnessAt) return null;
+  let front = 0, rear = 0, roughFront = 0, roughRear = 0, kick = 0, lift = 0, roll = 0;
   const { wb, track } = tuning.spec;
   for (const axle of [-1, 1]) {
     for (const side of [-1, 1]) {
@@ -13,8 +14,13 @@ function kerbContacts(car, step, tuning, sy, cy) {
       const x = car.x + sy * along + cy * across, z = car.z + cy * along - sy * across;
       const vx = car.vx + car.tyreYaw * (cy * along - sy * across);
       const vz = car.vz - car.tyreYaw * (sy * along + cy * across);
-      const patch = at(x, z) ?? at(x + vx * step * .5, z + vz * step * .5);
-      if (!patch) continue;
+      const patch = at?.(x, z) ?? at?.(x + vx * step * .5, z + vz * step * .5);
+      if (!patch) {
+        const roughness = roughnessAt?.(x, z) ?? 0;
+        if (axle > 0) roughFront += roughness;
+        else roughRear += roughness;
+        continue;
+      }
       if (axle > 0) front++;
       else rear++;
       const climb = patch.gx * vx + patch.gz * vz;
@@ -45,7 +51,7 @@ function kerbContacts(car, step, tuning, sy, cy) {
     car.flight.t = 0;
     car.rollV = roll;
   }
-  return front || rear ? { front, rear } : null;
+  return { front, rear, roughFront, roughRear };
 }
 
 export function kartTyres(car, longitudinal, step, tuning, handbrake) {
@@ -66,15 +72,16 @@ export function kartTyres(car, longitudinal, step, tuning, handbrake) {
   const frontSlip = Math.atan2(lateral + car.tyreYaw * frontArm, travel) - steer * Math.sign(forward);
   const rearSlip = Math.atan2(lateral - car.tyreYaw * rearArm, travel);
 
-  const contacts = kerbContacts(car, step, tuning, sy, cy);
+  const contacts = wheelContacts(car, step, tuning, sy, cy);
   const frontExtra = .10 * (contacts?.front ?? 0), rearExtra = .10 * (contacts?.rear ?? 0);
-  const rearLimit = tuning.rearMu * G * (1 - car.frontLoad) * (1 + rearExtra);
+  const frontRough = (contacts?.roughFront ?? 0) * .5, rearRough = (contacts?.roughRear ?? 0) * .5;
+  const rearLimit = tuning.rearMu * G * (1 - car.frontLoad) * (1 + rearExtra - .25 * rearRough);
   // Aerodynamic drag acts on the chassis. Engine and brake torque both go
   // through the solid rear axle and consume its available cornering force.
   const rearDrive = Math.abs(longitudinal + Math.sign(forward) * tuning.drag * forward ** 2);
   const rearPeak = Math.sqrt(Math.max(.04 * rearLimit ** 2, rearLimit ** 2 - rearDrive ** 2));
   const rear = -rearPeak * (handbrake ? .5 : 1) * Math.tanh(rearSlip * 12 * rearLimit / rearPeak);
-  const frontLimit = tuning.frontMu * G * car.frontLoad * (1 + frontExtra);
+  const frontLimit = tuning.frontMu * G * car.frontLoad * (1 + frontExtra - .25 * frontRough);
   const onBrake = clamp((car.frontLoad - FRONT_SHARE) * 10, 0, 1);
   const balancedFront = Math.min(frontLimit, rearPeak * rearArm / frontArm * .92);
   const frontPeak = frontLimit + onBrake * (balancedFront - frontLimit);
@@ -85,10 +92,14 @@ export function kartTyres(car, longitudinal, step, tuning, handbrake) {
   const scale = Math.min(1, lateralLimit / Math.max(1, Math.abs(cornering)));
   const turn = car.tyreYaw + scale * (front * frontArm - rear * rearArm) / .26 * step;
   car.tyreYaw = clamp(turn, -3.6, 3.6);
+  // Without suspension, repeated tyre impacts on rough ground dissipate
+  // more energy as speed rises. Each wheel contributes independently.
+  const speed = Math.hypot(forward, lateral);
+  const roughDrag = (frontRough + rearRough) * .5 * speed * (.13 + .014 * speed);
   return {
     yawRate: car.tyreYaw,
     lateral: cornering * scale,
-    drag: Math.abs(front * frontSlip + rear * rearSlip) * .13,
+    drag: Math.abs(front * frontSlip + rear * rearSlip) * .13 + roughDrag,
     steer,
   };
 }

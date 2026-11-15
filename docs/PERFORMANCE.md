@@ -4268,3 +4268,22 @@ V8's Map size limit. Its furniture, ribbon and road-marking audits passed.
 Rebuilding all 21 live areas produced 2,715 byte-identical data products.
 The normal Narvsky page also recorded a test lap, hid the HUD when the kart
 left the area, and showed the new brake response without module errors.
+
+## Kart reverse steering and rough surfaces, 14.4.1
+
+Normal baked loading on Chrome 157, Apple M1 Pro, 1280 × 720, Performance
+quality. Repeated the 14.3.1 driving paths above with the current kart body
+and engine tuning. The straight run is shorter following the acceleration
+changes in 14.4.0. No separate 14.4.0 baseline was captured, so this compares
+the combined kart changes, including per-wheel ground sampling.
+
+| Run | Load | Mean / p50 / p95 frame | Frames >40 ms | Mean draw calls | Distance |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Narvsky, club SR5 | 7.3 s | 16.7 / 16.7 / 16.7 ms | 0 | 622 | 25 m in 4 s |
+| Palace, street car | 13.4 s | 16.7 / 16.7 / 16.7 ms | 0 | 1101 | 42 m in 6 s |
+
+After driving, CDP reported 490 MiB of used heap and 587 MiB of backing
+storage on Narvsky, and 473 MiB and 1,048 MiB on Palace. Both runs sustained
+60 FPS. The normal Narvsky page also passed a reverse launch in both
+steering directions. All 2,715 products from the 21 rebuilt areas matched
+the previous revision byte for byte.

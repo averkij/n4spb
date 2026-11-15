@@ -299,7 +299,10 @@ export function createHandling(ctx, tuning = null) {
     let vF = car.vx * sy + car.vz * cy;
     const vF0 = vF, sp = Math.abs(vF), aloft = car.air || car.fall;      // aloft: no drive, no brakes, no grip, little steering (the gas hop, a launch from a ramp, a fall)
     // ---- steering input (a little slower to turn in than to return)
-    const tgt = clamp(inp.steer, -1, 1) * (vF > -0.3 ? 1 : vF < -1.2 ? -1 : 1 - 2 * (-0.3 - vF) / 0.9);       // in reverse the left / right keys are swapped (A swings the nose left when backing up, the way the player expects)
+    // Street cars keep their arcade nose-turn controls. Physical steering
+    // holds the wheels in the requested direction even when backing up.
+    const steerSign = T.physicalReverseSteer || vF > -0.3 ? 1 : vF < -1.2 ? -1 : 1 - 2 * (-0.3 - vF) / 0.9;
+    const tgt = clamp(inp.steer, -1, 1) * steerSign;
     car.steer += (tgt - car.steer) * Math.min(1, (Math.abs(tgt) > Math.abs(car.steer) ? T.steerIn : T.steerOut) * h);
     // ---- longitudinal
     const thr = clamp(inp.thr, 0, 1), brk = clamp(inp.brk, 0, 1);

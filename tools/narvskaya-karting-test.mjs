@@ -277,3 +277,40 @@ moreGrip.reset(0, 0, 0);
 moreGrip.vz = 15;
 for (let i = 0; i < 72; i++) moreGrip.step(1 / 60, { thr: .35, brk: 0, steer: 1 });
 assert.ok(Math.abs(moreGrip.aLat) > Math.abs(flatKart.aLat) * 1.12, 'Kerb contact must raise available lateral grip');
+
+for (const steer of [-1, 1]) {
+  flatKart.reset(0, 0, 0);
+  flatKart.vz = 1.5;
+  stepKart(30, 0, 0, steer);
+  assert.ok(flatKart.steerAngle * steer > .20 && flatKart.yaw * steer > .05);
+  for (const entrySpeed of [0, -1.5]) {
+    flatKart.reset(0, 0, 0);
+    flatKart.vz = entrySpeed;
+    for (let i = 0; i < 45; i++) {
+      stepKart(1, 0, 1, steer);
+      assert.ok(flatKart.steerAngle * steer > 0, 'The wheels must keep the requested direction as the kart starts to reverse');
+    }
+    const rearX = flatKart.x - Math.sin(flatKart.yaw) * halfWheelbase;
+    assert.ok(flatKart.vF < -1 && flatKart.yaw * steer < -.08 && rearX * steer > 0,
+      'The rear must follow the steered direction while reversing');
+  }
+}
+
+const sampleAsphalt = course.racingLine.getPointAt(.14);
+const sampleLawn = crown.p.clone().addScaledVector(kerbNormal, 1);
+assert.equal(course.roughnessAt(sampleAsphalt.x, sampleAsphalt.z), 0, 'Track centre must be smooth');
+assert.equal(course.roughnessAt(sampleLawn.x, sampleLawn.z), 1, 'Verge beyond the kerb must be rough');
+assert.equal(course.roughnessAt(-4670, 3569), 0, 'Paddock pavement must be smooth');
+function coastForOneSecond(roughnessAt) {
+  const car = createHandling(flat, { ...club.tuning, roughnessAt });
+  car.reset(0, 0, 0);
+  car.vz = 20;
+  for (let i = 0; i < 60; i++) car.step(1 / 60, { thr: 0, brk: 0, steer: 0 });
+  return car.speed;
+}
+const pavedSpeed = coastForOneSecond(() => 0);
+const vergeSpeed = coastForOneSecond(x => x > 0 ? 1 : 0);
+const lawnSpeed = coastForOneSecond(() => 1);
+assert.ok(pavedSpeed > vergeSpeed + 7 && vergeSpeed > lawnSpeed + 7,
+  'Two tyres on the verge must slow the kart less than all four tyres on grass');
+console.log(`Coasting from 72 km/h for 1 s: asphalt ${pavedSpeed.toFixed(1)}, two wheels on grass ${vergeSpeed.toFixed(1)}, grass ${lawnSpeed.toFixed(1)} km/h`);

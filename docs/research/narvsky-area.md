@@ -212,3 +212,12 @@ On flat asphalt, the model caps the tyres' combined lateral acceleration at
 1.2 g. The measured regression draws an 18.5 m radius at 51.4 km/h
 (1.13 g). It also verifies that releasing the brake and centring the wheel for
 0.2 s reduces exit slip, and that a kart can turn again while accelerating.
+
+The steering wheel turns in the key's direction both forwards and in reverse.
+The rough surface calculation samples each tyre. Track asphalt, the pit lane
+and the paddock are sampled from their rendered geometry, and the kerbs retain
+their own contact response. Grass, gravel and setts reduce grip and dissipate
+speed, with stronger losses at higher speeds. In the coast test from 72 km/h,
+the kart holds 69.5 km/h after one second on asphalt, 57.4 km/h with two tyres
+on grass and 48.3 km/h with all four tyres on grass. These are game tuning
+values, without measured rough-surface telemetry.

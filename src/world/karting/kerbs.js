@@ -9,7 +9,7 @@ export const KERB_PROFILE = [
 const CELL = 4;
 const key = (x, z) => x * 65536 + z;
 
-export function createKerbIndex() {
+export function createTrackSurfaceIndex() {
   const cells = new Map();
   function addTriangle(a, b, c, section) {
     const ux = b[0] - a[0], uz = b[2] - a[2], vx = c[0] - a[0], vz = c[2] - a[2];
@@ -42,7 +42,6 @@ export function createKerbIndex() {
       addTriangle(a, c, d, section);
     },
     at(x, z) {
-      if (x < -4768 || x > -4600 || z < 3497 || z > 3689) return null;
       const planes = cells.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
       return planes?.find(plane => plane.contains(x, z)) ?? null;
     },
