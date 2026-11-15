@@ -57,6 +57,8 @@ const _s = { y: -Infinity, kind: null, item: null };
 export function createHandling(ctx, tuning = null) {
   const L = ctx.L, ph = ctx.physics;
   const T = tuning ? { ...COUPE_TUNING, ...tuning } : COUPE_TUNING, SPEC = T.spec || COUPE_SPEC, GEAR = T.gearTop;
+  const extendedSupport = T.supportFront !== undefined || T.supportRear !== undefined;
+  const supportFront = T.supportFront ?? SPEC.wb / 2, supportRear = T.supportRear ?? SPEC.wb / 2;
   const collide = createCarCollisions(ph, SPEC);
   const KEEP_OUT = HOOKS.carKeepOut;      // the area's own closed ground (the Tauride Garden, T2): a plain (x, z) => boolean, absent for the strip
   const DS = HOOKS.deckServices || [];      // the area's own deck services (a podium, stairs): their deckY comes before the bridge decks (docs/AREAS.md section 9)
@@ -86,6 +88,25 @@ export function createHandling(ctx, tuning = null) {
       if (th < -0.2 && S.y > th + 0.05) return S.y + 0.03;                 // a floor over the trench: a pier deck, a landing
     }
     return th < -0.2 ? th + 0.03 : 0.03;
+  }
+  // A remote axle may reach a continuous bridge approach before the authored
+  // origin reaches the deck. Accept that support only along a connected local
+  // road profile, never across a trench/hole or an abrupt raised slab. This is
+  // needed only for explicitly extended axle layouts; ordinary cars retain
+  // their existing edge rule and arithmetic. At most 32 half-metre probes per
+  // axle path (the articulated bus uses 6 front / 20 rear), once per frame.
+  function connectedSupport(x, z, target, originHeight) {
+    const n = Math.ceil(Math.hypot(x - car.x, z - car.z) / .5);
+    if (!n || n > 32) return false;
+    let previous = originHeight;
+    for (let i = 1; i <= n; i++) {
+      const px = car.x + (x - car.x) * i / n, pz = car.z + (z - car.z) * i / n;
+      if (ph.inHole(px, pz, .2)) return false;
+      const height = groundAt(px, pz, previous, previous);
+      if (!Number.isFinite(height) || Math.abs(height - previous) > DROP_MAX) return false;
+      previous = height;
+    }
+    return Math.abs(previous - target) < .05;
   }
   /** the surface y of the water at (x, z) (a waterway, a pond, a basin) or null */
   const waterY = (x, z) => { const w = ph.waterLevel ? ph.waterLevel(x, z) : null; return w !== null && w !== undefined ? w : (L.waterLevelAt ? L.waterLevelAt(x, z) : null); };
@@ -378,16 +399,18 @@ export function createHandling(ctx, tuning = null) {
     if (T.hop) hopStep(dt, inp);
     for (let i = 0; i < n; i++) sub(h, inp);
     // ---- ride height + attitude: the axles follow the road (humped deck), body pitch / roll from the accelerations
-    const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw), w = SPEC.wb / 2;
+    const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw);
     const g0 = groundAt(car.x, car.z);
     const dRef = car.y + 1.4;      // (the axle probes see a deck up to 2.6 m above the wheels: a leaf raised by 45 degrees rises 1.8 m over a wheelbase, docs/AREAS.md 13.11)
-    let yF = groundAt(car.x + sy * w, car.z + cy * w, car.y, dRef), yR = groundAt(car.x - sy * w, car.z - cy * w, car.y, dRef);
+    const xf = car.x + sy * supportFront, zf = car.z + cy * supportFront, xr = car.x - sy * supportRear, zr = car.z - cy * supportRear;
+    let yF = groundAt(xf, zf, car.y, dRef), yR = groundAt(xr, zr, car.y, dRef);
     // an axle over an edge (a quay, a trench wall) does not tilt the car: it holds on its middle until it falls; a DECK under both the axle and the middle is no edge (a leaf raised by 25 degrees steps 0.6 m over the wheelbase)
     const onDeck = (x, z) => deckAt(x, z, dRef) !== null, dm = deckAt(car.x, car.z, car.y) !== null;
     let edge = false;
-    if (Math.abs(yF - g0) > DROP_MAX && !(dm && onDeck(car.x + sy * w, car.z + cy * w))) { yF = g0; edge = true; }
-    if (Math.abs(yR - g0) > DROP_MAX && !(dm && onDeck(car.x - sy * w, car.z - cy * w))) { yR = g0; edge = true; }
-    const yT = (yF + yR) / 2, slope = Math.atan2(yF - yR, SPEC.wb);
+    if (Math.abs(yF - g0) > DROP_MAX && !(dm && onDeck(xf, zf)) && !(extendedSupport && connectedSupport(xf, zf, yF, g0))) { yF = g0; edge = true; }
+    if (Math.abs(yR - g0) > DROP_MAX && !(dm && onDeck(xr, zr)) && !(extendedSupport && connectedSupport(xr, zr, yR, g0))) { yR = g0; edge = true; }
+    const span = extendedSupport ? supportFront + supportRear : SPEC.wb;
+    const yT = extendedSupport ? yR + (yF - yR) * supportRear / span : (yF + yR) / 2, slope = Math.atan2(yF - yR, span);
     if (!car.air && !car.fall) { car.slope = slope; if (!edge) car.slopeOn = slope; }      // (slopeOn = the last slope with both axles on a surface: what a take-off from the tip of a ramp takes along)
     const k = Math.min(1, 16 * dt);
     if (!car.air && !car.fall) {                                                               // (airborne, car.y is the flight itself: only the road part of the height is eased)

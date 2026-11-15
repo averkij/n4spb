@@ -36,7 +36,10 @@ for(const row of Object.values(REGISTRY).filter(a=>!a.parked&&a.status!=='planne
   assert.equal(typeof area.HOOKS.treeReject,'function');assert.equal(typeof area.HOOKS.tuftReject,'function');
   areas.set(row.id,{sites:FOUNTAIN_SITES,hooks:area.HOOKS,modules:area.MODULES,mask:makeFountainKeepout(FOUNTAIN_SITES)});sites+=FOUNTAIN_SITES.length;
 }
-assert.equal(areas.size,11,'every area with measured fountain/tree intrusions must retain its keepout');
+// Preserve every established mask while allowing later areas to add their own.
+// Moskovskaya joined the original eleven after this regression was introduced.
+for (const id of ['admiralty','aptekarsky','dekabristov','islands','kolomna','kronverk','moskovskaya','palace','semyonovsky','smolny','vasilyevsky','vladimirsky'])
+  assert(areas.has(id), `${id}: measured fountain/tree intrusions must retain their keepout`);
 let baselineProbes=0;
 const baselineIndex=process.argv.indexOf('--baseline');
 if(baselineIndex>=0){
