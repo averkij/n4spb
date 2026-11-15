@@ -9,6 +9,8 @@ const angleDelta = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 let playing = false, ready = false, lockedBefore = false, dragging = false, lastLook = 0, clock = 0;
 let footView = 0, driveView = 0, yaw = 0, pitch = .22, cameraDistance = 4.6, snapCamera = true;
 let renderer, sim, character, characterVisual, sedan, mixer, actions, activeAction, animationName = '', wheels = [];
+const characters = [];
+let characterIndex = 0, animationTransitions = 0;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#a8c0cd'); scene.fog = new THREE.Fog('#a8c0cd', 75, 175);
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, .08, 220);
@@ -93,10 +95,22 @@ function prepareCharacter(gltf) {
     if (/Jump/.test(clip.name)) { action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; }
   }
   for (const name of ['Idle', 'Walk', 'Run', 'Jump', 'RunningJump', 'Sitting']) if (!actions[name]) throw new Error(`Character is missing the ${name} animation`);
+  characters.push({ root: character, visual: characterVisual, mixer, actions });
+}
+function selectCharacter(index) {
+  if (!characters[index]) return;
+  for (const c of characters) { c.root.visible = false; c.mixer.stopAllAction(); }
+  characterIndex = index;
+  const selected = characters[index]; character = selected.root; characterVisual = selected.visual;
+  mixer = selected.mixer; actions = selected.actions; activeAction = null; animationName = '';
+  for (const button of document.querySelectorAll('[data-character]')) button.setAttribute('aria-pressed', String(Number(button.dataset.character) === index));
+  // Reflect the choice even while the welcome/pause overlay is open.
+  animateCharacter(0); updateCamera(0);
 }
 function animateCharacter(dt) {
   const s = sim.state, name = s.animation;
   if (animationName !== name) {
+    animationTransitions++;
     const next = actions[name]; next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).play();
     if (activeAction) { next.crossFadeFrom(activeAction, name.includes('Jump') ? .12 : .2, false); }
     activeAction = next; animationName = name;
@@ -168,6 +182,7 @@ start.addEventListener('click', () => {
 $('help-button').addEventListener('click', () => {
   const open = $('help').hidden; $('help').hidden = !open; $('help-button').setAttribute('aria-expanded', String(open));
 });
+for (const button of document.querySelectorAll('[data-character]')) button.addEventListener('click', () => selectCharacter(Number(button.dataset.character)));
 document.addEventListener('pointerlockchange', () => {
   const locked = document.pointerLockElement === canvas;
   if (!locked && lockedBefore) pause(); lockedBefore = locked;
@@ -178,6 +193,7 @@ addEventListener('keydown', e => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   keys.add(e.code);
   if (e.repeat) return;
+  if (/^Digit[123]$/.test(e.code)) selectCharacter(Number(e.code.slice(-1)) - 1);
   if (e.code === 'KeyV') cycleView();
   if (e.code === 'Space' && sim.state.mode === 'foot') sim.jump();
   if (e.code === 'KeyE' && sim.enterExit()) { yaw = sim.state.mode === 'drive' ? sim.state.carYaw : sim.state.yaw; pitch = .22; snapCamera = true; }
@@ -208,8 +224,8 @@ async function boot() {
   scene.add(sunlight, sunlight.target);
   buildGround();
   const loader = new GLTFLoader();
-  const [simulation, human, car] = await Promise.all([createSimulation(), loader.loadAsync(new URL('./assets/civilian.glb', import.meta.url).href), loader.loadAsync(new URL('./assets/sedan.glb', import.meta.url).href)]);
-  sim = simulation; prepareCharacter(human); prepareCar(car);
+  const [simulation, humans, car] = await Promise.all([createSimulation(), Promise.all(['man-white', 'woman-beret', 'man-jacket'].map(name => loader.loadAsync(new URL(`./assets/${name}.glb`, import.meta.url).href))), loader.loadAsync(new URL('./assets/sedan.glb', import.meta.url).href)]);
+  sim = simulation; humans.forEach(prepareCharacter); prepareCar(car); selectCharacter(0);
   ready = true; start.disabled = false; start.textContent = 'Enter the playground →'; $('loading').textContent = 'Mouse to look · Esc to release · R to reset';
   animateCharacter(0); updateCamera(0); updateHud();
   let previous = performance.now(), accumulator = 0, frames = [];
@@ -231,13 +247,13 @@ async function boot() {
   }
   // Explicit test surface, enabled only by the diagnostic URL. Normal play has no writable hooks.
   if (new URLSearchParams(location.search).has('test')) window.__polygon = {
-    get state() { return { ...sim.state, playing, footView, driveView, cameraDistance, yaw, pitch, camera: camera.position.toArray(), characterVisible: character.visible, animation: animationName }; },
+    get state() { return { ...sim.state, playing, footView, driveView, cameraDistance, yaw, pitch, camera: camera.position.toArray(), characterVisible: character.visible, animation: animationName, characterIndex, animationTransitions, animationTime: activeAction?.time }; },
     get stats() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, frames: [...frames], animations: Object.keys(actions) }; },
     resetFrameSamples() { frames = []; },
     reset() { sim.reset(); yaw = 0; pitch = .22; snapCamera = true; },
     pose(x, z, heading = 0) { sim.person.setTranslation({ x, y: 1.02, z }, true); sim.person.setNextKinematicTranslation({ x, y: 1.02, z }); sim.state.vx = sim.state.vz = sim.state.vy = 0; yaw = heading; sim.step({ forward: false, back: false, left: false, right: false, run: false, jump: false }, yaw); snapCamera = true; },
     look(y, p = .22) { yaw = y; pitch = p; lastLook = clock; snapCamera = true; },
-    scene, character, sedan, camera,
+    scene, get character() { return character; }, sedan, camera,
   };
   window.__ready = true;
   requestAnimationFrame(frame);

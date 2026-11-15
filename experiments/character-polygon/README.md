@@ -25,6 +25,7 @@ is not supported by browser ES modules.
 | E | Enter a nearby car | Exit when nearly stopped, using a clear side |
 | V | Near third person → far → first person | Chase → far chase → driver seat |
 | R | Reset player and car | Reset player and car |
+| 1 / 2 / 3 | Select character | Select seated character |
 | Escape | Release mouse and pause | Release mouse and pause |
 
 Third person is the initial walking view. Each transport mode keeps its own view
@@ -39,8 +40,10 @@ corner for testing camera obstruction, and three blocks for jump/landing tests.
 Low perimeter walls stop the player and car. The three orange cones are visual
 steering markers outside the driving lane, not physical obstacles.
 
-The male character has a 32-bone rig and six retained clips: Idle, Walk, Run,
-Jump, RunningJump and Sitting. Speed controls animation cadence, and clips blend
+Three selectable low-poly characters offer a white T-shirt with jeans, a woman
+in a navy dress and red beret, and a bearded man in a blue overshirt with dark
+trousers. Each has six clips: Idle, Walk, Run, Jump, RunningJump and Sitting.
+Speed controls animation cadence, and clips blend
 between movement states. The blue sedan has animated wheel rotation/steering,
 an interior, a seated driver, and a first-person driving view. Entry/exit is an
 instant state transition; animated door opening and climbing in are not included.
@@ -50,6 +53,10 @@ ground snapping and small-step handling, plus a dynamic car with an arcade plana
 drive model. Camera collision uses a sphere sweep with immediate contraction and
 smoothed extension. The character hides when the camera is extremely close to
 avoid seeing the inside of the head/body.
+
+The floor uses an exact physics half-space. A wide thin cuboid caused sporadic
+zero-displacement capsule steps on flat ground, flashing Idle and restarting
+the locomotion clip. Continuous curved walk/run regression tests cover this fix.
 
 ## Isolation and future integration
 
@@ -67,14 +74,21 @@ not evidence of city performance.
 ## Assets
 
 See [CREDITS.md](CREDITS.md) for the original Sketchfab URLs, authors, CC BY 4.0
-licenses and modifications. The two models were inspected/exported in Blender
+licenses and modifications. The models were inspected/exported in Blender
 through MCP, then deduplicated/pruned with glTF Transform 4.5.1. The runtime loads
 GLB only. `clean-glb-scenes.mjs` removes empty scenes left by Blender's selection
 export without changing binary geometry/animation data.
 
-Khronos/glTF validation has no errors. The character retains six advisory
-`NODE_SKINNED_MESH_NON_ROOT` warnings from its imported rig hierarchy; skinning,
-all retained animations and transformed placement are verified in Three.js.
+`prepare-variants.py` records the Blender preparation, accessory construction,
+and pose-relative animation transfer. Its source object names refer to the live
+import session; reimporting the originals requires updating those names. It
+bakes every bone channel so missing constant channels cannot retain a seated
+pose when changing back to walking. `civilian.glb` remains as the original
+animation reference but is not loaded by the page.
+
+Khronos/glTF validation has no errors. Imported rigs retain advisory
+`NODE_SKINNED_MESH_NON_ROOT` warnings; skinning,
+all six animations and transformed placement are verified in Three.js.
 The sedan has no validation warnings. No geometry simplification or lossy
 animation compression was applied.
 
@@ -85,6 +99,9 @@ node experiments/character-polygon/simulation-test.mjs
 node experiments/character-polygon/playtest.mjs
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/civilian.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/sedan.glb
+npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/man-white.glb
+npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/woman-beret.glb
+npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/man-jacket.glb
 ```
 
 The browser test starts and stops its own server on port 5194 and uses the
@@ -93,12 +110,17 @@ running, jumping/landing, all camera views, wall collision, vehicle proximity,
 entering, acceleration, steering, braking, safe exit, reset and pause. It checks
 a narrow viewport and saves screenshots and measurements under the ignored
 `shots/character-polygon/` directory. Simulation tests additionally cover diagonal
-speed normalization and full-throttle boundary collision. Diagnostic hooks are
+speed normalization, full-throttle boundary collision, and 20 seconds each of
+uninterrupted curved walking/running. The browser test switches all three
+characters and samples every rendered frame during walking/running to reject
+idle flashes and action restarts; it also captures jumping and seated poses.
+Diagnostic hooks are
 available only with `?test=1`.
 
 Latest local check (2026-11-15): both test programs passed, with zero browser or
 asset errors. At 1440 × 900, a five-second uninterrupted idle sample recorded
-301 frames, median 16.7 ms and p95 16.8 ms, with 98 draws and 8,942 triangles.
+301 frames, median 16.7 ms and p95 16.8 ms, with about 96 draws and 10,400 triangles.
 These are headless Edge measurements of this empty test ground, not the city.
-The character GLB is 393.6 KB and the car is 241.0 KB; the vendored Rapier module
+The three selectable GLBs total 1.70 MB (630.0 / 472.5 / 594.2 KB).
+The original character reference is 393.6 KB and the car is 241.0 KB; the vendored Rapier module
 with embedded WASM is 4.34 MB. First startup includes compilation of that WASM.

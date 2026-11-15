@@ -2,7 +2,25 @@
 
 The assets are downloaded locally through Sketchfab using Blender MCP. No Sketchfab credentials are included or needed at runtime.
 
-## Character
+## Selectable characters
+
+All three base models below are by **Razvan Savescu (razvansavescu)** and licensed
+under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+| Variant | Original model | Local file |
+| --- | --- | --- |
+| White T-shirt and jeans | [Low-poly Man](https://sketchfab.com/3d-models/7b93db2d46d847f191cf5e841b322856) | `assets/man-white.glb` |
+| Woman in a red beret | [Low-poly Girl](https://sketchfab.com/3d-models/3e79fef9da5f4db7b6a46f3e0ff89328) | `assets/woman-beret.glb` |
+| Blue overshirt and dark trousers | [Low-poly Man Casual Clothes 2](https://sketchfab.com/3d-models/4a834adf1e33405c979e94555e7955c6) | `assets/man-jacket.glb` |
+
+Changes: normalized and grounded in Blender; original red beret, short male hair
+and simple eyes added; native motion baked with complete bone transforms;
+missing idle/walk/run motion transferred from Low-poly Man and jump/running-jump/
+sitting motion transferred from Kobi's model below. All three export six clips.
+GLBs deduplicated/pruned, empty export scenes removed, and runtime materials
+converted to toon shading. The original girl model supplies her walking clip.
+
+## Supplemental animation source and previous character
 
 - **Low-poly animated Man** by **Kobi (kobiS21)**
 - Source: https://sketchfab.com/3d-models/fec7bd66fe67411ca58645c9e983f14c

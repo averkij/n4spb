@@ -19,7 +19,9 @@ export async function createSimulation() {
   await RAPIER.init();
   const world = new RAPIER.World({ x: 0, y: -20, z: 0 });
   world.timestep = STEP;
-  world.createCollider(RAPIER.ColliderDesc.cuboid(80, .25, 80).setTranslation(0, -.25, 0).setFriction(.8));
+  // An exact plane avoids GJK contact-normal noise from a very wide, thin box.
+  // That noise occasionally discarded the entire horizontal capsule step.
+  world.createCollider(new RAPIER.ColliderDesc(new RAPIER.HalfSpace({ x: 0, y: 1, z: 0 })).setFriction(.8));
   for (const b of obstacles) world.createCollider(RAPIER.ColliderDesc.cuboid(b.w / 2, b.h / 2, b.d / 2).setTranslation(b.x, b.y, b.z));
   const person = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, .92, 5));
   const capsule = world.createCollider(RAPIER.ColliderDesc.capsule(.6, .28), person);

@@ -6,6 +6,19 @@ const sim = await createSimulation();
 const advance = (seconds, input = {}, yaw = 0) => { for (let i = 0; i < Math.round(seconds * 60); i++) sim.step({ ...idle, ...input }, yaw); };
 const pose = (x, z) => { sim.person.setTranslation({ x, y: .92, z }, true); sim.person.setNextKinematicTranslation({ x, y: .92, z }); advance(.1); };
 try {
+  // Regression: wide thin-box floor contacts used to discard occasional steps,
+  // flashing Idle and restarting the loop even with uninterrupted input.
+  for (const run of [false, true]) {
+    sim.reset(); pose(20,15);
+    for (let frame=0; frame<1200; frame++) {
+      sim.step({ ...idle, forward:true, run }, frame/60*.6);
+      if (frame>30) {
+        assert.equal(sim.state.animation, run ? 'Run' : 'Walk', `Uninterrupted locomotion at frame ${frame}`);
+        assert(sim.state.speed > (run ? 4 : 1.8), 'No dropped physical movement step');
+      }
+    }
+  }
+  sim.reset();
   advance(.3);
   const startZ = sim.state.z; advance(1, { forward: true }); const straight = startZ - sim.state.z;
   sim.reset(); advance(.3); const start = { x: sim.state.x, z: sim.state.z }; advance(1, { forward: true, right: true });

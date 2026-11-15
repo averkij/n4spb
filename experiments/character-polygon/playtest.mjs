@@ -30,6 +30,38 @@ try {
   assert.equal((await state()).playing, true);
   assert.equal((await state()).footView, 0);
   await shot('01-idle');
+  results.variants = [];
+  for (let variant = 0; variant < 3; variant++) {
+    await tap(`Digit${variant+1}`); await page.evaluate(() => __polygon.reset()); await wait(250);
+    assert.equal((await state()).characterIndex, variant);
+    await page.evaluate(() => __polygon.look(Math.PI)); await wait(200); await shot(`variant-${variant+1}-front`);
+    await page.evaluate(() => __polygon.look(0));
+    const continuity = [];
+    for (const running of [false, true]) {
+      await page.evaluate(() => __polygon.pose(20,15));
+      await page.keyboard.down('KeyW'); if (running) await page.keyboard.down('ShiftLeft');
+      await wait(500);
+      const trace = await page.evaluate(() => new Promise(resolve => {
+        const start=performance.now(), states=[];
+        function sample(now) {
+          states.push(__polygon.state);
+          if(now-start<2500)requestAnimationFrame(sample);else resolve(states);
+        }requestAnimationFrame(sample);
+      }));
+      const expected=running?'Run':'Walk';
+      assert(trace.every(s=>s.animation===expected), `Variant ${variant+1}: no Idle flashes during ${expected}`);
+      assert.equal(new Set(trace.map(s=>s.animationTransitions)).size,1, `Variant ${variant+1}: no ${expected} restarts`);
+      assert(trace.every(s=>s.speed>(running?4:1.8)), 'Movement steps remain continuous');
+      continuity.push({ animation:expected, frames:trace.length, transitions:0 });
+      await shot(`variant-${variant+1}-${expected.toLowerCase()}`);
+      await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); await wait(400);
+    }
+    await tap('Space'); await wait(220); await shot(`variant-${variant+1}-jump`); await wait(700);
+    await page.evaluate(() => { __polygon.reset(); __polygon.pose(2.3,1); }); await wait(200); await tap('KeyE'); await wait(300);
+    await shot(`variant-${variant+1}-seated`); assert.equal((await state()).mode,'drive');
+    results.variants.push({variant:variant+1,continuity});
+  }
+  await tap('Digit1'); await page.evaluate(() => __polygon.reset()); await wait(200);
   const before = await state();
   await page.keyboard.down('KeyW'); await wait(1200); const walked = await state(); await shot('02-walk'); await page.keyboard.up('KeyW');
   assert(walked.z < before.z - 1, 'Walking moves the character forward'); assert.equal(walked.animation, 'Walk');

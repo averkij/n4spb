@@ -13,6 +13,10 @@
   <canvas id="world" aria-label="Third-person character and driving playground"></canvas>
   <header><span class="dot"></span><div><strong>CHARACTER PLAYGROUND</strong><small>n4spb / movement study 01</small></div></header>
   <div id="status"><span id="mode">ON FOOT</span><span id="view">THIRD PERSON</span><span id="speed">0 km/h</span></div>
+  <div id="character-switcher" role="group" aria-label="Choose character">
+    <span>CHARACTER · PRESS 1 / 2 / 3</span>
+    <div><button data-character="0" aria-pressed="true">1 · White tee</button><button data-character="1" aria-pressed="false">2 · Red beret</button><button data-character="2" aria-pressed="false">3 · Overshirt</button></div>
+  </div>
   <div id="prompt" role="status"></div>
   <div id="welcome">
     <span class="eyebrow">THE TEST GROUND</span>
@@ -24,7 +28,7 @@
   <footer><span id="hint">WASD move · Shift run · Space jump · E enter car · V camera</span><button id="help-button" aria-expanded="false" aria-controls="help">? Controls</button></footer>
   <section id="help" hidden>
     <h2>Make yourself at home</h2>
-    <dl><dt>W A S D / arrows</dt><dd>Move / drive</dd><dt>Mouse</dt><dd>Look around (drag also works)</dd><dt>Shift</dt><dd>Run</dd><dt>Space</dt><dd>Jump / handbrake</dd><dt>E</dt><dd>Enter / leave the car</dd><dt>V</dt><dd>Near → far → first person</dd><dt>R</dt><dd>Reset character and car</dd><dt>Esc</dt><dd>Release mouse / pause</dd></dl>
+    <dl><dt>1 / 2 / 3</dt><dd>Change character</dd><dt>W A S D / arrows</dt><dd>Move / drive</dd><dt>Mouse</dt><dd>Look around (drag also works)</dd><dt>Shift</dt><dd>Run</dd><dt>Space</dt><dd>Jump / handbrake</dd><dt>E</dt><dd>Enter / leave the car</dd><dt>V</dt><dd>Near → far → first person</dd><dt>R</dt><dd>Reset character and car</dd><dt>Esc</dt><dd>Release mouse / pause</dd></dl>
     <p>Walk into the wall corner to test camera obstruction. Jump onto the low blocks. Try the driving loop.</p>
     <a href="./experiments/character-polygon/CREDITS.md" target="_blank" rel="noopener">Model credits & licenses ↗</a>
   </section>
