@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createSimulation, obstacles, STEP, WALK, RUN } from './simulation.js';
+import { settledSitting, createPoseRig, fitDriver } from './character-pose.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world'), start = $('start'), welcome = $('welcome');
@@ -11,6 +12,7 @@ let footView = 0, driveView = 0, yaw = 0, pitch = .22, cameraDistance = 4.6, sna
 let renderer, sim, character, characterVisual, sedan, mixer, actions, activeAction, animationName = '', wheels = [];
 const characters = [];
 let characterIndex = 0, animationTransitions = 0;
+let poseRig, steeringPivot;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#a8c0cd'); scene.fog = new THREE.Fog('#a8c0cd', 75, 175);
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, .08, 220);
@@ -78,6 +80,11 @@ function prepareCar(gltf) {
   sedan = new THREE.Group(); scene.add(sedan);
   const visual = gltf.scene; visual.rotation.y = Math.PI; sedan.add(visual); prepareMaterials(visual, true);
   sedan.updateMatrixWorld(true);
+  const steering=visual.getObjectByName('Steerwheel');
+  if(steering) {
+    steeringPivot=new THREE.Group();steeringPivot.position.set(-.37,1.15,-.51);
+    sedan.add(steeringPivot);steeringPivot.attach(steering);
+  }
   for (const name of ['FL_Wheel', 'FR_Wheel', 'RL_Wheel', 'RR_Wheel']) {
     const wheel = visual.getObjectByName(name); if (!wheel) continue;
     const bounds = new THREE.Box3().setFromObject(wheel), center = bounds.getCenter(new THREE.Vector3());
@@ -90,12 +97,13 @@ function prepareCharacter(gltf) {
   character = new THREE.Group(); characterVisual = gltf.scene;
   characterVisual.rotation.y = Math.PI; character.add(characterVisual); scene.add(character); prepareMaterials(characterVisual);
   mixer = new THREE.AnimationMixer(characterVisual); actions = {};
-  for (const clip of gltf.animations) {
+  for (const source of gltf.animations) {
+    const clip=source.name==='Sitting'?settledSitting(source):source;
     const action = mixer.clipAction(clip); actions[clip.name] = action;
     if (/Jump/.test(clip.name)) { action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; }
   }
   for (const name of ['Idle', 'Walk', 'Run', 'Jump', 'RunningJump', 'Sitting']) if (!actions[name]) throw new Error(`Character is missing the ${name} animation`);
-  characters.push({ root: character, visual: characterVisual, mixer, actions });
+  characters.push({ root: character, visual: characterVisual, mixer, actions, rig:createPoseRig(character) });
 }
 function selectCharacter(index) {
   if (!characters[index]) return;
@@ -103,6 +111,7 @@ function selectCharacter(index) {
   characterIndex = index;
   const selected = characters[index]; character = selected.root; characterVisual = selected.visual;
   mixer = selected.mixer; actions = selected.actions; activeAction = null; animationName = '';
+  poseRig=selected.rig;
   for (const button of document.querySelectorAll('[data-character]')) button.setAttribute('aria-pressed', String(Number(button.dataset.character) === index));
   // Reflect the choice even while the welcome/pause overlay is open.
   animateCharacter(0); updateCamera(0);
@@ -112,7 +121,10 @@ function animateCharacter(dt) {
   if (animationName !== name) {
     animationTransitions++;
     const next = actions[name]; next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).play();
-    if (activeAction) { next.crossFadeFrom(activeAction, name.includes('Jump') ? .12 : .2, false); }
+    if (activeAction) {
+      if(name==='Sitting')activeAction.stop();
+      else next.crossFadeFrom(activeAction, name.includes('Jump') ? .12 : .2, false);
+    }
     activeAction = next; animationName = name;
   }
   if (name === 'Walk') activeAction.timeScale = 1.3 * THREE.MathUtils.clamp(s.speed / WALK, .35, 1.15);
@@ -123,13 +135,14 @@ function animateCharacter(dt) {
   character.visible = !driving && view !== 2;
   character.position.set(s.x, s.y, s.z); character.rotation.y = s.yaw;
   sedan.position.set(s.carX, s.carY, s.carZ); sedan.rotation.y = s.carYaw;
+  steeringPivot?.quaternion.setFromAxisAngle(new THREE.Vector3(0,.35,.94).normalize(),s.steering*.6);
   for (const w of wheels) { w.roll.rotation.x -= s.carSpeed * dt / .37; w.steer.rotation.y = w.front ? s.steering * .4 : 0; }
   // The imported sitting clip is used for the visible driver in exterior views.
   if (driving && view !== 2) {
     character.visible = true;
-    const seat = new THREE.Vector3(-.44, .43, -.1).applyAxisAngle(THREE.Object3D.DEFAULT_UP, s.carYaw);
-    character.position.set(s.carX + seat.x, s.carY + seat.y, s.carZ + seat.z); character.rotation.y = s.carYaw;
-    // A seated animation bends the legs; its original root remains in asset space.
+    character.rotation.y = s.carYaw;
+    sedan.updateWorldMatrix(true,true);
+    fitDriver(poseRig,sedan,[-.37,.73,-.08],[-.37,1.15,-.51],s.steering);
   }
 }
 function updateCamera(dt) {
@@ -258,6 +271,11 @@ async function boot() {
       playing = false; sim.state.animation = name; mixer.stopAllAction();
       activeAction = actions[name]; activeAction.reset().play(); activeAction.time = time;
       animationName = name; mixer.update(0);
+    },
+    get driverPose() {
+      character.updateWorldMatrix(true,true);
+      const local=bone=>sedan.worldToLocal(bone.getWorldPosition(new THREE.Vector3())).toArray();
+      return {hips:local(poseRig.hips),head:local(poseRig.head),left:local(poseRig.arms.l.end),right:local(poseRig.arms.r.end)};
     },
     scene, get character() { return character; }, sedan, camera,
   };

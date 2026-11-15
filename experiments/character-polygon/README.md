@@ -50,6 +50,12 @@ between movement states. The blue sedan has animated wheel rotation/steering,
 an interior, a seated driver, and a first-person driving view. Entry/exit is an
 instant state transition; animated door opening and climbing in are not included.
 
+Driving samples the settled portion of the source Sitting clip into a constant
+pose, excluding its standing lead-in. Two-bone arm/leg IK fits the driver to the
+seat, steering-wheel grips and footwell. `driving-test.mjs` checks both drivers
+for 9.5 seconds each (beyond the old clip wrap), rejecting head-height flashes
+and hands that miss the steering-wheel targets.
+
 Physics uses Rapier at a fixed 60 Hz: a kinematic capsule with collision sliding,
 ground snapping and small-step handling, plus a dynamic car with an arcade planar
 drive model. Camera collision uses a sphere sweep with immediate contraction and
