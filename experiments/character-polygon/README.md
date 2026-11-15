@@ -1,7 +1,7 @@
 # Character playground
 
 Standalone review prototype for a GTA-inspired third-person walker and drivable
-sedan. Open **`/character-test.html`** through the repository's HTTP server:
+cars. Open **`/character-test.html`** through the repository's HTTP server:
 
 ```powershell
 npm start
@@ -16,15 +16,15 @@ is not supported by browser ES modules.
 
 ## Controls
 
-| Control | On foot | In the sedan |
+| Control | On foot | In a car |
 | --- | --- | --- |
 | WASD / arrows | Camera-relative movement | Accelerate, brake/reverse, steer |
 | Mouse | Orbit/look; drag fallback | Orbit, with automatic recentering while moving |
 | Shift | Run | — |
 | Space | Jump | Handbrake |
-| E | Enter a nearby car | Exit when nearly stopped, using a clear side |
+| E | Enter / take a nearby car | Animated exit when nearly stopped, with a clear driver side |
 | V | Near third person → far → first person | Chase → far chase → driver seat |
-| R | Reset player and car | Reset player and car |
+| R | Reset player, all three cars and NPC drivers | Reset player, all three cars and NPC drivers |
 | 2 / 3 | Red-beret woman / overshirt man | Select seated character |
 | Escape | Release mouse and pause | Release mouse and pause |
 
@@ -47,8 +47,31 @@ and a brown baseball cap
 Walking is 2.7 m/s and running is 8 m/s, with full-speed animation cadence of
 1.3x and 1.65x. Speed scales cadence during acceleration, and clips blend
 between movement states. The blue sedan has animated wheel rotation/steering,
-an interior, a seated driver, and a first-person driving view. Entry/exit is an
-instant state transition; animated door opening and climbing in are not included.
+an interior, a seated driver, and a first-person driving view.
+
+The red Bibliott GT and grey everyday traffic sedan are instantiated from the
+city's actual model factories (`src/world/drive/model.js` and
+`src/world/traffic/models.js`). Playground adapters split their merged geometry
+at the driver-door boundaries, hinge the extracted panels and windows, hollow
+the old decorative cabin deck, and add usable seats, floor and steering fittings.
+The original blue sedan remains available as an empty car.
+
+Both city cars start with the original Kobi male character at the wheel. E runs
+an approach, door-open, reach, extraction, recovery, climb-in, close and settle
+sequence. After approaching, an occupied-car takeover takes about 4.1 seconds;
+empty entry and exit take about 2.25 / 2.1 seconds. The NPC steps out and walks
+away. Hands track the door handle, occupant's shoulders and steering wheel;
+feet clear the sill, and the player ducks before moving under the roof. These
+are authored procedural poses and two-bone IK on the existing low-poly rigs,
+not a newly recorded motion-capture clip. The original NPC has independent foot
+controls; virtual shin endpoints preserve his feet during IK.
+
+Approaches route around the car footprint and reject paths blocked by physics
+colliders. Driving inputs and repeated E presses cannot interrupt entry;
+character selection is disabled until it completes. Getting out reverses the
+empty-entry sequence. Escape freezes the whole action; R restores the cars,
+closed doors and both NPC drivers. Each car has its own collider and driving
+state, so taking one leaves the others parked.
 
 Driving samples the settled portion of the source Sitting clip into a constant
 pose, excluding its standing lead-in. Two-bone arm/leg IK fits the driver to the
@@ -57,7 +80,7 @@ for 9.5 seconds each (beyond the old clip wrap), rejecting head-height flashes
 and hands that miss the steering-wheel targets.
 
 Physics uses Rapier at a fixed 60 Hz: a kinematic capsule with collision sliding,
-ground snapping and small-step handling, plus a dynamic car with an arcade planar
+ground snapping and small-step handling, plus three dynamic cars with an arcade planar
 drive model. Camera collision uses a sphere sweep with immediate contraction and
 smoothed extension. The character hides when the camera is extremely close to
 avoid seeing the inside of the head/body.
@@ -69,9 +92,9 @@ the locomotion clip. Continuous curved walk/run regression tests cover this fix.
 ## Isolation and future integration
 
 This is an authoring/test tool, not a shipped city change. All implementation,
-vendor code and models live here; the root HTML is its only entry point. It does
-not import or change the city's player, driving controls, areas, version, or bake
-products. `node tools/bake-scene.mjs --plan` confirms all area bakes remain fresh.
+vendor code and GLBs live here; the root HTML is its only entry point. It imports
+the city's two geometry factories, but does not change the city's player, driving
+controls, model factories, areas, version, or bake products. `node tools/bake-scene.mjs --plan` confirms all area bakes remain fresh.
 The main game's version should be raised when the approved behavior is integrated.
 
 The eventual integration must adapt to the existing player/vehicle physics,
@@ -91,8 +114,8 @@ export without changing binary geometry/animation data.
 and pose-relative animation transfer. Its source object names refer to the live
 import session; reimporting the originals requires updating those names. It
 bakes every bone channel so missing constant channels cannot retain a seated
-pose when changing back to walking. `civilian.glb` remains as the original
-animation reference but is not loaded by the page.
+pose when changing back to walking. `civilian.glb` is both the original
+animation reference and the two cloned NPC drivers loaded by this page.
 
 Run `repair-characters.py` after initial preparation to produce the final two
 variants: fitted arm/hand swing, face-surface eye placement, welded and thickened
@@ -115,6 +138,9 @@ animation compression was applied.
 ```powershell
 node experiments/character-polygon/simulation-test.mjs
 node experiments/character-polygon/playtest.mjs
+# With the review server on 5186:
+node experiments/character-polygon/driving-test.mjs
+node experiments/character-polygon/takeover-test.mjs
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/civilian.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/sedan.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/woman-beret.glb
@@ -141,10 +167,15 @@ separation was below 0.001 mm.
 Diagnostic hooks are
 available only with `?test=1`.
 
-Latest local check (2026-11-15): both test programs passed, with zero browser or
-asset errors. At 1440 × 900, a five-second uninterrupted idle sample recorded
-301 frames, median 16.7 ms and p95 16.8 ms, with 102 draws and 10,766 triangles.
-These are headless Edge measurements of this empty test ground, not the city.
+Latest local check (2026-11-15): simulation, browser movement/driving, seated
+loop regression and the four character/car takeover combinations passed with
+zero browser or asset errors. The takeover test samples every frame for pelvis
+continuity (largest observed step 0.072 m), checks wheel grips, all stages,
+re-entry, input locking, pause/resume and reset. Both original seated-loop checks
+sampled 571 frames over 9.5 seconds without a head-height flash. At 1440 x 900,
+a five-second idle sample recorded 300 frames, median 16.7 ms and p95 16.8 ms,
+with 118 draws and 21,240 triangles. These are headless Edge measurements of this
+empty test ground, not the city.
 The two selectable GLBs total approximately 1.10 MB (470.7 / 625.8 KB).
 The original character reference is 393.6 KB and the car is 241.0 KB; the vendored Rapier module
 with embedded WASM is 4.34 MB. First startup includes compilation of that WASM.

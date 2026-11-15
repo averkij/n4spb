@@ -30,7 +30,7 @@ and clips are retained.
 The white-shirt character was removed from the selection and exported files;
 its transferred animation remains credited above.
 
-## Supplemental animation source and previous character
+## NPC drivers and supplemental animation source
 
 - **Low-poly animated Man** by **Kobi (kobiS21)**
 - Source: https://sketchfab.com/3d-models/fec7bd66fe67411ca58645c9e983f14c
@@ -44,7 +44,16 @@ its transferred animation remains credited above.
 - Source: https://sketchfab.com/3d-models/aeb2699532b4402e8b75ec8888b800b9
 - License: Creative Commons Attribution 4.0 — https://creativecommons.org/licenses/by/4.0/
 - File: `assets/sedan.glb`
-- Changes: normalized to 4.5 m length, grounded, exported through Blender to GLB; glTF Transform dedup/prune and removal of empty export scenes; runtime toon materials, blue body tint, transparent windows and wheel animation pivots.
+- Changes: normalized to 4.5 m length, grounded, exported through Blender to GLB; glTF Transform dedup/prune and removal of empty export scenes; runtime toon materials, blue body tint, transparent windows, wheel animation pivots and hinged driver door.
+
+## Reused city cars
+
+- Red Bibliott GT: existing project geometry from `src/world/drive/model.js`.
+- Grey traffic sedan: existing `sedan` recipe from `src/world/traffic/models.js`.
+- Playground-only changes: clipped and hinged driver-door panels/windows,
+  hollow cabin openings, seats/floor, steering-wheel fittings and wheel motion.
+- Both are built locally from the current game factories; no new external car
+  downloads, licenses or API credentials were introduced.
 
 ## Software
 

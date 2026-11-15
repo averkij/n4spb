@@ -10,7 +10,7 @@ try {
   await page.keyboard.press(key);
   await page.evaluate(()=>{__polygon.reset();__polygon.pose(2.3,1);});
   await new Promise(r=>setTimeout(r,200));await page.keyboard.press('KeyE');
-  await new Promise(r=>setTimeout(r,300));
+  await page.waitForFunction('__polygon.state.mode === "drive"',{timeout:15000});
   const trace=await page.evaluate(()=>new Promise(resolve=>{
    const frames=[],start=performance.now();function sample(t){frames.push({state:__polygon.state,pose:__polygon.driverPose});if(t-start<9500)requestAnimationFrame(sample);else resolve(frames);}requestAnimationFrame(sample);
   }));

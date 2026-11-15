@@ -59,7 +59,7 @@ try {
       await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); await wait(400);
     }
     await tap('Space'); await wait(220); await shot(`variant-${variant+1}-jump`); await wait(700);
-    await page.evaluate(() => { __polygon.reset(); __polygon.pose(2.3,1); }); await wait(200); await tap('KeyE'); await wait(300);
+    await page.evaluate(() => { __polygon.reset(); __polygon.pose(2.3,1); }); await wait(200); await tap('KeyE'); await page.waitForFunction('__polygon.state.mode === "drive"',{timeout:15000});
     await shot(`variant-${variant+1}-seated`); assert.equal((await state()).mode,'drive');
     results.variants.push({variant:variant+1,continuity});
   }
@@ -82,7 +82,7 @@ try {
   const wall = await state(); assert(wall.z > -8.55, 'Walker cannot pass through the wall');
   await page.evaluate(() => __polygon.reset()); await wait(200);
   await page.evaluate(() => __polygon.pose(2.3, 1)); await wait(350); await shot('08-car-prompt');
-  await tap('KeyE'); await wait(350); assert.equal((await state()).mode, 'drive'); await shot('09-driving-near');
+  await tap('KeyE'); await page.waitForFunction('__polygon.state.mode === "drive"',{timeout:15000}); assert.equal((await state()).mode, 'drive'); await shot('09-driving-near');
   const parked = await state();
   await page.keyboard.down('KeyW'); await wait(1400); const drove = await state(); await shot('10-driving');
   assert(drove.carZ < parked.carZ - 3, `Car accelerates and moves: ${JSON.stringify({ parked, drove })}`);
@@ -93,7 +93,7 @@ try {
   assert(Math.abs((await state()).carSpeed) < 1.5, 'Handbrake stops car');
   await tap('KeyV'); await wait(200); await shot('11-driving-far');
   await tap('KeyV'); await wait(200); assert.equal((await state()).driveView, 2); await shot('12-cockpit');
-  await tap('KeyE'); await wait(300); const exited = await state(); assert.equal(exited.mode, 'foot'); assert.equal(exited.footView, 0); await shot('13-exited');
+  await tap('KeyE'); await page.waitForFunction('__polygon.state.mode === "foot"',{timeout:15000}); const exited = await state(); assert.equal(exited.mode, 'foot'); assert.equal(exited.footView, 0); await shot('13-exited');
   assert(Math.hypot(exited.x - exited.carX, exited.z - exited.carZ) > 1.3, 'Exit places character beside car');
   await tap('KeyR'); await wait(300); const reset = await state(); assert(Math.abs(reset.x) < .1 && Math.abs(reset.z - 5) < .1, 'R resets player');
   // A quiet interval, without screenshot or input automation overhead, for this

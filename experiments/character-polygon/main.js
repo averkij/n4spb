@@ -1,7 +1,12 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createSimulation, obstacles, STEP, WALK, RUN } from './simulation.js';
-import { settledSitting, createPoseRig, fitDriver } from './character-pose.js';
+import { settledSitting, createPoseRig, capturePoses } from './character-pose.js';
+
+import {clone} from 'three/addons/utils/SkeletonUtils.js';
+import {createVehicles,updateVehicle} from './vehicles.js';
+import {VEHICLES} from './vehicle-specs.js';
+import {animateInteraction,animateOccupant,poseDriver} from './interaction.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world'), start = $('start'), welcome = $('welcome');
@@ -9,10 +14,11 @@ const keys = new Set(), inputs = { forward: false, back: false, left: false, rig
 const angleDelta = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 let playing = false, ready = false, lockedBefore = false, dragging = false, lastLook = 0, clock = 0;
 let footView = 0, driveView = 0, yaw = 0, pitch = .22, cameraDistance = 4.6, snapCamera = true;
-let renderer, sim, character, characterVisual, sedan, mixer, actions, activeAction, animationName = '', wheels = [];
+let renderer, sim, character, characterVisual, sedan, mixer, actions, activeAction, animationName = '';
 const characters = [];
 let characterIndex = 0, animationTransitions = 0;
-let poseRig, steeringPivot;
+let poseRig;
+let vehicles=[];
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#a8c0cd'); scene.fog = new THREE.Fog('#a8c0cd', 75, 175);
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, .08, 220);
@@ -43,9 +49,7 @@ function buildGround() {
   for (const x of [-26, 26]) stripe(.12, 52, x, 0);
   for (const z of [-26, 26]) stripe(52, .12, 0, z);
   for (let i = -28; i <= 28; i += 6) { stripe(.12, 2, -30.5, i); stripe(.12, 2, 30.5, i); stripe(2, .12, i, -30.5); stripe(2, .12, i, 30.5); }
-  for (const x of [2.4, 5.6, 8.8]) stripe(.09, 6.6, x, 1);
-  stripe(6.4, .09, 5.6, -2.3);
-  groundLabel('PARK / ENTER', 5.5, 5.3, 5);
+  for(const spec of VEHICLES){for(const x of [spec.x-1.8,spec.x+1.8])stripe(.09,6.6,x,1);stripe(3.6,.09,spec.x,-2.3);groundLabel(spec.id==='coupe'?'BIBLIOTT GT':spec.id==='traffic'?'CITY TRAFFIC':'BLUE SEDAN',spec.x,5.3,4.4);}
   groundLabel('CAMERA / CLEARANCE', -8.5, -11, 9);
   groundLabel('WALK / RUN / JUMP', -5.5, 9, 9);
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.25, 1.3, 64), new THREE.MeshBasicMaterial({ color: '#d6ec94', transparent: true, opacity: .65, side: THREE.DoubleSide }));
@@ -76,24 +80,7 @@ function prepareMaterials(root, car = false) {
     o.material = Array.isArray(o.material) ? o.material.map(convert) : convert(o.material);
   });
 }
-function prepareCar(gltf) {
-  sedan = new THREE.Group(); scene.add(sedan);
-  const visual = gltf.scene; visual.rotation.y = Math.PI; sedan.add(visual); prepareMaterials(visual, true);
-  sedan.updateMatrixWorld(true);
-  const steering=visual.getObjectByName('Steerwheel');
-  if(steering) {
-    steeringPivot=new THREE.Group();steeringPivot.position.set(-.37,1.15,-.51);
-    sedan.add(steeringPivot);steeringPivot.attach(steering);
-  }
-  for (const name of ['FL_Wheel', 'FR_Wheel', 'RL_Wheel', 'RR_Wheel']) {
-    const wheel = visual.getObjectByName(name); if (!wheel) continue;
-    const bounds = new THREE.Box3().setFromObject(wheel), center = bounds.getCenter(new THREE.Vector3());
-    const steer = new THREE.Group(); steer.position.copy(sedan.worldToLocal(center)); sedan.add(steer);
-    const roll = new THREE.Group(); steer.add(roll); roll.attach(wheel);
-    wheels.push({ steer, roll, front: name.startsWith('F') });
-  }
-}
-function prepareCharacter(gltf) {
+function prepareCharacter(gltf,selectable=true) {
   character = new THREE.Group(); characterVisual = gltf.scene;
   characterVisual.rotation.y = Math.PI; character.add(characterVisual); scene.add(character); prepareMaterials(characterVisual);
   mixer = new THREE.AnimationMixer(characterVisual); actions = {};
@@ -103,10 +90,11 @@ function prepareCharacter(gltf) {
     if (/Jump/.test(clip.name)) { action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; }
   }
   for (const name of ['Idle', 'Walk', 'Run', 'Jump', 'RunningJump', 'Sitting']) if (!actions[name]) throw new Error(`Character is missing the ${name} animation`);
-  characters.push({ root: character, visual: characterVisual, mixer, actions, rig:createPoseRig(character) });
+  const actor={root:character,visual:characterVisual,mixer,actions,rig:createPoseRig(character)};capturePoses(actor);
+  if(selectable)characters.push(actor);return actor;
 }
 function selectCharacter(index) {
-  if (!characters[index]) return;
+  if (!characters[index]||sim?.state.interaction) return;
   for (const c of characters) { c.root.visible = false; c.mixer.stopAllAction(); }
   characterIndex = index;
   const selected = characters[index]; character = selected.root; characterVisual = selected.visual;
@@ -131,26 +119,22 @@ function animateCharacter(dt) {
   if (name === 'Run') activeAction.timeScale = 1.65 * THREE.MathUtils.clamp(s.speed / RUN, .6, 1.15);
   if (/Jump/.test(name)) activeAction.timeScale = 1.35;
   mixer.update(dt);
-  const driving = s.mode === 'drive', view = driving ? driveView : footView;
-  character.visible = !driving && view !== 2;
-  character.position.set(s.x, s.y, s.z); character.rotation.y = s.yaw;
-  sedan.position.set(s.carX, s.carY, s.carZ); sedan.rotation.y = s.carYaw;
-  steeringPivot?.quaternion.setFromAxisAngle(new THREE.Vector3(0,.35,.94).normalize(),s.steering*.6);
-  for (const w of wheels) { w.roll.rotation.x -= s.carSpeed * dt / .37; w.steer.rotation.y = w.front ? s.steering * .4 : 0; }
-  // The imported sitting clip is used for the visible driver in exterior views.
-  if (driving && view !== 2) {
-    character.visible = true;
-    character.rotation.y = s.carYaw;
-    sedan.updateWorldMatrix(true,true);
-    fitDriver(poseRig,sedan,[-.37,.73,-.08],[-.37,1.15,-.51],s.steering);
-  }
+  for(let i=0;i<vehicles.length;i++)updateVehicle(vehicles[i],sim.vehicles[i],dt);
+  const vehicle=vehicles[s.activeVehicle];sedan=vehicle.root;
+  for(let i=0;i<vehicles.length;i++)animateOccupant(vehicles[i],sim.vehicles[i],dt,i===s.activeVehicle?s.interaction:null);
+  const driving=s.mode==='drive',interacting=!!s.interaction,view=driving?driveView:footView;
+  character.visible=interacting||view!==2;
+  character.position.set(s.x,s.y,s.z);character.rotation.set(0,s.yaw,0);
+  if(driving)poseDriver(characters[characterIndex],vehicle,s.steering);
+  else if(interacting&&s.interaction.phase!=='approach')animateInteraction(characters[characterIndex],vehicle,s.interaction);
+
 }
 function updateCamera(dt) {
-  const s = sim.state, driving = s.mode === 'drive', view = driving ? driveView : footView;
+  const s = sim.state, driving = s.mode === 'drive', interacting=!!s.interaction, view = interacting?0:driving ? driveView : footView;
   if (driving && playing && clock - lastLook > 1.4 && Math.abs(s.carSpeed) > .8) yaw += angleDelta(yaw, s.carYaw) * (1 - Math.exp(-2.6 * dt));
   if (view === 2) {
     if (driving) {
-      offset.set(-.44, 1.48, -.35).applyAxisAngle(THREE.Object3D.DEFAULT_UP, s.carYaw);
+      const seat=vehicles[s.activeVehicle].spec.seat;offset.set(seat[0],seat[1]+.69,seat[2]-.16).applyAxisAngle(THREE.Object3D.DEFAULT_UP, s.carYaw);
       camera.position.set(s.carX + offset.x, s.carY + offset.y, s.carZ + offset.z);
     } else camera.position.set(s.x, s.y + 1.65, s.z);
     camera.rotation.set(-pitch, yaw, 0, 'YXZ');
@@ -159,7 +143,7 @@ function updateCamera(dt) {
   target.set(s.x, s.y + (driving ? 1.12 : 1.12), s.z);
   if (snapCamera) smoothTarget.copy(target);
   else smoothTarget.lerp(target, 1 - Math.exp(-18 * dt));
-  const distance = driving ? (view === 1 ? 10 : 6.7) : (view === 1 ? 7.2 : 4.6);
+  const distance = interacting?5.4:driving ? (view === 1 ? 10 : 6.7) : (view === 1 ? 7.2 : 4.6);
   const cp = Math.cos(pitch);
   offset.set(Math.sin(yaw) * cp * distance, Math.sin(pitch) * distance, Math.cos(yaw) * cp * distance);
   const fraction = sim.cameraFraction(smoothTarget, offset);
@@ -173,15 +157,18 @@ function updateCamera(dt) {
 }
 function updateHud() {
   const s = sim.state, driving = s.mode === 'drive', v = driving ? driveView : footView;
-  $('mode').textContent = driving ? 'DRIVING' : s.animation === 'Idle' ? 'ON FOOT' : s.animation.replace('RunningJump', 'JUMP').toUpperCase();
+  const labels={approach:'APPROACHING',open:'OPENING DOOR',reach:'TAKING CAR',extract:'PULLING DRIVER OUT',recover:'TAKING CAR',climb:'GETTING IN',close:'CLOSING DOOR',settle:'GETTING IN'};
+  $('mode').textContent = s.interaction ? (s.mode==='exit'?'GETTING OUT':labels[s.interaction.phase]) : driving ? 'DRIVING' : s.animation === 'Idle' ? 'ON FOOT' : s.animation.replace('RunningJump', 'JUMP').toUpperCase();
+  for(const button of document.querySelectorAll('[data-character]'))button.disabled=!!s.interaction;
   $('view').textContent = ['THIRD PERSON', 'WIDE VIEW', driving ? 'DRIVER VIEW' : 'FIRST PERSON'][v];
   $('speed').textContent = `${Math.round((driving ? Math.abs(s.carSpeed) : s.speed) * 3.6)} km/h`;
   $('hint').textContent = driving ? 'WASD drive · Space handbrake · E exit · V camera · R reset' : 'WASD move · Shift run · Space jump · E enter car · V camera';
-  $('prompt').textContent = !playing ? '' : s.messageTime > 0 ? s.message : driving ? (Math.abs(s.carSpeed) < 1.5 ? 'E  ·  Leave the car' : '') : Math.hypot(s.x - s.carX, s.z - s.carZ) < 3.8 ? 'E  ·  Get in the sedan' : '';
+  $('prompt').textContent = !playing ? '' : s.messageTime > 0 ? s.message : s.interaction ? '' : driving ? (Math.abs(s.carSpeed)<1.5?'E · Leave the car':'') : s.nearby>=0 ? `E · ${sim.vehicles[s.nearby].occupied?'Take':'Enter'} ${vehicles[s.nearby].spec.name}` : '';
 }
 function clearInput() { keys.clear(); for (const k in inputs) inputs[k] = false; dragging = false; }
 function pause() {
   if (!ready || !playing) return;
+  if(document.pointerLockElement===canvas)document.exitPointerLock();
   playing = false; clearInput(); welcome.hidden = false; start.textContent = 'Continue exploring →'; $('loading').textContent = 'Click to resume · Your position is kept';
 }
 function cycleView() {
@@ -209,7 +196,7 @@ addEventListener('keydown', e => {
   if (/^Digit[23]$/.test(e.code)) selectCharacter(Number(e.code.slice(-1)) - 2);
   if (e.code === 'KeyV') cycleView();
   if (e.code === 'Space' && sim.state.mode === 'foot') sim.jump();
-  if (e.code === 'KeyE' && sim.enterExit()) { yaw = sim.state.mode === 'drive' ? sim.state.carYaw : sim.state.yaw; pitch = .22; snapCamera = true; }
+  if (e.code === 'KeyE' && sim.enterExit()) { yaw = sim.state.carYaw-Math.PI/2-.35; pitch = .15; snapCamera = true; }
   if (e.code === 'KeyR') { sim.reset(); yaw = 0; pitch = .22; snapCamera = true; }
 });
 addEventListener('keyup', e => keys.delete(e.code));
@@ -237,8 +224,10 @@ async function boot() {
   scene.add(sunlight, sunlight.target);
   buildGround();
   const loader = new GLTFLoader();
-  const [simulation, humans, car] = await Promise.all([createSimulation(), Promise.all(['woman-beret', 'man-jacket'].map(name => loader.loadAsync(new URL(`./assets/${name}.glb`, import.meta.url).href))), loader.loadAsync(new URL('./assets/sedan.glb', import.meta.url).href)]);
-  sim = simulation; humans.forEach(prepareCharacter); prepareCar(car); selectCharacter(0);
+  const [simulation, humans, car, civilian] = await Promise.all([createSimulation(), Promise.all(['woman-beret', 'man-jacket'].map(name => loader.loadAsync(new URL(`./assets/${name}.glb`, import.meta.url).href))), loader.loadAsync(new URL('./assets/sedan.glb', import.meta.url).href),loader.loadAsync(new URL('./assets/civilian.glb',import.meta.url).href)]);
+  sim = simulation; humans.forEach(h=>prepareCharacter(h));vehicles=createVehicles(car);
+  for(const v of vehicles){scene.add(v.root);if(v.spec.occupied)v.npc=prepareCharacter({scene:clone(civilian.scene),animations:civilian.animations},false);}
+  selectCharacter(0);
   ready = true; start.disabled = false; start.textContent = 'Enter the playground →'; $('loading').textContent = 'Mouse to look · Esc to release · R to reset';
   animateCharacter(0); updateCamera(0); updateHud();
   let previous = performance.now(), accumulator = 0, frames = [];
@@ -277,7 +266,8 @@ async function boot() {
       const local=bone=>sedan.worldToLocal(bone.getWorldPosition(new THREE.Vector3())).toArray();
       return {hips:local(poseRig.hips),head:local(poseRig.head),left:local(poseRig.arms.l.end),right:local(poseRig.arms.r.end)};
     },
-    scene, get character() { return character; }, sedan, camera,
+    get vehicles(){return vehicles;},get vehicleStates(){return sim.vehicles.map(({body,collider,spec,...v})=>({...v,id:spec.id}));},
+    scene, get character() { return character; }, get sedan(){return sedan;}, camera,
   };
   window.__ready = true;
   requestAnimationFrame(frame);
