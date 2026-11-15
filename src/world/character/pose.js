@@ -57,7 +57,7 @@ export function fitDriver(rig,car,seat,wheel,steering=0,floor=.49) {
   for(const [side,sign] of [['l',-1],['r',1]]) {
     const target=new THREE.Vector3(sign*.165,.025,.045).applyQuaternion(turn).add(new THREE.Vector3(...wheel));
     solveLimb(rig.arms[side],car.localToWorld(target),new THREE.Vector3(sign,-.65,.1).transformDirection(car.matrixWorld));
-    const foot=new THREE.Vector3(seat[0]+sign*.105,floor+(rig.soleOffsets?.[side]||0),seat[2]-.66);
+    const foot=new THREE.Vector3(seat[0]+sign*.105,floor,seat[2]-.66);
     solveLimb(rig.legs[side],car.localToWorld(foot),new THREE.Vector3(0,1,-.4).transformDirection(car.matrixWorld));
   }
 }
@@ -69,15 +69,7 @@ export function capturePoses(actor) {
   };
   actor.standing=sample('Idle');actor.root.updateMatrixWorld(true);actor.standHip=position(actor.rig.hips).y-actor.root.position.y;
   actor.standFeet=Object.fromEntries(['l','r'].map(side=>[side,position(actor.rig.legs[side].end).sub(actor.root.position)]));
-  const bounds=()=>{actor.root.updateMatrixWorld(true);actor.root.traverse(o=>{if(o.isSkinnedMesh)o.skeleton.update();});return new THREE.Box3().setFromObject(actor.root,true);};
-  const soles=bounds().min.y;actor.rig.soleOffsets=Object.fromEntries(['l','r'].map(side=>[side,position(actor.rig.legs[side].end).y-soles]));
-  actor.seated=sample('Sitting');
-  // Include rigid hats and skinned hair. A few load-time samples allow a
-  // damaged low roof to make the driver duck without lowering hips through
-  // the seat or scanning mesh vertices during a frame.
-  actor.seatedClearance=[0,.2,.4,.6,.8,1,1.2].map(lean=>{blendPose(actor,1);leanTorso(actor.rig,lean);leanTorso({...actor.rig,chest:actor.rig.head},lean*.45);return{lean,top:bounds().max.y-position(actor.rig.hips).y};});
-  actor.seatedTop=actor.seatedClearance[0].top;blendPose(actor,1);
-  actor.mixer.stopAllAction();
+  actor.seated=sample('Sitting');actor.mixer.stopAllAction();
 }
 // Explicit restoration is necessary after IK: AnimationMixer skips writes for
 // unchanged constant tracks, which otherwise leaves last frame's IK in place.

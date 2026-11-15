@@ -16,23 +16,14 @@ export function carContact(car, spec, b, out = {}) {
   const hw = spec.W / 2 + 0.06, hd = spec.len / 2 + 0.06;
   if (b.type === 'hole') return null;
   if (b.boatPass && car.floats) return null;      // a walker's floor over the water (the steppable quay stair, its landings and the pontoon deck, environment/quay.js): a floating boat is not stopped by it
-  let top = b.y1, feet = car.y;
+  let top = b.y1;
   if (b.type === 'walk') top = b.top;
   if (b.type === 'ramp') {
     const z = clamp((cx - b.cx) * b.s + (cz - b.cz) * b.c, -b.hd, b.hd);
     top = b.yA + (b.yB - b.yA) * (z / (2 * b.hd) + 0.5);
     if (top - (car.floats ? Math.min(b.thick, HULL_DECK_SLAB) : b.thick) >= car.y + spec.hgt) return null;
-    // A long grounded chassis is already tilted by its supporting axles. A
-    // deck slice under its nose is not a wall just because it stands more than
-    // STEP_HEIGHT above the model origin. Compare heights at the same point,
-    // using physical support slope (never suspension pitch or flight attitude).
-    if (!car.floats && !car.air && !car.fall && Number.isFinite(car.slope)) {
-      const x = clamp((cx - b.cx) * b.c - (cz - b.cz) * b.s, -b.hw, b.hw);
-      const px = b.cx + x * b.c + z * b.s, pz = b.cz - x * b.s + z * b.c;
-      feet += ((px - car.x) * s + (pz - car.z) * c) * Math.tan(car.slope);
-    }
   }
-  if (top <= feet + STEP_HEIGHT || b.y0 >= car.y + spec.hgt) return null;
+  if (top <= car.y + STEP_HEIGHT || b.y0 >= car.y + spec.hgt) return null;
   const dx = cx - b.cx, dz = cz - b.cz;
   let nx, nz, depth, px, pz;
   if (b.type === 'cyl') {

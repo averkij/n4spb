@@ -47,10 +47,9 @@ export function trafficSpec(kind, geometry) {
 export function trafficTuning(kind, geometry) {
   const spec = trafficSpec(kind, geometry), p = trafficPhysics(kind, spec), heavy = p.mass > 3000;
   return { spec, acc: p.acc, vmax: p.vmax, brake: p.brake, grip: p.grip, revAcc: heavy ? 4 : 6, vrev: heavy ? 6 : 8,
-    // Owned articulated buses are rigid: steering uses the average rear-axle
-    // station, while road support spans the front and rearmost physical axles.
+    // Owned articulated buses are rigid: use the average rear-axle station for
+    // steering, keeping authored front-section axle probes and wheel geometry.
     steerWheelbase: kind==='artic'?9.325:spec.wb,
-    ...(kind==='artic'?{supportFront:2.9,supportRear:9.95}:{}),
     steerLock: p.steerLock, steerIn: heavy ? 4.0 : 6.5, steerOut: heavy ? 7 : 10,
     maxLat: heavy ? 14 : 20, yawGrip: heavy ? 16 : 22, gripHand: heavy ? 1.8 : 1.2,
     handYaw: heavy ? .36 : .52, handYawMax: heavy ? 1.4 : 2.1,

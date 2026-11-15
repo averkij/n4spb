@@ -68,10 +68,7 @@ export function placeFountains(S,city=CITY,layout=L){
     const record={id:f.id,x:f.x,z:f.z,group:layout.groupOf?.(f.id)||null,owner:null,status:null,basins:0};records.push(record);
     if(!layout.inPlay(f.x,f.z)){record.status='outside';stats.outside++;continue;}
     if(NON_FOUNTAINS[f.id]){record.status='not-fountain';record.reason=NON_FOUNTAINS[f.id];stats.excluded++;continue;}
-    // Kronverk loads only the mosque part of Troitskaya, not the mansion and its
-    // fountain. A partial landmark module must not suppress the generic basin.
-    const specialistClaim=f.id!=='n10245075680'||(layout.GROUPS?.landmarksTroitskaya||[]).some(g=>g.key==='kshesinskaya');
-    if(specialistClaim&&SPECIALIST_FOUNTAINS[f.id]&&ownerModules.includes(SPECIALIST_FOUNTAINS[f.id])){record.status='specialist';record.owner=SPECIALIST_FOUNTAINS[f.id];stats.specialist++;continue;}
+    if(SPECIALIST_FOUNTAINS[f.id]&&ownerModules.includes(SPECIALIST_FOUNTAINS[f.id])){record.status='specialist';record.owner=SPECIALIST_FOUNTAINS[f.id];stats.specialist++;continue;}
     // A separately mapped nozzle node inside a surveyed pool is the same
     // fountain. Keep an explicit alias so the coverage audit can resolve it.
     const alias=!f.polys.length&&allPolys.find(g=>g.id!==f.id&&layout.inPlay(g.x,g.z)&&g.polys.some(p=>contains(p,f.x,f.z)));

@@ -42,8 +42,7 @@ for(const record of coverage.records){
   assert(record.status,`unresolved fountain ${f.id}`);
   assert.notEqual(record.status,'invalid-polygon',`invalid mapped fountain ${f.id}`);
   if(!L.inPlay(f.x,f.z)){assert.equal(record.status,'outside');continue;}
-  const specialistClaim=f.id!=='n10245075680'||L.groupOf(f.id)==='kshesinskaya';
-  if(specialistClaim&&SPECIALIST_FOUNTAINS[f.id]&&mainModules().includes(SPECIALIST_FOUNTAINS[f.id])){
+  if(SPECIALIST_FOUNTAINS[f.id]&&mainModules().includes(SPECIALIST_FOUNTAINS[f.id])){
     assert.equal(record.status,'specialist');assert.equal(record.owner,SPECIALIST_FOUNTAINS[f.id]);
     assert(!effects.some(e=>e.id.startsWith(`mapped-${f.id}-`)),'specialist fountain receives duplicate generic water');continue;
   }

@@ -1,54 +1,5 @@
 # Performance — what costs what, what was done, how to measure
 
-## 2026-11-15: Bridge, overlap and vehicle-pose corrections (15.1.1)
-
-Anichkov's rising deck slices previously collided with a long bus's flat model
-origin even while its wheels were climbing the same road. Grounded ramp contacts
-now compare the supported chassis plane at the sampled deck point. Articulated
-buses additionally use their actual rear axle; bounded support continuity probes
-reject disconnected raised slabs and holes. Boat passage, airborne contacts,
-piers, walls and ordinary-car support arithmetic retain their existing rules.
-The real-bridge CPU regression passes 56 crossings and 14 crest restarts. The
-browser diagnostic reproduced all eight stalls on `183e8345`, then crossed in
-both directions, forward and reverse, with the bus and articulated bus and no
-deck impacts. This isolated diagnostic is functional evidence, not city FPS.
-
-The detailed mosque was already present in Aptekarsky but absent from the
-Kronverk/Petrovsky overlap. Kronverk now claims only the mosque portion of
-Troitskaya: 13,269 authored triangles, preserving both 48.6 m minarets, the dome,
-existing spatial batching and 75 knockable fence/lamp pieces. The remaining
-Troitskaya landmarks stay with their existing area owners. The partial-module
-check also preserves the generic mansion fountain where its specialist is not
-built. Actual vertex/claim tests and the exact reported camera poses pass in
-both areas, including the distant skyline.
-
-Mapped/procedural benches now check their full sampled footprint against the
-existing measured fountain polygons and coping margin during construction.
-This removes the three invalid Swan Lake bench positions in both overlap
-datasets, without adding a water collider or per-frame placement work. Dry
-islands and accepted benches' movable/breakable registration remain intact.
-Both areas pass targeted road furniture, surface, ribbon and strict marking
-audits. The fountain planting regression now permits additional areas while
-requiring all twelve established masks; all 326 source-site masks pass.
-Full Palace/Admiralty road checks were also compared with exact baseline
-`183e8345`: the existing 13/2 furniture failures have identical coordinates and
-clearances, and Palace retains the same one missing signal stop bar. Surface
-residuals remain 80/256,600 and 70/298,765 samples within their existing limits;
-both ribbon checks pass. No new road or marking failures were introduced.
-
-Door cutting retains fixed sill/underbody strips on the chassis. Door reaches
-use actor-local shoulder directions and the interior pull. Each character's
-seated head/hat clearance is measured at seven lean poses once on creation;
-the cabin samples four roof points with the existing damage map only when its
-damage revision changes. Driving reuses these bounded values rather than
-scanning mesh vertices each frame. Focused checks cover both playable rigs and
-all 25 enterable cabins, including crushed roofs, feet, steering and entry
-continuity. All 21 shipping bakes are fresh: 2,715 complete products,
-1,095.5 MiB gzip. Of these, 2,711 are byte-identical to `183e8345`. The only
-changed products are Kronverk's city-base metadata, its two mosque-adjacent
-city cells (`--3_-4`, `--3_-5`), and its roof capture. Normal-loading driving
-measurements and deployed checks follow this release checkpoint.
-
 ## 2026-11-15: Ground contact, door interiors and bus takeovers (15.1.0)
 
 The avatar now follows the actual drawn paving above its existing physical

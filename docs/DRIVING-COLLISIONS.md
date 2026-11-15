@@ -112,34 +112,6 @@ lane `Lw142734279:0:f1`. Local evidence is
 `shots/floor-road-audit-comparison.json`. These results establish no new road
 regression, not a clean result for every preexisting strict audit.
 
-### Anichkov Bridge bus correction
-
-Long buses previously treated rising deck slices as walls because ramp height
-was compared with the chassis origin instead of its supported slope. Grounded
-car contacts now compare both heights at the same ramp point. The rigid
-articulated bus also samples its real front/rearmost axles (2.9 m ahead and
-9.95 m behind its origin), with a weighted origin height. Remote support must
-follow a continuous local surface: holes, trench gaps and abrupt raised slabs
-remain invalid. Checks are bounded to 32 half-metre probes per axle path and
-run once per frame only when the extended layout needs them; ordinary cars
-retain the previous support calculation. Airborne and boat contacts are unchanged.
-
-`node tools/area.mjs palace tools/anichkov-bus-test.mjs` passes 56 crossings
-using the actual landmark module: seven buses, both directions, slow starts,
-cruise, reverse and diagonal approaches, plus 14 crest restarts. It also checks
-the real under-arch water/bed passages, solid piers, walls, steps and disconnected
-support. The existing 13 collision scenarios, hop suite, 960 edge runs and 136
-bridge checks pass. Browser verification reproduced eight blocked cases
-on `183e8345`; all eight corrected cases crossed without impacts or lane drift.
-Local evidence is `shots/anichkov-bus-after/result.json`.
-
-A local CPU timing probe over repeated real-bridge crossings measured handling
-means of 0.055 ms for the ordinary bus, 0.071 ms for the articulated bus forward
-and 0.077 ms reversing (p95 0.086/0.097/0.111 ms). Observed extra support probes
-were zero for the ordinary bus and at most 20 per frame for the articulated bus.
-These are module timings, not full-city frame-rate measurements; the local
-artifact is `shots/anichkov-support-timing.json`.
-
 ## Small test area
 
 Run `npm start`, then open `http://localhost:5176/tools/collision-lab.html`.

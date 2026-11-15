@@ -14,8 +14,6 @@ import { placeM, vcMat, instanced, hash01, clamp, makePanels, nightMat, staticMe
 import { signTextures } from './signs.js';
 import { streetTrackDist } from '../streets/net.js';
 import { registerLOD } from '../../core/spatial.js';
-import { makeFountainKeepout } from '../../areas/fountain-keepout.js';
-import { mappedFountains, NON_FOUNTAINS } from './fountains.js';
 
 const INST_CELL = 384;
 
@@ -63,9 +61,6 @@ class Placed {                                              // spatial hash of o
 
 export function makeState(ctx) {
   const env = ctx.services.environment, st = ctx.services.streets, city = ctx.services.city, lm = ctx.services.landmarks, rail = ctx.services.rail;
-  // The occupancy raster predates props' fountain phase. Check the mapped basin
-  // itself at final bench placement, including dry holes and point fountains.
-  const fountain = makeFountainKeepout(mappedFountains().filter(f => !NON_FOUNTAINS[f.id]));
   const S = {
     ctx, L, F, W: buildWorld(ctx), R: ctx.rng('spb-props'), placed: new Placed(),
     svc: { benches: [], lamps: [], bins: [], shelters: [], kiosks: [], racks: [], terraces: [], pillars: [], planters: [], clocks: [], stalls: [], urns: [], boxes: [] },
@@ -125,9 +120,6 @@ export function makeState(ctx) {
       const u = -len / 2 + len * i / nx, v = -d / 2 + d * j / nz, px = x + c * u + s * v, pz = z - s * u + c * v;
       if (st?.net ? st.net.cover(px, pz, {}) >= -0.5 : L.isOnRoad(px, pz, 0.5)) return false;
       if (streetTrackDist(px, pz) < 1.9) return false;
-      // <=0.5 m sampling with a 0.36 m margin covers the entire bench footprint
-      // and leaves its legs off the coping; this is placement, not a water wall.
-      if (fountain(px, pz, 0.36)) return false;
     }
     S.add(name, x, z, rotY); S.svc.benches.push({ x, z, rotY, len });
     S.box(x, z, len, d, rotY, 0.9, { r: radius, tag: 'bench' });

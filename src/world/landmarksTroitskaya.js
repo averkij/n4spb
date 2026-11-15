@@ -15,6 +15,7 @@ import * as L from './layout.js';
 import { Parts } from './landmarksTroitskaya/kit.js';
 import { makeMats } from './landmarksTroitskaya/mats.js';
 import { MQ } from './landmarksTroitskaya/frame.js';
+import { GROUPS_LIST } from './landmarksTroitskaya/groups.js';
 
 const PARTS = [
   ['mosque', 'mosque', () => import('./landmarksTroitskaya/mosque.js')],
@@ -29,9 +30,7 @@ async function buildSource(ctx) {
   const M = makeMats(ctx);
   const root = new THREE.Group(); root.name = 'landmarksTroitskaya';
   const svc = { monuments: [], photoSpots: [], entrances: [], crowd: [], fences: [], benches: [], lamps: [], trees: [], paths: [], triangles: 0, parts: {} };
-  // Area overlaps can own only the mosque. Build exactly the active claims so
-  // unclaimed neighbouring landmarks remain with the generic city module.
-  const claimed = new Set((L.GROUPS.landmarksTroitskaya || []).map((g) => g.key));
+  const claimed = new Set(GROUPS_LIST.map((g) => g.key));
   const failed = [];
   for (const [name, key, load] of PARTS) {
     if (!claimed.has(key)) continue;                                   // a part is built only when its claim is on (groups.js): no double drawing with the generic city
