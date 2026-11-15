@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { kartTyres } from './handling.js';
+import { sr5Body } from './sr5-body.js';
 
 const SPEC = {
   W: 1.332, len: 1.914, hgt: .67, R: .137, tw: .16, track: 1.0, wb: 1.07,
@@ -15,23 +16,23 @@ const VARIATION = [
   [.02, -.03, .06], [-.04, .01, -.08],
 ];
 
-export function loadKarts(ctx) {
+export function loadKarts(ctx, course) {
   const workshop = buildGeometry();
   return ['rental', 'club'].flatMap((fleet, side) => VARIATION.map(([launch, top, steering], index) => {
     const num = index + 1, label = side ? 'Клубный карт' : 'Прокатный карт';
     const labelEn = side ? 'Club kart' : 'Rental kart';
     const stagger = num % 2 ? 0 : .18;
     const x = -4674.9 + index*.64 + side*3.55 + stagger, z = 3559.5 + index*1.62 - side*1.28;
-    const vmax = (side ? 24.46 : 21.46) + top*.72;
+    const vmax = (side ? 24.45 : 21.02) + top*.72;
     return {
       id: 'narvskaya-' + fleet + '-' + num, kind: 'kart', spec: SPEC,
       parked: { x, z, yaw: .362 + (side ? Math.PI/2 : -Math.PI/2) },
       tuning: {
         spec: SPEC, noBoost: true, hf: .95, hr: .92, hw: .65,
-        acc: (side ? 4.7 : 4.25) * (1 + launch), vmax, engineFalloff: 1.7 + top*3,
-        drag: .00039, brake: 4.8, revAcc: 2.6, vrev: 2.2, engBrake: .53,
-        steerIn: 8.6*(1+steering), steerOut: 13, steerLock: .49*(1+steering),
-        tyres: kartTyres, frontMu: 1.17*(1+steering*.60), rearMu: 1.30,
+        acc: (side ? 3.55 : 3.12) * (1 + launch), vmax, engineFalloff: 1.7 + top*3,
+        drag: .00039, brake: 4.45, revAcc: 2.6, vrev: 2.2, engBrake: .53,
+        steerIn: 8.6*(1+steering), steerOut: 24, steerLock: .49*(1+steering),
+        tyres: kartTyres, kerbAt: course.kerbAt, frontMu: 1.32 + 1.17*steering*.60, rearMu: 1.38,
         rollK: .0023, pitchK: .0041, impactDecay: 10,
         gearTop: [vmax], maxGear: 1, handDecel: 3.6, handYawMax: 1.65, smokeZ: -.55, smokeY: .17,
       },
@@ -50,23 +51,13 @@ const box = (x, y, z, w, h, d, tilt = 0) => new THREE.BoxGeometry(w, h, d).rotat
 const round = (x, y, z, w, h, d) => new THREE.SphereGeometry(1, 10, 6).scale(w,h,d).translate(x,y,z);
 
 function buildGeometry() {
-  const bumper = new THREE.Shape(), inner = new THREE.Path();
-  function trace(path, w, a, b, c) {
-    path.moveTo(-w+c,a);
-    path.lineTo(w-c,a);
-    path.quadraticCurveTo(w,a,w,a+c);
-    path.lineTo(w,b-c);
-    path.quadraticCurveTo(w,b,w-c,b);
-    path.lineTo(-w+c,b);
-    path.quadraticCurveTo(-w,b,-w,b-c);
-    path.lineTo(-w,a+c);
-    path.quadraticCurveTo(-w,a,-w+c,a);
-  }
-  trace(bumper,.666,-.968,.946,.235);
-  trace(inner,.547,-.848,.823,.215);
-  bumper.holes.push(inner);
-  const guard = new THREE.ExtrudeGeometry(bumper, { depth: .09, bevelEnabled: true, bevelSize: .026, bevelThickness: .024, bevelSegments: 2, curveSegments: 5 })
-    .rotateX(-Math.PI/2).translate(0,.145,0);
+  const panels = Object.fromEntries(Object.entries(sr5Body).map(([name, { vertices, triangles }]) => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(triangles);
+    geometry.computeVertexNormals();
+    return [name, geometry];
+  }));
   const merge = parts => {
     const unindexed = parts.map(p => p.index ? p.toNonIndexed() : p);
     const g = mergeGeometries(unindexed);
@@ -74,25 +65,6 @@ function buildGeometry() {
     return g;
   };
 
-  const chassis = merge([
-    guard, box(0,.105,.16,.96,.035,1.22), box(0,.18,-.23,.56,.07,.51),
-    box(0,.37,-.48,.45,.08,.41,-.87), round(0,.268,-.24,.235,.085,.232),
-    box(-.324,.255,-.513,.27,.23,.36), box(-.36,.396,-.47,.23,.085,.26),
-  ]);
-  const painted = merge([
-    round(0,.25,.727,.475,.088,.197),
-    box(0,.318,.475,.27,.08,.505,-.32),
-    round(-.463,.261,.04,.16,.092,.40), round(.463,.261,.04,.16,.092,.40),
-    round(0,.273,-.731,.337,.087,.12),
-  ]);
-  const metal = merge([
-    box(0,.14,-.53,1.07,.029,.029),
-    box(.284,.213,-.55,.17,.11,.33),
-    box(-.29,.321,-.682,.13,.09,.17),
-    ...Array.from({length: 5}, (_, i) => box(-.325,.226+i*.027,-.635,.266,.012,.118)),
-    box(0,.335,.197,.056,.36,.056,-.44),
-    box(-.106,.144,.645,.097,.085,.052,-.4), box(.106,.144,.645,.097,.085,.052,-.4),
-  ]);
   const wheel = new THREE.CylinderGeometry(.137,.137,.181,14).rotateZ(Math.PI/2);
   const hub = new THREE.CylinderGeometry(.073,.073,.187,11).rotateZ(Math.PI/2);
   const steering = merge([
@@ -101,7 +73,7 @@ function buildGeometry() {
   ]);
   const driver = merge([round(0,.624,-.288,.195,.222,.119), round(0,.891,-.277,.116,.126,.115),
     round(-.15,.512,.012,.072,.062,.269), round(.15,.512,.012,.072,.062,.269)]);
-  return { chassis, painted, metal, wheel, hub, steering, driver };
+  return { ...panels, wheel, hub, steering, driver };
 }
 
 function createModel(ctx, geometry, club, number) {
@@ -116,27 +88,34 @@ function createModel(ctx, geometry, club, number) {
     parent.add(object);
     return object;
   };
-  add('chassis', rubber); add('painted', ctx.mat.toon(color)); add('metal', alloy);
+  add('bumper', rubber);
+  add('chassis', ctx.mat.toon('#21242a'));
+  add('painted', ctx.mat.toon(color));
+  add('trim', ctx.mat.toon('#d9dfe6'));
+  add('metal', alloy);
   const steering = add('steering', rubber);
-  steering.position.set(0,.515,.139);
+  steering.position.set(0,.548,.112);
   steering.rotation.x = -.78;
   const driver = add('driver', ctx.mat.toon(club ? '#283951' : '#77544c'));
   driver.visible = false;
-  const badge = new THREE.Mesh(new THREE.PlaneGeometry(.156, .113), ctx.mat.toon('#e9e6d9'));
-  badge.rotation.x = -Math.PI/2;
-  badge.position.set(0,.374,.472);
-  root.add(badge);
+  const numberPanel = new THREE.Group();
+  numberPanel.position.set(0, .553, .275);
+  numberPanel.rotation.x = Math.atan(.49);
+  const badge = new THREE.Mesh(new THREE.PlaneGeometry(.125, .086), ctx.mat.toon('#e9e6d9'));
+  badge.rotation.x = -Math.PI / 2;
+  numberPanel.add(badge);
   const digits = new THREE.Group();
-  digits.position.copy(badge.position);
-  digits.position.y += .003;
+  digits.position.y = .002;
   addNumber(digits, number, rubber);
-  root.add(digits);
+  numberPanel.add(digits);
+  root.add(numberPanel);
 
   const wheels = [];
   for (const side of [-1, 1]) for (const front of [false, true]) {
     const pivot = new THREE.Group(), spin = new THREE.Group();
-    pivot.position.set(.51*side,.137,front ? .535 : -.535);
-    if (!front) spin.scale.x = 1.13;
+    const radius = front ? .131 : .1455;
+    pivot.position.set((front ? .495 : .500) * side, radius, front ? .535 : -.535);
+    spin.scale.set(front ? .77 : 1.07, radius / .137, radius / .137);
     pivot.add(spin); root.add(pivot);
     add('wheel', rubber, spin); add('hub', alloy, spin);
     wheels.push({ pivot, spin, front });

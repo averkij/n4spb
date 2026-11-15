@@ -20,14 +20,15 @@ function gate(a, b, forward) {
 export function createLapTimer(course) {
   const finish = gate(...course.startFinish, [0, 1]);
   // Require the three sectors in order so a turn-around at the line or a
-  // short cut across the infield cannot count as a completed clockwise lap.
+  // short cut across the infield cannot count as a completed lap.
   const markers = [.25, .50, .75].map(u => {
     const p = course.racingLine.getPointAt(u), t = course.racingLine.getTangentAt(u);
     return gate([p.x - t.z * 4.8, p.z + t.x * 4.8], [p.x + t.z * 4.8, p.z - t.x * 4.8], [t.x, t.z]);
   });
   const look = course.racingLine.getSpacedPoints(84);
   const view = { visible: false, elapsed: null, last: null, best: null };
-  let previous, started, next;
+  const results = [{ last: null, best: null }, { last: null, best: null }];
+  let previous, started, next, direction;
   function reset() {
     previous = null;
     started = null;
@@ -50,14 +51,20 @@ export function createLapTimer(course) {
         const hit = finish(previous, current);
         if (hit) {
           const at = previous.time + hit.fraction * (time - previous.time);
-          if (hit.forward && started !== null && next === markers.length) {
-            view.last = at - started;
-            view.best = view.best === null ? view.last : Math.min(view.best, view.last);
+          const result = results[Number(hit.forward)];
+          if (direction === hit.forward && started !== null && next === markers.length) {
+            result.last = at - started;
+            result.best = result.best === null ? result.last : Math.min(result.best, result.last);
           }
-          started = hit.forward ? at : null;
+          view.last = result.last;
+          view.best = result.best;
+          view.direction = hit.forward ? 'cw' : 'ccw';
+          direction = hit.forward;
+          started = at;
           next = 0;
-        } else if (started !== null && next < markers.length && markers[next](previous, current)?.forward) {
-          next += 1;
+        } else if (started !== null && next < markers.length) {
+          const marker = markers[direction ? next : markers.length - 1 - next](previous, current);
+          if (marker?.forward === direction) next += 1;
         }
       }
       view.elapsed = started === null ? null : time - started;
@@ -98,10 +105,10 @@ export function mountLapTimer(ctx, course) {
   ctx.onUpdate((_dt, time) => {
     const drive = ctx.drive;
     timer.update(drive?.active && drive.vehicle.kind === 'kart' ? drive.car : null, time);
-    const { visible, elapsed, last, best } = timer.view;
+    const { visible, elapsed, last, best, direction } = timer.view;
     if (root.hidden === visible) root.hidden = !visible;
     if (!visible) return;
-    const text = elapsed === null ? 'Пересеки старт-финиш' : formatTime(elapsed);
+    const text = elapsed === null ? 'Пересеки старт-финиш' : (direction === 'cw' ? '↻ ' : '↺ ') + formatTime(elapsed);
     if (current.textContent !== text) current.textContent = text;
     const laps = last === null ? '' : 'Последний ' + formatTime(last) + ' · Лучший ' + formatTime(best);
     if (results.textContent !== laps) results.textContent = laps;

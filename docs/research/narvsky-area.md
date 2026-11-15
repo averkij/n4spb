@@ -174,16 +174,41 @@ The TrackTakTak clockwise start/finish gate is the finite line from
 (59.900469928, 30.266926778) to (59.900572405, 30.267520222). The painted line
 uses its intersection with the mapped track. The speed reference is separate,
 at approximately X −4731.8, Z 3518, before the left turn marked by the owner.
-A repeatable run enters the back straight at 48.24 km/h and lifts through the
-right-hand bend. At the reference, it measures 65.6–66.9 km/h for rental karts
-and 71.1–72.4 km/h for club karts. The pace depends on the line and throttle.
+A repeatable run enters the back straight at 61.2 km/h and lifts through the
+right-hand bend. At the reference, it measures 65.4–66.4 km/h for rental karts
+and 71.7–72.8 km/h for club karts. The pace depends on the line and throttle.
 
-Crossing the start/finish clockwise starts the timer. Three intermediate
-sectors must be crossed in order for the next crossing to record a lap.
-The HUD shows the current, last and best times. Leaving the kart or going
+Crossing start/finish in either direction starts the timer. Three intermediate
+sectors must be crossed in order for the next crossing to record a lap. The HUD
+shows the current time and the last and best times for the active direction. Leaving the kart or going
 more than 45 m from the racing line cancels the current lap and hides the HUD.
 Results are kept until the scene reloads.
 
 References [track and photos](https://kartingpitstop.ru/trassy/narvskaya/),
 [driver footage](https://www.youtube.com/watch?v=Bs-fz2zajrI), and
 [Sodi SR5 technical drawings](https://www.sodikart.com/en-gb/karts/rental/sr5-30.html).
+
+The kerbs use three surfaces: a gradual ramp, a slightly uneven crown and a
+steeper outside edge. The rendered triangles also define the wheel contact
+surfaces. An oblique strike can rotate or lift the kart. A wheel on the kerb
+has more grip than it does on asphalt.
+
+The SR5 body comes from `assets/models/sodi-sr5.blend` and uses the published
+1,914 × 1,332 mm footprint and the 262 / 291 mm front and rear tyre diameters.
+Use `tools/export-sodi-sr5.py` to regenerate the game mesh after Blender edits.
+
+For longitudinal tuning, the TrackTakTak export is a clockwise session from
+1 August 2026 with 51 laps at roughly 10 Hz. Among the 20 fastest laps, the
+80th percentile of smoothed positive acceleration on near-straight samples
+(`|aLat| < 2 m/s²`) was 2.22 m/s² at 40–50 km/h, 1.55 at 50–60, 1.14 at
+60–65 and 0.98 at 65–70. The median of braking samples below −2 m/s² with
+the same straight-line filter was −4.16 m/s². These are GPS-derived estimates.
+The export does not identify the fleet or record pedal position. The game
+uses them as a tuning reference and retains the owner's different speed targets
+for each fleet. Source analysis is in TrackTakTak's
+`product_analysis/outputs/pitstop_measurements/measurements.json`.
+
+On flat asphalt, the model caps the tyres' combined lateral acceleration at
+1.2 g. The measured regression draws an 18.5 m radius at 51.4 km/h
+(1.13 g). It also verifies that releasing the brake and centring the wheel for
+0.2 s reduces exit slip, and that a kart can turn again while accelerating.

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { KERB_PROFILE, createKerbIndex } from './kerbs.js';
 import { MeshBuilder, addCap } from '../lib/massing.js';
 import { knockBays, splitBays } from '../lib/fence-bays.js';
 import { COURSE, COURSE_LAWN, KERB_RUNS, PIT_LANE, START_FINISH, SPEED_CHECK, WALK_IN, distSqToLine, relief } from './site.js';
@@ -94,6 +95,7 @@ function markingAt(builder, line, precision) {
 
 export function buildCourse(ctx, root) {
   const normals = offsets(circuit, true);
+  const kerbs = createKerbIndex();
   const asphalt = new MeshBuilder(), shoulder = new MeshBuilder(), white = new MeshBuilder(), red = new MeshBuilder();
   const grass = new MeshBuilder(), rubber = new MeshBuilder();
   const left = i => -cornerWidth(i), right = i => cornerWidth(i);
@@ -126,7 +128,19 @@ export function buildCourse(ctx, root) {
       const edge = corner(circuit[i], normals[i], at(i), 0, relief);
       if (distSqToLine(edge[0], edge[2], lane2D) < 6.25) continue;
       const color = (i - start) % 4 < 2 ? red : white;
-      ribbon(color, circuit, normals, at, j => at(j) + side * .49, .015, relief, i, i + 1, .108);
+      const point = (j, profile) => {
+        const { offset, height } = KERB_PROFILE[profile];
+        const uneven = profile === 1 || profile === 2 ? .009 * Math.sin(j * 2.4) : 0;
+        return corner(circuit[j], normals[j], at(j) + side * offset, height + uneven, relief);
+      };
+      for (let section = 0; section < KERB_PROFILE.length - 1; section++) {
+        const points = [point(i, section), point(i + 1, section), point(i + 1, section + 1), point(i, section + 1)];
+        quad(color, points);
+        kerbs.addFace(points, section);
+        const [a, b, c, d] = points;
+        ctx.physics.addWalkTriangle([a, b, c], .1);
+        ctx.physics.addWalkTriangle([a, c, d], .1);
+      }
     }
   }
 
@@ -197,7 +211,9 @@ export function buildCourse(ctx, root) {
     rec: { kind: 'tyre-bank', mass: 33, h: .48, anchored: 23, hitK: .34, loosen: true },
   });
 
-  return { deckY, startFinish: START_FINISH, start, speedCheck: SPEED_CHECK, racingLine, length };
+  return {
+    deckY: (x, z) => kerbs.at(x, z)?.height(x, z) ?? deckY(x, z),
+    kerbAt: kerbs.at, startFinish: START_FINISH, start, speedCheck: SPEED_CHECK, racingLine, length };
 }
 
 function pavingPad() {

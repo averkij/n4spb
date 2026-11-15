@@ -13,5 +13,5 @@ export function build(ctx) {
   buildStadium(ctx, root);
   mountLapTimer(ctx, course);
   ctx.addStatic(root);
-  ctx.services.kartingNarvskaya = { ...course, loadVehicles: () => loadKarts(ctx) };
+  ctx.services.kartingNarvskaya = { ...course, loadVehicles: () => loadKarts(ctx, course) };
 }
