@@ -1,0 +1,83 @@
+import puppeteer from 'puppeteer-core';
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const out = path.join(root, 'shots/character-polygon'); fs.mkdirSync(out, { recursive: true });
+const port = 5194;
+const server = spawn(process.execPath, ['tools/serve.mjs', String(port)], { cwd: root, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+await new Promise((resolve, reject) => { server.stdout.on('data', d => { if (String(d).includes('serving ')) resolve(); }); server.once('error', reject); server.once('exit', code => reject(new Error(`Server exited: ${code}`))); });
+const executablePath = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Google/Chrome/Application/chrome.exe'].find(fs.existsSync);
+let browser;
+const errors = [], results = {};
+try {
+  browser = await puppeteer.launch({ executablePath, headless: true, defaultViewport: { width: 1440, height: 900 }, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--no-first-run'] });
+  const page = await browser.newPage();
+  page.on('pageerror', e => errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('requestfailed', r => errors.push(`${r.url()}: ${r.failure()?.errorText}`));
+  await page.goto(`http://localhost:${port}/character-test.html?test=1`, { waitUntil: 'networkidle0' });
+  await page.waitForFunction('window.__ready === true', { timeout: 30000 });
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const state = () => page.evaluate(() => __polygon.state);
+  const shot = name => page.screenshot({ path: path.join(out, name + '.png') });
+  const tap = key => page.keyboard.press(key);
+  await shot('00-welcome');
+  await page.click('#start'); await wait(500);
+  assert.equal((await state()).playing, true);
+  assert.equal((await state()).footView, 0);
+  await shot('01-idle');
+  const before = await state();
+  await page.keyboard.down('KeyW'); await wait(1200); const walked = await state(); await shot('02-walk'); await page.keyboard.up('KeyW');
+  assert(walked.z < before.z - 1, 'Walking moves the character forward'); assert.equal(walked.animation, 'Walk');
+  await page.keyboard.down('KeyW'); await page.keyboard.down('ShiftLeft'); await wait(900); const ran = await state(); await shot('03-run');
+  assert(ran.speed > 4, 'Shift runs faster than walking'); assert.equal(ran.animation, 'Run');
+  await tap('Space'); await wait(210); const jumped = await state(); await shot('04-jump');
+  assert(jumped.y > ran.y + .45, 'Jump lifts the character');
+  await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); await wait(900);
+  assert((await state()).grounded, 'Jump lands');
+  await tap('KeyV'); await wait(200); assert.equal((await state()).footView, 1); await shot('05-far');
+  await tap('KeyV'); await wait(200); assert.equal((await state()).footView, 2); assert.equal((await state()).characterVisible, false); await shot('06-first-person');
+  await tap('KeyV');
+  await page.evaluate(() => { __polygon.pose(-10, -8, Math.PI); }); await wait(350);
+  results.wallCamera = await state(); assert(results.wallCamera.cameraDistance < 1, 'Camera sphere stops before the wall'); await shot('07-wall-camera');
+  await page.evaluate(() => { __polygon.pose(-10, -7.5, 0); }); await page.keyboard.down('KeyW'); await wait(1400); await page.keyboard.up('KeyW');
+  const wall = await state(); assert(wall.z > -8.55, 'Walker cannot pass through the wall');
+  await page.evaluate(() => __polygon.reset()); await wait(200);
+  await page.evaluate(() => __polygon.pose(2.3, 1)); await wait(350); await shot('08-car-prompt');
+  await tap('KeyE'); await wait(350); assert.equal((await state()).mode, 'drive'); await shot('09-driving-near');
+  const parked = await state();
+  await page.keyboard.down('KeyW'); await wait(1400); const drove = await state(); await shot('10-driving');
+  assert(drove.carZ < parked.carZ - 3, `Car accelerates and moves: ${JSON.stringify({ parked, drove })}`);
+  await page.keyboard.down('KeyA'); await wait(600); await page.keyboard.up('KeyA');
+  assert(Math.abs((await state()).carYaw) > .15, 'Car steers');
+  await tap('KeyE'); assert.equal((await state()).mode, 'drive', 'Exit is blocked at speed');
+  await page.keyboard.up('KeyW'); await page.keyboard.down('Space'); await wait(1500); await page.keyboard.up('Space');
+  assert(Math.abs((await state()).carSpeed) < 1.5, 'Handbrake stops car');
+  await tap('KeyV'); await wait(200); await shot('11-driving-far');
+  await tap('KeyV'); await wait(200); assert.equal((await state()).driveView, 2); await shot('12-cockpit');
+  await tap('KeyE'); await wait(300); const exited = await state(); assert.equal(exited.mode, 'foot'); assert.equal(exited.footView, 0); await shot('13-exited');
+  assert(Math.hypot(exited.x - exited.carX, exited.z - exited.carZ) > 1.3, 'Exit places character beside car');
+  await tap('KeyR'); await wait(300); const reset = await state(); assert(Math.abs(reset.x) < .1 && Math.abs(reset.z - 5) < .1, 'R resets player');
+  // A quiet interval, without screenshot or input automation overhead, for this
+  // small prototype only. This is not evidence of integrated city performance.
+  await page.evaluate(() => __polygon.resetFrameSamples()); await wait(5000);
+  results.performance = await page.evaluate(() => {
+    const stats = __polygon.stats, samples = stats.frames.slice().sort((a, b) => a - b);
+    return { viewport: [innerWidth, innerHeight], samples: samples.length, medianMs: samples[Math.floor(samples.length * .5)], p95Ms: samples[Math.floor(samples.length * .95)], meanMs: samples.reduce((a, b) => a + b, 0) / samples.length, calls: stats.calls, triangles: stats.triangles };
+  });
+  await tap('Escape'); await wait(100); assert.equal((await state()).playing, false, 'Escape pauses');
+  await page.keyboard.down('KeyW'); await wait(200); await page.keyboard.up('KeyW'); assert(Math.abs((await state()).z - reset.z) < .1, 'Paused input does not move');
+  await page.setViewport({ width: 640, height: 800 }); await wait(200); await shot('14-small-viewport');
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal UI overflow');
+  results.walk = walked; results.run = ran; results.jump = jumped; results.drive = drove;
+  results.stats = await page.evaluate(() => __polygon.stats); results.errors = errors;
+  fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify(results, null, 2));
+  assert.deepEqual(errors, [], 'No browser or asset errors');
+  console.log(JSON.stringify({ passed: true, screenshots: out, errors, performance: results.performance, animations: results.stats.animations }, null, 2));
+} catch (error) {
+  console.error('Browser errors:', errors); throw error;
+} finally { await browser?.close(); server.kill(); }
