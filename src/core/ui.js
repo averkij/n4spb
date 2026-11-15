@@ -121,7 +121,9 @@ export function createInteract({ camera, player, ui, doc = typeof document !== '
       for (const d of items) {
         if (d.enabled && !d.enabled()) continue;
         const a = posOf(d); if (!a) continue;
-        _p.set(a.x - camera.position.x, (a.y ?? camera.position.y) - camera.position.y, a.z - camera.position.z);
+        // Reach belongs to the walker, including when the camera trails behind.
+        const origin=player.pos||camera.position,eyeY=player.pos?origin.y+1.2:origin.y;
+        _p.set(a.x-origin.x,(a.y??eyeY)-eyeY,a.z-origin.z);
         const dist = _p.length();
         if (dist > d.radius || dist >= best) continue;
         if (dist > 1.2 && _p.normalize().dot(_f) < 0.25) continue;                 // roughly in front (about +-75 degrees), unless right at it

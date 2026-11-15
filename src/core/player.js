@@ -1,4 +1,4 @@
-// First-person walker: pointer-lock mouse look (drag-look fallback), WASD / arrows, Shift run, Space jump,
+// Third-person walker: V cycles near / far / first person. Pointer-lock mouse look (drag-look fallback), WASD / arrows, Shift run, Space jump,
 // F flight (take-off, then W/S fly along the view, Space/E up, Q/C down, F lands), touch joystick + drag look on phones.
 //
 // Underground support (docs/UNDERGROUND.md): the walker follows ANY surface of core/physics.js (terrain, decks, ramps, escalators, stairs, floors
@@ -10,6 +10,8 @@
 // (physics.waterLevel: the feet depth slows him down, `player.depth` / `player.under` feed the underwater tint of core/water-view.js); a flight landing over water is allowed like anywhere else.
 import * as THREE from 'three';
 import { STEP_HEIGHT, DROP_MAX } from './physics.js';
+import {footCameraFraction} from '../world/character/camera.js';
+import {JUMPS} from '../world/character/jump-timing.js';
 
 const DEG = Math.PI / 180;
 const FLY_SPEED = 3.4;                      // flight speed = walking / running speed × this
@@ -37,6 +39,10 @@ export class Player {
     this.vel = new THREE.Vector3();
     this.vy = 0;
     this.yaw = 0; this.pitch = 0;
+    this.facingYaw=0;this.speed=0;this.animation='Idle';this.jump=null;
+    this.view=0;this.cameraDistance=4.6;this.cameraSnap=true;
+    this.cameraTarget=new THREE.Vector3();this.cameraOffset=new THREE.Vector3();
+    this.shotView=typeof location!=='undefined'&&new URLSearchParams(location.search).has('shot');
     this.eye = 1.52; this.radius = 0.3; this.height = 1.7;
     this.walk = 3.6; this.run = 8.4;
     this.fly = false; this.enabled = false; this.onGround = true;
@@ -74,7 +80,8 @@ export class Player {
       this.keys.add(e.code);
       if (this.inputLock > 0) return;
       if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) this.toggleFly();   // not on key auto-repeat, not Ctrl+F (browser find)
-      if (e.code === 'Space' && this.enabled && !this.ride && (this.onGround || this.fly)) { if (!this.fly) this.vy = this.depth > 0.3 ? 3.0 : 4.2; e.preventDefault(); }      // (a push off the bed is weaker)
+      if(e.code==='KeyV'&&!e.repeat&&this.enabled&&!this.fly&&!this.ride&&!e.ctrlKey&&!e.metaKey&&!e.altKey)this.cycleView();
+      if (e.code === 'Space' && this.enabled && !this.ride && (this.onGround || this.fly)) { if (!this.fly&&!e.repeat) this.requestJump(); e.preventDefault(); }      // (a push off the bed is weaker)
     });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
@@ -108,6 +115,14 @@ export class Player {
 
   requestLock() { try { const p = this.dom.requestPointerLock?.(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* drag-look fallback */ } }
 
+  setView(view) {this.view=((Math.trunc(Number(view)||0)%3)+3)%3;this.cameraSnap=true;this.applyCamera(0);return this.view;}
+  cycleView() {return this.setView(this.view+1);}
+  get firstPerson(){return this.view===2||this.fly||!!this.ride||this.shotView;}
+  requestJump(){
+    if(!this.enabled||this.inputLock>0||this.fly||this.ride||!this.onGround||(this.jump&&this.jump.phase!=='land'))return false;
+    this.jump={phase:'anticipation',time:0,clip:this.speed>this.walk*1.2?'RunningJump':'Jump',launchSpeed:this.depth>.3?3:4.2};return true;
+  }
+
   /** True when the feet are below the terrain (a tunnel, a station, an escalator below the street). */
   isUnderground() { return this.pos.y < this.physics.heightAt(this.pos.x, this.pos.z) - UNDER_EPS; }
   get riding() { return !!this.ride; }
@@ -122,7 +137,7 @@ export class Player {
     if (on) {
       const why = this.ride ? 'ride' : this.isUnderground() ? 'underground' : null;
       if (why) { if (this.onFly) this.onFly(why); return why; }
-      this.fly = true; this.lift = TAKEOFF.time; this.descent = false; this.roof = null; this.vy = 0; this.vel.y = 0; this.supportItem = null; this.stick = false;
+      this.fly = true; this.lift = TAKEOFF.time; this.descent = false; this.roof = null; this.vy = 0; this.vel.y = 0; this.supportItem = null; this.stick = false;this.jump=null;
     } else {
       r = this.landingBlocked();
       if (!r) {
@@ -177,6 +192,7 @@ export class Player {
       if (this.fly && this.pos.y < ph.heightAt(x, z) - UNDER_EPS) this.noclipUnder = true;
     }
     this.yaw = yawDeg * DEG; this.pitch = pitchDeg * DEG; this.vy = 0; this.smoothY = null;
+    this.facingYaw=this.yaw;this.jump=null;this.speed=0;this.animation='Idle';this.cameraSnap=true;
     this.vel.set(0, 0, 0); this.lift = 0; this.descent = false; this.roof = null; this.turn.yaw = this.turn.pitch = 0; this.look.dx = this.look.dy = 0;
     this.supportItem = null; this.stick = false; this.onGround = !this.fly;
     this.safe.x = x; this.safe.y = this.pos.y; this.safe.z = z;
@@ -198,6 +214,7 @@ export class Player {
     const R = this.ride = { frame, local: { x: local.x, y: local.y ?? 0, z: local.z }, bounds: o.bounds || null, lookRelative: o.lookRelative !== false, onExit: o.onExit || null, v: { x: 0, z: 0 } };
     this._clampRide(R);
     this.fly = false; this.noclipUnder = false; this.lift = 0; this.descent = false; this.roof = null; this.vy = 0; this.vel.set(0, 0, 0);
+    this.jump=null;this.speed=0;this.animation='Idle';
     this.supportItem = null; this.stick = false; this.onGround = true; this.smoothY = null; this.turn.yaw = this.turn.pitch = 0;
     if (R.lookRelative) this.yaw -= phi;                 // keeps the world view direction the same at the moment of boarding
     this._rideCamera(0, fr);
@@ -259,6 +276,7 @@ export class Player {
   update(dt) {
     dt = Math.min(dt, 0.05);
     const sens = 0.0022, tr = this.turn, locked = this.inputLock > 0;
+    if(locked&&this.jump?.phase==='anticipation')this.jump=null;
     if (locked) this.look.dx = this.look.dy = 0;
     // Look: the raw movement (whole pixels, uneven frame times, bursts of touch events) goes into a pending turn and the view eases toward it
     // (frame-rate independent), so slow mouse movement and irregular frames no longer show as steps. The total turn is unchanged.
@@ -284,6 +302,11 @@ export class Player {
     if (this.fly) { this.depth = 0; this.wade = 1; this._fly(dt, f, s, u, running, fx, fz, rx, rz); this.applyCamera(dt); const wf = this.physics.waterLevel ? this.physics.waterLevel(this.pos.x, this.pos.z) : null; this.under = wf !== null && this.pos.y + this.eye < wf; return; }
 
     const ph = this.physics;
+    if(this.jump){
+      const jump=this.jump,timing=JUMPS[jump.clip];jump.time+=dt;
+      if(jump.phase==='anticipation'&&jump.time>=timing.anticipation){jump.phase='air';jump.time=0;this.vy=jump.launchSpeed;this.onGround=false;}
+      else if(jump.phase==='land'&&jump.time>=timing.recovery)this.jump=null;
+    }
     // standing on a roof: remember its height (kept while airborne, so a jump cannot carry the player over the edge)
     if (this.onGround) { const rt = ph.roofTop(this.pos.x, this.pos.z); this.roof = Math.abs(rt - this.pos.y) < 0.2 ? rt : null; }
     // wading: the water over the feet slows the walker (the camera stays at the eye height above the bed)
@@ -324,7 +347,10 @@ export class Player {
     const b = this.bounds;
     if (this.clampXZ) { const c = this.clampXZ(p.x, p.z, 0); p.x = c[0]; p.z = c[1]; }
     else { p.x = THREE.MathUtils.clamp(p.x, b.x0, b.x1); p.z = THREE.MathUtils.clamp(p.z, b.z0, b.z1); }
-    this.distance += Math.max(0, Math.hypot(p.x - this.pos.x - cvx * dt, p.z - this.pos.z - cvz * dt));
+    const movedX=p.x-this.pos.x-cvx*dt,movedZ=p.z-this.pos.z-cvz*dt;
+    this.speed=dt>0?Math.hypot(movedX,movedZ)/dt:this.speed;
+    if(this.speed>.12){const direction=Math.atan2(-movedX,-movedZ);this.facingYaw+=Math.atan2(Math.sin(direction-this.facingYaw),Math.cos(direction-this.facingYaw))*(1-Math.exp(-14*dt));}
+    this.distance += Math.max(0, Math.hypot(movedX,movedZ));
     this.pos.x = p.x; this.pos.z = p.z;
     const S2 = ph.surfaceAt(this.pos.x, this.pos.z, this.pos.y, true, _P), g = S2.y, item = S2.item;
     if (this.onGround && (this.stick || (item && item.sticky)) && !this.descent && this.vy <= 0 && this.pos.y > g && this.pos.y - g <= STICK_DOWN) {
@@ -338,10 +364,15 @@ export class Player {
       else this.onGround = false;
     }
     this.supportItem = this.onGround ? item : null;
+    if(this.jump?.phase==='air'&&this.onGround){this.jump.phase='land';this.jump.time=0;}
+    else if(this.jump?.phase==='anticipation'&&!this.onGround){this.jump.phase='air';this.jump.time=0;}
+    else if(!this.onGround&&!this.jump&&!this.descent)this.jump={phase:'air',time:0,clip:this.speed>this.walk*1.2?'RunningJump':'Jump',launchSpeed:4.2};
+    this.animation=this.jump?.clip||(this.speed<.12?'Idle':this.speed>this.walk*1.2?'Run':'Walk');
     this.stick = this.onGround && !!(item && item.sticky);
     if (this.onGround) { if (g > -Infinity) { this.safe.x = this.pos.x; this.safe.y = this.pos.y; this.safe.z = this.pos.z; } }
     else if (g === -Infinity && this.pos.y < this.safe.y - RESCUE_DROP) {   // falling through nothing (jumped over a rail into a void): never leave the player there
       this.pos.set(this.safe.x, this.safe.y, this.safe.z); this.vy = 0; this.vel.set(0, 0, 0); this.onGround = true; this.smoothY = null;
+      this.jump=null;this.animation='Idle';this.speed=0;this.cameraSnap=true;
       if (this.onRescue) this.onRescue();
     }
     if (this.onGround && this.descent) {                                // touched down
@@ -385,6 +416,15 @@ export class Player {
     if (this.smoothY === null || this.fly) this.smoothY = eyeY;
     else this.smoothY += (eyeY - this.smoothY) * Math.min(1, dt * 14);
     if (Math.abs(this.smoothY - eyeY) > 1.2) this.smoothY = eyeY;
+    if(!this.firstPerson){
+      const distance=this.view===1?7.2:4.6,pitch=THREE.MathUtils.clamp(this.pitch,-1.05,.45),cp=Math.cos(pitch);
+      const target=this.cameraTarget.set(this.pos.x,this.smoothY-this.eye+1.12,this.pos.z);
+      const offset=this.cameraOffset.set(Math.sin(this.yaw)*cp*distance,.65-Math.sin(pitch)*distance,Math.cos(this.yaw)*cp*distance);
+      const length=offset.length(),allowed=length*footCameraFraction(this.physics,target,offset);
+      this.cameraDistance=this.cameraSnap||allowed<this.cameraDistance?allowed:THREE.MathUtils.lerp(this.cameraDistance,allowed,1-Math.exp(-7*dt));
+      this.camera.position.copy(target).addScaledVector(offset,this.cameraDistance/length);this.camera.lookAt(target);this.cameraSnap=false;return;
+    }
+    this.cameraSnap=true;
     this.camera.position.set(this.pos.x, this.smoothY + bobY, this.pos.z);
     this.camera.rotation.set(this.pitch, this.yaw, Math.sin(this.bob) * 0.0025 * Math.min(1, sp / 3), 'YXZ');
   }

@@ -5,6 +5,7 @@ import { addMechanicalInterior, breakGroups, fragmentGeometry } from './breakabl
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const fold = t => Math.max(0, 1 - Math.abs(t - .52) / .38);
 export const DAMAGE_STAGES = ['Pristine', 'Scuffed', 'Dented', 'Crumpled', 'Wrecked'];
+export const DURABILITY_MULTIPLIER = 1.5;
 export function createDamageState() { return { front: 0, rear: 0, left: 0, right: 0, revision: 0, shed: {} }; }
 export function damageAmount(s) { return Math.max(s.front, s.rear, s.left, s.right); }
 export function crushedSpec(spec, state) {
@@ -16,7 +17,7 @@ export function recordDamage(state, event, spec) {
   if (event.type !== 'hit' || event.v < 3 || !Number.isFinite(event.localX) || !Number.isFinite(event.localZ)) return false;
   const side = Math.abs(event.localNX || 0) > Math.abs(event.localNZ || 0);
   const zone = side ? (event.localX > 0 ? 'left' : 'right') : (event.localZ > (spec.front + spec.rear) / 2 ? 'front' : 'rear');
-  state[zone] = Math.min(1, state[zone] + clamp((event.v - 3) / 45 / (spec.durability || 1)));       // spec.durability: a stout body (> 1) crumples less per hit, soft old metal (< 1) more
+  state[zone] = Math.min(1, state[zone] + clamp((event.v - 3) / (45 * DURABILITY_MULTIPLIER) / (spec.durability || 1))); // 50% more impact budget, retaining each body's relative strength and the 100% junk threshold.
   state.revision++; return true;
 }
 // Monotonic X/Z mapping; wheel-arch bands translate together, with the final
@@ -41,16 +42,22 @@ export function deformPoint(p, state, spec) {
 export function createCarDamage(model, options = {}) {
   const spec = options.spec || { W: 1.82, len: 4.14, hgt: 1.3, front: 2.12, rear: -2.02, wb: 2.62 };
   const state = options.state || createDamageState();
+  if (options.interior && model.body) addMechanicalInterior(model.body, spec, options.interior);
   const meshes = options.meshes || model.root.children.filter(m => m.isMesh && (m === model.body || m === model.glass || m === model.driver ||
     ['drive-head', 'drive-tail', 'drive-plate', 'drive-logo'].includes(m.material?.name)));
   const point = new THREE.Vector3(), pivot = new THREE.Vector3();
+  // Capture a closed rest pose once. Door meshes may live under animated hinges;
+  // damage is authored in car space, then transformed back into each mesh's space.
+  model.root.updateWorldMatrix(true, true);
+  const rootInverse = model.root.matrixWorld.clone().invert();
   const parts = meshes.map(mesh => {
-    if (options.interior && /^(drive-body|pb-car-paint)$/.test(mesh.material?.name || '')) addMechanicalInterior(mesh, spec);
     const g = mesh.geometry, p = g.attributes.position, color = g.attributes.color;
-    mesh.updateMatrix(); p.setUsage(THREE.DynamicDrawUsage); color?.setUsage(THREE.DynamicDrawUsage);
+    mesh.updateWorldMatrix(true, false); p.setUsage(THREE.DynamicDrawUsage); color?.setUsage(THREE.DynamicDrawUsage);
+    const matrix = new THREE.Matrix4().multiplyMatrices(rootInverse, mesh.matrixWorld);
+    const parentMatrix = mesh.parent ? new THREE.Matrix4().multiplyMatrices(rootInverse, mesh.parent.matrixWorld) : new THREE.Matrix4();
     return { mesh, g, p, color, base: p.array.slice(), colors: color?.array.slice(), normals: g.attributes.normal?.array.slice(),
-      matrix: mesh.matrix.clone(), inverse: mesh.matrix.clone().invert(), origin: mesh.position.clone(),
-      rigid: ['drive-plate', 'drive-logo'].includes(mesh.material?.name), breaks: breakGroups(mesh, spec),
+      matrix, inverse: matrix.clone().invert(), origin: mesh.position.clone(), carOrigin: new THREE.Vector3().setFromMatrixPosition(matrix), parentInverse: parentMatrix.invert(),
+      rigid: ['drive-plate', 'drive-logo'].includes(mesh.material?.name), breaks: breakGroups(mesh, spec, matrix),
       lamp: /(?:drive-head|drive-tail|pb-car-lamp)/.test(mesh.material?.name || '') };
   });
   const wheels = (model.wheels || []).map(w => ({ pivot: w.pivot, base: w.pivot.position.clone() }));
@@ -60,14 +67,14 @@ export function createCarDamage(model, options = {}) {
     for (const [partId, part] of parts.entries()) {
       const { mesh, g, p, base, color, colors, matrix, inverse, rigid, lamp } = part;
       if (rigid) {
-        mesh.position.copy(deformPoint(pivot.copy(part.origin), state, spec));
-        const amount = mesh.material.name === 'drive-logo' ? damageAmount(state) : part.origin.z > 0 ? state.front : state.rear;
+        mesh.position.copy(deformPoint(pivot.copy(part.carOrigin), state, spec).applyMatrix4(part.parentInverse));
+        const amount = mesh.material.name === 'drive-logo' ? damageAmount(state) : part.carOrigin.z > 0 ? state.front : state.rear;
         mesh.userData.damageHidden = amount > .55;
         if (mesh.userData.damageHidden) mesh.visible = false;
         const key = `rigid:${partId}`;
         if (mesh.material.name === 'drive-plate' && amount > .55 && !state.shed?.[key]) {
           (state.shed ||= {})[key] = true;
-          if (options.onDetach) options.onDetach({ geometry: fragmentGeometry(part, part.breaks.original), zone: part.origin.z > 0 ? 'front-plate' : 'rear-plate' });
+          if (options.onDetach) options.onDetach({ geometry: fragmentGeometry(part, part.breaks.original), zone: part.carOrigin.z > 0 ? 'front-plate' : 'rear-plate' });
         }
         continue;
       }

@@ -48,5 +48,5 @@ pool.dispose(); assert.equal(scene.children.length, 0);
 const turned = record(); turned.c = 0; turned.s = 1;
 bindParkedImpact(box, turned, ARCH.sedan);
 box.source.onCarHit(35, { x: 2.12, z: 0, nx: -1, nz: 0 });
-assert(turned.damageState.front > .5); assert.equal(turned.damageState.left, 0);
+assert(turned.damageState.front > .3 && turned.damageState.front < .5, '50% more durable, but the rotated front still dents'); assert.equal(turned.damageState.left, 0);
 console.log('PASS struck-car locality, shared mesh isolation, dynamic bounds, cache capacity, eviction/recreation, steady reuse and disposal');

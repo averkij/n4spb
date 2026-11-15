@@ -1,6 +1,14 @@
 // Collision callbacks preserve per-vehicle cosmetic state, never shared geometry.
-import { createDamageState, recordDamage } from '../drive/damage.js';
+import { createDamageState, recordDamage, damageAmount } from '../drive/damage.js';
 import { vehicleMass } from '../drive/wrecks.js';
+import { trafficSpec } from '../drive/vehicle-profiles.js';
+const specs=new WeakMap();
+function impactSpec(kind,spec){
+  if(spec.kind===kind&&spec.mass&&spec.W)return spec;
+  let kinds=specs.get(spec);if(!kinds){kinds=new Map();specs.set(spec,kinds);}
+  if(!kinds.has(kind))kinds.set(kind,trafficSpec(kind,spec));
+  return kinds.get(kind);
+}
 function applyCarImpulse(ix, iz, x, z) { this.wrecks.impulse(this, ix, iz, x, z); }
 function onCarHit(speed, contact) {
   const v = this.vehicle;
@@ -16,9 +24,12 @@ function onCarHit(speed, contact) {
     const state = this.record.damageState || (this.record.damageState = createDamageState());
     recordDamage(state, { type: 'hit', v: speed, localX: x * c - z * s, localZ: x * s + z * c,
       localNX: -contact.nx * c + contact.nz * s, localNZ: -contact.nx * s - contact.nz * c }, this.spec);
+    this.record.junked = damageAmount(state) >= .999;
+    if(v)v.junked=this.record.junked;
   }
 }
 export function bindCarImpact(box, vehicle, time, record = null, spec = null, wrecks = null) {
+  if(spec)spec=impactSpec(record?.kind || vehicle.kind,spec);
   box.vehicle = vehicle; box.time = time;
   box.vx = Math.sin(box.rotY) * vehicle.v;
   box.vz = Math.cos(box.rotY) * vehicle.v;
@@ -33,6 +44,7 @@ export function bindCarImpact(box, vehicle, time, record = null, spec = null, wr
   box.originZ = box.cz - Math.cos(box.rotY) * offset;
 }
 export function bindParkedImpact(box, record, spec, wrecks = null) {
+  spec=impactSpec(record.kind,spec);
   box.source = { record, spec, originX: record.x, originZ: record.z,
     cx: box.cx, cz: box.cz, w: spec.wid, d: spec.len, y0: record.y, y1: record.y + spec.hgt,
     rotY: Math.atan2(record.s, record.c), vx: 0, vz: 0, onCarHit,

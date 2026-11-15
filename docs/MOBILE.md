@@ -44,7 +44,7 @@ At the default landscape scale:
 | Walking | 112 px floating stick bottom left; amber JUMP, RUN and FLY bottom right; contextual use action near the right thumb |
 | Flying | UP, DOWN, BOOST and LAND in the same thumb area |
 | Driving | 112 px steering hint bottom left; 68 × 86 px GAS/BRAKE, NITRO/DRIFT above; boost level shown within the NITRO button |
-| Occasional actions | Sound, horn, auto-gas, repair and control settings in Menu; camera and exit remain directly accessible at top right |
+| Occasional actions | Sound, horn, auto-gas, character and control settings in Menu; camera and exit remain directly accessible at top right |
 | Special cars | HOP/FLIP remain direct actions; on short landscape screens they move above the steering thumb |
 
 All controls retain at least 44 px targets. Safe-area insets, portrait layout,
@@ -129,7 +129,7 @@ loading checkpoint below remains v9.19.3 until the redesign is published.
 
 * left thumb: a **floating wheel** (default: only the horizontal offset counts, full lock = 64 px, 6 px dead zone, curve 1.35, the wheel icon turns; the wheel follows the thumb past the lock so straightening needs a small move back), or two big **arrows** (96 px, ramping 0.3 -> 1 in 0.3 s), or **tilt** (phone roll);
 * right thumb: **GAS** 100 x 124, **BRAKE** 80 (at a standstill = reverse), **NITRO** 76 (its ring is the tank; the word comes from the car's HUD profile, so the Roadster says THRUSTER), **DRIFT** 64 (handbrake), **HOP** 60 and **FLIP** 68 (only when the current car has the gas hops: `vehicle.def.hop` or `id === 'roadster'`; each FIRES ON THE PRESS, no hold and no ring: HOP = the simple hop (`KeyX`, 1.86 m), FLIP = the barrel hop (`KeyC`, 3.72 m with the roll; the accent-blue button, a little bigger). They sit in the thumb zone above DRIFT / BRAKE, HOP 126 px and FLIP 200 px from the right edge, both 184 px up; both dim while the car is in the air or the tank cannot pay them);
-* top right second row: **CAM** (V), **HORN** (G), **AUTO** (auto-gas toggle), **FIX** (repair, only when damaged and stopped); top left beside the 108 px map: **EXIT** (refused above 25 km/h like E, with the toast);
+* top right second row: **CAM** (V), **HORN** (G), **AUTO** (auto-gas toggle),  top left beside the 108 px map: **EXIT** (available once stopped like E, with the toast);
 * the speedometer is scaled to half and sits at the bottom centre (above the pedals in portrait), the nitro bar, key hints, old `.d-touch` buttons and the damage pill are hidden (`html.tc` CSS, no hud.js edit);
 * a drag on the free part of the screen orbits the chase camera (a synthetic `mousemove` with `movementX`, the path drive.js already has for the mouse).
 
@@ -145,7 +145,7 @@ An iPhone cannot lock the orientation, so the banner is the only mechanism there
 | JUMP, CAM, HORN, SOUND | a synthetic `KeyboardEvent` keydown + keyup on `window` (`Space`, `KeyV`, `KeyG`, `KeyM`): every handler reads `e.code`, none checks `isTrusted` |
 | UP / DOWN / BOOST / NITRO / DRIFT | the code is held in `player.keys` while the finger is down (`Space`, `KeyC`, `ShiftLeft`); no keydown is dispatched, so no jump |
 | HOP / FLIP (`ACTIONS.hop` / `ACTIONS.flip`, `kind = 'tap'`, `fire: 'down'`) | the press sends a synthetic keydown + keyup of `KeyX` / `KeyC` (never a held key: `desiredKeys` ignores them); drive.js latches it (`hopTap` / `flipTap`), `readInput` makes it `input.jump` / `input.flip` and handling.js launches on that very step. In fly mode `KeyC` stays the descend key: the FLIP button only exists in drive mode and drive.js ignores `KeyC` unless the car is driven |
-| USE / EXIT / FIX / FLY | `ctx.interact.use()` / `ctx.drive.exit()` / `ctx.drive.repair()` / `player.toggleFly()` |
+| USE / EXIT / FLY | `ctx.interact.use()` / `ctx.drive.exit()` / `player.toggleFly()` |
 | steering + pedals | the exact inverse of drive.js `readInput`: `player.touchMove = (-steer / 1.4, thr > 0 ? -thr / 1.3 : brk)`; the brake wins over the gas; a neutral y of 0.12 keeps small steering above the 0.1 threshold; gas below 0.2 is lifted to 0.2 (`touch-logic.js encodeDrive`) |
 | the clean contract (Phase 2) | `ctx.touch = { active, mode, steer (+left), thr, brk, nitro, hand, hop, flip, look: {dx, dy} }`, written every frame (`hop` / `flip` = a HOP / FLIP press in the last three frames); `active` is true while driving |
 
@@ -206,7 +206,7 @@ node tools/make-icons.mjs          # rewrites assets/icons/*.png
 
 The browser test uses the fast harness (`?baked=0&only=drive&noroof=1`, ~6 s per page) and, for the real scene, `?baked=force` (needed while the bake is stale). Run browser tools one at a time (GPU).
 It covers: the desktop page untouched (and `?touch=1` / `?touch=0`), the stick, look, stick + look at once, two fingers in a zone, a third finger, JUMP, RUN latch, FLY with UP / DOWN, USE -> the car, wheel (full / half / other side / dead zone), GAS, steer + gas at once, NITRO, DRIFT, BRAKE and reverse,
-CAM / HORN / HOP / FLIP / FIX / AUTO, EXIT at speed and standing, release safety (menu, blur, hidden tab, `pointercancel`), layouts at 844x390, 915x412, 667x375, 1180x820, 820x1180, 390x844, 360x640 and with 47 px notch insets (no overlaps, >= 44 px, nothing over the map / speedometer / clock),
+CAM / HORN / HOP / FLIP / AUTO, EXIT at speed and standing, release safety (menu, blur, hidden tab, `pointercancel`), layouts at 844x390, 915x412, 667x375, 1180x820, 820x1180, 390x844, 360x640 and with 47 px notch insets (no overlaps, >= 44 px, nothing over the map / speedometer / clock),
 the rotate banner, the settings panel and persistence across a reload, left-handed, tilt, arrows, places, the boot stubs (fullscreen -> orientation lock, wake lock, re-request, haptics, an iPhone user agent), the fatal card, the crash-loop guard, the phone warning and the watchdog.
 
 ## 8. Wiring in `src/main.js` (what to re-apply when merging)

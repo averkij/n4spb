@@ -110,7 +110,12 @@ try {
       let progress = 'loading page';
       page.on('console', m => {
         if (m.text().startsWith('[bake-progress] ')) progress = m.text().slice(16);
-        else if (m.type() === 'error') console.error(m.text(), ...m.args().map(a=>a.remoteObject().description||''));
+        else if (m.type() === 'error') {
+          console.error(m.text(), ...m.args().map(a=>a.remoteObject().description||''));
+          // main.js catches module failures to render its fatal card. They are
+          // not pageerror events, and can never reach __bakeReady afterwards.
+          if(m.text().startsWith('[fatal]'))rejectFailure(new Error(`${quality} bake entered the fatal screen: ${m.text()}`));
+        }
         else if (process.env.BAKE_VERBOSE) console.log(`[${Math.round((Date.now() - T0) / 1000)}s] ${m.text().slice(0, 300)}`);
       });
       await page.evaluateOnNewDocument(() => {
@@ -122,7 +127,10 @@ try {
         }, { once: true });
       });
       console.log(`Baking ${quality} (${quality === 'medium' ? 'static geometry, textures, field, roof, navigation' : 'navigation'})…`);
-      page.on('requestfailed', r => console.error('REQUEST FAILED:', r.url().slice(0, 160), r.failure() && r.failure().errorText));
+      page.on('requestfailed', r => {
+        console.error('REQUEST FAILED:', r.url().slice(0, 160), r.failure() && r.failure().errorText);
+        if(r.url().startsWith(`http://127.0.0.1:${server.address().port}/src/`)&&/\.js(?:[?#]|$)/.test(r.url()))rejectFailure(new Error(`Required bake module could not load: ${r.url()}`));
+      });
       page.on('response', r => { if (r.status() >= 400) console.error('HTTP', r.status(), r.url().slice(0, 160)); });
       const heartbeat = setInterval(() => console.log(`[${quality} ${Math.round((Date.now() - T0) / 1000)}s] ${progress}; ${Object.keys(files).length} products complete`), 30000);
       try {

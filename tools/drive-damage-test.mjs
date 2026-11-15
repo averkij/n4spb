@@ -2,7 +2,7 @@
 // by drive-collision-browser.mjs using the production drive module in a small yard.
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { createCarDamage, deformPoint } from '../src/world/drive/damage.js';
+import { createCarDamage, deformPoint, DURABILITY_MULTIPLIER } from '../src/world/drive/damage.js';
 import { bindCarImpact } from '../src/world/traffic/impact.js';
 const root = new THREE.Group();
 const g = new THREE.BoxGeometry(1.82, 1, 4.14, 4, 3, 12).toNonIndexed(); g.translate(0, .65, .05);
@@ -12,7 +12,8 @@ const original = g.attributes.position.array.slice(), originalColor = colors.sli
 const damage = createCarDamage({ root, body });
 damage.hit({ type: 'scrape', v: 1 }); assert.deepEqual(g.attributes.position.array, original);
 damage.hit({ type: 'hit', v: 35, localX: .7, localZ: 2.1, localNX: 0, localNZ: -1 });
-assert(damage.amount > .3 && damage.smoke > 0); assert.notDeepEqual(g.attributes.position.array, original); assert.notDeepEqual(colors, originalColor);
+assert(Math.abs(damage.amount - (35-3)/(45*DURABILITY_MULTIPLIER))<1e-9,'50% larger impact budget');
+assert(damage.amount > .3 && damage.smoke === 0,'More durable body has not reached the smoke threshold after one hit'); assert.notDeepEqual(g.attributes.position.array, original); assert.notDeepEqual(colors, originalColor);
 let untouched = 0;
 for (let i = 0; i < original.length; i += 3) if (original[i + 2] < -1) { assert.equal(g.attributes.position.array[i + 2], original[i + 2]); untouched++; }
 assert(untouched > 0, 'unhit rear stays intact');

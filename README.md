@@ -70,10 +70,12 @@ Note that the page loads fast only while the shipping bake in `assets/baked/` ma
 | Mouse | Look (click the canvas to lock the pointer) |
 | W A S D / arrows | Walk |
 | Shift | Run |
+| V | Camera: third person, distant third person, first person |
+| Settings | Choose the girl in the red beret (default) or the man in the brown cap; the choice is saved |
 | Space | Jump |
 | F | Take off / land. While flying **W / S fly along the view**, A / D strafe, Space or E up, Q or C down, Shift boost. Roofs are walkable: fly over a building, press F and you land on its roof |
 | E | Use: enter the metro, board / leave a train, switch an escalator, get into the car ("[E] ..." prompts) |
-| E at a parked car | **Drive**: four cars wait on the station forecourt, each with its own handling, engine voice and cockpit: the red sports car (beside the Moscow station's taxi rank), the taxi pickup, the eggplant Zhiguli and the white **Tesla Roadster** (2026; its **Shift** is a THRUST from four cold-gas nozzles, **X** is a gas hop over kerbs, benches and bins (1.9 m high), **C** is the barrel hop, twice as high (3.7 m) with a 360 degree roll and side jets; both start the instant the key goes down); E at the nearest one gets in, every car carries the Bibliotechka roof logo. In the car: **W / S** gas / brake + reverse, **A / D** steer, **Shift** nitro, **Space** handbrake (drift), **G** horn, **V** camera (chase / high / cockpit), mouse looks around, **E** gets out (below 25 km/h); R teleports the car to the start |
+| E at a parked car | **Drive**: four cars wait on the station forecourt, each with its own handling, engine voice and cockpit: the red sports car (beside the Moscow station's taxi rank), the taxi pickup, the eggplant Zhiguli and the white **Tesla Roadster** (2026; its **Shift** is a THRUST from four cold-gas nozzles, **X** is a gas hop over kerbs, benches and bins (1.9 m high), **C** is the barrel hop, twice as high (3.7 m) with a 360 degree roll and side jets; both start the instant the key goes down); E at the nearest one gets in, every car carries the Bibliotechka roof logo. In the car: **W / S** gas / brake + reverse, **A / D** steer, **Shift** nitro, **Space** handbrake (drift), **G** horn, **V** camera (chase / high / cockpit), mouse looks around, **E** opens the door and gets out once stopped; R teleports the car to the start |
 | Street map (bottom left) | A round heading-up map that labels the named streets and a pill above it that names the street you are on (hidden underground and in the metro, **H** hides it with the rest of the UI) |
 | T | Time of day: 15:20 **day** → 19:10 **golden evening** → 00:20 **white night** (never black, lit windows and lamps) → 11:20 **overcast** ("Petersburg milk") |
 | L | Copy the current pose `x,y,z,yaw,pitch` to the clipboard (paste it into `?cam=` or `tools/shot.mjs --cams`) |
@@ -101,9 +103,11 @@ The page runs on phones and tablets with an on-screen control layer (`src/core/t
 | Top right | **MENU** (time of day, sound, hide UI, respawn, FPS, fullscreen, quality, settings) and **SOUND** |
 | Driving: left thumb | steering: a floating wheel (swipe left / right, proportional), or arrows, or tilt the phone |
 | Driving: right thumb | **GAS**, **BRAKE** (reverse at a standstill), **NITRO**, **DRIFT** (handbrake), **HOP** and **FLIP** (cars that can hop: HOP is the simple hop, FLIP the high barrel hop; each fires on the press) |
-| Driving: top | **CAM** (camera), **HORN**, **AUTO** (auto-gas), **FIX** (repair), **EXIT** (below 25 km/h); a drag on the free screen orbits the camera |
+| Driving: top | **CAM** (camera), **HORN**, **AUTO** (auto-gas), **EXIT** (stop before getting out); a drag on the free screen orbits the camera |
 
-Settings (menu -> Controls, saved on the device): look and steering sensitivity, invert Y, steering scheme (wheel / arrows / tilt), speed steering assist, tilt range, auto-gas, left-handed layout, haptics (Android only), button size, run by default.
+Character selection is in Settings on desktop and Menu -> Controls -> Character on touch devices. Ordinary traffic cars can also be taken with E: the character opens the door, pulls out the driver and climbs in. Cars retain damage and have no repair action.
+
+Control settings (menu -> Controls, saved on the device): look and steering sensitivity, invert Y, steering scheme (wheel / arrows / tilt), speed steering assist, tilt range, auto-gas, left-handed layout, haptics (Android only), button size, run by default.
 On a phone the first visit shows a heavy-scene warning (about 51 MB to download and about 1 GB of memory), the quality starts on **Performance** (shadow map 1024, MSAA 2, pixel ratio 1), and the page tries fullscreen, a landscape lock (Android) and the screen wake lock when you press the start button.
 
 * **iPhone / iPad**: Safari needs iOS 16.4 or newer. An iPhone has no element fullscreen: use Share -> Add to Home Screen (the page ships a web-app manifest) to get a fullscreen app; it cannot lock the orientation and has no vibration. iPads can go fullscreen from the menu.

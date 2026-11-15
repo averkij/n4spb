@@ -2,8 +2,8 @@
 //   node tools/drive-wasted-test.mjs
 // Proves: damage below 100% shows nothing and the car drives; the step the damage reaches 100% shows the label ONCE (exact text, 5 s of game time, then gone, never again while the car stays wrecked);
 // the wrecked car ignores gas / steering / nitro / hop and brakes to a standstill without reversing; a repair (damage.repair) removes the label at once and gives the car its input back;
-// reset() (getting into a wrecked car, a hand-off arrival) adopts the state without a label; hide() (exit, respawn) clears a running label; drive.js wires it and its repair() has no rule
-// against a wrecked car (the only condition is the speed). To reach 100% by hand: drive at full speed into a wall 3-4 times (a 100+ km/h hit crumples one zone by ~0.5-1).
+// reset() (getting into a wrecked car, a hand-off arrival) adopts the state without a label; hide() (exit, respawn) clears a running label.
+// Internal damage.repair() resets fixtures only; the public drive API and J key expose no repair action.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from 'three';
@@ -89,13 +89,11 @@ wasted.reset(damage.amount); assert.equal(wasted.step(DT, damage.amount), false,
 assert.equal(wasted.gate({ thr: 1, steer: 1 }, 0, damage.amount).thr, 0, 'but it is still immobile'); damage.repair();
 assert.equal(wasted.gate({ thr: 1, steer: 1 }, 0, damage.amount).thr, 1, 'and drives after the repair');
 
-// 8. drive.js wiring and the repair rule
+// 8. drive.js wiring and removal of the public repair action
 const src = fs.readFileSync(new URL('../src/world/drive.js', import.meta.url), 'utf8');
 for (const needle of ["import { createWasted } from './drive/wasted.js'", 'wasted.gate(input, car.vF, damage.amount)', 'wasted.step(dt, damage.amount)', 'wasted.reset(damage.amount)', 'wasted.hide()'])
   assert(src.includes(needle), 'drive.js wires: ' + needle);
 assert(/wasted\.gate\(\{ \.\.\.\(typeof inp === 'function'/.test(src) && src.includes('wasted.step(dt, damage.amount); if (wake') , 'the sim() test hook runs the same gate and step');
-const r0 = src.indexOf('    repair() {'), r1 = src.indexOf('damage.repair()', r0);
-const rule = src.slice(r0, r1);
-assert(/if \(Math\.hypot\(car\.vx, car\.vz\) > 1\.4\)/.test(rule) && (rule.match(/return false/g) || []).length === 2, 'repair() refuses only a moving car (> 1.4 m/s): a wrecked, stopped car is repairable');
-assert(src.includes("e.code === 'KeyJ'") && src.includes('api.repair()'), 'the J key calls repair()');
-console.log('PASS wasted: label once per wreck event (5 s, exact text), wrecked car immobile (brakes to a stop, no reverse), repair / exit / respawn clear it, J repair rule unchanged');
+assert(!/^    repair\(\) \{/m.test(src) && !src.includes('api.repair()'), 'the drive API exposes no repair action');
+assert(!src.includes("e.code === 'KeyJ'"), 'J no longer repairs a car');
+console.log('PASS wasted: label once per wreck event (5 s, exact text), wrecked car immobile (brakes to a stop, no reverse), fixture reset / exit / respawn clear it, no public repair action');

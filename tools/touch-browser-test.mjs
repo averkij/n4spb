@@ -74,7 +74,7 @@ const centre = (page, id) => page.evaluate((id) => { const b = __tc.btns[id].get
 const fwd = (yaw) => [-Math.sin(yaw), -Math.cos(yaw)];
 const wrapPi = (d) => ((d + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
 async function tapBtn(page, id) {
-  const secondary = { horn: 'Horn', auto: 'Auto gas:', repair: 'Repair car' };
+  const secondary = { horn: 'Horn', auto: 'Auto gas:' };
   if (secondary[id]) {
     await tapBtn(page, 'menu'); await sleep(450);
     const c = await page.evaluate((text) => {
@@ -305,7 +305,7 @@ SCENARIOS.mobile = async () => {
     check(`BRAKE (hold) brakes the car (${before.toFixed(0)} -> ${st.car.speed.toFixed(0)} km/h) through touchMove y +1`, st.car.speed < before * 0.35 && st.ts.brk === 1 && near(st.tm[1], 1, 0.001), { speed: st.car.speed, tm: st.tm });
     await sleep(3000); st = await snap(page); await hb.end();
     check(`BRAKE at a standstill reverses (vF ${st.car.vF.toFixed(1)} m/s)`, st.car.vF < -1, st.car.vF);
-    // ---- 17. camera, horn, hop, repair, auto-gas
+    // ---- 17. camera, horn, hop, persistent damage, auto-gas
     await page.evaluate(() => { window.__horns = 0; __drive.sound.horn = () => { window.__horns++; }; window.__keysSeen = []; addEventListener('keydown', (e) => window.__keysSeen.push(e.code)); });
     const v0 = (await snap(page)).view; await tapBtn(page, 'cam'); await sleep(200); const v1 = (await snap(page)).view;
     check(`CAM: V cycles the view (${v0} -> ${v1})`, v1 === (v0 + 1) % 3, [v0, v1]);
@@ -323,18 +323,21 @@ SCENARIOS.mobile = async () => {
     st = await snap(page); check('HOP / FLIP are presses, not holds: no KeyX / KeyC left in player.keys, nothing held', !st.keys.includes('KeyX') && !st.keys.includes('KeyC') && st.held.length === 0, { keys: st.keys, held: st.held });
     await page.evaluate(() => { delete __drive.vehicle.def.hop; });
     await page.evaluate(() => { const d = __drive; d.teleport(d.car.x, d.car.z, d.car.yaw); d.damage.hit({ type: 'hit', v: 14, localX: 0, localZ: 2, localNX: 0, localNZ: -1 }); }); await sleep(400);
-    check('damaged car keeps repair in the menu, away from driving controls', await page.evaluate(() => !__tc.btns.repair && __drive.car.damage > 0));
-    await shot(page, 'drive-repair-844x390');
-    auditChecks('drive + FIX 844x390', await layoutAudit(page));
-    await tapBtn(page, 'repair'); await sleep(250); st = await snap(page);
-    check('menu REPAIR: the car is repaired and returns to play', st.car.damage === 0 && (await page.evaluate(() => __drive.damage.amount === 0 && !__ctx.ui.open)), st.car.damage);
+    const dentBeforeMenu = await page.evaluate(() => __drive.damage.amount);
+    check('damaged car exposes no touch repair control or public repair API', await page.evaluate(() => !__tc.btns.repair && __drive.car.damage > 0 && typeof __drive.repair === 'undefined'));
+    await tapBtn(page, 'menu'); await sleep(250);
+    check('driving menu has no repair action', await page.evaluate(() => ![...document.querySelectorAll('.tc-menu button')].some(b => /repair|ремонт/i.test(b.textContent))));
+    await page.keyboard.press('Escape'); await sleep(250);
+    check('opening and closing the menu preserves damage', await page.evaluate(n => __drive.damage.amount === n && !__ctx.ui.open, dentBeforeMenu));
+    await shot(page, 'drive-damaged-844x390');
+    auditChecks('damaged drive 844x390', await layoutAudit(page));
     await tapBtn(page, 'auto'); await sleep(1300); st = await snap(page);
     check(`AUTO gas: the car pulls away without the pedal (${st.car.speed.toFixed(0)} km/h), setting saved`, st.car.speed > 20 && await page.evaluate(() => JSON.parse(localStorage.getItem('piter.touch')).autoGas === true), st.car);
     // ---- EXIT is refused at speed, works at a standstill
     await tapBtn(page, 'exit'); await sleep(400); st = await snap(page);
     check(`EXIT above 25 km/h is refused (still driving at ${st.car && st.car.speed.toFixed(0)} km/h)`, st.drive === true, st.car);
     await tapBtn(page, 'auto'); await page.evaluate(() => { const d = __drive; d.teleport(d.car.x, d.car.z, d.car.yaw); }); await sleep(300);
-    await tapBtn(page, 'exit'); await sleep(900); st = await snap(page);
+    await tapBtn(page, 'exit'); await page.waitForFunction(() => !__drive.active && !__drive.interacting, { timeout: 5000 }); st = await snap(page);
     check('EXIT at a standstill: out of the car, the walk layout is back, ctx.touch inactive, no key / touchMove left behind', !st.drive && st.mode === 'walk' && st.ts.active === false && st.keys.length === 0 && st.tm[0] === 0 && st.tm[1] === 0, st);
     // ---- 17b. the Roadster's two hop buttons for real (hop v3): HOP = X (the simple hop), FLIP = C (the barrel hop); each fires on the PRESS, with a second finger while the GAS is held
     {

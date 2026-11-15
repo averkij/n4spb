@@ -103,13 +103,13 @@ export function createCarCollisions(physics, spec) {
         if (vn >= 0) continue;
         const lever = rz * nx - rx * nz;
         const targetLever = trz * nx - trx * nz;
-        const impulse = -(1 + (-vn > 2 ? 0.12 : 0)) * vn / (1 + lever * lever / inertia + invMass * (1 + targetLever ** 2 / targetInertia));
+        const impulse = -(1 + (-vn > 2 ? 0.08 : 0)) * vn / (1 + lever * lever / inertia + invMass * (1 + targetLever ** 2 / targetInertia));
         car.vx += impulse * nx; car.vz += impulse * nz;
         car.impactSpin += lever * impulse / inertia;
         const tx = -nz, tz = nx, tangentLever = rz * tx - rx * tz;
         vx = car.vx + car.impactSpin * rz - ovx; vz = car.vz - car.impactSpin * rx - ovz;
         const targetTangent = trz * tx - trx * tz;
-        const friction = clamp(-(vx * tx + vz * tz) / (1 + tangentLever ** 2 / inertia + invMass * (1 + targetTangent ** 2 / targetInertia)), -impulse * 0.25, impulse * 0.25);
+        const friction = clamp(-(vx * tx + vz * tz) / (1 + tangentLever ** 2 / inertia + invMass * (1 + targetTangent ** 2 / targetInertia)), -impulse * 0.38, impulse * 0.38);
         car.vx += friction * tx; car.vz += friction * tz;
         car.impactSpin += tangentLever * friction / inertia;
         source?.applyCarImpulse?.(-mass * (impulse * nx + friction * tx), -mass * (impulse * nz + friction * tz), x, z);

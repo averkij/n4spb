@@ -131,7 +131,7 @@ const BTN = {
   gas: { label: 'GAS', cls: 'pedal gas', fire: 'hold', aria: 'Газ · Gas' }, brake: { label: 'BRAKE', cls: 'brake', fire: 'hold', aria: 'Тормоз · Brake' },
   nitro: { label: 'NITRO', fire: 'hold', aria: 'Нитро · Nitro' }, hand: { label: 'DRIFT', fire: 'hold', aria: 'Ручник · Handbrake' }, hop: { label: 'HOP', fire: 'down', aria: 'Прыжок авто · Hop' }, flip: { label: 'FLIP', cls: 'flip', fire: 'down', aria: 'Прыжок с бочкой · Barrel hop' },
   cam: { label: '', svg: SVG.cam, cls: 'small', fire: 'down', aria: 'Камера · Camera' }, horn: { label: 'HORN', cls: 'small', fire: 'down', aria: 'Сигнал · Horn' }, auto: { label: 'AUTO', cls: 'small', fire: 'up', aria: 'Автогаз · Auto gas' },
-  repair: { label: 'FIX', cls: 'small', fire: 'up', aria: 'Починить · Repair' }, exit: { label: '', svg: SVG.exit, cls: 'small', fire: 'up', aria: 'Выйти из машины · Exit the car' },
+  exit: { label: '', svg: SVG.exit, cls: 'small', fire: 'up', aria: 'Выйти из машины · Exit the car' },
   arrowL: { label: '', cls: 'arrow', fire: 'hold', svg: SVG.left, aria: 'Руль влево · Steer left' }, arrowR: { label: '', cls: 'arrow', fire: 'hold', svg: SVG.right, aria: 'Руль вправо · Steer right' },
   recentre: { label: '0°', cls: 'small', fire: 'up', aria: 'Выровнять наклон · Recentre tilt' },
 };
@@ -246,7 +246,6 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
     const vis = {
       interact: (mode === 'walk' || mode === 'ride') && !!tgt,
       hop: mode === 'drive' && hasHop(dv && dv.vehicle), flip: mode === 'drive' && hasHop(dv && dv.vehicle),
-      repair: mode === 'drive' && !!car && (car.damage || 0) > 0.03 && Math.hypot(car.vx || 0, car.vz || 0) < 1.4,
       arrowL: mode === 'drive' && settings.steerMode === 'arrows', arrowR: mode === 'drive' && settings.steerMode === 'arrows',
       recentre: mode === 'drive' && settings.steerMode === 'tilt',
       run: mode === 'walk', jump: mode === 'walk',
@@ -392,7 +391,6 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
         if (a.call === 'toggleFly') player.toggleFly();
         else if (a.call === 'interact') { if (ctx.interact && ctx.interact.use()) buzz(18); }
         else if (a.call === 'exit') { if (dv) dv.exit(); }
-        else if (a.call === 'repair') { if (dv && dv.repair) dv.repair(); else tap('KeyJ'); }
         else if (a.call === 'autoGas') { settings.autoGas = !settings.autoGas; save(); refresh(true); }
         else if (a.call === 'menu') openMenu();
         else if (a.call === 'recentre') tiltZero = tiltRoll;
@@ -499,8 +497,7 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
     const el = h('div', { class: 'tc-menu' },
       mode === 'drive' ? h('div', { class: 'tc-grid' },
         act('Сигнал · Horn', () => closePanelThen(() => fire('horn'))),
-        act(settings.autoGas ? 'Автогаз: вкл · Auto gas: on' : 'Автогаз: выкл · Auto gas: off', () => closePanelThen(() => fire('auto'))),
-        act('Починить автомобиль · Repair car', () => closePanelThen(() => fire('repair')))) : null,
+        act(settings.autoGas ? 'Автогаз: вкл · Auto gas: on' : 'Автогаз: выкл · Auto gas: off', () => closePanelThen(() => fire('auto')))) : null,
       h('div', { class: 'tc-grid' },
         act('Время суток · Time of day', () => closePanelThen(() => tap('KeyT'))),
         act(muted ? 'Звук: выкл · Sound: off' : 'Звук: вкл · Sound: on', () => closePanelThen(() => tap('KeyM'))),
@@ -516,6 +513,8 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
   }
   const SPEC_AUTO = { uiScale: 1 };
   function openSettings() {
+    const characterButton=h('button',{type:'button',text:'Персонаж · Character'});
+    characterButton.addEventListener('click',()=>closePanelThen(()=>ctx.characters?.openSettings()));
     const row = (name, sub, control) => h('div', { class: 'tc-row' }, h('label', {}, name, sub ? h('small', { text: sub }) : null), control);
     const range = (k, min, max, step, fmt) => {
       const out = h('span', { style: 'font:700 12px Rubik,sans-serif;color:#9a6f1f' });
@@ -551,7 +550,7 @@ export function createTouchControls({ ctx, player, canvas, params = new URLSearc
       row('Вибрация · Haptics', vib ? null : 'iOS не даёт вибрацию · iOS does not allow vibration', (() => { const c = check('haptics'); if (!vib) c.disabled = true; return c; })()),
       row('Размер кнопок · Button size', null, range('uiScale', 0.8, 1.3, 0.05, (v) => v.toFixed(2) + '×')),
       row('Размер кнопок: авто · Button size: auto', null, (() => { const c = h('input', { type: 'checkbox' }); c.checked = !settings.uiScale; c.addEventListener('change', () => { settings.uiScale = c.checked ? 0 : T.uiScale(W, H); save(); relayout(); openSettings(); }); return c; })()),
-      reset);
+      characterButton,reset);
     ctx.ui.panel(el, { title: 'Управление · Controls', closeLabel: 'Готово · Done' }); swallowGhostClick();
   }
   

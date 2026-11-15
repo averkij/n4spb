@@ -39,6 +39,12 @@ export const DYNAMIC_IMPORTS = {
  * A row whose literal is gone from its file is a hard error; so is an asset-looking literal without a row.
  */
 export const RUNTIME_ASSETS = {
+  'src/world/character/settings.js':{'../../../assets/characters/CREDITS.md':{path:'assets/characters/CREDITS.md',hash:false,why:'character model attribution opened from settings'}},
+  'src/world/character/index.js': {
+    '../../../assets/characters/woman-beret.glb':{path:'assets/characters/woman-beret.glb',hash:true,why:'playable girl rig and animations'},
+    '../../../assets/characters/man-jacket.glb':{path:'assets/characters/man-jacket.glb',hash:true,why:'playable man rig and animations'},
+    '../../../assets/characters/civilian.glb':{path:'assets/characters/civilian.glb',hash:true,why:'bounded nearby takeover NPC rigs'},
+  },
   'src/menu/menu.js': { './assets/menu/map.json': { path:'assets/menu/map.json',hash:false,why:'lightweight menu geography, never scene geometry' } },
   'vendor/brotli-dec-wasm/decoder.js': {
     'brotli_dec_wasm_bg.wasm': { path: null, hash: false, why: 'deployment-only Brotli decoder resolves its adjacent WASM; the Pages pack manifest verifies its exact SHA-256' },

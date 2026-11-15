@@ -1,10 +1,10 @@
 // drive/wasted.js - the "Потрачено" (GTA "WASTED") state of a car junked to 100%.
 // The instant the body damage of the car the player drives reaches 100% (damage.js: the worst of the four zones is at 1) a big centred red label appears for 5 seconds (pure DOM / CSS,
 // pointer-events none, a grey vignette behind it), and from that moment the car cannot be driven: gate() turns the player's input into the same "held car" input a panel uses (handling.js
-// holdInput: no gas, no steering, no nitro, no hop; the car brakes to a stop and never reverses), so physics (a push, a slope) can still move it. E (exit) and J (repair, drive.js
-// api.repair, also the HUD / touch Repair button) work as ever; the repair brings the damage under 100%, which lifts the hold and removes the label at once.
+// holdInput: no gas, no steering, no nitro, no hop; the car brakes to a stop and never reverses), so physics (a push, a slope) can still move it. Exit and respawn remain available;
+// there is no player repair action. A replacement/reset damage state can still clear this controller for a new vehicle.
 // The label fires ONCE per wreck event (the edge junked false -> true), never per frame; reset() (get into a car, hand-off arrival) only adopts the state without a label, hide() removes it
-// (exit, respawn R, repair). The 5 s run on the game clock (step(dt)), the CSS animation only draws them.
+// (exit, respawn R). The 5 s run on the game clock (step(dt)), the CSS animation only draws them.
 import { holdInput } from './handling.js';
 
 export const WASTED_AT = 0.999;        // damage.amount is Math.min(1, ...) per zone: 1 exactly when a zone is crushed through; the margin only guards float noise
@@ -24,7 +24,7 @@ const CSS = `
 @media (prefers-reduced-motion: reduce) { #wasted.on .w-text { animation: none; } }
 body.shot #wasted { display: none !important; }`;
 
-/** `doc`: the document (absent in node: the logic runs without a label element); `onShow`: called once at each wreck event (drive.js: a toast with the J hint) */
+/** `doc`: the document (absent in node: the logic runs without a label element); `onShow`: called once at each wreck event. */
 export function createWasted({ doc = typeof document !== 'undefined' ? document : null, onShow = null } = {}) {
   let junked = false, left = 0, el = null;
   const build = () => {

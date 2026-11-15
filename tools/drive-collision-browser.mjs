@@ -29,18 +29,23 @@ try{
  const smoke=await page.evaluate(()=>lab.ctx.scene.children.filter(o=>o.name==='drive-smoke').map(o=>o.geometry.instanceCount));assert(smoke.some(n=>n>0),'front smoke emitted');
  await page.evaluate(()=>{lab.drive.car.vx=lab.drive.car.vz=0;lab.drive.exit(true);lab.drive.enter();});
  assert(await page.evaluate(()=>lab.drive.damage.amount>0),'damage persists across exit/entry');
+ const damageBeforeJ=await page.evaluate(()=>lab.drive.damage.amount);
  await page.keyboard.press('KeyJ');
+ assert.equal(await page.evaluate(()=>lab.drive.damage.amount),damageBeforeJ,'J cannot repair persistent damage');
+ assert.equal(await page.evaluate(()=>typeof lab.drive.repair),'undefined','there is no public repair API');
+ await page.evaluate(()=>lab.reset());
  assert.deepEqual(await page.evaluate(()=>Array.from(lab.drive.model.body.geometry.attributes.position.array)),pristine,'repair restores production geometry');
  assert.deepEqual(await page.evaluate(()=>Array.from(lab.drive.model.body.geometry.index.array)),pristinePanels,'repair reattaches panels');
  await shot('repaired');
  const pole=await page.evaluate(()=>lab.crash('pole',35));assert(Math.abs(pole.spin)>.1);console.log('Pole impact:',pole);await shot('damaged-corner');
- await page.evaluate(()=>{lab.drive.car.vx=lab.drive.car.vz=0;});await page.click('.d-condition button');assert.equal(await page.evaluate(()=>lab.drive.damage.amount),0);
+ assert.equal(await page.$('.d-condition button'),null,'the driving HUD has no repair button');
+ await page.evaluate(()=>lab.reset());assert.equal(await page.evaluate(()=>lab.drive.damage.amount),0);
  const moving=await page.evaluate(()=>lab.crash('traffic',35));assert.equal(await page.evaluate(()=>lab.vehicle.v),0);assert(moving.damage>0);console.log('Traffic impact:',moving);
  assert(await page.evaluate(()=>lab.traffic.damageState.front>.5),'struck moving car is damaged too');
  assert(await page.evaluate(()=>lab.traffic.z>14.1),'oncoming vehicle physically recoils');
  await page.evaluate(()=>{lab.crash('traffic',35);lab.inspect(true,[4,1.9,-5],lab.traffic);});await shot('traffic-wrecked');
  assert(await page.evaluate(()=>lab.fleet.damaged.size>0),'actual fleet renderer uses private damaged mesh');
- await page.evaluate(()=>{lab.reset();lab.crash('parked',35);lab.crash('parked',35);lab.inspect(true,[4,1.9,-5],lab.parked);});await shot('parked-wrecked');
+ await page.evaluate(()=>{lab.reset();for(let i=0;i<3;i++)lab.crash('parked',35);lab.inspect(true,[4,1.9,-5],lab.parked);});await shot('parked-wrecked');
  assert(await page.evaluate(()=>lab.parked.damageState.rear===1),'struck parked car keeps rear damage');
  assert(await page.evaluate(()=>lab.parked.z>18),'parked car is pushed several metres');
  await page.evaluate(()=>{for(let i=0;i<24;i++)lab.wrecks.step(1/120);});await shot('flying-parts');
@@ -48,20 +53,22 @@ try{
  await page.evaluate(()=>{lab.reset();lab.crash('parked',45,.65);});
  assert(await page.evaluate(()=>Math.abs(lab.parked.wreckBody.angvel().y)>.1),'offset hit spins struck car');
  await page.evaluate(()=>lab.reset());
- for(const [name,speed] of [['Scuffed',8],['Dented',15],['Crumpled',21],['Wrecked',30]]){
+ for(const [name,speed] of [['Scuffed',10.5],['Dented',21],['Crumpled',30],['Wrecked',43.5]]){
    const stage=await page.evaluate(speed=>{lab.crash('wall',speed);lab.drive.teleport(0,0,0);lab.drive.sim(1/60);lab.inspect(true,[3.8,1.8,4.5]);return lab.drive.damage.stage;},speed);
    assert.equal(stage,name);await shot('stage-'+name.toLowerCase());
  }
  await page.evaluate(()=>lab.inspect(true,[5,1.3,.1]));await shot('wrecked-side');
- assert(await page.evaluate(()=>lab.drive.model.body.geometry.index.count < 18000),'wrecked shell loses panels');
+ assert(await page.evaluate(count=>lab.drive.model.body.geometry.index.count < count-60,pristinePanels.length),'wrecked shell loses panels');
  await page.evaluate(()=>{lab.drive.setView(2);lab.drive.setView(0);});
  assert(await page.evaluate(()=>lab.drive.model.root.children.filter(o=>o.material?.name==='drive-plate'&&o.position.z>0).every(o=>!o.visible)), 'shed plates stay absent after camera changes');
- await page.evaluate(()=>{lab.drive.car.vx=lab.drive.car.vz=0;lab.drive.repair();});
+ await page.evaluate(()=>lab.reset());
  assert.equal(await page.evaluate(()=>lab.drive.damage.stage),'Pristine');
  await page.click('[data-stage="4"]');assert.equal(await page.evaluate(()=>lab.drive.damage.stage),'Wrecked','preview buttons exercise impacts');
  console.log('Geometry budget:',await page.evaluate(()=>({playerBodyTriangles:lab.drive.model.body.geometry.index.count/3,
    cachedCars:lab.fleet.damaged.size,damagedLayers:lab.ctx.scene.children.filter(o=>o.name==='damaged-traffic').reduce((n,o)=>n+o.children.length,0)})));
- await page.evaluate(()=>{lab.reset();lab.drive.car.vz=10;});await page.keyboard.press('KeyJ');assert.equal(await page.evaluate(()=>document.querySelector('#toast').textContent),'Stop to repair');
+ await page.evaluate(()=>{lab.reset();lab.drive.car.vz=10;});
+ const toastBeforeJ=await page.evaluate(()=>document.querySelector('#toast').textContent);
+ await page.keyboard.press('KeyJ');assert.equal(await page.evaluate(()=>document.querySelector('#toast').textContent),toastBeforeJ,'J has no repair feedback or action while moving');
  await page.evaluate(()=>{lab.reset();lab.inspect(false);lab.pause(false);});await page.keyboard.down('KeyW');await new Promise(r=>setTimeout(r,900));await page.keyboard.up('KeyW');
  assert(await page.evaluate(()=>lab.drive.car.speed>5),'real keyboard acceleration');
  await page.keyboard.press('KeyV');await page.keyboard.press('KeyV');await shot('cockpit');
@@ -70,5 +77,5 @@ try{
  await page.evaluate(()=>{lab.drive.setView(0);lab.inspect();lab.drive.car.vx=lab.drive.car.vz=0;});await shot('mobile');
  const bounds=await page.$eval('.d-condition',e=>{const b=e.getBoundingClientRect();return{x:b.x,right:b.right,y:b.y,bottom:b.bottom};});assert(bounds.x>=0&&bounds.right<=390&&bounds.y>=0&&bounds.bottom<=844);
  assert.deepEqual(errors,[],'no page / WebGL errors');
- console.log('PASS four damage stages, parked/moving fleet damage, production drive, repair, persistence, smoke, cockpit and mobile HUD');
+ console.log('PASS four damage stages, parked/moving fleet damage, production drive, internal fixture reset, no repair action, persistence, smoke, cockpit and mobile HUD');
 }finally{await browser.close();await new Promise(r=>server.close(r));}

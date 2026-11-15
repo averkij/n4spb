@@ -39,6 +39,14 @@ The extract was registered to a screenshot of Yandex Maps that is kept **only as
   its licence is `vendor/rapier/LICENSE`. It is vendored so that the static deployment needs no CDN for physics; the npm package is therefore not listed in `package.json`, and the file's provenance is this note.
 * **Fonts**: Rubik, Noto Sans, Noto Serif, Caveat, Golos Text and Oranienbaum (SIL Open Font License, Google Fonts) are loaded from Google Fonts at run time and baked into canvas textures (signs, plates); no font files are included.
 
+## Playable characters and vehicle occupants
+
+The character models and source animation clips in `assets/characters/` are
+adapted from works by Razvan Savescu and Kobi, licensed under Creative Commons
+Attribution 4.0. Exact source links, author names and modifications are listed in
+[the character credits](assets/characters/CREDITS.md), also linked from the
+in-game character settings. These assets retain their original licence.
+
 ## Reference photographs
 
 Photographs (mostly Wikimedia Commons, each under its own licence) were used **only as visual references** while modelling (shapes,

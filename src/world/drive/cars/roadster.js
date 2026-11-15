@@ -41,7 +41,7 @@ export const SPEC_ROADSTER = {
 };
 
 // ---- the palette (albedo hex of the toon / vertex-colour pipeline)
-const NOSE = '#1E2228', PAINT = '#DDDFE4', PAINT_HI = '#F6F7F9', CARBON = '#14171B', UNDER = '#0D0F12', LINING = '#0F1114', LINER = '#161B26', PILLAR = '#14171B', SEAT = '#E6E6EA', METAL = '#C9CBD0', FENDER = '#CDD2DB';
+const NOSE = '#1E2228', PAINT = '#DDDFE4', PAINT_HI = '#F6F7F9', CARBON = '#14171B', UNDER = '#0D0F12', LINING = '#0F1114', PILLAR = '#14171B', SEAT = '#E6E6EA', METAL = '#C9CBD0', FENDER = '#CDD2DB';
 const DISC = '#F0F1F5', RIM = '#A9ACB6', SPOKE = '#0A0A0D', BRONZE = '#8C6B4A', TITAN = '#524E53', CAP = '#242733', TYRE_STEP = '#1B1B1D', RING = '#B8A47C', BORE = '#050505';
 const DEGS = Math.PI / 180, SHADE_LIFT = [0.44, 0.46, 0.50];
 /** hop v3 (the numbers mirror tuning.hop in cars/tuning.js): the height of the barrel roll's axis, the side-jet nozzles (front lateral L1 / L2 and a rear pair near the rear wheels; x is mirrored) */
@@ -148,9 +148,8 @@ export function createRoadsterModel(ctx, { plate = 'RDSTR' } = {}) {
     for (const [z, y] of [[0.86, 0.78], [0.45, 1.165], [-0.20, 1.195], [-1.15, 1.03], [-1.0, 0.975]]) pts.push([sd * (sideX(y) + 0.012), y, z], [sd * (sideX(y) - 0.05), y - 0.02, z]);
     G.add(hullGeo(pts), '#ffffff');
   }
-  const liner = [];
-  for (const z of glassZ) { const hw = Math.max(0.2, glassHW(z) - 0.1); liner.push([hw, roofY(z) - 0.12, z], [hw - 0.02, 0.80, z]); }
-  V.add(hullGeo(sym(liner)), LINER, new THREE.Matrix4().makeScale(-1, 1, 1));                                          // inside-out: its faces look into the cabin (the dark shell under the bronze glass)
+  // The exterior cabin is open beneath its glass so the animated driver is
+  // visible. First-person mode retains its separate interior roof lining.
   for (const x of [0.36, -0.36]) {
     V.rbox(0.44, 0.52, 0.12, 0.05, SEAT, [x, 0.80, -0.14], [-0.4, 0, 0], 1);
     V.rbox(0.24, 0.17, 0.10, 0.04, SEAT, [x, 1.00, -0.24], [-0.4, 0, 0], 1);
@@ -242,7 +241,7 @@ export function createRoadsterModel(ctx, { plate = 'RDSTR' } = {}) {
   // ================================================================================== meshes
   const body = new THREE.Mesh(V.build(), liftShade(mat.toon('#ffffff', { vertexColors: true, paint: 0.02, name: 'drive-body' }), SHADE_LIFT, ctx.shared.uNight));
   body.castShadow = true; body.receiveShadow = true; body.name = 'drive-body';
-  const glassBase = mat.glass({ tint: '#2A1F18', opacity: 0.92, streaks: true });
+  const glassBase = mat.glass({ tint: '#594536', opacity: 0.32, streaks: true });
   const glassMat = glassBase.clone();
   glassMat.fragmentShader = glassBase.fragmentShader.replace('0.35 + 0.45 * fres', '0.16 + 0.55 * fres').replace('smoothstep(-0.1, 0.6, R.y));', 'smoothstep(-0.1, 0.6, R.y)); sky = vec3(dot(sky, vec3(0.3, 0.55, 0.15))) * vec3(1.28, 1.0, 0.78) * 0.45;').replace('streak * 0.55', 'streak * 0.20');   // bronze, never blue: the sky it reflects is turned into warm luminance
   if (ctx.shared.uSkyMid) { glassMat.uniforms.uSkyTop = ctx.shared.uSkyMid; glassMat.uniforms.uSkyLow = ctx.shared.uSkyLow; }

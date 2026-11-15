@@ -38,6 +38,11 @@ export const DEFAULTS = {
   warningLead: 50,        // advance notice, metres before the actual loading trigger
 };
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+/** The vehicle part of an outgoing handoff, shared by gates and CPU checks. */
+export function carHandoff(d){
+  const v=d.vehicle,s=d.damage.state;
+  return {id:v.id,kind:v.kind,vessel:v.def?.vessel,dock:v.def?.dock,traffic:v.def?.traffic,view:d.view.mode,d:[s.front,s.rear,s.left,s.right]};
+}
 
 // ---------------------------------------------------------------- 1. geometry
 /** depth of the prompt zone (m from the border) for a mode ('walk' | 'fly' | 'car') at speed v (m/s): a walker 30 m, a vehicle or flyer clamp(30 + 0.5 v + v^2/60, 40, 160) (92 m at 48 m/s: the coupe stops in 38 m at full brake) */
@@ -373,7 +378,7 @@ export function createGates(deps) {
     return { x: player.pos.x, y: null, z: player.pos.z, yaw: player.yaw * DEG, pitch: player.pitch * DEG };
   }
   const xz = () => { const d = ctx.drive; return d && d.active ? { x: d.car.x, z: d.car.z } : { x: player.pos.x, z: player.pos.z }; };
-  const isBlocked = () => !isStarted() || traveling || !!(guard && guard.dead) || !!ctx.travelPending || ui.open || player.riding || player.isUnderground();
+  const isBlocked = () => !isStarted() || traveling || !!(guard && guard.dead) || !!ctx.travelPending || !!ctx.drive?.interacting || ui.open || player.riding || player.isUnderground();
 
   function setChip(c) {
     chipGate = c ? c.gate : null;
@@ -458,7 +463,7 @@ export function createGates(deps) {
     const pose = dest ? { x: dest.x, y: null, z: dest.z, yaw: dest.yaw, pitch: dest.pitch ?? 0 } : here;
     const incoming = ctx.handoff && ctx.handoff.ho ? ctx.handoff.ho.n : 0;
     const ho = makeHo({ from: A.ID, to: g.to, via, gate: g.id, n: incoming + 1, mute: !!audio.muted, noui: doc.body.classList.contains('noui'), ret: { x: here.x, z: here.z, yaw: here.yaw, pitch: here.pitch },
-      car: m === 'car' ? { id: d.vehicle.id, kind: d.vehicle.kind, vessel: d.vehicle.def?.vessel, dock: d.vehicle.def?.dock, view: d.view.mode, d: [d.damage.state.front, d.damage.state.rear, d.damage.state.left, d.damage.state.right] } : null });
+      car: m === 'car' ? carHandoff(d) : null });
     const url = arrivalUrl({ page: REGISTRY[g.to].page, pose, fly: m === 'fly', tod: tod.k, look: tod.variant, ho, search: win.location.search });
     let snap = null; try { snap = deps.captureFrame ? await deps.captureFrame() : null; } catch (e) { snap = null; }      // the frozen frame (null: the plain dark veil)
     seam.show(snap); if (snap && snap.img && seam.lead) seam.lead(SEAM_LEAD);      // the bar rises to SEAM_LEAD: the destination continues from there (entry.p)

@@ -1,5 +1,86 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-15: Characters, traffic takeovers and grounded collisions (15.0.0)
+
+The character controller uses the existing player physics, renderer, materials
+and area streaming. Two playable rigs share three locally shipped GLB templates
+(about 1.5 MB total). Full NPC rigs have a 24-actor pool and a 65 m update range;
+ordinary traffic keeps instanced drivers. A 16 m spatial grid finds enterable
+cars. At most twelve taken traffic cars retain detailed door/cabin geometry;
+distant parked models return to instancing with paint, plate, occupant state and
+damage preserved. Disposal releases private geometry without destroying shared
+toon materials or atlases. Moving, interacting and nearby reacting occupants
+are protected from retirement.
+
+Grounded struck cars now receive explicit longitudinal, lateral and angular
+resistance. Their planar bodies previously had no normal floor contact, so
+contact friction could not prevent sliding. A sedan initially moving sideways
+at 10 m/s stops in 5.43 m, versus roughly 15 m before; forward motion stops in
+10.77 m. The isolated 24-wreck CPU run measured 0.229 ms mean and 0.685 ms p95.
+Garage and taken parked cars now use the same mass-dependent impulse path.
+Durability has a common 1.5 multiplier, preserving relative vehicle strength.
+
+Focused checks cover fourteen traffic archetypes, identity/damage retention,
+handoff validation and reserved IDs, nested door damage, resource disposal,
+grounded traction and WASTED input gating. All 21 live-area garage audits pass.
+The real-page four-car test covers both playable rigs through eight complete
+entry/extraction/angry-driver/exit cycles, with stable seated hips and hand-target
+error at most 4.3 cm. Full-city E interactions passed for three actual street
+car types. That pre-bake diagnostic found and fixed a close camera in crowded
+parking rows and plate-atlas lettering on added chassis geometry. Touch checks
+cover saved character selection, camera order, modal locks and R cancellation.
+
+Final normal-loading validation uses all 21 fresh bakes, with no `baked=force`.
+All 2,715 decoded bake products are byte-identical to the pre-integration
+snapshot `a725e062`; only their source provenance changes. The normal full-city
+suite passed three actual traffic archetypes through takeover, angry reaction,
+driving, exit/re-entry, retained appearance/damage and WASTED, plus desktop and
+touch Settings/cameras. No scene or browser errors were recorded. Existing
+road-audit failures match the baseline exactly; see
+[CHARACTER-ROAD-AUDIT.md](CHARACTER-ROAD-AUDIT.md).
+
+Serial Edge/D3D11 runs at 1280×720, medium quality, normal fresh baked loading,
+20 seconds of W, without profiling or screenshots during measurement:
+
+| Run | Ready, s | Mean / p50 / p95 / max frame, ms | Frames >40 / >80 ms | Long tasks | Mean draws | Distance, m |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| Palace before | 24.90 | 20.2 / 17.6 / 35.3 / 268.2 | 12 / 3 | 3 | 1,252 | 352 |
+| Palace after | 26.33 | 22.3 / 17.8 / 35.7 / 69.9 | 11 / 0 | 1 | 1,383 | 800 |
+| Admiralty before | 25.63 | 18.7 / 17.5 / 18.6 / 227.7 | 6 / 2 | 2 | 1,360 | 169 |
+| Admiralty after | 26.53 | 21.3 / 17.7 / 35.4 / 211.5 | 7 / 2 | 5 | 1,454 | 168 |
+
+The station/Nevsky comparison is not a pure character-overhead measurement:
+the old car wrecked and stopped, while the new run continued along Nevsky and
+loaded 42 regions versus 37. Admiralty travelled a similar distance and ended
+against dense traffic/roadside obstacles (40 versus 41 loaded regions). Its
+new final heading also retracts the existing wall-avoidance chase camera close
+to the car. The reviewed screenshots retain the surrounding buildings, trees,
+street detail and skyline; this close wall-camera case remains a limitation.
+There were no failed regions or baked loads in any run.
+
+Post-measurement CDP `heap.usedSize` / `backingStorageSize`, separately in MiB:
+Palace 598 / 951 before and 628 / 1,081 after; Admiralty 515 / 1,301 before and
+573 / 1,313 after. These are retained heap readings, not peak-memory measures.
+The new runs average 45–47 FPS, above 30 FPS, but p95 exceeds 33.3 ms and
+Admiralty still has two >80 ms hitches. Smooth driving on every frame is not
+established. The remaining measured costs include 1,383–1,454 draws and up to
+211.5 ms long frames; a separate profile of the Admiralty collision/traffic
+burst is the next diagnostic, not another reduction of world content.
+
+Reproduce in the baseline worktree and this tree, changing the output suffix:
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/character-perf/palace-after
+node tools/drive-bench.mjs --area admiralty --q medium --seconds 20 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/character-perf/admiralty-after
+node tools/character-city-test.mjs --normal --out shots/character-city-baked
+```
+
+The assembled Pages artifact is 980,151,888 bytes, below the 1,000,000,000-byte
+limit. Actual-output integrity checks verified all 889 Brotli bake products
+and 43,756 exports in 1,092 packed data modules. Neither packing operation
+changes runtime data values.
+
+
 ## 2026-11-13: Reported floors, layered roads and landmark follow-up (13.2.0)
 
 The two supplied promenade positions exposed different defects. Polygonal

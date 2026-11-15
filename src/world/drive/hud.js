@@ -6,7 +6,6 @@
 
 const CSS = `
 #drive .d-condition { position: absolute; right: 24px; bottom: calc(370px + env(safe-area-inset-bottom, 0px)); padding: 8px 10px; border-radius: 8px; background: rgba(12,18,44,.72); font: 700 12px/1.4 "Noto Sans", sans-serif; }
-#drive .d-condition button { pointer-events: auto; margin-left: 12px; background: transparent; color: #fff; border: 1px solid #8894ac; border-radius: 4px; padding: 3px 6px; cursor: pointer; }
 @media (pointer: coarse) { #drive .d-condition { bottom: calc(280px + env(safe-area-inset-bottom, 0px)); } }
 #drive { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: none; font-family: "Rubik", "Noto Sans", "Segoe UI", sans-serif; color: #fff; }
 body.driving #drive { display: block; }
@@ -49,7 +48,7 @@ const ARC = { cx: 150, cy: 150, r: 124, a0: 135, a1: 405 };
 const pt = (a, r) => [ARC.cx + r * Math.cos(a * Math.PI / 180), ARC.cy + r * Math.sin(a * Math.PI / 180)];
 const arcPath = (a0, a1, r) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
 
-export function createDriveHud({ isTouch, onExit, onRepair, onNitro, onHand, onBrake, onJump, onFlip }) {
+export function createDriveHud({ isTouch, onExit, onNitro, onHand, onBrake, onJump, onFlip }) {
   const style = document.createElement('style'); style.textContent = CSS; document.head.appendChild(style);
   const root = document.createElement('div'); root.id = 'drive';
   const ticks = [];
@@ -57,7 +56,7 @@ export function createDriveHud({ isTouch, onExit, onRepair, onNitro, onHand, onB
   const full = arcPath(ARC.a0, ARC.a1, ARC.r), len = (ARC.a1 - ARC.a0) * Math.PI / 180 * ARC.r;
   root.innerHTML = `
     <canvas class="d-streaks"></canvas>
-    <div class="d-condition"><span>BODY 100%</span><button type="button" title="Stop, then repair the car (J)">J · Repair</button></div>
+    <div class="d-condition"><span>BODY 100%</span></div>
     <div class="d-vig"></div><div class="d-flash"></div>
     <div class="d-nlab">NITRO</div><div class="d-nitro"><i></i></div>
     <div class="d-speedo">
@@ -76,7 +75,6 @@ export function createDriveHud({ isTouch, onExit, onRepair, onNitro, onHand, onB
   document.body.appendChild(root);
   const $ = (s) => root.querySelector(s);
   const condition = $('.d-condition span');
-  $('.d-condition button').addEventListener('click', () => onRepair?.());
   const el = { rpm: $('.d-rpm'), num: $('.d-num'), gear: $('.d-gear'), nitro: $('.d-nitro'), nbar: $('.d-nitro i'), vig: $('.d-vig'), flash: $('.d-flash'), drift: $('.d-drift'), driftN: $('.d-drift span'), keys: $('.d-keys'),
     streaks: $('.d-streaks'), hopKey: $('.d-hopk'), hopBtn: $('.d-touch [data-k="hop"]'), flipBtn: $('.d-touch [data-k="flip"]'), touch: $('.d-touch') };
   const sctx = el.streaks.getContext('2d'), keysDefault = el.keys.innerHTML;

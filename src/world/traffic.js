@@ -60,6 +60,7 @@ import { planParked } from './traffic/parking.js';
 import { ARCH, MODEL_KINDS, archOf, TAXI_WHITE, ROUTE_BY_REF } from './traffic/fleetdata.js';
 import { STATIONS } from './data/city.js';
 import { northDeckHeight } from './northBridges/sites.js';
+import { createTrafficTakeovers } from './traffic/takeover.js';
 
 const DBG = (typeof location !== 'undefined' && new URLSearchParams(location.search).get('tr')) || '';
 const TAU = Math.PI * 2;
@@ -74,25 +75,28 @@ export async function build(ctx) {
   let plan = DBG.includes('nopark') ? { cars: [], stats: {} } : planParked(ctx, st);
   if (DBG.includes('gallery')) plan = { cars: gallery(ctx), stats: {} };
   const parkedRecs = plan.cars.map((p) => ({
-    kind: p.kind, x: p.x, y: p.y, z: p.z, c: p.c, s: p.s, color: new THREE.Color(p.color), plate: p.plate, lamp: null, driver: p.driver, pax: p.pax, taxi: p.taxi, police: !!p.police, amb: !!p.amb, route: undefined, tips: null,
+    kind: p.kind, x: p.x, y: p.y, z: p.z, c: p.c, s: p.s, color: new THREE.Color(p.color), plate: p.plate, lamp: null, driver: archOf(p.kind).bus ? p.driver : true, pax: p.pax, taxi: p.taxi, police: !!p.police, amb: !!p.amb, route: undefined, tips: null,
   }));
   for (const [index, p] of plan.cars.entries()) {
     const a = archOf(p.kind), ox = Math.sin(p.rotY) * (a.front + a.rear) / 2, oz = Math.cos(p.rotY) * (a.front + a.rear) / 2;
     const collider = ctx.physics.addBox(p.x + ox, p.z + oz, a.wid + 0.08, a.len + 0.08, p.rotY, 0, a.hgt);
     bindParkedImpact(collider, parkedRecs[index], a, wrecks);
+    parkedRecs[index].trafficCollider=collider;
     svc.parked.push({ x: p.x, z: p.z, rotY: p.rotY, kind: p.kind });
   }
 
   // ---- moving traffic: only the lanes within ~420 m of the camera exist (sim.js regional simulation); ?tr=whole simulates the whole network
   const camPos = ctx.camera.position, centre = [0, 0];
   const L = ctx.L;
-  // retired vehicles (sim.js: a trip ends when nobody can see the car): outside the view frustum and > 60 m away, or > 230 m away
-  const frus = new THREE.Frustum(), projView = new THREE.Matrix4(), ball = new THREE.Sphere(new THREE.Vector3(), 4);
+  // Retirement uses the same outer range as rendering. The old 230 m shortcut
+  // deleted cars that were still visible in the fleet's 340 m render range.
+  const frus = new THREE.Frustum(), projView = new THREE.Matrix4(), ball = new THREE.Sphere(new THREE.Vector3(), 12);
+  const retireRange2=CULL_RADIUS(ctx)**2;
   const hidden = (x, z) => {
     const dx = x - camPos.x, dz = z - camPos.z, d2 = dx * dx + dz * dz;
-    if (d2 > 230 * 230) return true;
+    if (d2 > retireRange2) return true;
     if (d2 < 60 * 60) return false;
-    ball.center.set(x, 1.5, z); return !frus.intersectsSphere(ball);
+    ball.center.set(x, (deckY?.(x,z)??0)+2, z); return !frus.intersectsSphere(ball);
   };
   // the Anichkov Bridge is a humped deck (+0.06 m at the abutments, +1.5 m at the crown): vehicles on it ride at the deck height and pitch with its slope (landmarksC.bridge.deckY)
   const westDeckY = bridgeDeck(ctx), SV = ctx.services;
@@ -122,6 +126,10 @@ export async function build(ctx) {
   const px = ctx.player.position;
   svc.sim = sim;
   svc.blockers = () => blockers;
+  const carriedId=ctx.handoff?.ho?.car?.kind==='traffic'?ctx.handoff.ho.car.id:null;
+  const takeovers=createTrafficTakeovers({physics:ctx.physics,sim,parkedRecords:parkedRecs,wrecks,reservedIds:carriedId?[carriedId]:[],refresh:()=>frame(Math.max(0,lastT))});
+  for(const record of parkedRecs)takeovers.register(record,null,record.trafficCollider);
+  for(const key of ['nearestEnterable','claim','commitClaim','cancelClaim','release'])svc[key]=takeovers[key];
 
   // the two wire points a trolleybus's poles touch: 4.3 m behind the pad, on the contact-wire pair under the bus (null -> folded poles)
   const tipsBuf = new Float32Array(8);
@@ -162,7 +170,8 @@ export async function build(ctx) {
     const alpha = sim_ ? sim_.advanceTo(t) : 0;
     const nt = night ? night.value : 0;
     fleet.begin(camera);
-    for (const r of parkedRecs) fleet.push(r);
+    takeovers.begin();
+    for (const r of parkedRecs){fleet.push(r);takeovers.register(r);}
     let nb = 0, nd = 0, nv = 0;
     if (sim_) {
       const head = 0.78 + 1.9 * nt, tailBase = 0.38 + 0.8 * nt;
@@ -175,7 +184,7 @@ export async function build(ctx) {
           if (parts) v.rec2 = { kind: parts[1], x: 0, y: 0.03, z: 0, c: 1, s: 0, color: rec.color, plate: v.plate, lamp: [0, 0, 0], driver: false, pax: false, taxi: false, police: false, amb: false, route: undefined, door: 0, tips: null, pole: null };
         }
         // Rapier owns the pose after impact. Do not put the wreck back on its lane.
-        if (rec.wrecked) { fleet.push(rec); continue; }
+        if (rec.wrecked) { fleet.push(rec);takeovers.register(rec,v);continue; }
         const x = v.px + (v.x - v.px) * alpha, z = v.pz + (v.z - v.pz) * alpha;
         let dr = v.rot - v.prot; dr -= TAU * Math.round(dr / TAU);
         const rot = v.prot + dr * alpha;
@@ -187,6 +196,7 @@ export async function build(ctx) {
           rec.tips = dd < 70 * 70 ? trolleyTips(rec, rec.c, rec.s, x, z, rot) : null;
         }
         fleet.push(rec);
+        takeovers.register(rec,v);
         if (parts) {
           const r2 = v.rec2, x2 = v.px2 + (v.x2 - v.px2) * alpha, z2 = v.pz2 + (v.z2 - v.pz2) * alpha;
           let d2 = v.rot2 - v.prot2; d2 -= TAU * Math.round(d2 / TAU);
@@ -217,6 +227,7 @@ export async function build(ctx) {
     if (svc.extraBlockers) for (const e of svc.extraBlockers) blockers.push(e);
     dyn.length = nd;
     fleet.end();
+    takeovers.end();
     svc.stats.moving = nv; svc.stats.parked = parkedRecs.length; svc.stats.l0 = fleet.stats.l0; svc.stats.l1 = fleet.stats.l1;
     lastT = t;
   };

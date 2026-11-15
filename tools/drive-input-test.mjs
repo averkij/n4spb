@@ -34,8 +34,8 @@ try {
     });
     interact.update();
     vm.runInNewContext(driveListener, {
-      addEventListener, isInteractionKey, state, ctx: { ui }, performance: { now: () => now },
-      exit: () => { exits++; state.active = false; player.inputLock = 0; },
+      addEventListener, isInteractionKey, state, ctx: { ui }, interactions: null, performance: { now: () => now },
+      requestExit: () => { exits++; state.active = false; player.inputLock = 0; },
     }, { filename: 'drive.js keydown listener' });
     const press = (repeat = false, extra = {}) => {
       const e = new Event('keydown', { cancelable: true }); Object.assign(e, { ...key, repeat, ...extra });
@@ -104,12 +104,13 @@ assert.equal(isInteractionKey({ code: '', key: 'e' }, 'Space'), false, 'fallback
   // the keydown listener latches the press of X (hopTap) and of C (flipTap): immediately, only while driving, not on auto-repeat, not behind a modal; each key has its own latch
   {
     const events = new EventTarget(); globalThis.addEventListener = events.addEventListener.bind(events);
-    const sb = { addEventListener, isInteractionKey, state: { active: true, enteredAt: 0 }, ctx: { ui: { modalOpen: false } }, performance: { now: () => 1e6 }, exit() {}, api: { setView() {}, repair() {} }, view: { mode: 0 }, sound: { horn() {} }, hopTap: false, flipTap: false };
+    const sb = { addEventListener, isInteractionKey, state: { active: true, enteredAt: 0 }, ctx: { ui: { modalOpen: false } }, interactions: null, performance: { now: () => 1e6 }, requestExit() {}, api: { setView() {} }, view: { mode: 0 }, sound: { horn() {} }, hopTap: false, flipTap: false };
     vm.runInNewContext(driveListener, sb, { filename: 'drive.js keydown listener (hop)' });
     const press = (code, repeat = false) => events.dispatchEvent(Object.assign(new Event('keydown', { cancelable: true }), { code, repeat }));
     for (const [code, latch, other] of [['KeyX', 'hopTap', 'flipTap'], ['KeyC', 'flipTap', 'hopTap']]) {
       press(code, true); assert.equal(sb[latch], false, code + ': auto-repeat does not latch');
       sb.ctx.ui.modalOpen = true; press(code); assert.equal(sb[latch], false, code + ': a modal swallows the key'); sb.ctx.ui.modalOpen = false;
+      sb.interactions = { active: true }; press(code); assert.equal(sb[latch], false, code + ': an entry/exit animation swallows the key'); sb.interactions = null;
       sb.state.active = false; press(code); assert.equal(sb[latch], false, code + ': not driving (walking / flying: C is the descend key there): no latch'); sb.state.active = true;
       press(code); assert.equal(sb[latch], true, 'a fresh ' + code + ' press while driving latches its hop on the frame of the key down'); assert.equal(sb[other], false, code + ' does not latch the other hop');
       sb.hopTap = sb.flipTap = false;
@@ -125,7 +126,7 @@ assert.equal(isInteractionKey({ code: '', key: 'e' }, 'Space'), false, 'fallback
   assert(source.includes("ev.type === 'dry'") && source.includes('hud.deny()'), 'a press the tank cannot pay blinks the boost bar');
   assert(source.includes("car.jumpHeld = keys.has('KeyX')") && source.includes("car.flipHeld = keys.has('KeyC')"), 'a hop key that is down at the door starts no hop when the car is entered');
   // exit() refuses in mid-hop (unless forced)
-  const e0 = source.indexOf('  function exit(force = false) {'), e1 = source.indexOf('EXIT_MAX_KMH', e0);
+  const e0 = source.indexOf('  function exit(force = false,'), e1 = source.indexOf('EXIT_MAX_KMH', e0);
   assert(e0 >= 0 && /!force && car\.air\) return false/.test(source.slice(e0, e1)), 'exit() keeps the door shut while the car is airborne');
 }
 console.log('RESULT: OK - physical and Firefox-hidden E keys across 15 key/setup-delay combinations, modifier/IME/input guards, first-E entry, held key and subsequent exit; hop keys, exhaust-point room, no exit in the air.');

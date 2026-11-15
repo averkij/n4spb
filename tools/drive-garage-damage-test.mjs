@@ -64,8 +64,9 @@ try {
     await shot(`${id}_wall48`);
     // the damage state belongs to this car only
     r.stateSnapshot = await page.evaluate(() => { const s = lab.drive.vehicle.damage.state; return { front: s.front, rear: s.rear, left: s.left, right: s.right }; });
-    // repair restores the exact pristine geometry
-    await page.evaluate(() => { lab.drive.car.vx = lab.drive.car.vz = 0; lab.drive.repair(); });
+    // Internal fixture reset restores pristine geometry; gameplay has no repair action.
+    assert.equal(await page.evaluate(() => typeof lab.drive.repair), 'undefined', 'no public repair API');
+    await page.evaluate(() => { const d = lab.drive; d.car.vx = d.car.vz = 0; d.damage.repair(); d.car.damage = d.car.damageSmoke = 0; d.car.damageStage = d.damage.stage; });
     const fixed = await page.evaluate(() => { const g = lab.drive.vehicle.model.body.geometry; return { pos: Array.from(g.attributes.position.array), index: Array.from(g.index.array), amount: lab.drive.damage.amount }; });
     check(fixed.amount === 0, `${id}: repair clears the damage`);
     check(JSON.stringify(fixed.pos) === JSON.stringify(info.pristine) && JSON.stringify(fixed.index) === JSON.stringify(info.index), `${id}: repair restores the pristine geometry exactly`);

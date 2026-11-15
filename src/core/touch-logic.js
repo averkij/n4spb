@@ -132,9 +132,8 @@ export const ACTIONS = {
   hand:     { kind: 'hold',  code: 'Space',     modes: ['drive'] },
   hop:      { kind: 'tap',   code: 'KeyX',      modes: ['drive'] },        // the simple hop: fires on the press (a synthetic keydown, drive.js latches it)
   flip:     { kind: 'tap',   code: 'KeyC',      modes: ['drive'] },        // the barrel hop: the same, KeyC (drive only: in fly mode C is the descend key and there is no FLIP button)
-  cam:      { kind: 'tap',   code: 'KeyV',      modes: ['drive'] },
+  cam:      { kind: 'tap',   code: 'KeyV',      modes: ['walk', 'drive'] },
   horn:     { kind: 'tap',   code: 'KeyG',      modes: ['drive'] },
-  repair:   { kind: 'call',  call: 'repair',    modes: ['drive'] },
   auto:     { kind: 'call',  call: 'autoGas',   modes: ['drive'] },
   exit:     { kind: 'call',  call: 'exit',      modes: ['drive'] },
   mute:     { kind: 'tap',   code: 'KeyM',      modes: ['walk', 'fly', 'ride', 'drive'] },
@@ -181,7 +180,7 @@ export const LAYOUT = {
 export function anchors(mode, w, h = Infinity, u = 1) {
   const a = { ...LAYOUT.common, ...LAYOUT[mode] };
   // Keep the utility row compact even with enlarged thumb controls.
-  const toolbar = mode === 'drive' ? ['menu', 'cam', 'exit', 'report'] : ['menu', 'report'];
+  const toolbar = mode === 'drive' ? ['menu', 'cam', 'exit', 'report'] : mode === 'walk' ? ['menu', 'cam', 'report'] : ['menu', 'report'];
   for (const [i, id] of toolbar.entries()) a[id] = A('r', 't', 16 + i * 52 / u, 12, 44 / u);
   if (mode === 'drive' && w < 480) { a.arrowL = A('l', 'b', 12, 16, 50); a.arrowR = A('l', 'b', 74, 16, 50); }
   // On short landscape screens (or enlarged controls), optional car tricks sit

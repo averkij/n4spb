@@ -1,4 +1,29 @@
-# Driving collisions and cosmetic damage
+# Driving collisions and damage
+
+## Character and traffic integration (15.0.0)
+
+Settings selects one of two playable characters, with the red-beret girl as
+the default. V cycles near third person, distant third person and first person
+on foot as well as in cars. The selection persists between districts.
+
+E approaches the driver's door, opens it, pulls out an occupied car's driver,
+climbs in and closes the door. The displaced driver raises and shakes his arms,
+then walks away. Stop before exiting. The seated pose is constant between
+frames; hands and feet follow vehicle-specific cabin anchors. Jump anticipation
+finishes before physical takeoff. Character credits are in Settings and
+`assets/characters/CREDITS.md`.
+
+All fourteen ordinary traffic car models can be taken, retaining their paint,
+plate, livery and damage. Public buses and trams keep their transit simulation.
+Detailed taken cars are a bounded nearby cache; distant parked cars return to
+instanced traffic without losing their identity. Visible traffic is no longer
+retired merely because it has waited at a red light.
+
+Cars have 50% more impact durability. Damage persists, fully junked cars trigger
+WASTED and cannot accelerate, and gameplay has no repair button or J action.
+Vehicle masses and grip differ by class. Grounded wrecks receive explicit tyre
+and brake resistance because their planar physics bodies have no normal floor
+contact; collision restitution and water resistance remain separate.
 
 The player car now uses an oriented rigid footprint against the existing spatial
 physics grid. Box and cylinder contacts apply normal impulses, friction and yaw
@@ -33,16 +58,15 @@ capacity fallback. Hidden sets are evicted without losing damage state. The
 runtime physics pool is capped at 24 cars, 48 debris bodies and 512 nearby scenery
 proxies. Untouched city colliders remain in the existing spatial grid.
 
-**Repair:** stop (below approximately 5 km/h), then press **J** or click/tap
-**J · Repair** above the speedometer. The BODY readout shows cosmetic condition.
-Repair restores original vertex positions, normals and colours and clears smoke.
+The BODY readout shows persistent vehicle condition. Internal geometry reset
+remains available to test fixtures only; players must find another car.
 
 ## Small test area
 
 Run `npm start`, then open `http://localhost:5176/tools/collision-lab.html`.
 The test yard loads production driving, handling, car meshes, materials, effects
 and HUD without building the city. Buttons exercise a wall, an offset pole, a
-production parked and oncoming fleet cars; WASD, drift, camera and repair inputs
+production parked and oncoming fleet cars; WASD, drift and camera inputs
 remain live. This page is a development fixture, not a new city region.
 Damage preview buttons reproduce each stage through real impacts.
 

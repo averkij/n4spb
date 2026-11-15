@@ -230,6 +230,7 @@ export function createFleet(ctx, cfg) {
   const addEx = (e, v) => { if (e && e.n < e.cap) { put(e.instanceMatrix.array, e.n * 16, v.x, v.y, v.z, v.c, v.s, v.cp === undefined ? 1 : v.cp, v.sp || 0); e.n++; } };
   /** v: { kind, x, y, z, c, s (cos / sin of rotY), color {r,g,b}, plate, lamp: [head, tail, ind] | null (parked), driver, pax, taxi, police, amb, route, tips } */
   function push(v) {
+    if(v.claimed)return;
     const dx = v.x - cam.x, dz = v.z - cam.z, d2 = dx * dx + dz * dz;
     if (d2 > cullR2) { culled++; return; }
     const k = K[v.kind]; if (!k) return;

@@ -824,8 +824,13 @@ export function createSim(st, makeRng, opts = {}) {
         if (v.v < 0.25 && v.holding) v.wait += DT; else if (v.v > 1) v.wait = 0;
         // a turning car that cannot find a gap for 10 s gives up and drives straight on (a shared left / straight lane must not stay blocked)
         if (v.v < 0.25 && v.holding && v.entryBlock) { v.eWait = (v.eWait || 0) + DT; if (v.eWait > 10 && v.next && v.next.turn !== 'straight') { const alt = seg.okConns.find((c) => c.turn === 'straight'); if (alt) { v.next = alt; v.eWait = 0; } } } else v.eWait = 0;
-        if (v.wait > 170) dead.push(v);
-        if (v.s > seg.cut) { dead.push(v); sim.stats.deadlocks = (sim.stats.deadlocks || 0) - 1; }      // (left the map at the water's edge: not a deadlock)
+        // A long red/blocked queue is not permission to delete a car in front
+        // of the player. Recover stale queues only after the car is out of view.
+        if (v.wait > 170 && hidden(v.x, v.z)) dead.push(v);
+        if (v.s > seg.cut) {
+          if(hidden(v.x,v.z)){dead.push(v);sim.stats.deadlocks=(sim.stats.deadlocks||0)-1;}
+          else {v.s=seg.cut;v.v=0;v.brake=true;}
+        }      // (left the map at the water's edge: not a deadlock)
         else if (v.s > seg.len) pending.push(v);
       }
     }
@@ -837,7 +842,8 @@ export function createSim(st, makeRng, opts = {}) {
       if (seg.kind === 'lane') {
         const c = v.next;
         if (!c || (regional && !c.on)) {
-          if (v.s > seg.len + Math.min(v.len + 3, 8)) { remove(v); }                  // (a lane end without an exit / at the edge of the simulated region: a 12 m bus would run 15 m on over the kerb: it goes after 8)
+          const end=seg.len+Math.min(v.len+3,8);
+          if(v.s>end){if(hidden(v.x,v.z))remove(v);else{v.s=end;v.v=0;v.brake=true;}}
           continue;
         }
         // may the car really enter? (it is "committed" on amber, but a red light / occupied box is a hard stop)
@@ -882,6 +888,15 @@ export function createSim(st, makeRng, opts = {}) {
   }
 
   sim.reset = reset;
+  // Promotion to the player's driving controller transfers identity and damage;
+  // it is not a normal despawn and must not invoke wreck cleanup on that record.
+  sim.detach = v => {
+    if(!sim.vehicles.includes(v)||v.tram||v.arch?.bus)return false;
+    const i=v.seg.veh.indexOf(v);if(i>=0)v.seg.veh.splice(i,1);
+    for(const segment of [v.seg,...v.trail])if(segment.lastOut===v)segment.lastOut=null;
+    const j=sim.vehicles.indexOf(v);sim.vehicles[j]=sim.vehicles.at(-1);sim.vehicles.pop();
+    v.claimed=true;v.v=0;v.brake=true;sim.stats.claimed=(sim.stats.claimed||0)+1;return true;
+  };
   sim.step = step;
   /** advance (or restart + fast-forward) so that sim.time <= t < sim.time + DT; returns the interpolation factor 0..1 */
   let started = false;

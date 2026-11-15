@@ -286,6 +286,7 @@ async function goToView(v) {
   try {
     if (ctx.regions) { showToast('Загрузка места…'); await ctx.regions.ensureAt(v.x, v.z); }
     let placed = true;      // review fix: drive.place() answers false when no free spot is within 40 m (the garden keeps the cars out): the car stays, so the label and the area name must not say it arrived
+    ctx.drive?.cancelInteraction?.();
     if (ctx.drive?.active) placed = ctx.drive.place(v.x, v.z, v.yaw) !== false; else player.setPose(v.x, v.z, v.yaw, v.pitch);
     if (!placed) { showToast('Сюда на машине нельзя: выйдите из неё (E) · Cars cannot go there: get out first (E)'); return; }
     if (ctx.gates) ctx.gates.teleported();      // (a jump is no speed: the gate's velocity estimate starts over)
@@ -575,7 +576,7 @@ async function main() {
     if (e.code === 'KeyT') showToast(tod.cycle());
     if (e.code === 'KeyM') { audio.muted = !audio.muted; const b = $('mute'); if (b) b.setAttribute('aria-pressed', String(audio.muted)); }
     const drv = ctx.drive && ctx.drive.active;      // while driving the places / R move the car instead of the walker
-    if (e.code === 'KeyR') { if (drv) ctx.drive.place(L.HERO.x, L.HERO.z, L.HERO.yaw); else player.setPose(L.HERO.x, L.HERO.z, L.HERO.yaw, L.HERO.pitch); if (ctx.gates) ctx.gates.teleported(); }
+    if (e.code === 'KeyR') { ctx.drive?.cancelInteraction?.(); if (drv) ctx.drive.place(L.HERO.x, L.HERO.z, L.HERO.yaw); else player.setPose(L.HERO.x, L.HERO.z, L.HERO.yaw, L.HERO.pitch); if (ctx.gates) ctx.gates.teleported(); }
     if (e.code === 'Backquote' && !e.altKey && !e.shiftKey) { const s = $('stats'); if (s) s.hidden = !s.hidden; }
     const v = VIEWS[(e.altKey && e.shiftKey ? 'AltShift' : e.altKey ? 'Alt' : e.shiftKey ? 'Shift' : '') + e.code]; if (v && !e.repeat && TELEPORTS) goToView(v);     // standing on the ground there (setPose without y ends a flight); with the baked scene the regions around the destination stream in first (the Admiralty end is 2.6 km from the start pose)
   });

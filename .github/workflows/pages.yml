@@ -142,6 +142,19 @@ jobs:
       - run: npm ci
       - name: Vehicle entry and exit with physical or privacy-hidden Firefox E keys
         run: node tools/drive-input-test.mjs
+      - name: Characters, takeovers, damage and grounded vehicle traction
+        run: |
+          node tools/character-player-test.mjs
+          node tools/character-interaction-test.mjs
+          node tools/traffic-takeover-test.mjs
+          node tools/traffic-model-test.mjs
+          node tools/promotion-cache-test.mjs
+          node tools/handoff-traffic-test.mjs
+          node tools/drive-door-damage-test.mjs
+          node tools/vehicle-traction-test.mjs
+          node tools/owned-car-physics-test.mjs
+          node tools/drive-wasted-test.mjs
+          node tools/touch-logic-test.mjs
       - name: Audio names, silent construction calls and bounded sound scheduling
         run: node tools/audio-test.mjs
       - name: Aurora visitor boarding, deck inspection, open water and breakable rails

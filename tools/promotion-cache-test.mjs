@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import {retirementCandidates,disposePromotedModel} from '../src/world/drive/promotion-cache.js';
+const car=(x,extra={})=>({kind:'traffic',source:{},parked:{x,z:0},...extra});
+const far=car(200),near=car(10),active=car(250),interacting=car(300),reaction=car(400,{cabin:{npc:{},npcOrigin:{x:0,z:10}}}),handoff=car(500,{source:null});
+assert.deepEqual(retirementCandidates([far,near,active,interacting,reaction,handoff],{x:0,z:0,active,interacting}),[far]);
+const crowded=Array.from({length:12},(_,i)=>car(i===11?80:i));
+assert.deepEqual(retirementCandidates(crowded,{x:0,z:0,reserve:1,forward:{x:-1,z:0}}),[crowded[11]],'Capacity frees an unseen distant parked slot before promotion');
+assert.deepEqual(retirementCandidates(crowded,{x:0,z:0,reserve:1,forward:{x:1,z:0}}),[],'Capacity does not swap visible mid-distance cars');
+assert.deepEqual(retirementCandidates(crowded,{x:0,z:0}),[],'Ordinary cache avoids swapping visible nearby cars');
+const root=new THREE.Group(),scene=new THREE.Group(),geometry=new THREE.BoxGeometry(),shared=new THREE.MeshBasicMaterial(),privateMat=new THREE.MeshBasicMaterial();
+root.add(new THREE.Mesh(geometry,shared),new THREE.Mesh(geometry,privateMat));scene.add(root);
+let geometryDisposals=0,sharedDisposals=0,privateDisposals=0;
+geometry.addEventListener('dispose',()=>geometryDisposals++);shared.addEventListener('dispose',()=>sharedDisposals++);privateMat.addEventListener('dispose',()=>privateDisposals++);
+disposePromotedModel({root,ownedMaterials:[privateMat]});
+assert.equal(geometryDisposals,1);assert.equal(privateDisposals,1);assert.equal(sharedDisposals,0);assert.equal(root.parent,null);assert.equal(root.children.length,0);
+console.log('PASS: bounded promotion selection, protected active/interacting/nearby NPC cars, safe model resource disposal');

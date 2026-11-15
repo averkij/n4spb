@@ -125,6 +125,9 @@ ok('actions: hold -> key, tap -> synthetic key, latch, call; mode filter', () =>
   for (const [id, a] of Object.entries(T.ACTIONS)) { assert(['hold', 'tap', 'latch', 'call', 'pedal'].includes(a.kind), id); assert(a.modes.length, id); if (a.kind !== 'call' && a.kind !== 'pedal') assert(/^(Key[A-Z]|Space|ShiftLeft)$/.test(a.code), id + ' code'); }
   assert.equal(T.ACTIONS.jump.code, 'Space'); assert.equal(T.ACTIONS.cam.code, 'KeyV'); assert.equal(T.ACTIONS.horn.code, 'KeyG'); assert.equal(T.ACTIONS.hop.code, 'KeyX'); assert.equal(T.ACTIONS.flip.code, 'KeyC');
   assert.equal(T.ACTIONS.nitro.code, 'ShiftLeft'); assert.equal(T.ACTIONS.hand.code, 'Space'); assert.equal(T.ACTIONS.mute.code, 'KeyM');
+  assert.deepEqual(T.ACTIONS.cam.modes, ['walk', 'drive'], 'camera cycling is available on foot and in cars');
+  assert.equal(T.ACTIONS.repair, undefined, 'repair is no longer a touch action');
+  assert(!Object.values(T.ACTIONS).some(a => a.code === 'KeyJ' || a.call === 'repair'), 'no repair binding remains in the touch action table');
   // HOP v3: two buttons, HOP (X, the simple hop) and FLIP (C, the barrel hop); each FIRES ON THE PRESS (a synthetic keydown + keyup that drive.js latches): no hold semantics, no charge
   for (const [id, code] of [['hop', 'KeyX'], ['flip', 'KeyC']]) {
     assert.equal(T.ACTIONS[id].kind, 'tap', id.toUpperCase() + ' is a tap (fires on the press, immediately)'); assert.equal(T.ACTIONS[id].code, code); assert.deepEqual(T.ACTIONS[id].modes, ['drive'], id + ' exists in drive mode only');

@@ -31,6 +31,6 @@ for(let i=0;i<900;i++){
     else {assert(d<3,'a connector must not teleport the car');moving++;}
   }
 }
-assert(stopped>100 && moving>100,'exercise stopped queues and moving traffic');
+assert(stopped>100 && moving>100,`exercise stopped queues and moving traffic (stopped ${stopped}, moving ${moving}, area ${process.env.AREA || 'strip'})`);
 if(process.env.AREA==='palace')assert.equal(seams,2,'both reported embankment seams exist');
 console.log(`PASS ${seams} real way seams; ${stopped} stationary and ${moving} moving NPC poses`);

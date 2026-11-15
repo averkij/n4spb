@@ -250,7 +250,7 @@ try {
     d.enter('coupe'); r.hudDamageCoupe = d.car.damage; d.car.speed = 0; d.exit(true);
     d.enter('lada'); r.hudDamageLada = d.car.damage; r.ladaReenter = d.damage.amount; d.car.speed = 0; d.exit(true);
     // put everything back for the next checks
-    d.enter('lada'); d.teleport(p.x, p.z, p.yaw); d.car.speed = 0; d.exit(true); d.enter('lada'); d.repair(); d.car.speed = 0; d.exit(true);
+    d.enter('lada'); d.teleport(p.x, p.z, p.yaw); d.car.speed = 0; d.exit(true); d.enter('lada'); d.damage.repair(); d.car.damage = d.car.damageSmoke = 0; d.car.damageStage = d.damage.stage; d.car.speed = 0; d.exit(true);
     return r;
   });
   console.log('state per car:', JSON.stringify(keep));

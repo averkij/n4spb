@@ -3,9 +3,10 @@
 import RAPIER from '../../../vendor/rapier/rapier.js';
 import * as THREE from 'three';
 import { crushedSpec } from './damage.js';
+import { TRAFFIC_PHYSICS, trafficPhysics, wreckTraction } from './vehicle-profiles.js';
 
 let initialized;
-export const vehicleMass = spec => spec.mass || (spec.bus ? 8500 : spec.len > 5.3 ? 2400 : 1400);
+export const vehicleMass = spec => spec.mass || TRAFFIC_PHYSICS[spec.kind]?.mass || (spec.bus ? TRAFFIC_PHYSICS.bus.mass : spec.len > 5.3 ? TRAFFIC_PHYSICS.van.mass : TRAFFIC_PHYSICS.sedan.mass);
 const yawRotation = yaw => ({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) });
 export async function getCarWrecks(ctx) {
   if (ctx.services.carWrecks) return ctx.services.carWrecks;
@@ -76,7 +77,7 @@ function createWreckWorld(ctx) {
     const yaw = Math.atan2(record.s, record.c), offset = (spec.front + spec.rear) / 2;
     const desc = RAPIER.RigidBodyDesc.dynamic().setTranslation(record.x + record.s * offset, record.y + .55, record.z + record.c * offset)
       .setRotation(yawRotation(yaw)).enabledTranslations(true, false, true).enabledRotations(false, true, false)
-      .setLinearDamping(.65).setAngularDamping(1.2).setCcdEnabled(true);
+      .setLinearDamping(0).setAngularDamping(0).setCcdEnabled(true);
     const body = world.createRigidBody(desc);
     const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(spec.wid / 2, .45, spec.len / 2)
       .setMass(vehicleMass(spec)).setFriction(.65).setRestitution(.08).setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS), body);
@@ -90,7 +91,7 @@ function createWreckWorld(ctx) {
     // Traffic reuses its collider slots each frame. Keep our own stable source.
     const owned = { ...source };
     record.wreckSource = owned;
-    entry = { body, collider, record, source: owned, spec, lastHit: tick };
+    entry = { body, collider, record, source: owned, spec, traction: trafficPhysics(record.kind, spec), lastHit: tick };
     cars.set(record, entry); carHandles.set(collider.handle, entry); return entry;
   }
   function impulse(source, ix, iz, x, z) {
@@ -98,6 +99,19 @@ function createWreckWorld(ctx) {
     entry.body.applyImpulseAtPoint({ x: ix, y: 0, z: iz }, { x, y: entry.body.translation().y, z }, true);
     sync(entry);
     source.vx = entry.source.vx; source.vz = entry.source.vz; source.spin = entry.source.spin;
+  }
+  /** Hand a struck/parked vehicle to the driving controller without a second
+   * collider, stale lane callback or reset of its pose/dents. */
+  function release(record) {
+    const entry = cars.get(record); if(entry)sync(entry);
+    const source = entry?.source || record.wreckSource;
+    const snapshot={x:record.x,y:record.y,z:record.z,yaw:Math.atan2(record.s,record.c),vx:source?.vx||0,vz:source?.vz||0,spin:source?.spin||0,damageState:record.damageState};
+    if(entry)retire(entry,false);
+    if(source?.staticBox){ctx.physics.remove(source.staticBox);source.staticBox=null;}
+    if(source?.vehicle){source.vehicle.wreckCleanup?.();delete source.vehicle.wreckCleanup;source.vehicle.wrecked=false;}
+    const proxy=scenery.get(record);if(proxy){proxyHandles.delete(proxy.collider.handle);world.removeCollider(proxy.collider,false);scenery.delete(record);}
+    record.wreckBody=null;record.wreckSource=null;record.wrecked=false;
+    return snapshot;
   }
   function dropPiece(p) { world.removeRigidBody(p.body); p.mesh.removeFromParent(); p.mesh.geometry.dispose(); }
   function shed(fragment, pose, tint) {
@@ -160,7 +174,28 @@ function createWreckWorld(ctx) {
     if (!started) return;
     const mover = carHandles.get(h1) || carHandles.get(h2);
     const target = proxyHandles.get(h1) || proxyHandles.get(h2);
-    if (!mover || !target || target.record?.wreckBody) return;
+    if (!mover) return;
+    // Rapier resolves two active wrecks and fixed scenery itself. They still
+    // need damage events; previously only a chain hit against an untouched car
+    // damaged either shell, so an already struck car could hit walls unharmed.
+    if(!target || target.record?.wreckBody){
+      const otherHandle=mover.collider.handle===h1?h2:h1,other=world.getCollider(otherHandle);
+      if(!other)return;
+      const second=carHandles.get(otherHandle),prior=mover.before||mover.body.linvel(),ov=second?.before||{x:0,y:0,z:0};
+      const p=mover.body.translation(),op=other.translation();let hit=null;
+      world.contactPair(mover.collider,other,manifold=>{
+        const n=manifold.normal();if(Math.abs(n.y)>.7)return;
+        let nx=n.x,nz=n.z;const length=Math.hypot(nx,nz);if(length<.01)return;nx/=length;nz/=length;
+        if(nx*(p.x-op.x)+nz*(p.z-op.z)<0){nx=-nx;nz=-nz;}
+        const speed=-((prior.x-ov.x)*nx+(prior.z-ov.z)*nz);
+        if(speed>.7&&(!hit||speed>hit.speed)){
+          const point=manifold.numSolverContacts()?manifold.solverContactPoint(0):{x:(p.x+op.x)/2,z:(p.z+op.z)/2};
+          hit={speed,x:point.x,z:point.z,nx,nz};
+        }
+      });
+      if(hit){mover.lastHit=tick;mover.source.onCarHit?.(hit.speed,hit);if(second){second.lastHit=tick;second.source.onCarHit?.(hit.speed,{...hit,nx:-hit.nx,nz:-hit.nz});}}
+      return;
+    }
     const p = mover.body.translation(), dx = p.x - target.cx, dz = p.z - target.cz, d = Math.hypot(dx, dz) || 1;
     const nx = dx / d, nz = dz / d, prior = mover.before || mover.body.linvel();
     const speed = -((prior.x - target.vx) * nx + (prior.z - target.vz) * nz);
@@ -180,7 +215,15 @@ function createWreckWorld(ctx) {
     while (accumulator >= 1 / 120) {
       for (const entry of cars.values()) if (entry.source.vehicle?.retired) retire(entry, false);
       tick++; if (tick % 6 === 1) nearby();
-      for (const entry of cars.values()) entry.before = entry.body.linvel();
+      for (const entry of cars.values()) {
+        if(!entry.body.isSleeping()) {
+          const v=entry.body.linvel(),q=entry.body.rotation(),yaw=Math.atan2(2*q.w*q.y,1-2*q.y*q.y);
+          const water=ctx.physics.waterLevel?.(entry.record.x,entry.record.z),depth=Number.isFinite(water)?Math.max(0,water-entry.record.y):0;
+          const grip=wreckTraction(v.x,v.z,entry.body.angvel().y,yaw,1/120,entry.traction,depth);
+          entry.body.setLinvel({x:grip.vx,y:0,z:grip.vz},false);entry.body.setAngvel({x:0,y:grip.spin,z:0},false);
+        }
+        entry.before = entry.body.linvel();
+      }
       world.timestep = 1 / 120; world.step(events); accumulator -= 1 / 120;
       events.drainCollisionEvents(chainCollision);
       for (const e of cars.values()) sync(e);
@@ -203,6 +246,6 @@ function createWreckWorld(ctx) {
     return colliders;
   }
   ctx.physics.addDynamic(movingColliders);
-  return { impulse, shed, step, reset, blockers: movingColliders,
+  return { impulse, shed, step, reset, release, blockers: movingColliders,
     get stats() { return { cars: cars.size, debris: pieces.length, scenery: scenery.size }; } };
 }

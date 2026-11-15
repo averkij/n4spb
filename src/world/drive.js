@@ -8,7 +8,7 @@
 // HOW IT PLUGS IN: while driving, player.inputLock is raised (the walker is frozen and its keys / look are ignored), player.pos follows the car (so the people / traffic / zones /
 //   street-name toasts keep working around the car) and this module sets the camera after the player's update (module updates run after player.update). The parked car is a physics
 //   box; the moving car uses a rigid footprint with angular impulses against the walker's solids (core/physics.js). Traffic brakes after impacts while keeping its lane route; it appears to
-//   the pedestrians as one more moving blocker (services.traffic.extraBlockers). damage.js retains local dents/scuffs until the stopped driver repairs with J or the HUD button.
+//   the pedestrians as one more moving blocker (services.traffic.extraBlockers). Damage persists when a car is left or taken again.
 // GARAGE (2026-10-13): three cars stand parked beside the taxi rank, each a vehicle with its own model, handling state, damage state and physics box (drive/cars/index.js registry, cars/tuning.js
 //   handling / sound / HUD per car): the red coupe, the taxi pickup (heavier, a bit slower) and the eggplant Zhiguli (lighter, a bit faster, loose). E gets into the NEAREST one (the interaction layer),
 //   exit leaves it parked where it stopped (dents included), only one car is active. A fourth, the white Roadster, adds THRUST (cold-gas nozzles) and the gas hop (handling.js tuning.hop). car / model / damage / parked in the service follow the current (last driven) car.
@@ -24,6 +24,7 @@ import { GARAGE } from './lib/area-tables.js';
 import { createHandling, holdInput } from './drive/handling.js';
 import { createCarDamage, crushedSpec } from './drive/damage.js';
 import { getCarWrecks } from './drive/wrecks.js';
+import { createParkedPhysics } from './drive/parked-physics.js';
 import { createCarSound } from './drive/sound.js';
 import { createFx } from './drive/fx.js';
 import { createDriveHud } from './drive/hud.js';
@@ -32,6 +33,11 @@ import { STEP_HEIGHT } from '../core/physics.js';
 import { loadBoats } from './drive/boat/index.js';
 import { createBoatHandling } from './drive/boat/handling.js';
 import { createWake } from './drive/boat/wake.js';
+import {createCharacters} from './character/index.js';
+import {createVehicleCabin,cabinDamageMeshes} from './drive/vehicle-cabin.js';
+import {createCharacterInteractions} from './drive/character-interaction.js';
+import {trafficDefinition} from './drive/traffic-model.js';
+import {PROMOTED_LIMIT,retirementCandidates,disposePromotedModel} from './drive/promotion-cache.js';
 import { boatCameraLow, boatCameraFraction } from './drive/boat/camera.js';
 
 const DEG = Math.PI / 180, TAU = Math.PI * 2;
@@ -47,7 +53,7 @@ export async function build(ctx) {
   const player = ctx.playerObj || null;                       // set by main.js before the modules are built
   // a page reached in a car by an edge gate (docs/AREAS.md 14, 15.z) must put the player into THAT car even when this area's garage does not keep it (admiralty: ONE purple Zhiguli): the carried car is built too, parked at the arrival pose
   const hoCar = ctx.handoff && ctx.handoff.mode === 'car' && ctx.handoff.ho && ctx.handoff.ho.car && ctx.handoff.pose ? ctx.handoff : null;
-  const garage = await loadGarage(ctx, { carry: hoCar && hoCar.ho.car.kind !== 'boat' ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // A boat id can coincide with a car id; do not create a car for it.
+  const garage = await loadGarage(ctx, { carry: hoCar && !['boat','traffic'].includes(hoCar.ho.car.kind) ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // A boat id can coincide with a car id; do not create a car for it.
   if (!garage.length) { console.warn('[drive] the area has no garage (GARAGE.poses): no cars'); return; }      // an area without cars: no drive service (the callers test ctx.drive)
   const wrecks = await getCarWrecks(ctx);
   // ONE VEHICLE PER CAR: its own model, handling state (parked pose included), damage state, parked physics box. V is the car the player drives or last drove; the closure
@@ -57,8 +63,10 @@ export async function build(ctx) {
     const car = createHandling(ctx, def.tuning), p = def.parked;
     car.reset(p.x, p.z, p.yaw);
     const parked = { x: p.x, z: p.z, yaw: p.yaw, y: car.groundAt(p.x, p.z) };
-    const damage = createCarDamage(model, { interior: true, spec: def.spec, onDetach: fragment => wrecks.shed(fragment, car) });
-    return { id: def.id, def, model, car, parked, damage, spec: def.spec, box: null };
+    const v={id:def.id,def,model,car,parked,damage:null,spec:def.spec,box:null};
+    const cabin=createVehicleCabin(ctx,v);
+    v.damage=createCarDamage(model,{interior:cabin?'hood':true,spec:def.spec,meshes:cabinDamageMeshes(model,cabin),onDetach:fragment=>wrecks.shed(fragment,car)});
+    return v;
   });
   // THE BOATS (drive/boat/): the motor boats that wait at their docks, one vehicle each with the same shape as a car (model, handling state, parked pose, a damage state that stays empty, a physics box); they are NOT in `fleet`
   // (the cars of the station, which the tests count) but in `boats`; `vehicles` is both. A boat floats at the water level, takes the car's controls and has its own wake, sound and key line.
@@ -79,18 +87,20 @@ export async function build(ctx) {
   const isTouch = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
   const touch = { nitro: false, hand: false, brake: false, jump: false, flip: false };
   let hopTap = false, flipTap = false;      // the X / C hop key (or button) went down since the last physics step: a press shorter than one frame (keydown + keyup between two frames) must still launch its hop
-  const hud = createDriveHud({ isTouch, onExit: () => api.exit(), onRepair: () => api.repair(), onNitro: (v) => { touch.nitro = v; }, onHand: (v) => { touch.hand = v; }, onBrake: (v) => { touch.brake = v; }, onJump: (v) => { touch.jump = v; if (v) hopTap = true; }, onFlip: (v) => { touch.flip = v; if (v) flipTap = true; } });
+  const hud = createDriveHud({ isTouch, onExit: () => requestExit(), onNitro: (v) => { touch.nitro = v; }, onHand: (v) => { touch.hand = v; }, onBrake: (v) => { touch.brake = v; }, onJump: (v) => { touch.jump = v; if (v) hopTap = true; }, onFlip: (v) => { touch.flip = v; if (v) flipTap = true; } });
   const night = ctx.shared.uNight;
-  // 100% junked: the "Потрачено" label for 5 s, the car cannot be driven (J still repairs it): drive/wasted.js
-  const wasted = createWasted({ onShow: () => ctx.ui.toast('Нажмите J — ремонт · Press J to repair') });
+  // 100% junked: the "Потрачено" label for 5 s; leave the wreck and find another car.
+  const wasted = createWasted({onShow:()=>ctx.ui.toast('Машина разбита. E — выйти · Car wrecked. E to get out.')});
 
+  const parkedPhysics = createParkedPhysics(wrecks);
   const addBox = (v = V) => {
     if (v.box) return;
     const { parked: p, spec } = v, sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
     const draft = v.kind === 'boat' ? (spec.draft ?? 0.45) : 0.03;      // reach below the waterline, including the cargo ship's deep hull
     v.box = ph.addBox(p.x + sy * spec.centerZ, p.z + cy * spec.centerZ, spec.W + 0.08, spec.len + 0.08, p.yaw, p.y - draft, p.y - 0.03 + spec.hgt);
+    parkedPhysics.attach(v, v.box);
   };
-  const dropBox = (v = V) => { if (v.box) { ph.remove(v.box); v.box = null; } };
+  const dropBox = (v = V) => { parkedPhysics.release(v); if (v.box) { ph.remove(v.box); v.box = null; } };
   for (const v of vehicles) if (!v.def.carried) addBox(v);      // (the carried car of a hand-off has no box until it is left somewhere: the player's own spot is not a wall for him)
   /** make `v` the current car (the closure names follow it); a car parked since its last drive keeps its dents */
   function use(v) {
@@ -106,6 +116,43 @@ export async function build(ctx) {
   const _v = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _q2 = new THREE.Quaternion();
   const extra = [];       // services.traffic.extraBlockers: the player's car as a moving blocker for the pedestrians
   const me = { x: 0, z: 0, w: SPEC.W, d: SPEC.len, hw: SPEC.W / 2, hd: SPEC.len / 2, rotY: 0, vx: 0, vz: 0, speed: 0, kind: 'player' };
+
+  const characters=typeof window!=='undefined'&&window.location?.protocol?.startsWith('http')&&!ctx.recordBake&&player ? await createCharacters(ctx,{manualUpdate:true,maxNpcs:24}) : null;
+  const interactions=characters?createCharacterInteractions(ctx,{characters,vehicles,enterNow:enter,exitNow:exit,dropBox,addBox,activeVehicle:()=>V,active:()=>state.active,view}):null;
+  function requestEnter(v){return v?.kind==='boat'||!interactions?enter(v):interactions.enter(v);}
+  function requestExit(){if(!state.active||interactions?.active)return false;return V.kind==='boat'||!interactions?exit():interactions.exit();}
+  function promoteTraffic(descriptor,claim=true){
+    prunePromotions(1);
+    if(vehicles.filter(v=>v.kind==='traffic'&&!v.retired).length>=PROMOTED_LIMIT){ctx.ui.toast('Leave the nearby cars before taking another car');return null;}
+    const traffic=ctx.services.traffic,claimed=claim?traffic?.claim(descriptor):descriptor;if(!claimed)return null;
+    let promoted=null;
+    try{
+      const def=trafficDefinition(claimed);if(!def)throw Error('Unknown traffic car');
+      const model=def.makeModel(ctx),car=createHandling(ctx,def.tuning),p=def.parked;ctx.add(model.root);car.reset(p.x,p.z,p.yaw);
+      const v={id:def.id,kind:'traffic',def,model,car,parked:{...p,y:car.y},spec:def.spec,box:null,damage:null,source:claim?claimed:null};
+      promoted=v;
+      const cabin=createVehicleCabin(ctx,v);if(cabin)cabin.occupied=claim?!!claimed.wasOccupied:false;
+      v.damage=createCarDamage(model,{spec:v.spec,state:claimed.damageState||claimed.record?.damageState,interior:cabin?'hood':true,meshes:cabinDamageMeshes(model,cabin),onDetach:fragment=>wrecks.shed(fragment,car)});
+      if(claimed.record)claimed.record.damageState=v.damage.state;
+      v.damage.sync();vehicles.push(v);addBox(v);poseVehicle(v,0,false);registerPromotedPrompt(v);if(claim)traffic.commitClaim(claimed);return v;
+    }catch(error){if(promoted){dropBox(promoted);ctx.interact?.remove(promoted.prompt);const i=vehicles.indexOf(promoted);if(i>=0)vehicles.splice(i,1);disposePromotedModel(promoted.model);}if(claim)traffic?.cancelClaim(claimed);console.error('Unable to take traffic car',error);return null;}
+  }
+  function prunePromotions(reserve=0){
+    if(!player)return;
+    const traffic=ctx.services.traffic;if(!traffic?.release)return;
+    camera.getWorldDirection(_v);
+    for(const v of retirementCandidates(vehicles,{x:player.pos.x,z:player.pos.z,forward:_v,active:state.active?V:null,interacting:interactions?.state?.vehicle,reserve})){
+      parkedPhysics.sync(v);
+      v.source.record.damageState=v.damage.state;
+      if(!traffic.release(v.source,{...v.parked,occupied:!!v.cabin?.occupied}))continue;
+      if(v===V)use(fleet[0]);
+      dropBox(v);v.retired=true;ctx.interact?.remove(v.prompt);
+      if(v.cabin?.npc){characters?.releaseNpc(v.cabin.npc);v.cabin.npc=null;}
+      vehicles.splice(vehicles.indexOf(v),1);disposePromotedModel(v.model);v.damage=null;
+    }
+  }
+  let pruneTime=0;
+  ctx.onUpdate(dt=>{pruneTime+=dt;if(pruneTime>=1){pruneTime=0;prunePromotions();}});
 
   // ---------------------------------------------------------------- input
   function readInput(out = {}) {
@@ -125,10 +172,11 @@ export async function build(ctx) {
   // ---------------------------------------------------------------- enter / exit
   /** get into a car: `which` = a vehicle, its id ('coupe' | 'truck' | 'lada' | 'roadster') or nothing (the current / last driven one) */
   function enter(which) {
-    if (state.active || !player) return false;
+    if (state.active || !player || interactions?.active) return false;
     if (player.fly || player.riding) return false;
     const v = typeof which === 'string' ? vehicles.find((f) => f.id === which) : which && which.car ? which : V;
     if (!v) return false;
+    if(v.cabin?.occupied){v.cabin.occupied=false;if(v.cabin.npc){characters?.releaseNpc(v.cabin.npc);v.cabin.npc=null;}}
     state.active = true; state.enteredAt = performance.now();
     player.inputLock++; player.fly = false;
     use(v); dropBox(); wasted.reset(damage.amount);
@@ -163,11 +211,12 @@ export async function build(ctx) {
     }
     return null;
   }
-  function exit(force = false) {
+  function exit(force = false, animatedSpot = null) {
+    if(force)interactions?.cancel();
     if (!state.active) return false;
     if (!force && car.air) return false;                                        // mid-hop the door stays shut until the touchdown
     if (!force && car.speed > EXIT_MAX_KMH) { ctx.ui.toast('Остановитесь · Slow down to get out'); return false; }
-    const spot = exitSpot();
+    const spot = animatedSpot || exitSpot();
     if (!spot && !force) { ctx.ui.toast('Здесь не выйти · No room to get out'); return false; }
     state.active = false;
     parked.x = car.x; parked.z = car.z; parked.yaw = car.yaw; parked.y = car.air ? car.groundAt(car.x, car.z) : car.y; car.vx = car.vz = 0;
@@ -203,6 +252,7 @@ export async function build(ctx) {
   }
   /** teleport (R, the places) of the active car; a BOAT that cannot be set at the spot (it is on land: the start of the game) is left where it floats and the player is set down there on foot */
   function place(x, z, yawDeg) {
+    interactions?.cancel();
     if (placeVehicle(x, z, yawDeg)) return true;
     if (state.active && V.kind === 'boat') { exit(true); if (player) player.setPose(x, z, yawDeg, 0); return true; }
     return false;
@@ -225,6 +275,7 @@ export async function build(ctx) {
     let frustum = false;
     for (const v of vehicles) {
       if (state.active && v === V) { v.model.root.visible = true; continue; }
+      parkedPhysics.sync(v);
       const p = v.parked, dx = p.x - camera.position.x, dz = p.z - camera.position.z, near = dx * dx + dz * dz < 70 * 70;
       let seen = near;
       if (!seen) {
@@ -326,18 +377,22 @@ export async function build(ctx) {
     player.yaw = car.yaw + Math.PI; player.pitch = 0;
   }
   function trafficBlocker() {
-    const tr = ctx.services.traffic; if (!tr || V.kind === 'boat') return;      // (a boat is on the water: nobody on the road needs to dodge it; the list was emptied at the exit from a car)
-    const sy = Math.sin(car.yaw), cy = Math.cos(car.yaw);
-    me.x = car.x + sy * SPEC.centerZ; me.z = car.z + cy * SPEC.centerZ; me.rotY = car.yaw; me.vx = car.vx; me.vz = car.vz; me.speed = Math.hypot(car.vx, car.vz);
+    const current=interactions?.state?.vehicle||V,c=current.car,s=current.spec;
+    const tr = ctx.services.traffic; if (!tr || current.kind === 'boat') return;
+    const sy = Math.sin(c.yaw), cy = Math.cos(c.yaw);
+    me.x = c.x + sy * s.centerZ; me.z = c.z + cy * s.centerZ; me.rotY = c.yaw; me.vx = c.vx; me.vz = c.vz; me.speed = Math.hypot(c.vx, c.vz);
+    me.w=s.W;me.d=s.len;me.hw=s.W/2;me.hd=s.len/2;
     if (!tr.extraBlockers) tr.extraBlockers = extra;
-    if (state.active && !extra.includes(me)) extra.push(me); else if (!state.active && extra.length) extra.length = 0;
+    if ((state.active||interactions?.active) && !extra.includes(me)) extra.push(me); else if (!state.active&&!interactions?.active && extra.length) extra.length = 0;
   }
 
   // ---------------------------------------------------------------- per frame
   const wheelsW = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], exW = Array.from({ length: 8 }, () => new THREE.Vector3()), exUse = [], jetDir = new THREE.Vector3();
   let collisionRevision = -1;
-  /** the active car hit a PARKED car of the garage: that car crumples too, by the mass share (a 2.97 t pickup hurts a parked 0.95 t Zhiguli far more than the reverse); the struck car stays a static solid */
+  /** Legacy unbound solids still receive damage; registered parked cars already
+   * exchange momentum and damage through their shared impact callback. */
   function strikeParked(ev) {
+    if (ev.obstacle?.source?.ownedVehicle) return; // Its shared impact callback already damages and moves it.
     const o = vehicles.find((f) => f !== V && f.box && f.box === ev.obstacle); if (!o) return;
     if (o.kind === 'boat') return;
     const mA = SPEC.mass || 1350, mB = o.spec.mass || 1350, p = o.parked, sy = Math.sin(p.yaw), cy = Math.cos(p.yaw), rx = ev.x - p.x, rz = ev.z - p.z;
@@ -375,11 +430,12 @@ export async function build(ctx) {
   }
   function frame(dt) {
     parkedStep();
+    if(interactions?.active){interactions.update(dt);trafficBlocker();return;}
     if (wake) wake.update(dt, V.car, state.active && V.kind === 'boat');      // the foam of the boat: emitted while it is driven, fading afterwards
-    if (!state.active) return;
+    if (!state.active){interactions?.update(dt);return;}
     const locked = ctx.ui && ctx.ui.modalOpen;
     readInput(input);
-    wasted.gate(input, car.vF, damage.amount);      // a junked car (100%) cannot be driven; E and J still work
+    wasted.gate(input, car.vF, damage.amount);      // a junked car cannot be driven; exiting remains available
     if (locked) holdInput(input, car.vF);      // a panel / the area prompt is open: the car holds (a fixed brake input would make a stopped car reverse: handling.js holdInput)
     if (dt > 0) {
       car.step(dt, input); hopTap = flipTap = false;
@@ -401,6 +457,7 @@ export async function build(ctx) {
     cameraStep(dt);
     view.snap = false;
     trafficBlocker();
+    interactions?.update(dt);
   }
 
   let lastT = -1;
@@ -411,15 +468,14 @@ export async function build(ctx) {
     addEventListener('keydown', (e) => {
       if (!state.active || e.repeat && e.code !== 'KeyG') return;
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) e.preventDefault();
-      if (ctx.ui && ctx.ui.modalOpen) return;
+      if (ctx.ui && ctx.ui.modalOpen || interactions?.active) return;
       // The interaction handler consumes the enter event before this listener. First-time HUD/audio
       // setup can take longer than the debounce window; that same E must never immediately exit.
-      if (isInteractionKey(e) && !e.defaultPrevented && performance.now() - state.enteredAt > 350 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); exit(); }
+      if (isInteractionKey(e) && !e.defaultPrevented && performance.now() - state.enteredAt > 350 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); requestExit(); }
       else if (e.code === 'KeyV') api.setView((view.mode + 1) % 3);
       else if (e.code === 'KeyG') sound.horn();
       else if (e.code === 'KeyX') hopTap = true;
       else if (e.code === 'KeyC') flipTap = true;
-      else if (e.code === 'KeyJ') { e.preventDefault(); api.repair(); }
     });
     addEventListener('mousemove', (e) => {
       if (!state.active || !player || player.inputLock > 1) return;
@@ -439,18 +495,27 @@ export async function build(ctx) {
       for (const [i, point] of points.entries()) ctx.interact.add({
         id: id + (point.key ? '-' + point.key : i ? '-port' : ''), radius: v.def.reach, label: v.def.label, labelEn: v.def.labelEn,
         at: () => { const s = Math.sin(v.parked.yaw), c = Math.cos(v.parked.yaw); return { x: v.parked.x + s * point.z + c * point.x, y: v.parked.y + (point.y ?? 0.8), z: v.parked.z + c * point.z - s * point.x }; },
-        enabled: () => !v.retired && !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
-        onUse: () => enter(v),
+        enabled: () => !interactions?.active && !v.retired && !state.active && !!player && !player.fly && !player.riding && !player.isUnderground(),
+        onUse: () => requestEnter(v),
       });
     }
   }
+
+  let trafficCandidate=null;
+  if(ctx.interact)ctx.interact.add({id:'drive-traffic',radius:5.4,label:'Take the car',labelEn:()=>trafficCandidate?.spec?.name||'',
+    enabled:()=>{if(state.active||interactions?.active||!player||player.fly||player.riding||player.isUnderground())return false;trafficCandidate=ctx.services.traffic?.nearestEnterable(player.pos.x,player.pos.z,5.4);return!!trafficCandidate&&Math.abs(trafficCandidate.speed)<3.5;},
+    at:()=>trafficCandidate?{x:trafficCandidate.x,y:trafficCandidate.y+.8,z:trafficCandidate.z}:null,
+    onUse:()=>{const candidate=ctx.services.traffic?.nearestEnterable(player.pos.x,player.pos.z,5.4);if(!candidate||Math.abs(candidate.speed)>=3.5||state.active||interactions?.active)return;const v=promoteTraffic(candidate);if(v)requestEnter(v);},
+  });
+  function registerPromotedPrompt(v){v.prompt=ctx.interact?.add({id:'drive-owned-'+v.id,radius:v.def.reach,label:v.def.label,labelEn:v.def.labelEn,
+    at:()=>({x:v.parked.x,y:v.parked.y+.8,z:v.parked.z}),enabled:()=>!!player&&!v.retired&&!state.active&&!interactions?.active&&!player.fly&&!player.riding&&!player.isUnderground(),onUse:()=>requestEnter(v)});}
 
   /** Arrival of a hand-off (docs/AREAS.md): get into car `spec.id`, put it at (x, z) facing the camera yaw (degrees), restore its view and its four damage scalars. false (and the walker stays) when the car cannot be placed there. */
   function arrive(spec, x, z, yawDeg) {
     if (state.active || !spec) return false;
     // Vehicle ids are local to their type: a boat dock may use an id that is
     // also a car model name. Older hand-offs omit kind and mean a car.
-    const incoming = spec.kind === 'boat'
+    const incoming = spec.kind==='traffic' ? vehicles.find(v=>v.kind==='traffic'&&v.id===spec.id)||promoteTraffic({...spec,x,z,rotY:yawDeg*DEG+Math.PI},false) : spec.kind === 'boat'
       ? boats.find((v) => v.def.carried && v.def.carriedFrom === spec.id) || boats.find((v) => spec.dock && v.def.dock === spec.dock) || boats.find((v) => v.id === spec.id && (!spec.dock || !v.def.dock))
       : fleet.find((v) => v.id === spec.id);
     if (!incoming || !enter(incoming)) return false;
@@ -479,20 +544,13 @@ export async function build(ctx) {
   }
   const api = {
     get active() { return state.active; }, get car() { return car; }, get parked() { return parked; }, get model() { return model; }, get damage() { return damage; }, hud, fx, sound, view,
-    enter, exit, place, arrive,
+    enter, exit:force=>force?exit(true):requestExit(), requestEnter, requestExit, place, arrive,
+    cancelInteraction:()=>interactions?.cancel(),
+    get interacting(){return!!interactions?.active;},get interaction(){return interactions?.state;},
     /** the garage: one vehicle per car { id, def, model, car (handling state), parked, damage, spec, box }; `vehicle` is the current / last driven one; enter('truck') gets into a car by id */
     fleet, get vehicle() { return V; }, vehicleById: (id) => vehicles.find((f) => f.id === id),
     /** the motor boats ({ id: 'boat', kind: 'boat', def, model, car, parked, damage (empty), spec, box }), docs/AREAS.md "The motor boat"; `vehicles` = the cars and the boats */
     boats, vehicles, wake,
-    repair() {
-      if (V.kind === 'boat') return false;      // a boat has no body to repair
-      if (Math.hypot(car.vx, car.vz) > 1.4) { ctx.ui.toast('Stop to repair'); return false; }
-      damage.repair(); wasted.hide(); car.damage = car.damageSmoke = 0; car.damageStage = damage.stage; fx.clear();
-      car.collisionSpec = null;
-      model.setView(view.mode === 2); damage.hideDetached();
-      hud.update(car, 0);
-      ctx.ui.toast('Car repaired'); return true;
-    },
     setView(i) { view.mode = i; model.setView(i === 2); damage.hideDetached(); if (i !== 2) cockpitNear(false); view.snap = true; if (i !== 2) view.camYaw = car.yaw; },
     /** test hook: step the physics for `seconds` with a fixed input ({ thr, brk, steer, hand, nitro, jump (X hop), flip (C barrel hop) }) in 1/60 s frames, then refresh the model / camera / player */
     sim(seconds, inp = {}, frames = null) {
@@ -500,6 +558,7 @@ export async function build(ctx) {
       const dt = 1 / 60, n = Math.round(seconds / dt), full = { thr: 0, brk: 0, steer: 0, hand: false, nitro: false, jump: false, flip: false, ...inp };
       for (let i = 0; i < n; i++) { wrecks.step(dt); car.step(dt, wasted.gate({ ...(typeof inp === 'function' ? inp(i * dt) : full) }, car.vF, damage.amount)); hopEvents(false); applyImpacts(false); wasted.step(dt, damage.amount); if (wake && V.kind === 'boat') wake.update(dt, car, true); if (frames) frames(i, car); }
       view.snap = true; model.root.updateMatrixWorld(true); poseModel(0); syncPlayer(); cameraStep(0); view.snap = false; hud.update(car, 0.016);
+      interactions?.update(0);
       return { x: +car.x.toFixed(2), z: +car.z.toFixed(2), speed: +car.speed.toFixed(1), yaw: +(car.yaw / DEG).toFixed(1), gear: car.gear, boost: +car.boost.toFixed(2), vL: +car.vL.toFixed(2) };
     },
     /** test hook: put the (driving) car exactly here */
