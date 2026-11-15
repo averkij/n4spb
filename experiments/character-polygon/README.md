@@ -139,6 +139,6 @@ Latest local check (2026-11-15): both test programs passed, with zero browser or
 asset errors. At 1440 × 900, a five-second uninterrupted idle sample recorded
 301 frames, median 16.7 ms and p95 16.8 ms, with 102 draws and 10,766 triangles.
 These are headless Edge measurements of this empty test ground, not the city.
-The two selectable GLBs total 1.10 MB (470.7 / 625.5 KB).
+The two selectable GLBs total approximately 1.10 MB (470.7 / 625.8 KB).
 The original character reference is 393.6 KB and the car is 241.0 KB; the vendored Rapier module
 with embedded WASM is 4.34 MB. First startup includes compilation of that WASM.

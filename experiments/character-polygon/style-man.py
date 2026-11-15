@@ -29,12 +29,14 @@ def material(name,hexcolor):
 denim=material('Straight-leg denim','40566b');man.data.materials.append(denim)
 texture=next(n.image for n in man.data.materials[0].node_tree.nodes if n.type=='TEX_IMAGE')
 pixels=list(texture.pixels);w,h=texture.size;uvs=man.data.uv_layers.active.data
-pant_vertices=set()
+pant_vertices=set();shoe_vertices=set()
 for poly in man.data.polygons:
     uv=sum((uvs[l].uv for l in poly.loop_indices),Vector((0,0)))/len(poly.loop_indices)
     k=(min(h-1,int(uv.y*h))*w+min(w-1,int(uv.x*w)))*4;color=pixels[k:k+3]
     if .25<color[0]<.29 and .30<color[1]<.33:
         pant_vertices.update(poly.vertices);poly.material_index=len(man.data.materials)-1
+    elif (.12<color[0]<.15 and .14<color[1]<.16) or (.85<color[0]<.87 and .85<color[1]<.87):
+        shoe_vertices.update(poly.vertices)
 
 # Reshape the neutral evaluated silhouette, then invert each vertex's blended
 # skin matrix to keep the existing skeleton and all six clips intact.
@@ -49,6 +51,14 @@ for vertex in man.data.vertices:
     if not total:continue
     transform=rig.matrix_world@(blend*(1/total))@mesh_to_arm
     point=transform@vertex.co
+    if vertex.index in shoe_vertices:
+        # Enlarge each shoe around its own ankle while keeping the sole grounded.
+        side='L' if point.x>0 else 'R'
+        foot=rig.pose.bones['Foot.'+side+('_046' if side=='L' else '_050')]
+        ankle=rig.matrix_world@foot.head
+        point.x=ankle.x+(point.x-ankle.x)*1.20
+        point.y=ankle.y+(point.y-ankle.y)*1.25
+        point.z*=1.15
     if vertex.index in pant_vertices:
         side='L' if point.x>0 else 'R'
         upper=rig.pose.bones['UpperLeg.'+side+('_044' if side=='L' else '_048')]
@@ -71,6 +81,8 @@ brim_mat=material('Brown cap visor','654127')
 stitch=material('Cap panel stitching','92643e')
 
 def attach(name,vertices,faces,mat):
+    # A slightly smaller cap, anchored at the existing head-fitting band.
+    vertices=[(x*.94,.018+(y-.018)*.91,1.735+(z-1.735)*.88) for x,y,z in vertices]
     mesh=bpy.data.meshes.new(name);mesh.from_pydata(vertices,[],faces);mesh.materials.append(mat)
     obj=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(obj)
     obj['polygon_baseball_cap']=True

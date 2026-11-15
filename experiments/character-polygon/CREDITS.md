@@ -24,7 +24,9 @@ Her skirt has welded vertices, revised weights, a matched waist seam, a wider
 hem and fabric thickness. The man's beard polygons use the existing skin swatch.
 The man also has a broader upper-body silhouette, relaxed straight-leg denim,
 and an original brown baseball cap with a curved bill and panel seams, attached
-to the head bone. Existing animation weights and clips are retained.
+to the head bone. Shoes are enlarged around each ankle with soles kept grounded;
+the cap is slightly reduced around its fitted band. Existing animation weights
+and clips are retained.
 The white-shirt character was removed from the selection and exported files;
 its transferred animation remains credited above.
 
