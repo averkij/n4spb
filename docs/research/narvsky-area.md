@@ -174,10 +174,15 @@ The TrackTakTak clockwise start/finish gate is the finite line from
 (59.900469928, 30.266926778) to (59.900572405, 30.267520222). The painted line
 uses its intersection with the mapped track. The speed reference is separate,
 at approximately X −4731.8, Z 3518, before the left turn marked by the owner.
-A repeatable full-throttle run through the reference sector at a 43.2 km/h
-entry speed measured 65.4–66.4 km/h across the ten rental karts and
-71.5–72.6 km/h across the ten club karts at that point. These are simulation
-measurements and depend on the line and throttle.
+A repeatable run enters the back straight at 48.24 km/h and lifts through the
+right-hand bend. At the reference, it measures 65.6–66.9 km/h for rental karts
+and 71.1–72.4 km/h for club karts. The pace depends on the line and throttle.
+
+Crossing the start/finish clockwise starts the timer. Three intermediate
+sectors must be crossed in order for the next crossing to record a lap.
+The HUD shows the current, last and best times. Leaving the kart or going
+more than 45 m from the racing line cancels the current lap and hides the HUD.
+Results are kept until the scene reloads.
 
 References [track and photos](https://kartingpitstop.ru/trassy/narvskaya/),
 [driver footage](https://www.youtube.com/watch?v=Bs-fz2zajrI), and

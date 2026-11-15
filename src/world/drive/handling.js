@@ -189,6 +189,7 @@ export function createHandling(ctx, tuning = null) {
     car.fall = false; car.vyF = car.depth = 0; car.y = 0.03; car.slope = car.slopeOn = car.pitchV = car.rollV = car.airT = 0;
     car.flipOn = car.flipDone = car.barrel = false; car.flip = car.flipT = car.pulse0 = car.pulse1 = 0; car.jetK = 1;
     car.x = x; car.z = z; car.yaw = yaw; car.vx = car.vz = 0; car.steer = 0; car.pitch = car.roll = 0; car.y = groundAt(x, z, 0.03, 1e9);      // (asked from the neutral height and the sky: a car that stood on a bed must not read a bridge deck as a ceiling, and a deck of any height is the floor of a point placed on it)
+    if (T.tyres) { car.frontLoad = .42; car.tyreYaw = 0; car.poseRevision = (car.poseRevision ?? 0) + 1; }
     car.speed = car.vF = car.vL = car.aLong = car.aLat = 0; car.gear = 1; car.rpm = 0.15; car.boosting = car.drifting = car.braking = false;
   };
 
@@ -327,11 +328,14 @@ export function createHandling(ctx, tuning = null) {
     // ---- yaw rate: the bicycle model at low speed, limited by the tyre grip at high speed; the handbrake lets the tail come round
     const sgn = vF >= 0 ? 1 : -1, sa = Math.max(sp, 0.001);
     const maxLat = inp.hand ? T.maxLatHand : T.maxLat;
+    const tyres = T.tyres && !aloft ? T.tyres(car, a, h, T, inp.hand) : null;
+    if (T.tyres && aloft) car.tyreYaw *= Math.exp(-4 * h);
     let om;
-    if (inp.hand && sp > 6) om = car.steer * Math.min(sp * T.handYaw, T.handYawMax) * sgn;
+    if (tyres) om = tyres.yawRate;
+    else if (inp.hand && sp > 6) om = car.steer * Math.min(sp * T.handYaw, T.handYawMax) * sgn;
     else { const low = sa * Math.tan(T.steerLock * car.steer) / (T.steerWheelbase || SPEC.wb), grip = car.steer * T.yawGrip / Math.max(sa, 4) * sgn; om = Math.abs(low) < Math.abs(grip) ? low : grip; }
     if (aloft) om *= car.air ? T.hop.airSteer : 0.15;                                           // the tyres do not bite: the jets only nudge the nose
-    car.steerAngle = 0.5 * car.steer * clamp(1 - sp / 70, 0.25, 1);
+    car.steerAngle = tyres?.steer ?? 0.5 * car.steer * clamp(1 - sp / 70, 0.25, 1);
     car.impactSpin *= Math.exp(-(inp.hand ? 1.8 : T.impactDecay) * h);
     const yaw0 = car.yaw, sy0 = sy, cy0 = cy, turnX = car.x, turnZ = car.z;
     car.yaw += (om + car.impactSpin) * h; sy = Math.sin(car.yaw); cy = Math.cos(car.yaw);
@@ -343,19 +347,19 @@ export function createHandling(ctx, tuning = null) {
     car.z += (Math.cos(steerYaw) - cy) * SPEC.centerZ;
     // a rotation may not swing a corner of the footprint into a wall, a building or the river (the car turns about its middle: steering at an obstacle used to put the body in it, and a car
     // standing in a blocked pose refuses every move): the turn is refused like a contact, the spin dies. A car that is blocked already may turn freely (it needs to get out).
-    if (carBlocked(car.x, car.z, sy, cy) && !carBlocked(turnX, turnZ, sy0, cy0)) { car.yaw = yaw0; car.x = turnX; car.z = turnZ; sy = sy0; cy = cy0; car.impactSpin *= 0.3; }
+    if (carBlocked(car.x, car.z, sy, cy) && !carBlocked(turnX, turnZ, sy0, cy0)) { car.yaw = yaw0; car.x = turnX; car.z = turnZ; sy = sy0; cy = cy0; car.impactSpin *= 0.3; if (tyres) car.tyreYaw = 0; }
     // ---- grip: the velocity follows the heading; what the tyres cannot hold slides (drift)
     let vf = car.vx * sy + car.vz * cy, vl = car.vx * cy - car.vz * sy;
     vf += nvF - vF;                                                              // the longitudinal change of this step
     const gr = aloft ? 0 : inp.hand ? T.gripHand : T.grip, cap = maxLat * h;      // airborne: no grip, the sideways speed is kept and nothing scrubs
-    const dv = clamp(-vl * (1 - Math.exp(-gr * h)), -cap, cap);
+    const dv = tyres ? tyres.lateral * h : clamp(-vl * (1 - Math.exp(-gr * h)), -cap, cap);
     vl += dv;
-    vf -= Math.sign(vf) * Math.abs(dv) * T.scrub;                                  // sliding scrubs speed
+    vf -= Math.sign(vf) * (tyres ? Math.min(Math.abs(vf), tyres.drag * h) : Math.abs(dv) * T.scrub);                                  // sliding scrubs speed
     // water over the wheels (the car stands on the bed of a trench or a pond): a heavy drag, deeper = more
     car.depth = 0;
     if (!car.air && !car.fall) { const w = waterY(car.x, car.z); if (w !== null) { const dp = w - car.y; if (dp > 0.2) { car.depth = dp; const k = Math.exp(-WATER_K * Math.min(1, dp / WATER_DEEP) * h); vf *= k; vl *= k; } } }
     car.vx = sy * vf + cy * vl; car.vz = cy * vf - sy * vl;
-    car.vF = vf; car.vL = vl; car.aLong = (nvF - vF0) / h * 0.5 + car.aLong * 0.5; car.aLat = om * vf;
+    car.vF = vf; car.vL = vl; car.aLong = (nvF - vF0) / h * 0.5 + car.aLong * 0.5; car.aLat = tyres?.lateral ?? om * vf;
     car.braking = !aloft && ((brk > 0.1 && vF0 > 0.8) || !!inp.hand && sp > 3);
     car.boosting = boosting;
     car.throttle = thr;

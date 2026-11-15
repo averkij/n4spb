@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { kartTyres } from './handling.js';
 
 const SPEC = {
   W: 1.332, len: 1.914, hgt: .67, R: .137, tw: .16, track: 1.0, wb: 1.07,
@@ -21,16 +22,17 @@ export function loadKarts(ctx) {
     const labelEn = side ? 'Club kart' : 'Rental kart';
     const stagger = num % 2 ? 0 : .18;
     const x = -4674.9 + index*.64 + side*3.55 + stagger, z = 3559.5 + index*1.62 - side*1.28;
-    const vmax = (side ? 22.57 : 20.24) + top*.72;
+    const vmax = (side ? 24.46 : 21.46) + top*.72;
     return {
       id: 'narvskaya-' + fleet + '-' + num, kind: 'kart', spec: SPEC,
       parked: { x, z, yaw: .362 + (side ? Math.PI/2 : -Math.PI/2) },
       tuning: {
         spec: SPEC, noBoost: true, hf: .95, hr: .92, hw: .65,
         acc: (side ? 4.7 : 4.25) * (1 + launch), vmax, engineFalloff: 1.7 + top*3,
-        drag: .00039, brake: 10.5, revAcc: 2.6, vrev: 2.2, engBrake: .53,
-        steerIn: 9.8*(1+steering), steerOut: 14, steerLock: .56*(1+steering), yawGrip: 21.3*(1+steering),
-        maxLat: 22.4, grip: 14, scrub: .025, rollK: .0012, pitchK: .0021, impactDecay: 10,
+        drag: .00039, brake: 4.8, revAcc: 2.6, vrev: 2.2, engBrake: .53,
+        steerIn: 8.6*(1+steering), steerOut: 13, steerLock: .49*(1+steering),
+        tyres: kartTyres, frontMu: 1.17*(1+steering*.60), rearMu: 1.30,
+        rollK: .0023, pitchK: .0041, impactDecay: 10,
         gearTop: [vmax], maxGear: 1, handDecel: 3.6, handYawMax: 1.65, smokeZ: -.55, smokeY: .17,
       },
       label: label + ' №' + num, labelEn: labelEn + ' #' + num,

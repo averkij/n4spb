@@ -7,6 +7,8 @@ Newest first. One line per version; rules in CLAUDE.md (Versioning).
 - **15.1.1** (2026-11-15, patch): Fix bus bridge crossings, mosque overlap, fountain benches, door poses and damaged-roof character clearance
 - **15.1.0** (2026-11-15, minor): Add drivable buses and fix character ground contact, third-person aim dot, solid door interiors and closing sounds
 - **15.0.0** (2026-11-15, major): Playable characters with saved selection, animated vehicle takeovers, persistent traffic and firmer vehicle collisions; 50% stronger cars without repairs
+- **14.3.1** (2026-11-15, patch): Смягчить рабочий тормоз Sodi SR5
+- **14.3.0** (2026-11-14, minor): Перенос нагрузки на картах и хронометраж кругов Нарвской
 - **14.2.1** (2026-11-14, patch): Исправить кербы и убрать кусты с трассы Пит-Стоп Нарвская
 - **14.2.0** (2026-11-14, minor): Пит-Стоп Нарвская: картодром, стадион «Кировец» и двадцать управляемых Sodi SR5
 - **14.1.5** (2026-11-14, patch): Rename the start menu to Piter and randomly choose one of three selected backgrounds

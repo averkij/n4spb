@@ -4245,3 +4245,26 @@ capture was not taken. Both Narvsky and Kolomna also loaded their final
 bakes without module errors. Twenty kart departures per district produced
 no impacts. The route clearance, speed targets, road markings and water
 levels passed in both areas.
+
+## Kart handling and lap timing, 14.3.1
+
+Chrome 157 on Apple M1 Pro, 1280 × 720, Performance quality, normal baked
+loading. A club SR5 ran for four seconds from X −4745.35, Z 3639.61, heading
+16.158°. The Palace street car ran for six seconds from the first view
+and met traffic at the same location as the 14.2.0 baseline above.
+
+| Run | Load | Mean / p50 / p95 frame | Frames >40 ms | Mean draw calls | Distance |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Narvsky, club SR5 | 6.4 s | 16.7 / 16.7 / 16.8 ms | 0 | 607 | 32 m in 4 s |
+| Palace, street car | 13.6 s | 16.7 / 16.7 / 16.7 ms | 0 | 1101 | 42 m in 6 s |
+
+Both runs sustained 60 frames per second. The kart covered 2 m less with the
+new handling and reached a different end pose. Chrome reported 1,060 MB and
+1,629 MB of JS heap during the respective runs, up from 876 MB and 1,535 MB
+in the 14.2.0 captures. After the runs, CDP reported 478 MiB of used heap and
+588 MiB of backing storage for Narvsky, and 485 MiB and 1,161 MiB for Palace.
+The samples are single runs, and the baseline did not split these measurements. The full-area Narvsky surface audit reached
+V8's Map size limit. Its furniture, ribbon and road-marking audits passed.
+Rebuilding all 21 live areas produced 2,715 byte-identical data products.
+The normal Narvsky page also recorded a test lap, hid the HUD when the kart
+left the area, and showed the new brake response without module errors.
