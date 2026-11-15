@@ -25,7 +25,7 @@ is not supported by browser ES modules.
 | E | Enter a nearby car | Exit when nearly stopped, using a clear side |
 | V | Near third person → far → first person | Chase → far chase → driver seat |
 | R | Reset player and car | Reset player and car |
-| 1 / 2 / 3 | Select character | Select seated character |
+| 2 / 3 | Red-beret woman / overshirt man | Select seated character |
 | Escape | Release mouse and pause | Release mouse and pause |
 
 Third person is the initial walking view. Each transport mode keeps its own view
@@ -40,10 +40,11 @@ corner for testing camera obstruction, and three blocks for jump/landing tests.
 Low perimeter walls stop the player and car. The three orange cones are visual
 steering markers outside the driving lane, not physical obstacles.
 
-Three selectable low-poly characters offer a white T-shirt with jeans, a woman
-in a navy dress and red beret, and a bearded man in a blue overshirt with dark
-trousers. Each has six clips: Idle, Walk, Run, Jump, RunningJump and Sitting.
-Speed controls animation cadence, and clips blend
+Two selectable low-poly characters offer a woman in a navy dress and red beret
+(default, key 2) and a clean-shaven man in a blue overshirt with dark trousers
+(key 3). Each has six clips: Idle, Walk, Run, Jump, RunningJump and Sitting.
+Walking is 2.7 m/s and running is 8 m/s, with full-speed animation cadence of
+1.3x and 1.65x. Speed scales cadence during acceleration, and clips blend
 between movement states. The blue sedan has animated wheel rotation/steering,
 an interior, a seated driver, and a first-person driving view. Entry/exit is an
 instant state transition; animated door opening and climbing in are not included.
@@ -86,6 +87,12 @@ bakes every bone channel so missing constant channels cannot retain a seated
 pose when changing back to walking. `civilian.glb` remains as the original
 animation reference but is not loaded by the page.
 
+Run `repair-characters.py` after initial preparation to produce the final two
+variants: fitted arm/hand swing, face-surface eye placement, welded and thickened
+skirt with shared waist-seam weights, and beard removal. Its source backups live
+in the Blender session so the repair pass can be repeated without accumulating
+edits. Both scripts depend on the imported source objects and action names.
+
 Khronos/glTF validation has no errors. Imported rigs retain advisory
 `NODE_SKINNED_MESH_NON_ROOT` warnings; skinning,
 all six animations and transformed placement are verified in Three.js.
@@ -99,7 +106,6 @@ node experiments/character-polygon/simulation-test.mjs
 node experiments/character-polygon/playtest.mjs
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/civilian.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/sedan.glb
-npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/man-white.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/woman-beret.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/man-jacket.glb
 ```
@@ -111,16 +117,22 @@ entering, acceleration, steering, braking, safe exit, reset and pause. It checks
 a narrow viewport and saves screenshots and measurements under the ignored
 `shots/character-polygon/` directory. Simulation tests additionally cover diagonal
 speed normalization, full-throttle boundary collision, and 20 seconds each of
-uninterrupted curved walking/running. The browser test switches all three
+uninterrupted curved walking/running. The browser test switches both
 characters and samples every rendered frame during walking/running to reject
 idle flashes and action restarts; it also captures jumping and seated poses.
+It verifies the new travel speeds and animation cadence. With the review server
+running on 5186, `node experiments/character-polygon/motion-review.mjs` captures
+front/side/rear contact sheets of exact walk/run phases and close face views.
+The Blender pass was also checked across all 68 walk/run poses: finger endpoints
+remained at least 0.245 m from the body centreline and the maximum waist seam
+separation was below 0.001 mm.
 Diagnostic hooks are
 available only with `?test=1`.
 
 Latest local check (2026-11-15): both test programs passed, with zero browser or
 asset errors. At 1440 × 900, a five-second uninterrupted idle sample recorded
-301 frames, median 16.7 ms and p95 16.8 ms, with about 96 draws and 10,400 triangles.
+300 frames, median 16.7 ms and p95 16.8 ms, with 102 draws and 10,766 triangles.
 These are headless Edge measurements of this empty test ground, not the city.
-The three selectable GLBs total 1.70 MB (630.0 / 472.5 / 594.2 KB).
+The two selectable GLBs total 1.06 MB (470.7 / 594.2 KB).
 The original character reference is 393.6 KB and the car is 241.0 KB; the vendored Rapier module
 with embedded WASM is 4.34 MB. First startup includes compilation of that WASM.

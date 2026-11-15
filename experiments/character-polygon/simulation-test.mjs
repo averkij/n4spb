@@ -9,12 +9,12 @@ try {
   // Regression: wide thin-box floor contacts used to discard occasional steps,
   // flashing Idle and restarting the loop even with uninterrupted input.
   for (const run of [false, true]) {
-    sim.reset(); pose(20,15);
+    sim.reset(); pose(22,24);
     for (let frame=0; frame<1200; frame++) {
       sim.step({ ...idle, forward:true, run }, frame/60*.6);
       if (frame>30) {
         assert.equal(sim.state.animation, run ? 'Run' : 'Walk', `Uninterrupted locomotion at frame ${frame}`);
-        assert(sim.state.speed > (run ? 4 : 1.8), 'No dropped physical movement step');
+        assert(sim.state.speed > (run ? 7.7 : 2.6), 'Faster walking/running without dropped movement steps');
       }
     }
   }

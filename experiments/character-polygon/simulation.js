@@ -1,6 +1,6 @@
 import RAPIER from './vendor/rapier.mjs';
 
-export const WALK = 2.05, RUN = 5.3, STEP = 1 / 60;
+export const WALK = 2.7, RUN = 8, STEP = 1 / 60;
 export const obstacles = [
   { x: -9, y: 1.9, z: -9, w: 10, h: 3.8, d: .5, kind: 'wall' },
   { x: -14, y: 1.9, z: -5.5, w: .5, h: 3.8, d: 7, kind: 'wall' },
@@ -96,7 +96,7 @@ export async function createSimulation() {
       state.speed = Math.hypot(delta.x, delta.z) / STEP;
       state.distance += state.speed * STEP;
       if (Math.hypot(state.vx, state.vz) > .15) state.yaw += angleDelta(state.yaw, Math.atan2(-state.vx, -state.vz)) * (1 - Math.exp(-14 * STEP));
-      state.animation = !state.grounded ? (state.speed > 2.5 ? 'RunningJump' : 'Jump') : state.speed < .12 ? 'Idle' : state.speed > 3 ? 'Run' : 'Walk';
+      state.animation = !state.grounded ? (state.speed > WALK * 1.2 ? 'RunningJump' : 'Jump') : state.speed < .12 ? 'Idle' : state.speed > WALK * 1.2 ? 'Run' : 'Walk';
       // A parked car settles naturally, without rolling away on level ground.
       const v = car.linvel(); car.setLinvel({ x: v.x * .94, y: v.y, z: v.z * .94 }, true);
       car.setAngvel({ x: 0, y: 0, z: 0 }, true);

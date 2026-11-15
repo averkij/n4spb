@@ -188,7 +188,7 @@ for i,rig in enumerate(rigs):
 
 os.makedirs(OUT,exist_ok=True)
 fmt=io_scene_gltf2.get_format_items(bpy.context.scene,bpy.context)[0][0]
-for i,filename in enumerate(['man-white.glb','woman-beret.glb','man-jacket.glb']):
+for i,filename in [(1,'woman-beret.glb'),(2,'man-jacket.glb')]:
     root=roots[i];rig=rigs[i];rig.animation_data.action=None
     bpy.ops.object.select_all(action='DESELECT')
     for obj in [root]+list(root.children_recursive):

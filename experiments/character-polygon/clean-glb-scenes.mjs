@@ -2,7 +2,7 @@
 // Remove those scenes after glTF Transform dedup/prune, preserving the BIN chunk.
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-for (const name of ['civilian', 'sedan', 'man-white', 'woman-beret', 'man-jacket']) {
+for (const name of ['civilian', 'sedan', 'woman-beret', 'man-jacket']) {
   const file = fileURLToPath(new URL(`./assets/${name}.glb`, import.meta.url));
   const source = fs.readFileSync(file);
   if (source.readUInt32LE(0) !== 0x46546c67 || source.readUInt32LE(4) !== 2) throw new Error('Expected a glTF 2.0 binary');

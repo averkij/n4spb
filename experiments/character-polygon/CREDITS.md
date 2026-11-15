@@ -4,21 +4,26 @@ The assets are downloaded locally through Sketchfab using Blender MCP. No Sketch
 
 ## Selectable characters
 
-All three base models below are by **Razvan Savescu (razvansavescu)** and licensed
+Both base models below are by **Razvan Savescu (razvansavescu)** and licensed
 under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 | Variant | Original model | Local file |
 | --- | --- | --- |
-| White T-shirt and jeans | [Low-poly Man](https://sketchfab.com/3d-models/7b93db2d46d847f191cf5e841b322856) | `assets/man-white.glb` |
 | Woman in a red beret | [Low-poly Girl](https://sketchfab.com/3d-models/3e79fef9da5f4db7b6a46f3e0ff89328) | `assets/woman-beret.glb` |
 | Blue overshirt and dark trousers | [Low-poly Man Casual Clothes 2](https://sketchfab.com/3d-models/4a834adf1e33405c979e94555e7955c6) | `assets/man-jacket.glb` |
 
-Changes: normalized and grounded in Blender; original red beret, short male hair
-and simple eyes added; native motion baked with complete bone transforms;
-missing idle/walk/run motion transferred from Low-poly Man and jump/running-jump/
-sitting motion transferred from Kobi's model below. All three export six clips.
+Changes: normalized and grounded in Blender; original red beret and fitted eyes
+added; native motion baked with complete bone transforms; missing idle/walk/run
+motion transferred from [Low-poly Man](https://sketchfab.com/3d-models/7b93db2d46d847f191cf5e841b322856)
+by **Razvan Savescu**, also CC BY 4.0, and jump/running-jump/sitting motion
+transferred from Kobi's model below. Both characters export six clips.
 GLBs deduplicated/pruned, empty export scenes removed, and runtime materials
-converted to toon shading. The original girl model supplies her walking clip.
+converted to toon shading. The original girl model supplies her walking clip;
+her walking/running arm and hand tracks were rebuilt for torso clearance.
+Her skirt has welded vertices, revised weights, a matched waist seam, a wider
+hem and fabric thickness. The man's beard polygons use the existing skin swatch.
+The white-shirt character was removed from the selection and exported files;
+its transferred animation remains credited above.
 
 ## Supplemental animation source and previous character
 

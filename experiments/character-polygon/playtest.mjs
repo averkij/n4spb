@@ -31,8 +31,9 @@ try {
   assert.equal((await state()).footView, 0);
   await shot('01-idle');
   results.variants = [];
-  for (let variant = 0; variant < 3; variant++) {
-    await tap(`Digit${variant+1}`); await page.evaluate(() => __polygon.reset()); await wait(250);
+  assert.equal(await page.$$eval('[data-character]', buttons => buttons.length), 2);
+  for (let variant = 0; variant < 2; variant++) {
+    await tap(`Digit${variant+2}`); await page.evaluate(() => __polygon.reset()); await wait(250);
     assert.equal((await state()).characterIndex, variant);
     await page.evaluate(() => __polygon.look(Math.PI)); await wait(200); await shot(`variant-${variant+1}-front`);
     await page.evaluate(() => __polygon.look(0));
@@ -51,7 +52,8 @@ try {
       const expected=running?'Run':'Walk';
       assert(trace.every(s=>s.animation===expected), `Variant ${variant+1}: no Idle flashes during ${expected}`);
       assert.equal(new Set(trace.map(s=>s.animationTransitions)).size,1, `Variant ${variant+1}: no ${expected} restarts`);
-      assert(trace.every(s=>s.speed>(running?4:1.8)), 'Movement steps remain continuous');
+      assert(trace.every(s=>s.speed>(running?7.7:2.6)), 'Faster movement steps remain continuous');
+      assert(trace.every(s=>s.animationRate>(running?1.6:1.25)), 'Animation cadence matches faster movement');
       continuity.push({ animation:expected, frames:trace.length, transitions:0 });
       await shot(`variant-${variant+1}-${expected.toLowerCase()}`);
       await page.keyboard.up('KeyW'); await page.keyboard.up('ShiftLeft'); await wait(400);
@@ -61,7 +63,7 @@ try {
     await shot(`variant-${variant+1}-seated`); assert.equal((await state()).mode,'drive');
     results.variants.push({variant:variant+1,continuity});
   }
-  await tap('Digit1'); await page.evaluate(() => __polygon.reset()); await wait(200);
+  await tap('Digit2'); await page.evaluate(() => __polygon.reset()); await wait(200);
   const before = await state();
   await page.keyboard.down('KeyW'); await wait(1200); const walked = await state(); await shot('02-walk'); await page.keyboard.up('KeyW');
   assert(walked.z < before.z - 1, 'Walking moves the character forward'); assert.equal(walked.animation, 'Walk');

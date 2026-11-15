@@ -115,8 +115,8 @@ function animateCharacter(dt) {
     if (activeAction) { next.crossFadeFrom(activeAction, name.includes('Jump') ? .12 : .2, false); }
     activeAction = next; animationName = name;
   }
-  if (name === 'Walk') activeAction.timeScale = THREE.MathUtils.clamp(s.speed / WALK, .35, 1.5);
-  if (name === 'Run') activeAction.timeScale = THREE.MathUtils.clamp(s.speed / RUN, .6, 1.4);
+  if (name === 'Walk') activeAction.timeScale = 1.3 * THREE.MathUtils.clamp(s.speed / WALK, .35, 1.15);
+  if (name === 'Run') activeAction.timeScale = 1.65 * THREE.MathUtils.clamp(s.speed / RUN, .6, 1.15);
   if (/Jump/.test(name)) activeAction.timeScale = 1.35;
   mixer.update(dt);
   const driving = s.mode === 'drive', view = driving ? driveView : footView;
@@ -193,7 +193,7 @@ addEventListener('keydown', e => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   keys.add(e.code);
   if (e.repeat) return;
-  if (/^Digit[123]$/.test(e.code)) selectCharacter(Number(e.code.slice(-1)) - 1);
+  if (/^Digit[23]$/.test(e.code)) selectCharacter(Number(e.code.slice(-1)) - 2);
   if (e.code === 'KeyV') cycleView();
   if (e.code === 'Space' && sim.state.mode === 'foot') sim.jump();
   if (e.code === 'KeyE' && sim.enterExit()) { yaw = sim.state.mode === 'drive' ? sim.state.carYaw : sim.state.yaw; pitch = .22; snapCamera = true; }
@@ -224,7 +224,7 @@ async function boot() {
   scene.add(sunlight, sunlight.target);
   buildGround();
   const loader = new GLTFLoader();
-  const [simulation, humans, car] = await Promise.all([createSimulation(), Promise.all(['man-white', 'woman-beret', 'man-jacket'].map(name => loader.loadAsync(new URL(`./assets/${name}.glb`, import.meta.url).href))), loader.loadAsync(new URL('./assets/sedan.glb', import.meta.url).href)]);
+  const [simulation, humans, car] = await Promise.all([createSimulation(), Promise.all(['woman-beret', 'man-jacket'].map(name => loader.loadAsync(new URL(`./assets/${name}.glb`, import.meta.url).href))), loader.loadAsync(new URL('./assets/sedan.glb', import.meta.url).href)]);
   sim = simulation; humans.forEach(prepareCharacter); prepareCar(car); selectCharacter(0);
   ready = true; start.disabled = false; start.textContent = 'Enter the playground →'; $('loading').textContent = 'Mouse to look · Esc to release · R to reset';
   animateCharacter(0); updateCamera(0); updateHud();
@@ -247,12 +247,18 @@ async function boot() {
   }
   // Explicit test surface, enabled only by the diagnostic URL. Normal play has no writable hooks.
   if (new URLSearchParams(location.search).has('test')) window.__polygon = {
-    get state() { return { ...sim.state, playing, footView, driveView, cameraDistance, yaw, pitch, camera: camera.position.toArray(), characterVisible: character.visible, animation: animationName, characterIndex, animationTransitions, animationTime: activeAction?.time }; },
+    get state() { return { ...sim.state, playing, footView, driveView, cameraDistance, yaw, pitch, camera: camera.position.toArray(), characterVisible: character.visible, animation: animationName, characterIndex, animationTransitions, animationTime: activeAction?.time, animationRate: activeAction?.timeScale }; },
     get stats() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, frames: [...frames], animations: Object.keys(actions) }; },
     resetFrameSamples() { frames = []; },
     reset() { sim.reset(); yaw = 0; pitch = .22; snapCamera = true; },
     pose(x, z, heading = 0) { sim.person.setTranslation({ x, y: 1.02, z }, true); sim.person.setNextKinematicTranslation({ x, y: 1.02, z }); sim.state.vx = sim.state.vz = sim.state.vy = 0; yaw = heading; sim.step({ forward: false, back: false, left: false, right: false, run: false, jump: false }, yaw); snapCamera = true; },
     look(y, p = .22) { yaw = y; pitch = p; lastLook = clock; snapCamera = true; },
+    previewAnimation(name, time) {
+      // Freeze a precise pose for asset QA; normal play exposes no such hook.
+      playing = false; sim.state.animation = name; mixer.stopAllAction();
+      activeAction = actions[name]; activeAction.reset().play(); activeAction.time = time;
+      animationName = name; mixer.update(0);
+    },
     scene, get character() { return character; }, sedan, camera,
   };
   window.__ready = true;
