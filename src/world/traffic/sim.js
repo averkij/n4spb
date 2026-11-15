@@ -891,11 +891,12 @@ export function createSim(st, makeRng, opts = {}) {
   // Promotion to the player's driving controller transfers identity and damage;
   // it is not a normal despawn and must not invoke wreck cleanup on that record.
   sim.detach = v => {
-    if(!sim.vehicles.includes(v)||v.tram||v.arch?.bus)return false;
+    if(!sim.vehicles.includes(v)||v.tram||v.arch?.tram)return false;
     const i=v.seg.veh.indexOf(v);if(i>=0)v.seg.veh.splice(i,1);
     for(const segment of [v.seg,...v.trail])if(segment.lastOut===v)segment.lastOut=null;
     const j=sim.vehicles.indexOf(v);sim.vehicles[j]=sim.vehicles.at(-1);sim.vehicles.pop();
-    v.claimed=true;v.v=0;v.brake=true;sim.stats.claimed=(sim.stats.claimed||0)+1;return true;
+    v.claimed=true;v.v=0;v.brake=true;v.dwell=0;v.at=null;v.door=0;v.pax=false;v.route=null;v.next=null;v.trail=[];v.served?.clear();
+    sim.stats.claimed=(sim.stats.claimed||0)+1;return true;
   };
   sim.step = step;
   /** advance (or restart + fast-forward) so that sim.time <= t < sim.time + DT; returns the interpolation factor 0..1 */

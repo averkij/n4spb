@@ -1,4 +1,30 @@
 import * as THREE from 'three';
+// A cut shell is a one-sided sheet. Add its inward-facing lining to the same
+// private, nonindexed buffer so an opened door stays solid with the existing
+// front-side material and draw call. Window/decal meshes never use this helper.
+export function addDoorInterior(geometry) {
+  const count = geometry.attributes.position.count;
+  geometry.userData.doorInteriorOffset = count;
+  const trim = new THREE.Color('#30343a').toArray();
+  for (const [name, attribute] of Object.entries(geometry.attributes)) {
+    const size = attribute.itemSize, data = new Float32Array(count * size * 2);
+    data.set(attribute.array);
+    for (let face = 0; face < count; face += 3) for (let corner = 0; corner < 3; corner++) {
+      const from = face + (corner === 1 ? 2 : corner === 2 ? 1 : 0), to = count + face + corner;
+      for (let k = 0; k < size; k++) {
+        let value = attribute.getComponent(from, k);
+        if (name === 'normal') value = -value;
+        else if (name === 'color') value = trim[k] ?? value;
+        else if (name === 'uv') value = k === 0 ? .5 : .008; // blank number-plate atlas margin
+        else if (name === 'aKind') value = 0; // lining is not exterior paint
+        data[to * size + k] = value;
+      }
+    }
+    geometry.setAttribute(name, new THREE.BufferAttribute(data, size, attribute.normalized));
+  }
+  geometry.computeBoundingSphere();
+  return geometry;
+}
 // Split triangles at the actual clipping planes, preserving all attributes.
 // Centroid selection alone leaves giant triangles across an open doorway.
 export function cutBox(source,min,max) {

@@ -20,8 +20,9 @@ const num = (v) => typeof v === 'number' && Number.isFinite(v);
 const r2 = (v) => Math.round(v * 100) / 100;
 // Wire-protocol allowlist, intentionally kept independent of world modules:
 // handoff is runtime-only. A focused test checks it against the fleet catalogue.
-export const TRAFFIC_HANDOFF_MODELS = ['sedan','lada','ladasw','cross_c','cross_s','cross_m','suv','liftback','prem','hatch','mpv','van','truck','minibus'];
+export const TRAFFIC_HANDOFF_MODELS = ['sedan','lada','ladasw','cross_c','cross_s','cross_m','suv','liftback','prem','hatch','mpv','van','truck','minibus','bus','midi','artic','trolley','trolley2','dd','coach'];
 export const TRAFFIC_HANDOFF_PLATES = 36;
+export const TRAFFIC_HANDOFF_ROUTES = 61;
 
 // ---------------------------------------------------------------- base64url of a UTF-8 string (browser and Node)
 export function b64uEncode(str) {
@@ -50,6 +51,7 @@ export function makeHo({ from, to, via = 'gate', gate = '', car = null, mute = f
       ho.car.kind = 'traffic';
       const t = car.traffic || {};
       ho.car.traffic = { model: t.model, color: typeof t.color === 'string' ? t.color.toLowerCase() : t.color, plate: t.plate, livery: t.livery };
+      if(t.route!==undefined)ho.car.traffic.route=t.route;
     }
   }
   if (ret) ho.ret = { x: r2(ret.x), z: r2(ret.z), yaw: r2(ret.yaw), pitch: r2(ret.pitch ?? 0) };
@@ -74,11 +76,12 @@ export function validateHo(ho, { to } = {}) {
     if (c.kind === 'traffic') {
       const t = c.traffic;
       if (!/^traffic-car-\d{1,10}$/.test(c.id)) return bad('car.traffic.id');
-      if (!t || typeof t !== 'object' || Array.isArray(t) || Object.keys(t).length !== 4) return bad('car.traffic');
+      if (!t || typeof t !== 'object' || Array.isArray(t) || Object.keys(t).length < 4 || Object.keys(t).length > 5 || Object.keys(t).some(k=>!['model','color','plate','livery','route'].includes(k))) return bad('car.traffic');
       if (!TRAFFIC_HANDOFF_MODELS.includes(t.model)) return bad('car.traffic.model');
       if (typeof t.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(t.color)) return bad('car.traffic.color');
       if (!Number.isInteger(t.plate) || t.plate < 0 || t.plate >= TRAFFIC_HANDOFF_PLATES) return bad('car.traffic.plate');
       if (!Number.isInteger(t.livery) || t.livery < 0 || t.livery > 7) return bad('car.traffic.livery');
+      if(t.route!==undefined&&(!Number.isInteger(t.route)||t.route<0||t.route>=TRAFFIC_HANDOFF_ROUTES))return bad('car.traffic.route');
       if (!Number.isInteger(c.view) || c.view < 0 || c.view > 2) return bad('car.traffic.view');
     } else if (c.traffic !== undefined) return bad('car.traffic.kind');
     if (c.vessel !== undefined && (c.kind !== 'boat' || c.vessel !== 'container-ship')) return bad('car.vessel');

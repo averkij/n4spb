@@ -1,5 +1,125 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-15: Ground contact, door interiors and bus takeovers (15.1.0)
+
+The avatar now follows the actual drawn paving above its existing physical
+support. A runtime-only collector reads upward opaque source triangles before
+batching releases their CPU arrays, then indexes streamed regions as they
+attach. Queries use compact local bins; there is no per-frame scene raycast,
+new walking collider, or changed water/underpass rule. The takeoff correction
+persists through the existing physical jump trajectory. Initial Palace and
+Admiralty captures took about 0.82 seconds, with about 8.5–8.7 MB of typed data.
+Across 96 independently raycast city pavement/kerb samples the lookup error
+was zero. Two 4,800-query batches measured about 0.002 ms per query.
+
+The initial 300,000-triangle ceiling was insufficient when all regions loaded.
+The final on-demand capacity is 750,000 triangles / 3 million bin references
+(under 40 MB maximum typed payload), with a one-time exhaustion warning.
+The complete-residency diagnostic confirmed zero truncation and scene errors:
+
+| Area | Loaded regions | Floor triangles | Typed payload, bytes | Cumulative collection, ms |
+| --- | ---: | ---: | ---: | ---: |
+| Palace | 94 / 94 | 324,726 | 15,302,436 | 1,062.5 |
+| Moskovskaya | 176 / 176 | 451,098 | 22,048,984 | 850.4 |
+| Vasilyevsky | 121 / 121 | 334,039 | 16,242,212 | 1,052.1 |
+
+These payload totals exclude JavaScript Map/object overhead. Complete residency
+is an explicit diagnostic; normal startup still loads only nearby regions.
+The city raycast diagnostic retains source arrays with `keepcpu=1`, so its
+heap is not representative of normal gameplay. Normal-load driving comparisons
+below use the usual source-array release path.
+
+Car-door linings reuse the existing mesh and shared material, adding inward
+triangles without adding a mesh, material or draw call. Both faces share their
+damage group. Closing reuses the existing cached positional thud/latch sound,
+once per completed closure; muted, suspended and cancelled events stay silent.
+
+Bus takeovers reuse the bounded detailed-vehicle and NPC pools. Seven additional
+types keep their geometry, paint, route boards and driver-side cabin anchors;
+entry uses the right passenger doorway. Player-driven articulated buses retain
+both sections and three axles with one full-length rigid collision footprint;
+separate trailer/hitch dynamics are outside this change.
+
+Focused CPU checks cover 21 traffic models, 25 door interiors, all seven bus
+takeovers, rigid articulated demotion/re-entry, collision impulses about the
+actual centre of mass, hop continuity, and 960 edge runs. The 136 bridge checks
+pass with the original pitch/roll limits. Their barrier measurement now ends
+6 m beyond the boom: the previous failure measured a fall off the isolated
+test deck 143 m later, rather than the barrier crossing. The existing boat
+interaction-list assertion still fails identically on baseline `502387b8`;
+it is not counted as a passing check.
+
+The character fixture checks both rigs on paving, kerbs, slopes and raised
+supports, as well as water beds and holes; measured sole error is at most 2 mm.
+It also exercises jump anticipation/landing, the three camera modes and one
+door-close sound per entry. The walk-to-door override has a separate floor
+continuity regression. Source, import and generated-page checks pass.
+
+All 21 final bakes are fresh. All 2,715 products are byte-identical to the
+previous release `502387b8`; only source provenance changes. The final
+normal-loading Palace/Admiralty floor test again matched all 96 independent
+mesh samples, with zero truncation or scene errors. Collection took 850 / 787 ms,
+and 4,800 local lookups took 11.4 / 10.8 ms respectively.
+
+The normal-loading bus suite passes all seven models through extraction,
+boarding, near/far/cockpit views, driving, damage, exit and empty re-entry,
+with zero runtime or asset errors. It uses naturally routed trolley/bus cases
+and clear full-size road placements for less common variants. All six
+articulated wheel positions remain finite. The ordinary-car city smoke test
+also passes, including saved character selection, desktop/touch camera-dot
+visibility and reset cancellation. Settled cockpit and far-view screenshots
+were reviewed after the original entry-camera orbit decayed.
+
+Serial Edge/D3D11 driving comparisons use 1280×720, medium quality, 20 seconds
+of W and normal fresh baked loading, without profiling or mid-run screenshots:
+
+| Run | Ready, s | Mean / p50 / p95 / max frame, ms | Frames >40 / >80 ms | Long tasks | Mean draws | Distance, m |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| Palace before | 32.94 | 25.9 / 33.2 / 33.4 / 166.7 | 9 / 2 | 3 | 1,370 | 780 |
+| Palace after | 31.55 | 29.5 / 33.3 / 33.5 / 250.0 | 26 / 4 | 11 | 1,310 | 387 |
+| Admiralty before | 31.53 | 29.7 / 33.3 / 33.4 / 233.3 | 21 / 4 | 9 | 1,468 | 169 |
+| Admiralty after | 31.15 | 32.3 / 33.3 / 50.0 / 250.0 | 52 / 4 | 17 | 1,462 | 156 |
+
+These results do not establish a performance improvement. The new Palace run
+collided, veered onto the pavement and stopped at 387 m, whereas the baseline
+continued at 80 km/h; it loaded 39 rather than 42 regions. Admiralty remained
+in a dense collision/traffic scene and ended moving at 11 km/h instead of 1,
+with 41 rather than 40 loaded regions. Screenshots retain buildings, trees,
+street details and the skyline. Neither run had baked-load or region failures.
+The new averages are about 34 / 31 FPS, but p95 and long frames still miss the
+33.3 ms smooth-driving target. This work does not close that performance issue.
+
+The floor lookup does not run in the seated driving override. Its incremental
+collection shares the region-attach callback: total measured attach time rose
+from 64.0 to 201.2 ms in Palace and 30.4 to 105.4 ms in Admiralty over 20 seconds;
+the largest callback rose from 10.0 to 26.3 ms and 9.8 to 20.1 ms respectively.
+This contributes to hitches but does not alone explain the full frame-time gap.
+Post-measurement CDP `heap.usedSize` / `backingStorageSize`, separately in MiB:
+Palace 614.59 / 1,273.37 before and 620.64 / 1,283.83 after; Admiralty 542.59 /
+1,309.52 before and 525.18 / 721.43 after. These are retained readings after
+different collision paths and garbage-collection histories, not peak memory.
+
+A separate 20-second Admiralty CPU diagnostic (`--profile`, kept out of the
+comparison table) sampled 22,009 ms. Floor collection used 66 ms inclusive
+(0.30%), with no driving `heightAt` or support-index rebuild samples. Rendering
+used 11,340 ms inclusive (51.5%); update dispatch used 5,626 ms (25.6%), including
+traffic 1,826 ms, people 1,404 ms and driving 746 ms. Wreck stepping used 648 ms
+and garbage collection 75 ms. Inclusive figures overlap and must not be summed.
+The existing visible-traffic takeover registration loop used 741 ms inclusive;
+without a baseline CPU profile its whole cost cannot be attributed to the bus
+addition. Rendering/draw submission and repeated traffic registration are the
+next measured optimization targets. The profiled run's different frame times
+do not replace the unprofiled comparison above.
+
+Reproduce from the matching baseline worktree and this tree:
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --json --diagnostics --out shots/floor-perf/palace-after
+node tools/drive-bench.mjs --area admiralty --q medium --seconds 20 --start "-2493.919,-687.663,-52.605" --json --diagnostics --out shots/floor-perf/admiralty-after
+node tools/visual-floor-city-test.mjs --normal --out shots/visual-floor-city-baked
+node tools/bus-city-test.mjs --normal --out shots/bus-city-baked
+```
+
 ## 2026-11-15: Characters, traffic takeovers and grounded collisions (15.0.0)
 
 The character controller uses the existing player physics, renderer, materials

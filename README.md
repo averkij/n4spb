@@ -105,7 +105,7 @@ The page runs on phones and tablets with an on-screen control layer (`src/core/t
 | Driving: right thumb | **GAS**, **BRAKE** (reverse at a standstill), **NITRO**, **DRIFT** (handbrake), **HOP** and **FLIP** (cars that can hop: HOP is the simple hop, FLIP the high barrel hop; each fires on the press) |
 | Driving: top | **CAM** (camera), **HORN**, **AUTO** (auto-gas), **EXIT** (stop before getting out); a drag on the free screen orbits the camera |
 
-Character selection is in Settings on desktop and Menu -> Controls -> Character on touch devices. Ordinary traffic cars can also be taken with E: the character opens the door, pulls out the driver and climbs in. Cars retain damage and have no repair action.
+Character selection is in Settings on desktop and Menu -> Controls -> Character on touch devices. Traffic cars and buses can be taken with E: the character opens the door, pulls out the driver and climbs in. Buses use their front passenger doorway and have heavier handling. Vehicles retain damage and have no repair action. The central aim dot appears only in first-person views.
 
 Control settings (menu -> Controls, saved on the device): look and steering sensitivity, invert Y, steering scheme (wheel / arrows / tilt), speed steering assist, tilt range, auto-gas, left-handed layout, haptics (Android only), button size, run by default.
 On a phone the first visit shows a heavy-scene warning (about 51 MB to download and about 1 GB of memory), the quality starts on **Performance** (shadow map 1024, MSAA 2, pixel ratio 1), and the page tries fullscreen, a landscape lock (Android) and the screen wake lock when you press the start button.

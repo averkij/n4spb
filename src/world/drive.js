@@ -39,6 +39,7 @@ import {createCharacterInteractions} from './drive/character-interaction.js';
 import {trafficDefinition} from './drive/traffic-model.js';
 import {PROMOTED_LIMIT,retirementCandidates,disposePromotedModel} from './drive/promotion-cache.js';
 import { boatCameraLow, boatCameraFraction } from './drive/boat/camera.js';
+import { busChaseFloor } from './drive/chase-clearance.js';
 
 const DEG = Math.PI / 180, TAU = Math.PI * 2;
 /** the damage state of a vehicle that cannot be damaged (the motor boat): the shape of drive/damage.js that drive.js, the HUD and the hand-off read, with nothing in it */
@@ -350,8 +351,10 @@ export async function build(ctx) {
       t = view.boom;
     } else t = Math.max(t, 0.28);
     cx = c.x + dx * t; cz = c.z + dz * t;
-    const wantY = car.floats ? gy + 1.05 + (hy - gy - 1.05) * t : gy + (hy - gy) * Math.max(t, 0.45), gnd = car.groundAt(cx, cz) + 0.55;
+    const ownBodyFloor=busChaseFloor(SPEC,car,cx,cz);
+    const wantY = Math.max(car.floats ? gy + 1.05 + (hy - gy - 1.05) * t : gy + (hy - gy) * Math.max(t, 0.45),ownBodyFloor??-Infinity), gnd = car.groundAt(cx, cz) + 0.55;
     view.y = view.snap ? wantY : view.y + (wantY - view.y) * Math.min(1, 7 * dt);
+    if(ownBodyFloor!==null)view.y=Math.max(view.y,ownBodyFloor);
     // Vertical easing must not leave the eye inside a newly reached soffit.
     if (car.floats && cameraBlocked(cx, cz, .24, view.y - .24, view.y + .24)) view.y = wantY;
     camera.position.set(cx + (Math.random() - 0.5) * amp, Math.max(view.y, gnd) + (Math.random() - 0.5) * amp, cz + (Math.random() - 0.5) * amp);
@@ -387,7 +390,7 @@ export async function build(ctx) {
   }
 
   // ---------------------------------------------------------------- per frame
-  const wheelsW = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], exW = Array.from({ length: 8 }, () => new THREE.Vector3()), exUse = [], jetDir = new THREE.Vector3();
+  const exW = Array.from({ length: 8 }, () => new THREE.Vector3()), exUse = [], jetDir = new THREE.Vector3();
   let collisionRevision = -1;
   /** Legacy unbound solids still receive damage; registered parked cars already
    * exchange momentum and damage through their shared impact callback. */
@@ -447,6 +450,8 @@ export async function build(ctx) {
     syncPlayer();
     if (dt > 0) {
       model.root.updateMatrixWorld(true);
+      // Cache per model: articulated buses have three axles, boats have none.
+      const wheelsW = model.wheelWorldPositions ||= model.wheels.map(() => new THREE.Vector3());
       model.wheels.forEach((w, i) => w.pivot.getWorldPosition(wheelsW[i]));
       exUse.length = 0; for (let i = 0; i < Math.min(V.def.exhaust.length, exW.length); i++) { const e = V.def.exhaust[i]; exUse.push(model.root.localToWorld(exW[i].set(e.x, e.y, e.z))); }     // the car's own tail pipes (an electric pickup has none: no flame particles)
       jetDir.set(-Math.sin(car.yaw), 0.05, -Math.cos(car.yaw));                                                                                  // the nozzles fire backwards, 3 degrees up (the Roadster's cold-gas cloud, def.jetFx)
@@ -504,11 +509,11 @@ export async function build(ctx) {
   let trafficCandidate=null;
   if(ctx.interact)ctx.interact.add({id:'drive-traffic',radius:5.4,label:'Take the car',labelEn:()=>trafficCandidate?.spec?.name||'',
     enabled:()=>{if(state.active||interactions?.active||!player||player.fly||player.riding||player.isUnderground())return false;trafficCandidate=ctx.services.traffic?.nearestEnterable(player.pos.x,player.pos.z,5.4);return!!trafficCandidate&&Math.abs(trafficCandidate.speed)<3.5;},
-    at:()=>trafficCandidate?{x:trafficCandidate.x,y:trafficCandidate.y+.8,z:trafficCandidate.z}:null,
+    at:()=>trafficCandidate?{x:trafficCandidate.entryX??trafficCandidate.x,y:trafficCandidate.y+.8,z:trafficCandidate.entryZ??trafficCandidate.z}:null,
     onUse:()=>{const candidate=ctx.services.traffic?.nearestEnterable(player.pos.x,player.pos.z,5.4);if(!candidate||Math.abs(candidate.speed)>=3.5||state.active||interactions?.active)return;const v=promoteTraffic(candidate);if(v)requestEnter(v);},
   });
   function registerPromotedPrompt(v){v.prompt=ctx.interact?.add({id:'drive-owned-'+v.id,radius:v.def.reach,label:v.def.label,labelEn:v.def.labelEn,
-    at:()=>({x:v.parked.x,y:v.parked.y+.8,z:v.parked.z}),enabled:()=>!!player&&!v.retired&&!state.active&&!interactions?.active&&!player.fly&&!player.riding&&!player.isUnderground(),onUse:()=>requestEnter(v)});}
+    at:()=>{const p=v.parked,b=v.def.boarding||{x:0,z:0},s=Math.sin(p.yaw),c=Math.cos(p.yaw);return{x:p.x+c*b.x+s*b.z,y:p.y+.8,z:p.z-s*b.x+c*b.z};},enabled:()=>!!player&&!v.retired&&!state.active&&!interactions?.active&&!player.fly&&!player.riding&&!player.isUnderground(),onUse:()=>requestEnter(v)});}
 
   /** Arrival of a hand-off (docs/AREAS.md): get into car `spec.id`, put it at (x, z) facing the camera yaw (degrees), restore its view and its four damage scalars. false (and the walker stays) when the car cannot be placed there. */
   function arrive(spec, x, z, yawDeg) {

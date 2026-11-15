@@ -1,6 +1,6 @@
 # Driving collisions and damage
 
-## Character and traffic integration (15.0.0)
+## Character and traffic integration (15.1.0)
 
 Settings selects one of two playable characters, with the red-beret girl as
 the default. V cycles near third person, distant third person and first person
@@ -13,8 +13,13 @@ frames; hands and feet follow vehicle-specific cabin anchors. Jump anticipation
 finishes before physical takeoff. Character credits are in Settings and
 `assets/characters/CREDITS.md`.
 
-All fourteen ordinary traffic car models can be taken, retaining their paint,
-plate, livery and damage. Public buses and trams keep their transit simulation.
+All fourteen ordinary traffic car models and seven bus variants can be taken,
+retaining their paint, plate, livery and damage. Buses use the right-hand front
+passenger door and a front-aisle entry path to the left-hand driver's seat.
+Taking a bus removes it from its scheduled route; trams remain public transit.
+Bus handling, mass, braking and durability differ from ordinary cars. A driven
+articulated bus retains both body sections and three axles, but uses one rigid
+full-length collision body; separate trailer/hitch dynamics are not simulated.
 Detailed taken cars are a bounded nearby cache; distant parked cars return to
 instanced traffic without losing their identity. Visible traffic is no longer
 retired merely because it has waited at a red light.
@@ -30,6 +35,14 @@ physics grid. Box and cylinder contacts apply normal impulses, friction and yaw
 spin based on the contact point. Speed-dependent substeps keep thin obstacles
 solid at nitro speed; the existing terrain, water, hole and map guards remain.
 Walking collision response is unchanged.
+
+Character soles follow a compact index of the actual upward-facing paving
+triangles, including streamed regions and paving above physical bridge/platform
+supports. This is a render offset, preserving the walking collider, water bed,
+underpass access and jump trajectory. The central aiming dot is hidden in both
+third-person views. Car doors have opaque inward faces paired with the exterior
+damage groups; window glass remains transparent. A positional door thud/latch
+plays once at completed closure, respecting mute and audio unlock state.
 
 Nearby traffic supplies its velocity and mass. Impact impulses exchange momentum
 between the player and struck cars. Struck parked/moving cars switch to a Rapier
@@ -60,6 +73,44 @@ proxies. Untouched city colliders remain in the existing spatial grid.
 
 The BODY readout shows persistent vehicle condition. Internal geometry reset
 remains available to test fixtures only; players must find another car.
+
+### 15.1.0 verification (2026-11-15)
+
+CPU checks pass for 21 promoted traffic models, 25 inward-facing door panels,
+seven bus takeover variants, 13 collision scenarios, the hop suite, 960 map-edge
+runs, and 136 bridge checks. Articulated-bus checks use real Rapier impulses to
+verify one 18-tonne body after demotion, synchronized rear-section motion,
+preserved damage, clean reclaim and the 9.325 m effective steering wheelbase.
+Collision impulses and impact yaw use the mass centre; damage coordinates and
+ordinary steering retain their authored frame. Door tests cover transparent
+windows, paired inner/exterior detachment, shared materials and disposal.
+
+The bridge barrier test retains its 0.12/0.08 rad pitch/roll limits and 16-second
+debris simulation, but measures the crossing only from -3 to +6 m around the
+barrier. Its earlier failure came from a river fall 143 m farther along the
+isolated bridge, after the changed collision trajectory; baseline `502387b8`
+happened to remain on the deck. The Palace boat suite's interaction-list
+assertion fails identically on that baseline and current code (27/28 pass).
+
+Palace and Admiralty road/strict-marking commands from
+[CHARACTER-ROAD-AUDIT.md](CHARACTER-ROAD-AUDIT.md) were rerun serially. All 954
+nonempty output lines match the preceding integration logs in order after
+removing elapsed times and PowerShell stderr wrappers, including every ribbon
+category and geometry metric. No generators, thresholds or allowances changed.
+
+| Audit | Palace | Admiralty |
+| --- | --- | --- |
+| Furniture | Existing 13 disallowed rows; fail | Existing 2 disallowed rows; fail |
+| Surface | 80 / 256,600 residual samples; pass (budget 120) | 70 / 298,765; pass (budget 120) |
+| Ribbon | Pass; all category counts unchanged | Pass; all category counts unchanged |
+| Strict markings | Existing one missing stop bar; fail | Pass; no missing bars |
+| Paint geometry | 51,874 triangles; 22,517 / 22,518 covered points | 54,572 triangles; 23,208 / 23,209 covered points |
+
+The existing Palace stop-bar failure is signal `n1562060894`, approach 2,
+lane `Lw142734279:0:f1`. Local evidence is
+`shots/floor-{palace,admiralty}-{roads,markings}.log` and
+`shots/floor-road-audit-comparison.json`. These results establish no new road
+regression, not a clean result for every preexisting strict audit.
 
 ## Small test area
 

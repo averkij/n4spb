@@ -44,7 +44,7 @@ export function bindCarImpact(box, vehicle, time, record = null, spec = null, wr
   box.originZ = box.cz - Math.cos(box.rotY) * offset;
 }
 export function bindParkedImpact(box, record, spec, wrecks = null) {
-  spec=impactSpec(record.kind,spec);
+  spec=impactSpec(record.logicalKind||record.kind,spec);
   box.source = { record, spec, originX: record.x, originZ: record.z,
     cx: box.cx, cz: box.cz, w: spec.wid, d: spec.len, y0: record.y, y1: record.y + spec.hgt,
     rotY: Math.atan2(record.s, record.c), vx: 0, vz: 0, onCarHit,

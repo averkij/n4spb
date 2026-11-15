@@ -22,8 +22,9 @@ try{
   const ready=async()=>{await page.waitForFunction("document.body.classList.contains('loaded') && window.__ctx?.characters?.ready",{timeout:120000});await page.click('#go');await page.waitForFunction(() => getComputedStyle(document.getElementById('intro')).visibility==='hidden');await page.evaluate(()=>document.exitPointerLock());};
   await page.goto(url,{waitUntil:'load',timeout:120000});await ready();
   assert.equal(await page.evaluate(()=>__ctx.characters.index),0,'girl is default');
+  assert.equal(await page.$eval('#cross',e=>getComputedStyle(e).display),'none','default third-person view hides the aim dot');
   await page.screenshot({path:path.join(shots,'default.png')});
-  for(const expected of [1,2,0]){await page.keyboard.press('KeyV');await page.waitForFunction(v=>__ctx.playerObj.view===v,{},expected);}
+  for(const expected of [1,2,0]){await page.keyboard.press('KeyV');await page.waitForFunction(v=>__ctx.playerObj.view===v,{},expected);await page.waitForFunction(v=>(getComputedStyle(document.getElementById('cross')).display!=='none')===(v===2),{},expected);}
   await page.click('#character-settings-button');await page.select('#character-choice','1');await page.keyboard.press('Escape');
   assert.equal(await page.evaluate(()=>__ctx.characters.index),1);
   await page.reload({waitUntil:'load'});await ready();assert.equal(await page.evaluate(()=>__ctx.characters.index),1,'settings choice survives reload');

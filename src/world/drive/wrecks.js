@@ -51,6 +51,7 @@ function createWreckWorld(ctx) {
     source.x = source.cx; source.z = source.cz; source.hw = source.w / 2; source.hd = source.d / 2;
     source.speed = Math.hypot(v.x, v.z); source.kind = r.kind;
     source.y0 = r.y; source.y1 = r.y + spec.hgt;
+    source.syncParts?.();
     if (source.vehicle) {
       const v = source.vehicle; v.x = v.px = r.x; v.z = v.pz = r.z;
       v.rot = v.prot = yaw; v.sn = s; v.cs = c; v.v = 0;

@@ -7,11 +7,13 @@ import { createRegionStreamer } from './core/region-streamer.js';
 import * as THREE from 'three';
 import * as L from './world/layout.js';
 import * as A from './world/area.js';      // the area module of this page (docs/AREAS.md): the page of another area remaps this URL with an import map
+import { HEIGHT_PATCHES } from './world/lib/area-tables.js';
 import { createContext } from './core/ctx.js';
 import { createRenderPipeline, assignShadowMaterials, unifyInstanceColor } from './core/renderer.js';
 import { createSky } from './core/sky.js';
 import { Player } from './core/player.js';
 import { captureRoofMap } from './core/roofmap.js';
+import { createVisualFloor } from './core/visual-floor.js';
 import { batchStatic } from './core/batch.js';
 import { batchStatic as batchStatic2 } from './core/batch2.js';
 import { buildNDProxy, NDLazy } from './core/ndproxy.js';
@@ -224,6 +226,10 @@ async function build() {
   // Runtime colour batches duplicate that geometry and its atlas textures;
   // constructing them for an offline bake needlessly doubles peak memory.
   if (ctx.recordBake) { zones.refresh(); return; }
+  // Read the original drawn paving once, before batching/upload releases CPU
+  // arrays. This is avatar presentation only; walk/collision/water stay intact.
+  ctx.visualFloor=createVisualFloor(ctx.physics,{heightPatches:HEIGHT_PATCHES});
+  ctx.visualFloor.addGroup(ctx.staticRoot);stats.visualFloor=ctx.visualFloor.stats;
   const wm = ctx.wires.build(); if (wm) { scene.add(wm); ctx.wires.setResolution(pipeline.size.x, pipeline.size.y); }
   pipeline.sectorsRoot = LOD.init(ctx.staticRoot);      // the sector groups of the visibility registry (core/lod.js): batch pieces, instanced pieces and proxies are parented per 320 m sector
   pipeline.ndSectorsRoot = LOD.ndRoot;
@@ -245,6 +251,7 @@ async function build() {
   if (params.get('nofreeze') !== '1' && params.get('nofreeze') !== 'static') { ctx.staticRoot.traverse((o) => { if (!o.userData.dynamic) { o.updateMatrix(); o.matrixAutoUpdate = false; } }); ctx.staticRoot.updateMatrixWorld(true); pipeline.frozenRoot = ctx.staticRoot; }     // the static scene never moves: no per-frame matrix work for ~2 700 objects
   if (params.get('noempty') !== '1') ctx.dynamicRoot.traverse((o) => { if (o.isInstancedMesh && !o.userData.noEmptyCull) pipeline.emptyCull.push(o); });      // empty instanced meshes are not drawn (core/renderer.js)
   ctx.onRegionAttach = group => {
+    ctx.visualFloor?.addGroup(group);
     if (params.get('nd') !== '0') buildNDProxy(group, ndOpts);      // (lazy: a scan only, the cells are built by NDLazy.update)
     assignShadowMaterials(group);
     group.traverse(o => { if (!o.userData.dynamic) { o.updateMatrix(); o.matrixAutoUpdate = false; } });

@@ -45,7 +45,8 @@ try{
   if(normal)assert.equal(await page.evaluate(()=>!!__ctx.baked),true,'normal verification loads the baked world, without procedural fallback');
   assert.equal(await page.evaluate(()=>__ctx.characters.index),0);
   await page.click('#go');await page.waitForFunction(()=>getComputedStyle(document.getElementById('intro')).visibility==='hidden');await page.evaluate(()=>document.exitPointerLock());
-  for(const expected of [1,2,0]){await page.keyboard.press('KeyV');await page.waitForFunction(v=>__ctx.playerObj.view===v,{},expected);}
+  await page.waitForFunction(()=>__ctx.playerObj.view===0&&document.getElementById('cross').hidden);
+  for(const expected of [1,2,0]){await page.keyboard.press('KeyV');await page.waitForFunction(v=>__ctx.playerObj.view===v&&document.getElementById('cross').hidden===(v!==2),{},expected);}
   await page.screenshot({path:path.join(shots,'city-foot-default.png')});
   await page.click('#character-settings-button');await page.select('#character-choice','1');await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>localStorage.getItem('piter.character')),'man-jacket');
   await page.evaluate(()=>__ctx.characters.select(0));
@@ -103,7 +104,7 @@ try{
   await page.setViewport({width:844,height:390,deviceScaleFactor:1,isMobile:true,hasTouch:true,isLandscape:true});await page.reload({waitUntil:'load',timeout:180000});
   await page.waitForFunction(()=>document.body.classList.contains('loaded')&&window.__tc&&__ctx.characters?.ready,{timeout:180000});await page.tap('#go');await page.waitForFunction(()=>getComputedStyle(document.getElementById('intro')).visibility==='hidden');
   const tapButton=async id=>{const r=await page.evaluate(id=>{const b=__tc.btns[id],r=b.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};},id);await page.touchscreen.tap(r.x,r.y);};
-  for(const expected of [1,2,0]){await tapButton('cam');await page.waitForFunction(v=>__ctx.playerObj.view===v,{},expected);}
+  for(const expected of [1,2,0]){await tapButton('cam');await page.waitForFunction(v=>__ctx.playerObj.view===v&&document.getElementById('cross').hidden===(v!==2),{},expected);}
   await tapButton('menu');await new Promise(r=>setTimeout(r,400)); // production menu suppresses ghost clicks for 350 ms
   const tapText=async text=>{const r=await page.evaluate(text=>{const b=[...document.querySelectorAll('#panel button')].find(b=>b.textContent.includes(text));if(!b)throw Error('Missing touch setting '+text);b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};},text);await page.touchscreen.tap(r.x,r.y);};
   await tapText('Controls settings');await page.waitForFunction(()=>[...document.querySelectorAll('#panel button')].some(b=>b.textContent.includes('Character')),{timeout:5000});await new Promise(r=>setTimeout(r,400));await tapText('Character');await page.waitForSelector('#character-choice');

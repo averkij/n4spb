@@ -96,6 +96,26 @@ for (const [n, who] of used) {
 }
 for (const n of ['crow', 'raven', 'magpie', 'wings', 'dogBark', 'busBrake', 'carDoor', 'doorOpen', 'doorClose', 'bikeBell', 'carHorn', 'gull']) check(names.oneShots.includes(n), `one-shot '${n}' is defined`);
 {
+  const doorContext=new MockContext(),doorAudio=createAudio({context:doorContext,ambience:false,hrtf:false});
+  const position={x:3,y:1,z:4};
+  check(doorAudio.play('carDoor',{position})===null&&doorContext.sources.length===0,'car-door slam does not unlock or queue audio before start');
+  doorAudio.start();doorAudio.update(camera(0,1,0),0);
+  const before=doorContext.sources.length,handle=doorAudio.play('carDoor',{position,volume:.9}),source=doorContext.sources.at(-1);
+  check(!!handle&&doorContext.sources.length===before+1,'one car-door event creates exactly one cached-buffer voice');
+  const pcm=source.buffer.getChannelData(0);let peak=0,energy=0,tail=0;
+  for(let i=0;i<pcm.length;i++){peak=Math.max(peak,Math.abs(pcm[i]));energy+=pcm[i]*pcm[i];if(i>pcm.length*.8)tail+=pcm[i]*pcm[i];}
+  check(source.buffer.duration===.5&&peak>.5&&peak<1&&tail<energy*.001,'car-door sound is a short non-clipping thud/latch with a quiet tail');
+  const seen=new Set(),queue=[source];let panner=null;
+  while(queue.length){const n=queue.shift();if(seen.has(n))continue;seen.add(n);if(n.distanceModel)panner=n;queue.push(...n.out);}
+  check(panner?.distanceModel==='inverse'&&panner.refDistance===6&&panner.rolloffFactor===1,'door voice uses positional inverse-distance attenuation');
+  check(panner?.positionX.value===3&&panner?.positionY.value===1&&panner?.positionZ.value===4,'door panner matches the actual closing door');
+  const count=doorContext.sources.length;
+  check(doorAudio.play('carDoor',{position:{x:101,y:1,z:0}})===null&&doorContext.sources.length===count,'out-of-range door slams allocate no voice');
+  doorAudio.muted=true;
+  check(doorAudio.play('carDoor',{position})===null&&doorContext.sources.length===count,'muted door slams allocate no voice');
+  doorAudio.muted=false;handle.stop();
+}
+{
   const before = audio.stats.voices, sources = ac.sources.length, warns = warnings.length;
   check(audio.play('clank', { volume: 4 }) === null && audio.stats.voices === before && ac.sources.length === sources && warnings.length === warns,
     'removed construction sound creates no voice, source or warning');

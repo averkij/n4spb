@@ -32,7 +32,7 @@ export function createFleetDamage(ctx, capacity = 24) {
       root.add(mesh); meshes.push(mesh); mapping[name] = mesh;
     }
     const a = archOf(v.kind), spec = { ...a, W: a.wid };
-    const damage = createCarDamage({ root }, { meshes, spec, state: v.damageState, interior: true,
+    const damage = createCarDamage({ root }, { meshes, spec, state: v.visualDamageState||v.damageState, interior: true,
       onDetach: fragment => {
         const wrecks = ctx.services?.carWrecks;
         if (wrecks) wrecks.shed(fragment, { ...v, vx: v.wreckSource?.vx || 0, vz: v.wreckSource?.vz || 0 }, v.color);
@@ -45,8 +45,9 @@ export function createFleetDamage(ctx, capacity = 24) {
     get size() { return cache.size; },
     begin() { frame++; for (const entry of cache.values()) entry.root.visible = false; },
     push(v, k) {
-      if (!v.damageState?.revision) return false;
-      let entry = cache.get(v.damageState);
+      const state=v.visualDamageState||v.damageState;
+      if (!state?.revision) return false;
+      let entry = cache.get(state);
       if (!entry) {
         if (cache.size >= capacity) {
           let oldestKey, oldest;
@@ -55,13 +56,13 @@ export function createFleetDamage(ctx, capacity = 24) {
           if (oldest.seen === frame) return false;
           dispose(oldest); cache.delete(oldestKey);
         }
-        entry = make(v, k); cache.set(v.damageState, entry);
+        entry = make(v, k); cache.set(state, entry);
       }
       entry.seen = frame; entry.root.visible = true;
-      if (entry.boundRevision !== v.damageState.revision) {
+      if (entry.boundRevision !== state.revision) {
         entry.damage.sync();
         for (const mesh of entry.meshes) { mesh.computeBoundingBox(); mesh.computeBoundingSphere(); }
-        entry.boundRevision = v.damageState.revision;
+        entry.boundRevision = state.revision;
       }
       entry.root.position.set(v.x, v.y, v.z);
       entry.root.rotation.order = 'YXZ'; entry.root.rotation.set(-Math.asin(v.sp || 0), Math.atan2(v.s, v.c), 0);

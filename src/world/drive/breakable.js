@@ -41,6 +41,7 @@ export function breakGroups(mesh, spec, matrix = null) {
   const g = mesh.geometry, p = g.attributes.position, normal = g.attributes.normal, color = g.attributes.color;
   const index = g.index ? Array.from(g.index.array) : Array.from({ length: p.count }, (_, i) => i);
   const groups = new Map(), material = mesh.material?.name || '';
+  const doorOffset = g.userData.doorInteriorOffset, doorZones = doorOffset ? [] : null;
   const glass = mesh.name === 'drive-glass' || material === 'pb-car-glass';
   const body = material === 'drive-body' || material === 'pb-car-paint';
   const lamp = /drive-head|drive-tail|pb-car-lamp/.test(material);
@@ -64,6 +65,12 @@ export function breakGroups(mesh, spec, matrix = null) {
         else if (z > spec.wb * .23 && z < spec.front - .08 && y > spec.hgt * .46 && Math.abs(x) < spec.W * .43 &&
           (faceNormal.y > .25 || color && mean(color, 0) < .04)) zone = 'front-bonnet';
       }
+    }
+    // A door lining has a different color and opposing normal, but belongs to
+    // the same physical panel. Detach both faces together, never leave a sheet.
+    if (doorZones) {
+      if (tri[0] >= doorOffset) zone = doorZones[tri[0] - doorOffset] ?? zone;
+      else doorZones[tri[0]] = zone;
     }
     let group = groups.get(zone); if (!group) groups.set(zone, group = []); group.push(...tri);
   }

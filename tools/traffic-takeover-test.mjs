@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createSim} from '../src/world/traffic/sim.js';
 import {createTrafficTakeovers} from '../src/world/traffic/takeover.js';
-import {ARCH,CAR_KINDS} from '../src/world/traffic/fleetdata.js';
+import {ARCH,DRIVABLE_KINDS} from '../src/world/traffic/fleetdata.js';
 import {createDamageState} from '../src/world/drive/damage.js';
 
 let hidden=false;
@@ -24,14 +24,14 @@ const boxes=new Set(),physics={addBox(cx,cz,w,d,rotY,y0,y1){const b={cx,cz,w,d,r
 let refreshes=0,released=0;
 const parkedRecords=[],wrecks={release(r){released++;r.x+=r.wrecked?2:0;r.wrecked=false;r.wreckBody=null;r.wreckSource=null;}};
 const registry=createTrafficTakeovers({physics,sim,parkedRecords,wrecks,refresh:()=>refreshes++});
-for(const [i,kind] of CAR_KINDS.entries()){
+for(const [i,kind] of DRIVABLE_KINDS.entries()){
  const record={kind,x:i*30,y:.03,z:0,c:1,s:0,color:{r:.4,g:.5,b:.6},plate:i,driver:true,taxi:i===0,police:i===1,amb:i===2,damageState:createDamageState()};
  const a=ARCH[kind],box=physics.addBox(record.x,record.z,a.wid,a.len,0,0,a.hgt);parkedRecords.push(record);
- const d=registry.register(record,null,box);assert.equal(registry.nearestEnterable(record.x,0,4),d);assert(d.occupied);
+ const d=registry.register(record,null,box);assert.equal(registry.nearestEnterable(d.entryX,d.entryZ,4),d);assert(d.occupied);
  const damage=record.damageState,claimed=registry.claim(d);assert.equal(claimed,d);assert(d.wasOccupied&&!d.occupied);assert.equal(d.record.damageState,damage);assert(!boxes.has(box));assert.equal(registry.claim(d),null,'Double claim rejected');
- assert(registry.cancelClaim(d));assert(d.occupied&&d.record.driver);assert.equal(registry.nearestEnterable(record.x,0,4),d);
+ assert(registry.cancelClaim(d));assert(d.occupied&&d.record.driver);assert.equal(registry.nearestEnterable(d.entryX,d.entryZ,4),d);
  assert(registry.claim(d));assert(registry.commitClaim(d));assert(!registry.cancelClaim(d),'Committed ownership cannot be accidentally rolled back');
- assert(registry.release(d,{x:i*30+5,y:0,z:8,yaw:1.2}));assert(!d.occupied);assert.equal(d.record.damageState,damage);assert.equal(registry.nearestEnterable(i*30+5,8,4),d);
+ assert(registry.release(d,{x:i*30+5,y:0,z:8,yaw:1.2}));assert(!d.occupied);assert.equal(d.record.damageState,damage);assert.equal(registry.nearestEnterable(d.entryX,d.entryZ,4),d);
 }
 sim.reset();const moving=sim.vehicles.find(v=>!v.bus);assert(moving);moving.rec={kind:moving.kind,x:moving.x,y:.03,z:moving.z,c:Math.cos(moving.rot),s:Math.sin(moving.rot),driver:true,color:{r:1,g:1,b:1},plate:4};
 registry.begin();const md=registry.register(moving.rec,moving);registry.end();const count=sim.vehicles.length;
@@ -40,9 +40,9 @@ assert(registry.cancelClaim(md));assert(parkedRecords.includes(moving.rec));asse
 md.record.wrecked=true;md.record.wreckBody={};const x=md.x;
 assert(registry.claim(md));assert.equal(md.x,x+2,'Claim uses synchronized wreck pose');assert(!md.record.wreckBody);
 assert(registry.commitClaim(md));assert(registry.release(md,{occupied:true}));assert(md.record.driver,'An abandoned interaction preserves the occupant when demoted');
-assert(registry.register({kind:'bus',x:0,y:0,z:0,c:1,s:0})===null,'Public transit remains separate');
-assert(refreshes>CAR_KINDS.length*3&&released>CAR_KINDS.length);
+assert(registry.register({kind:'tram',x:0,y:0,z:0,c:1,s:0})===null,'Trams remain on rails');
+assert(refreshes>DRIVABLE_KINDS.length*3&&released>DRIVABLE_KINDS.length);
 const carriedRegistry=createTrafficTakeovers({physics,sim,parkedRecords:[],wrecks,reservedIds:['traffic-car-1','traffic-car-3']});
 const first=carriedRegistry.register({kind:'sedan',x:0,y:0,z:0,c:1,s:0}),second=carriedRegistry.register({kind:'hatch',x:5,y:0,z:0,c:1,s:0});
 assert.equal(first.id,'traffic-car-2');assert.equal(second.id,'traffic-car-4','Local cars never reuse incoming handoff IDs');
-console.log(`PASS: visible red-light/sink persistence, offscreen retirement, ${CAR_KINDS.length} car archetypes, stable ownership/damage, claim rollback/release, NPC occupancy, wreck transfer`);
+console.log(`PASS: visible red-light/sink persistence, offscreen retirement, ${DRIVABLE_KINDS.length} road archetypes, stable ownership/damage, claim rollback/release, NPC occupancy, wreck transfer`);

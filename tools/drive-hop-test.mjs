@@ -213,6 +213,17 @@ try {
   let src = execFileSync('git', ['show', `${BASE_COMMIT}:src/world/drive/handling.js`], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 24, stdio: ['ignore', 'pipe', 'ignore'] });
   src = src.replace("from './model.js'", `from '${new URL('model.js', DRIVE).href}'`).replace("from './collision.js'", `from '${new URL('collision.js', DRIVE).href}'`);
   assert(src.includes(new URL('collision.js', DRIVE).href) && !src.includes('tuning.hop'), 'the baseline copy is the pre-hop handling');
+  // Isolate hop/surge behaviour from the later generic collision COM fix.
+  // Apply that same pivot correction to the historical non-hop implementation;
+  // retain every strict state/event bit-identity assertion below. The separate
+  // collision regression proves the pivot correction itself, including buses.
+  src = src.replace('const yaw0 = car.yaw, sy0 = sy, cy0 = cy;', 'const yaw0 = car.yaw, sy0 = sy, cy0 = cy, turnX = car.x, turnZ = car.z;')
+    .replace('car.yaw += (om + car.impactSpin) * h; sy = Math.sin(car.yaw); cy = Math.cos(car.yaw);', `car.yaw += (om + car.impactSpin) * h; sy = Math.sin(car.yaw); cy = Math.cos(car.yaw);
+    const steerYaw = yaw0 + om * h;
+    car.x += (Math.sin(steerYaw) - sy) * SPEC.centerZ;
+    car.z += (Math.cos(steerYaw) - cy) * SPEC.centerZ;`)
+    .replace('!carBlocked(car.x, car.z, sy0, cy0)) { car.yaw = yaw0;', '!carBlocked(turnX, turnZ, sy0, cy0)) { car.yaw = yaw0; car.x = turnX; car.z = turnZ;');
+  assert(src.includes('const steerYaw') && src.includes('car.x = turnX'), 'baseline receives the same collision pivot correction');
   const file = path.join(mkdtempSync(path.join(tmpdir(), 'hop-base-')), 'handling-base.mjs'); writeFileSync(file, src);
   Base = await import(pathToFileURL(file).href);
 } catch (err) { console.log(`SKIP bit-identity: cannot get handling.js from ${BASE_COMMIT} (${String(err.message).split('\n')[0]})`); }

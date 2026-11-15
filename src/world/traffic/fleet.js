@@ -206,7 +206,7 @@ export function createFleet(ctx, cfg) {
     if (v.damageState) {
       const spec = v.damageSpec || (v.damageSpec = { ...archOf(v.kind), W: archOf(v.kind).wid });
       damagedPoint.x = lx; damagedPoint.y = ly; damagedPoint.z = lz;
-      deformPoint(damagedPoint, v.damageState, spec);
+      deformPoint(damagedPoint, v.visualDamageState||v.damageState, spec);
       lx = damagedPoint.x; ly = damagedPoint.y; lz = damagedPoint.z;
     }
     _w[0] = v.x + v.c * lx - sp * v.s * ly + cp * v.s * lz;

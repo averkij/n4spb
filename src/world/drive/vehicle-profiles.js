@@ -40,17 +40,20 @@ export function trafficPhysics(kind, spec = {}) {
 export function trafficSpec(kind, geometry) {
   const profile = trafficPhysics(kind, geometry), W = geometry.W ?? geometry.wid;
   return { ...geometry, ...profile, kind, W, wid: W, centerZ: (geometry.front + geometry.rear) / 2,
-    R: geometry.R || (geometry.bus ? .48 : geometry.hgt > 2.1 ? .40 : geometry.hgt > 1.6 ? .34 : .31) };
+    R: geometry.R || ({bus:.52,midi:.47,artic:.52,trolley:.52,trolley2:.52,coach:.50,dd:.52}[kind]) || (geometry.bus ? .48 : geometry.hgt > 2.1 ? .40 : geometry.hgt > 1.6 ? .34 : .31) };
 }
 
 /** createHandling(ctx, trafficTuning(kind, archetype)); returned spec is complete. */
 export function trafficTuning(kind, geometry) {
   const spec = trafficSpec(kind, geometry), p = trafficPhysics(kind, spec), heavy = p.mass > 3000;
   return { spec, acc: p.acc, vmax: p.vmax, brake: p.brake, grip: p.grip, revAcc: heavy ? 4 : 6, vrev: heavy ? 6 : 8,
+    // Owned articulated buses are rigid: use the average rear-axle station for
+    // steering, keeping authored front-section axle probes and wheel geometry.
+    steerWheelbase: kind==='artic'?9.325:spec.wb,
     steerLock: p.steerLock, steerIn: heavy ? 4.0 : 6.5, steerOut: heavy ? 7 : 10,
     maxLat: heavy ? 14 : 20, yawGrip: heavy ? 16 : 22, gripHand: heavy ? 1.8 : 1.2,
     handYaw: heavy ? .36 : .52, handYawMax: heavy ? 1.4 : 2.1,
-    engBrake: heavy ? 2.2 : 1.9, scrub: .16, impactDecay: heavy ? 6 : 5,
+    engBrake: spec.bus ? 2.6 : heavy ? 2.2 : 1.9, scrub: .16, impactDecay: heavy ? 6 : 5,
     rollK: heavy ? .005 : .0035, rollMax: heavy ? .08 : .065,
     hf: spec.front - .02, hr: -spec.rear + .08, hw: spec.W / 2 + .04,
     smokeZ: spec.front - .9, smokeY: spec.hgt * .63,

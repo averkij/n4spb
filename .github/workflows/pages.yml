@@ -145,12 +145,16 @@ jobs:
       - name: Characters, takeovers, damage and grounded vehicle traction
         run: |
           node tools/character-player-test.mjs
+          node tools/visual-floor-test.mjs
           node tools/character-interaction-test.mjs
           node tools/traffic-takeover-test.mjs
+          node tools/bus-takeover-test.mjs
+          node tools/bus-camera-test.mjs
           node tools/traffic-model-test.mjs
           node tools/promotion-cache-test.mjs
           node tools/handoff-traffic-test.mjs
           node tools/drive-door-damage-test.mjs
+          node tools/vehicle-door-interior-test.mjs
           node tools/vehicle-traction-test.mjs
           node tools/owned-car-physics-test.mjs
           node tools/drive-wasted-test.mjs

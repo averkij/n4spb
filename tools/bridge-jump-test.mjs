@@ -202,7 +202,10 @@ for (const kind of ['palace', 'troitsky']) {
         for (const e of car.events) ev.push(e.type + ' ' + fmt(e.v, 1));
         const prog = dir * (R.F.toUV(car.x, car.z, {}).u - g.u); maxProg = Math.max(maxProg, prog);
         if (prog < -2.5) vIn = car.vF * 3.6; else if (prog < 2) vMin = Math.min(vMin, car.vF * 3.6); else if (prog0 === null && prog > 4) { prog0 = prog; vAfter = car.vF * 3.6; }      // (the speed on the way through the boom: from 2.5 m before the line to 2 m past it)
-        maxPitch = Math.max(maxPitch, Math.abs(car.pitch || 0)); maxRoll = Math.max(maxRoll, Math.abs(car.roll || 0));
+        // Measure the boom crossing, including the rear bumper clearing it.
+        // Keep simulating all 16 s to settle debris; an unrelated river fall
+        // 143 m beyond this isolated bridge must not count as a boom launch.
+        if (prog >= -3 && prog <= 6) { maxPitch = Math.max(maxPitch, Math.abs(car.pitch || 0)); maxRoll = Math.max(maxRoll, Math.abs(car.roll || 0)); }
       }
       ctx.drive = null;
       say(`  ${label}: arm states ${state0} -> ${arms.map((a) => a.state)} (halves ${arms.map((a) => a.pieces.map((p) => p.rec && p.rec.state))}), the car got ${fmt(maxProg)} m past the gate line, speed before ${fmt(vIn, 1)} km/h, minimum in the boom ${fmt(vMin, 1)}, 4 m past ${fmt(vAfter, 1)}, pitch ${fmt(maxPitch, 2)} roll ${fmt(maxRoll, 2)}, events ${ev.slice(0, 6).join(', ')}`);

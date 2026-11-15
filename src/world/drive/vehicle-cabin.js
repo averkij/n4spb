@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {cutBox} from './geometry-cut.js';
+import {cutBox,addDoorInterior} from './geometry-cut.js';
 
 // Fittings in the character frame (-Z forward, -X driver side). The native
 // vehicle factories keep their established +Z/+X frame and damage coordinates.
@@ -13,15 +13,16 @@ export function createVehicleCabin(ctx,vehicle){
   if(vehicle.kind==='boat'||vehicle.model.placeholder)return null;
   const model=vehicle.model,spec=vehicle.spec;
   let fit=vehicle.def.traffic?null:GARAGE_CABINS[vehicle.id];
-  if(!fit&&model.cabin){const c=model.cabin;fit={seat:[-c.seat[0],c.seat[1],-c.seat[2]],wheel:[-c.wheel[0],c.wheel[1],-c.wheel[2]],floor:c.floor,front:c.doorFront,rear:c.doorRear,roof:model.seat?.roofY||spec.hgt};}
+  if(!fit&&model.cabin){const c=model.cabin;fit={seat:[-c.seat[0],c.seat[1],-c.seat[2]],wheel:[-c.wheel[0],c.wheel[1],-c.wheel[2]],floor:c.floor,front:c.doorFront,rear:c.doorRear,roof:model.seat?.roofY||spec.hgt,entrySide:c.entrySide??-1,entryZ:c.entryZ,entryFloor:c.entryFloor,cabinFront:c.cabinFront,cabinRear:c.cabinRear};}
   if(!fit){
     const seat=model.seat||{},roof=seat.roofY||Math.min(spec.hgt,2.35),x=seat.x||Math.min(.42,spec.W*.22);
     const hipY=Math.max(.3,roof-.91),z=seat.z??-.10,wheelY=seat.wy??hipY+.48,wheelZ=seat.wz??z+.48;
     fit={seat:[-x,hipY,-z],wheel:[-x,wheelY,-wheelZ],floor:Math.max(.15,hipY-.28),front:wheelZ+.38,rear:z-.58,roof};
   }
   const hw=spec.W/2,frame=new THREE.Group();frame.rotation.y=Math.PI;model.root.add(frame);
-  const config={...fit,id:vehicle.id,halfWidth:hw,halfLength:Math.max(spec.front,-spec.rear),height:fit.roof,
-    hinge:[-hw,fit.floor+.4,-fit.front],handle:[-hw-.025,fit.floor+.48,-fit.rear-.16]};
+  const side=fit.entrySide??-1,doorFloor=fit.entryFloor??fit.floor;
+  const config={...fit,id:vehicle.id,halfWidth:hw,halfLength:Math.max(spec.front,-spec.rear),frontExtent:spec.front,height:fit.roof,
+    hinge:[side*hw,doorFloor+.4,-fit.front],handle:[side*(hw+.025),doorFloor+(side===1?.78:.48),-fit.rear-.16]};
   const cabin={root:frame,spec:config,door:new THREE.Group(),handle:new THREE.Vector3(),npc:null,panels:[],occupied:true,npcTime:-1,npcOrigin:null,doorAmount:0};
   cabin.door.position.set(...config.hinge);frame.add(cabin.door);
   cabin.handle.set(...config.handle).sub(cabin.door.position);
@@ -29,21 +30,23 @@ export function createVehicleCabin(ctx,vehicle){
   if(model.body?.geometry&&model.glass?.geometry){
     // Factories provide private body/glass/livery buffers for each model.
     // Release each replaced shell after the splitter has copied its attributes.
-    const shell=model.body.geometry,hollow=cutBox(shell,[-hw+.17,fit.floor+.06,fit.rear-.22],[hw-.17,fit.roof-.07,fit.front+.10]);
+    const shell=model.body.geometry,hollow=cutBox(shell,[-hw+.17,doorFloor+.06,(fit.cabinRear??fit.rear)-.22],[hw-.17,fit.roof-.07,(fit.cabinFront??fit.front)+.10]);
     model.body.geometry=hollow.outside;shell.dispose();hollow.inside.dispose();
     for(const mesh of [model.body,model.glass,...(model.liveryMeshes||[])]){
-      const original=mesh.geometry,split=cutBox(original,[hw*.63,fit.floor-.01,fit.rear],[hw+.3,fit.roof-.045,fit.front]);
+      const original=mesh.geometry,split=cutBox(original,[side===1?-hw-.3:hw*.63,doorFloor-.01,fit.rear],[side===1?-hw*.63:hw+.3,Math.min(fit.roof-.045,side===1?2.55:Infinity),fit.front]);
+      if(mesh===model.body)addDoorInterior(split.inside);
       mesh.geometry=split.outside;original.dispose();const panel=new THREE.Mesh(split.inside,mesh.material);panel.name=mesh.name;panel.castShadow=mesh.castShadow;panel.receiveShadow=true;
       model.root.add(panel);model.root.updateMatrixWorld(true);cabin.door.attach(panel);cabin.panels.push(panel);
     }
   }
   const material=ctx.mat.toon('#30343a',{paint:0,name:'vehicle-cabin'});
   const box=(w,h,d,x,y,z)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;frame.add(mesh);return mesh;};
-  for(const x of [fit.seat[0],-fit.seat[0]]){box(.43,.08,.43,x,fit.seat[1]-.07,fit.seat[2]+.04);box(.43,.48,.08,x,fit.seat[1]+.2,fit.seat[2]+.25);box(.25,.14,.08,x,fit.seat[1]+.48,fit.seat[2]+.26);}
-  box(spec.W-.38,.04,fit.front-fit.rear,0,fit.floor-.04,-(fit.front+fit.rear)/2);
+  for(const x of (spec.bus?[fit.seat[0]]:[fit.seat[0],-fit.seat[0]])){box(.43,.08,.43,x,fit.seat[1]-.07,fit.seat[2]+.04);box(.43,.48,.08,x,fit.seat[1]+.2,fit.seat[2]+.25);box(.25,.14,.08,x,fit.seat[1]+.48,fit.seat[2]+.26);}
+  box(spec.bus?spec.W*.5:spec.W-.38,.04,(fit.cabinFront??fit.front)-(fit.cabinRear??fit.rear),spec.bus?-spec.W*.2:0,fit.floor-.04,-((fit.cabinFront??fit.front)+(fit.cabinRear??fit.rear))/2);
+  if(spec.bus){box(.42,.16,.9,hw-.17,.28,fit.entryZ);box(.4,.16,.9,hw-.52,.51,fit.entryZ);box(.4,.16,.9,hw-.86,.76,fit.entryZ);}
   // Factory setView() knows only the original shell. Keep added panels/cabin
   // aligned with cockpit visibility and never resurrect the old dummy driver.
-  const setView=model.setView.bind(model);model.setView=inside=>{setView(inside);frame.visible=!!vehicle.def.traffic||!inside;if(model.driver)model.driver.visible=false;};
+  const setView=model.setView.bind(model);model.setView=inside=>{setView(inside);frame.visible=!!vehicle.def.traffic||!inside;if(vehicle.def.traffic)for(const panel of cabin.panels)if(panel.material===model.glass.material)panel.visible=!inside;if(model.driver)model.driver.visible=false;};
   if(model.driver)model.driver.visible=false;
   vehicle.cabin=cabin;return cabin;
 }

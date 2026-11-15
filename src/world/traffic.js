@@ -75,7 +75,7 @@ export async function build(ctx) {
   let plan = DBG.includes('nopark') ? { cars: [], stats: {} } : planParked(ctx, st);
   if (DBG.includes('gallery')) plan = { cars: gallery(ctx), stats: {} };
   const parkedRecs = plan.cars.map((p) => ({
-    kind: p.kind, x: p.x, y: p.y, z: p.z, c: p.c, s: p.s, color: new THREE.Color(p.color), plate: p.plate, lamp: null, driver: archOf(p.kind).bus ? p.driver : true, pax: p.pax, taxi: p.taxi, police: !!p.police, amb: !!p.amb, route: undefined, tips: null,
+    kind: p.kind, x: p.x, y: p.y, z: p.z, c: p.c, s: p.s, color: new THREE.Color(p.color), plate: p.plate, lamp: null, driver: archOf(p.kind).tram ? p.driver : true, pax: p.pax, taxi: p.taxi, police: !!p.police, amb: !!p.amb, route: undefined, tips: null,
   }));
   for (const [index, p] of plan.cars.entries()) {
     const a = archOf(p.kind), ox = Math.sin(p.rotY) * (a.front + a.rear) / 2, oz = Math.cos(p.rotY) * (a.front + a.rear) / 2;
@@ -182,13 +182,14 @@ export async function build(ctx) {
           const kind = parts ? parts[0] : v.kind;
           rec = v.rec = { kind, x: 0, y: 0.03, z: 0, c: 1, s: 0, color: new THREE.Color(v.color), plate: v.plate, lamp: [0, 0, 0], driver: true, pax: v.pax, taxi: v.taxi, police: v.police, amb: v.amb, route: v.route, door: 0, tips: null, pole: fleet.K[kind].model.pole || null };
           if (parts) v.rec2 = { kind: parts[1], x: 0, y: 0.03, z: 0, c: 1, s: 0, color: rec.color, plate: v.plate, lamp: [0, 0, 0], driver: false, pax: false, taxi: false, police: false, amb: false, route: undefined, door: 0, tips: null, pole: null };
+          if(parts){rec.logicalKind=v.kind;rec.trailer=v.rec2;}
         }
         // Rapier owns the pose after impact. Do not put the wreck back on its lane.
-        if (rec.wrecked) { fleet.push(rec);takeovers.register(rec,v);continue; }
+        if (rec.wrecked||v.rec2?.wrecked) { fleet.push(rec);if(v.rec2)fleet.push(v.rec2);takeovers.register(rec,v);continue; }
         const x = v.px + (v.x - v.px) * alpha, z = v.pz + (v.z - v.pz) * alpha;
         let dr = v.rot - v.prot; dr -= TAU * Math.round(dr / TAU);
         const rot = v.prot + dr * alpha;
-        rec.x = x; rec.z = z; rec.c = Math.cos(rot); rec.s = Math.sin(rot); rec.door = v.door;
+        rec.x = x; rec.z = z; rec.c = Math.cos(rot); rec.s = Math.sin(rot); rec.door = v.door;rec.route=v.route;
         if (deckY) lift(rec, x, z, rot, v.wb);
         rec.lamp[0] = head; rec.lamp[1] = v.brake ? 2.1 + 0.4 * nt : tailBase; rec.lamp[2] = 0;
         if (rec.pole) {

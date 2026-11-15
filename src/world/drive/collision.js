@@ -92,22 +92,27 @@ export function createCarCollisions(physics, spec) {
         const q = carContact(car, car.collisionSpec || spec, b, contact); if (!q) continue;
         touched = true;
         const { nx, nz, x, z } = q, rx = x - car.x, rz = z - car.z;
+        // Models may be authored around an axle (the articulated bus origin is
+        // 3.45 m ahead of its centre). Inertia and angular point velocities use
+        // the mass centre; cosmetic damage coordinates keep the model origin.
+        const crx = rx - Math.sin(car.yaw) * spec.centerZ;
+        const crz = rz - Math.cos(car.yaw) * spec.centerZ;
         car.x += nx * (q.depth + 0.0001); car.z += nz * (q.depth + 0.0001);
         const source = b.source;
         const trx = x - (source?.cx ?? b.cx), trz = z - (source?.cz ?? b.cz);
         const invMass = (source?.invMassRatio || 0) * massK, targetInertia = source?.inertia || 1;
         const ovx = (source?.vx || 0) + (source?.spin || 0) * trz, ovz = (source?.vz || 0) - (source?.spin || 0) * trx;
-        let vx = car.vx + car.impactSpin * rz - ovx;
-        let vz = car.vz - car.impactSpin * rx - ovz;
+        let vx = car.vx + car.impactSpin * crz - ovx;
+        let vz = car.vz - car.impactSpin * crx - ovz;
         const vn = vx * nx + vz * nz;
         if (vn >= 0) continue;
-        const lever = rz * nx - rx * nz;
+        const lever = crz * nx - crx * nz;
         const targetLever = trz * nx - trx * nz;
         const impulse = -(1 + (-vn > 2 ? 0.08 : 0)) * vn / (1 + lever * lever / inertia + invMass * (1 + targetLever ** 2 / targetInertia));
         car.vx += impulse * nx; car.vz += impulse * nz;
         car.impactSpin += lever * impulse / inertia;
-        const tx = -nz, tz = nx, tangentLever = rz * tx - rx * tz;
-        vx = car.vx + car.impactSpin * rz - ovx; vz = car.vz - car.impactSpin * rx - ovz;
+        const tx = -nz, tz = nx, tangentLever = crz * tx - crx * tz;
+        vx = car.vx + car.impactSpin * crz - ovx; vz = car.vz - car.impactSpin * crx - ovz;
         const targetTangent = trz * tx - trx * tz;
         const friction = clamp(-(vx * tx + vz * tz) / (1 + tangentLever ** 2 / inertia + invMass * (1 + targetTangent ** 2 / targetInertia)), -impulse * 0.38, impulse * 0.38);
         car.vx += friction * tx; car.vz += friction * tz;

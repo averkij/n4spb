@@ -308,15 +308,21 @@ export function createHandling(ctx, tuning = null) {
     const maxLat = inp.hand ? T.maxLatHand : T.maxLat;
     let om;
     if (inp.hand && sp > 6) om = car.steer * Math.min(sp * T.handYaw, T.handYawMax) * sgn;
-    else { const low = sa * Math.tan(T.steerLock * car.steer) / SPEC.wb, grip = car.steer * T.yawGrip / Math.max(sa, 4) * sgn; om = Math.abs(low) < Math.abs(grip) ? low : grip; }
+    else { const low = sa * Math.tan(T.steerLock * car.steer) / (T.steerWheelbase || SPEC.wb), grip = car.steer * T.yawGrip / Math.max(sa, 4) * sgn; om = Math.abs(low) < Math.abs(grip) ? low : grip; }
     if (aloft) om *= car.air ? T.hop.airSteer : 0.15;                                           // the tyres do not bite: the jets only nudge the nose
     car.steerAngle = 0.5 * car.steer * clamp(1 - sp / 70, 0.25, 1);
     car.impactSpin *= Math.exp(-(inp.hand ? 1.8 : T.impactDecay) * h);
-    const yaw0 = car.yaw, sy0 = sy, cy0 = cy;
+    const yaw0 = car.yaw, sy0 = sy, cy0 = cy, turnX = car.x, turnZ = car.z;
     car.yaw += (om + car.impactSpin) * h; sy = Math.sin(car.yaw); cy = Math.cos(car.yaw);
+    // Keep the authored axle pivot for steering, but collision spin rotates
+    // around the mass centre. Otherwise an offset bus origin sweeps its COM
+    // sideways even when its linear velocity is zero.
+    const steerYaw = yaw0 + om * h;
+    car.x += (Math.sin(steerYaw) - sy) * SPEC.centerZ;
+    car.z += (Math.cos(steerYaw) - cy) * SPEC.centerZ;
     // a rotation may not swing a corner of the footprint into a wall, a building or the river (the car turns about its middle: steering at an obstacle used to put the body in it, and a car
     // standing in a blocked pose refuses every move): the turn is refused like a contact, the spin dies. A car that is blocked already may turn freely (it needs to get out).
-    if (carBlocked(car.x, car.z, sy, cy) && !carBlocked(car.x, car.z, sy0, cy0)) { car.yaw = yaw0; sy = sy0; cy = cy0; car.impactSpin *= 0.3; }
+    if (carBlocked(car.x, car.z, sy, cy) && !carBlocked(turnX, turnZ, sy0, cy0)) { car.yaw = yaw0; car.x = turnX; car.z = turnZ; sy = sy0; cy = cy0; car.impactSpin *= 0.3; }
     // ---- grip: the velocity follows the heading; what the tyres cannot hold slides (drift)
     let vf = car.vx * sy + car.vz * cy, vl = car.vx * cy - car.vz * sy;
     vf += nvF - vF;                                                              // the longitudinal change of this step

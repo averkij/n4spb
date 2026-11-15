@@ -39,6 +39,11 @@ export const PART_ARCH = {
 };
 export const ARTIC = { hinge: 9.2, rearAxle: 15.5, frontAxle: 2.65, midAxle: 8.45 };   // distances behind the front bumper along the path
 export const CAR_KINDS = Object.keys(ARCH).filter((k) => !ARCH[k].bus);
+export const BUS_KINDS = Object.keys(ARCH).filter(k=>ARCH[k].bus&&!ARCH[k].tram);
+export const DRIVABLE_KINDS = [...CAR_KINDS,...BUS_KINDS];
+export const ARTIC_REAR_OFFSET = ARCH.artic.front-(ARTIC.hinge+ARTIC.rearAxle)/2;
+/** Passenger-door centre in the native +Z-forward frame. */
+export const busDoorZ = kind=>({midi:3.55,coach:4.3,dd:4.1}[kind]??4);
 export const MODEL_KINDS = [...Object.keys(ARCH).filter((k) => !ARCH[k].parts), ...Object.keys(PART_ARCH)];
 export const archOf = (k) => ARCH[k] || PART_ARCH[k];
 
