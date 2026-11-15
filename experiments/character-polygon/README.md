@@ -41,7 +41,8 @@ Low perimeter walls stop the player and car. The three orange cones are visual
 steering markers outside the driving lane, not physical obstacles.
 
 Two selectable low-poly characters offer a woman in a navy dress and red beret
-(default, key 2) and a clean-shaven man in a blue overshirt with dark trousers
+(default, key 2) and a clean-shaven man in a blue overshirt, straight-leg jeans
+and a brown baseball cap
 (key 3). Each has six clips: Idle, Walk, Run, Jump, RunningJump and Sitting.
 Walking is 2.7 m/s and running is 8 m/s, with full-speed animation cadence of
 1.3x and 1.65x. Speed scales cadence during acceleration, and clips blend
@@ -92,6 +93,10 @@ variants: fitted arm/hand swing, face-surface eye placement, welded and thickene
 skirt with shared waist-seam weights, and beard removal. Its source backups live
 in the Blender session so the repair pass can be repeated without accumulating
 edits. Both scripts depend on the imported source objects and action names.
+Run `style-man.py` last for the man's broader silhouette, relaxed denim and
+head-attached baseball cap. It preserves the skinning by inverting each vertex's
+blended skin transform after reshaping the neutral pose. The waist uses a shared
+deformation across material boundaries so the shirt/jeans seam stays closed.
 
 Khronos/glTF validation has no errors. Imported rigs retain advisory
 `NODE_SKINNED_MESH_NON_ROOT` warnings; skinning,
@@ -123,6 +128,7 @@ idle flashes and action restarts; it also captures jumping and seated poses.
 It verifies the new travel speeds and animation cadence. With the review server
 running on 5186, `node experiments/character-polygon/motion-review.mjs` captures
 front/side/rear contact sheets of exact walk/run phases and close face views.
+Add `--man` to review the man instead of the default woman.
 The Blender pass was also checked across all 68 walk/run poses: finger endpoints
 remained at least 0.245 m from the body centreline and the maximum waist seam
 separation was below 0.001 mm.
@@ -131,8 +137,8 @@ available only with `?test=1`.
 
 Latest local check (2026-11-15): both test programs passed, with zero browser or
 asset errors. At 1440 × 900, a five-second uninterrupted idle sample recorded
-300 frames, median 16.7 ms and p95 16.8 ms, with 102 draws and 10,766 triangles.
+301 frames, median 16.7 ms and p95 16.8 ms, with 102 draws and 10,766 triangles.
 These are headless Edge measurements of this empty test ground, not the city.
-The two selectable GLBs total 1.06 MB (470.7 / 594.2 KB).
+The two selectable GLBs total 1.10 MB (470.7 / 625.5 KB).
 The original character reference is 393.6 KB and the car is 241.0 KB; the vendored Rapier module
 with embedded WASM is 4.34 MB. First startup includes compilation of that WASM.
