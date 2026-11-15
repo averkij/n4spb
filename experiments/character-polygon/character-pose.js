@@ -68,6 +68,7 @@ export function capturePoses(actor) {
     return actor.rig.bones.map(b=>({p:b.position.clone(),q:b.quaternion.clone(),s:b.scale.clone()}));
   };
   actor.standing=sample('Idle');actor.root.updateMatrixWorld(true);actor.standHip=position(actor.rig.hips).y-actor.root.position.y;
+  actor.standFeet=Object.fromEntries(['l','r'].map(side=>[side,position(actor.rig.legs[side].end).sub(actor.root.position)]));
   actor.seated=sample('Sitting');actor.mixer.stopAllAction();
 }
 // Explicit restoration is necessary after IK: AnimationMixer skips writes for

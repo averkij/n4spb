@@ -26,6 +26,8 @@ try {
   assert(Math.abs(diagonal - straight) < .03, 'Diagonal input must not increase walking speed');
   sim.reset(); advance(.3); sim.jump(); advance(.25); assert(sim.state.y > .6, 'Jump rises');
   advance(1); assert(sim.state.grounded && Math.abs(sim.state.y) < .06, 'Jump lands at the floor');
+  sim.reset();advance(.3);sim.jump();advance(.08);assert.equal(sim.state.jump.phase,'anticipation');assert(sim.state.grounded&&sim.state.y<.06,'Anticipation precedes the physics impulse');
+  advance(.14);assert.equal(sim.state.jump.phase,'air');assert(!sim.state.grounded&&sim.state.y>.3);advance(.8);assert.equal(sim.state.jump,null);
   sim.reset(); pose(-10, -7); advance(2, { forward: true }); assert(sim.state.z > -8.55, 'Capsule stops at wall');
   assert(sim.cameraFraction({ x: -10, y: 1.2, z: -8 }, { x: 0, y: .5, z: -5 }) < .15, 'Camera is blocked by wall');
   assert.equal(sim.cameraFraction({ x: 0, y: 1.2, z: 5 }, { x: 0, y: 1, z: 4 }), 1, 'Camera is unobstructed at spawn');

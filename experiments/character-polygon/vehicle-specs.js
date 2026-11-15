@@ -9,8 +9,8 @@ export const VEHICLES = [
    seat:[-.37,.52,.06],wheel:[-.37,1.04,-.35],floor:.24,hinge:[-.87,.7,-.82],handle:[-.9,.85,.22],radius:.31},
 ];
 export const entryPhases=occupied=>occupied?
- [['open',.42],['reach',.4],['extract',1.05],['recover',.4],['climb',1.2],['close',.48],['settle',.15]]:
- [['open',.42],['climb',1.2],['close',.48],['settle',.15]];
+ [['open',.28],['reach',.22],['extract',.55],['recover',.22],['climb',.68],['close',.28],['settle',.08]]:
+ [['open',.28],['climb',.68],['close',.28],['settle',.08]];
 
 export const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 export const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);

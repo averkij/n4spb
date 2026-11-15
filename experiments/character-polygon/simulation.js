@@ -1,5 +1,6 @@
 import RAPIER from './vendor/rapier.mjs';
 import { VEHICLES, entryPhases, entryPose } from './vehicle-specs.js';
+import {JUMPS} from './jump-timing.js';
 
 export const WALK = 2.7, RUN = 8, STEP = 1 / 60;
 export const obstacles = [
@@ -40,7 +41,7 @@ export async function createSimulation() {
   // Tire grip is resolved by the planar controller below. A low minimum contact
   // friction avoids the broad chassis/floor contact cancelling engine acceleration.
   const state = { mode: 'foot', x: 0, y: 0, z: 5, yaw: 0, vx: 0, vz: 0, vy: 0, speed: 0, grounded: true, carX: 4, carY: 0, carZ: 1, carYaw: 0, carSpeed: 0, steering: 0, animation: 'Idle', message: '', messageTime: 0, distance: 0 };
-  state.activeVehicle=0;state.nearby=-1;state.interaction=null;
+  state.activeVehicle=0;state.nearby=-1;state.interaction=null;state.jump=null;
   const exitShape = new RAPIER.Capsule(.6, .28);
   const cameraShape = new RAPIER.Ball(.19);
   let jumpQueued = false;
@@ -57,7 +58,7 @@ export async function createSimulation() {
   }
   function reset() {
     state.mode = 'foot'; state.vx = state.vz = state.vy = state.speed = state.yaw = state.carSpeed = state.steering = 0;
-    state.animation = 'Idle'; state.grounded = true; state.distance = 0; jumpQueued = false;
+    state.animation = 'Idle'; state.grounded = true; state.distance = 0; jumpQueued = false;state.jump=null;
     capsule.setEnabled(true);
     person.setTranslation({ x: 0, y: .92, z: 5 }, true);
     person.setNextKinematicTranslation({ x: 0, y: .92, z: 5 });
@@ -68,6 +69,8 @@ export async function createSimulation() {
   function enterExit() {
     if(state.mode==='enter'||state.mode==='exit')return false;
     if(state.mode==='foot') {
+      if(!state.grounded||state.jump?.phase==='anticipation'){tell('Land before entering a car');return false;}
+      state.jump=null;
       if(state.nearby<0){tell('Move closer to a car to enter');return false;}
       state.activeVehicle=state.nearby;
       const v=vehicles[state.activeVehicle],spec=v.spec;
@@ -100,13 +103,13 @@ export async function createSimulation() {
     let blocked=false;
     world.intersectionsWithShape(p,identity,exitShape,()=>{blocked=true;return false;},undefined,undefined,capsule,car);
     if(blocked){tell('Driver door is blocked. Move into open space.');return false;}
-    state.mode='exit';state.interaction={phase:'close',progress:1,time:0,index:0,occupied:false,phases:[['close',.48],['climb',1.2],['open',.42]]};
+    state.mode='exit';state.interaction={phase:'close',progress:1,time:0,index:0,occupied:false,phases:[['close',.28],['climb',.68],['open',.28]]};
     return true;
   }
   function interactionStep() {
     const t=state.interaction,v=vehicles[state.activeVehicle];
     if(t.phase==='approach') {
-      const point=t.path[0],dx=point.x-state.x,dz=point.z-state.z,d=Math.hypot(dx,dz),distance=Math.min(d,WALK*STEP);
+      const point=t.path[0],dx=point.x-state.x,dz=point.z-state.z,d=Math.hypot(dx,dz),distance=Math.min(d,WALK*1.35*STEP);
       if(d>.001){state.x+=dx/d*distance;state.z+=dz/d*distance;state.yaw+=angleDelta(state.yaw,Math.atan2(-dx,-dz))*.25;}
       state.speed=distance/STEP;state.animation='Walk';
       if(d<.04){t.path.shift();if(!t.path.length){t.index=0;t.phase=t.phases[0][0];t.time=0;t.progress=0;state.animation='Idle';}}
@@ -144,19 +147,27 @@ export async function createSimulation() {
       const length = Math.hypot(dx, dz); if (length > 1) { dx /= length; dz /= length; }
       const speed = input.run ? RUN : WALK, response = 1 - Math.exp(-14 * STEP);
       state.vx += (dx * speed - state.vx) * response; state.vz += (dz * speed - state.vz) * response;
-      if (jumpQueued && state.grounded) { state.vy = 6.5; state.grounded = false; }
+      if(jumpQueued&&state.grounded&&(!state.jump||state.jump.phase==='land')){state.jump={phase:'anticipation',time:0,clip:state.speed>WALK*1.2?'RunningJump':'Jump'};}
       jumpQueued = false;
+      if(state.jump){
+        const jump=state.jump,timing=JUMPS[jump.clip];jump.time+=STEP;
+        if(jump.phase==='anticipation'&&jump.time>=timing.anticipation){jump.phase='air';jump.time=0;state.vy=6.5;state.grounded=false;}
+        else if(jump.phase==='land'&&jump.time>=timing.recovery)state.jump=null;
+      }
       state.vy = Math.max(-30, state.vy - 20 * STEP);
       const before = person.translation();
       controller.computeColliderMovement(capsule, { x: state.vx * STEP, y: state.vy * STEP, z: state.vz * STEP });
       const delta = controller.computedMovement();
       state.grounded = controller.computedGrounded();
+      if(state.jump?.phase==='anticipation'&&!state.grounded){state.jump.phase='air';state.jump.time=0;}
+      if(state.jump?.phase==='air'&&state.grounded&&state.vy<0){state.jump.phase='land';state.jump.time=0;}
+      else if(!state.grounded&&!state.jump)state.jump={phase:'air',time:0,clip:state.speed>WALK*1.2?'RunningJump':'Jump'};
       if (state.grounded && state.vy < 0) state.vy = -.5;
       person.setNextKinematicTranslation({ x: before.x + delta.x, y: before.y + delta.y, z: before.z + delta.z });
       state.speed = Math.hypot(delta.x, delta.z) / STEP;
       state.distance += state.speed * STEP;
       if (Math.hypot(state.vx, state.vz) > .15) state.yaw += angleDelta(state.yaw, Math.atan2(-state.vx, -state.vz)) * (1 - Math.exp(-14 * STEP));
-      state.animation = !state.grounded ? (state.speed > WALK * 1.2 ? 'RunningJump' : 'Jump') : state.speed < .12 ? 'Idle' : state.speed > WALK * 1.2 ? 'Run' : 'Walk';
+      state.animation = state.jump?.clip || (state.speed < .12 ? 'Idle' : state.speed > WALK * 1.2 ? 'Run' : 'Walk');
     } else if(state.mode==='drive') {
       const v = car.linvel(), yaw = state.carYaw, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
       let speed = v.x * fx + v.z * fz;

@@ -19,6 +19,7 @@ try {
     }));
     for(const phase of ['open','extract','climb','close']){
       await page.waitForFunction(ph=>__polygon.state.interaction?.phase===ph&&__polygon.state.interaction.progress>.35,{timeout:15000},phase);
+      if(phase==='climb')assert.equal(await page.evaluate(i=>__polygon.vehicles[i].npc.reaction,car),'angry','Pulled-out driver raises and shakes his hands');
       await page.screenshot({path:`${out}/takeover-${character}-${car}-${phase}.png`});
     }
     const trace=await tracePromise,phases=[...new Set(trace.map(f=>f.state.interaction?.phase).filter(Boolean))];

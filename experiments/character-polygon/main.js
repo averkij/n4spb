@@ -7,6 +7,8 @@ import {clone} from 'three/addons/utils/SkeletonUtils.js';
 import {createVehicles,updateVehicle} from './vehicles.js';
 import {VEHICLES} from './vehicle-specs.js';
 import {animateInteraction,animateOccupant,poseDriver} from './interaction.js';
+import {jumpClipTime} from './jump-timing.js';
+import {fitJump} from './jump.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world'), start = $('start'), welcome = $('welcome');
@@ -111,13 +113,14 @@ function animateCharacter(dt) {
     const next = actions[name]; next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).play();
     if (activeAction) {
       if(name==='Sitting')activeAction.stop();
-      else next.crossFadeFrom(activeAction, name.includes('Jump') ? .12 : .2, false);
+      else next.crossFadeFrom(activeAction, name.includes('Jump') ? .06 : .16, false);
     }
     activeAction = next; animationName = name;
   }
-  if (name === 'Walk') activeAction.timeScale = 1.3 * THREE.MathUtils.clamp(s.speed / WALK, .35, 1.15);
+  if (name === 'Walk') activeAction.timeScale = 1.3 * THREE.MathUtils.clamp(s.speed / WALK, .35, s.interaction?1.4:1.15);
   if (name === 'Run') activeAction.timeScale = 1.65 * THREE.MathUtils.clamp(s.speed / RUN, .6, 1.15);
-  if (/Jump/.test(name)) activeAction.timeScale = 1.35;
+  activeAction.paused=!!s.jump;
+  if(s.jump){activeAction.time=jumpClipTime(s.jump,s.vy);activeAction.timeScale=1;}
   mixer.update(dt);
   for(let i=0;i<vehicles.length;i++)updateVehicle(vehicles[i],sim.vehicles[i],dt);
   const vehicle=vehicles[s.activeVehicle];sedan=vehicle.root;
@@ -125,6 +128,7 @@ function animateCharacter(dt) {
   const driving=s.mode==='drive',interacting=!!s.interaction,view=driving?driveView:footView;
   character.visible=interacting||view!==2;
   character.position.set(s.x,s.y,s.z);character.rotation.set(0,s.yaw,0);
+  if(s.jump)fitJump(characters[characterIndex],s.jump,s.y);
   if(driving)poseDriver(characters[characterIndex],vehicle,s.steering);
   else if(interacting&&s.interaction.phase!=='approach')animateInteraction(characters[characterIndex],vehicle,s.interaction);
 
@@ -266,6 +270,7 @@ async function boot() {
       const local=bone=>sedan.worldToLocal(bone.getWorldPosition(new THREE.Vector3())).toArray();
       return {hips:local(poseRig.hips),head:local(poseRig.head),left:local(poseRig.arms.l.end),right:local(poseRig.arms.r.end)};
     },
+    get bodyPose(){character.updateWorldMatrix(true,true);const p=b=>b.getWorldPosition(new THREE.Vector3()).toArray();return {hips:p(poseRig.hips),head:p(poseRig.head),leftFoot:p(poseRig.legs.l.end),rightFoot:p(poseRig.legs.r.end)};},
     get vehicles(){return vehicles;},get vehicleStates(){return sim.vehicles.map(({body,collider,spec,...v})=>({...v,id:spec.id}));},
     scene, get character() { return character; }, get sedan(){return sedan;}, camera,
   };

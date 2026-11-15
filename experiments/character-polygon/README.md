@@ -58,8 +58,8 @@ The original blue sedan remains available as an empty car.
 
 Both city cars start with the original Kobi male character at the wheel. E runs
 an approach, door-open, reach, extraction, recovery, climb-in, close and settle
-sequence. After approaching, an occupied-car takeover takes about 4.1 seconds;
-empty entry and exit take about 2.25 / 2.1 seconds. The NPC steps out and walks
+sequence. After approaching, an occupied-car takeover takes about 2.3 seconds;
+empty entry and exit take about 1.32 / 1.24 seconds. The NPC steps out, raises and shakes his hands angrily for 2.2 seconds, then walks
 away. Hands track the door handle, occupant's shoulders and steering wheel;
 feet clear the sill, and the player ducks before moving under the roof. These
 are authored procedural poses and two-bone IK on the existing low-poly rigs,
@@ -78,6 +78,13 @@ pose, excluding its standing lead-in. Two-bone arm/leg IK fits the driver to the
 seat, steering-wheel grips and footwell. `driving-test.mjs` checks both drivers
 for 9.5 seconds each (beyond the old clip wrap), rejecting head-height flashes
 and hands that miss the steering-wheel targets.
+
+Jumping uses a grounded 120-140 ms knee-bend before the physics impulse. The
+clip's airborne pose follows actual vertical velocity, and contact starts a
+short landing recovery. Baked upward root motion is removed so it cannot add a
+second lift on top of physics. `jump-test.mjs` checks standing and running jumps
+for both characters, including grounded preparation, uninterrupted clip choice,
+physical apex, visual root height and landing.
 
 Physics uses Rapier at a fixed 60 Hz: a kinematic capsule with collision sliding,
 ground snapping and small-step handling, plus three dynamic cars with an arcade planar
@@ -141,6 +148,7 @@ node experiments/character-polygon/playtest.mjs
 # With the review server on 5186:
 node experiments/character-polygon/driving-test.mjs
 node experiments/character-polygon/takeover-test.mjs
+node experiments/character-polygon/jump-test.mjs
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/civilian.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/sedan.glb
 npx --yes @gltf-transform/cli validate experiments/character-polygon/assets/woman-beret.glb
@@ -170,7 +178,7 @@ available only with `?test=1`.
 Latest local check (2026-11-15): simulation, browser movement/driving, seated
 loop regression and the four character/car takeover combinations passed with
 zero browser or asset errors. The takeover test samples every frame for pelvis
-continuity (largest observed step 0.072 m), checks wheel grips, all stages,
+continuity (largest observed step 0.130 m), checks wheel grips, all stages,
 re-entry, input locking, pause/resume and reset. Both original seated-loop checks
 sampled 571 frames over 9.5 seconds without a head-height flash. At 1440 x 900,
 a five-second idle sample recorded 300 frames, median 16.7 ms and p95 16.8 ms,

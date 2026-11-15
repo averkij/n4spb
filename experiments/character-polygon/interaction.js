@@ -12,7 +12,7 @@ function posed(actor,vehicle,hip,sit,yaw=0,lean=0) {
 function driver(actor,vehicle,steering=0) {
   blendPose(actor,1);actor.root.rotation.set(0,vehicle.root.rotation.y,0);
   const s=vehicle.spec,seat=[...s.seat];
-  if(actor===vehicle.npc){seat[1]-=.16;leanTorso(actor.rig,-.4);leanTorso({...actor.rig,chest:actor.rig.head},.4);}
+  if(actor===vehicle.npc){actor.reaction='seated';actor.animation=null;seat[1]-=.16;leanTorso(actor.rig,-.4);leanTorso({...actor.rig,chest:actor.rig.head},.4);}
   fitDriver(actor.rig,vehicle.root,seat,s.wheel,steering,s.floor-(actor===vehicle.npc ? .08 : 0));
 }
 function grip(actor,vehicle,side,target) {solveLimb(actor.rig.arms[side],target,pole(vehicle,[side==='l'?-1:1,-.6,.1]));}
@@ -34,6 +34,7 @@ export function animateInteraction(actor,vehicle,transition) {
     else {
       const hip=[...p.npcHip];hip[1]+=(npc.standHip-.94)*(1-p.npcSit)-.16*p.npcSit;
       posed(npc,vehicle,hip,p.npcSit,phase==='recover'?-Math.PI/2*(1+ease(progress)):-Math.PI/2*ease(progress),p.npcLean-.4*p.npcSit);
+      leanTorso({...npc.rig,chest:npc.rig.head},.4*p.npcSit);
       if(phase==='recover')groundFeet(npc,vehicle,p.npcHip);
       if(phase==='extract')for(const [side,sign,delay] of [['l',-1,0],['r',1,.2]]){
         const t=ease((progress-delay)/(.85-delay));
@@ -42,7 +43,13 @@ export function animateInteraction(actor,vehicle,transition) {
         solveLimb(npc.rig.legs[side],vehicle.root.localToWorld(foot),pole(vehicle,[-1,1,0]));
       }
       // The passenger braces against the door frame while being pulled out.
-      if(phase==='extract')grip(npc,vehicle,'r',world(vehicle,[-spec.halfWidth,.9,spec.seat[2]+.23]));
+      if(phase==='extract'){
+        const release=ease(progress/.3);
+        const right=world(vehicle,[spec.wheel[0]+.165,spec.wheel[1]+.025,spec.wheel[2]+.045]);
+        grip(npc,vehicle,'r',right.lerp(world(vehicle,[-spec.halfWidth,.9,spec.seat[2]+.23]),release));
+        const left=world(vehicle,[spec.wheel[0]-.165,spec.wheel[1]+.025,spec.wheel[2]+.045]);
+        grip(npc,vehicle,'l',left.lerp(npc.rig.arms.l.end.getWorldPosition(new THREE.Vector3()),release));
+      }
     }
   }
   const handle=vehicle.door.localToWorld(vehicle.handle.clone());
@@ -82,14 +89,27 @@ export function animateOccupant(vehicle,state,dt,activeTransition) {
   if(activeTransition?.occupied&&['extract','recover'].includes(activeTransition.phase))return;
   if(state.occupied){driver(actor,vehicle);return;}
   if(state.npcTime<0)return;
-  const elapsed=state.npcTime,distance=Math.min(5,elapsed*1.45),spec=vehicle.spec;
+  const elapsed=state.npcTime,distance=Math.min(5,Math.max(0,elapsed-2.2)*1.45),spec=vehicle.spec;
+  const origin=state.npcOrigin,c=Math.cos(origin.yaw),s=Math.sin(origin.yaw);
+  const x=-spec.halfWidth-1.15,z=spec.seat[2]+1.2+distance;
+  actor.root.position.set(origin.x+c*x+s*z,origin.y+.025,origin.z-s*x+c*z);
+  if(elapsed<2.2){
+    actor.reaction='angry';blendPose(actor,0);
+    actor.root.rotation.set(0,origin.yaw+Math.PI+Math.PI/2*ease(elapsed/.25),0);
+    const intensity=ease(elapsed/.2)*ease((2.2-elapsed)/.25);
+    leanTorso(actor.rig,.06*intensity);
+    for(const [side,sign] of [['l',-1],['r',1]]){
+      const wave=Math.sin(elapsed*19+sign*.6),current=actor.rig.arms[side].end.getWorldPosition(new THREE.Vector3());
+      const raised=actor.root.localToWorld(vec([sign*(.34+.07*wave),1.66+.1*wave,-.24]));
+      solveLimb(actor.rig.arms[side],current.lerp(raised,intensity),vec([sign,-.2,0]).applyQuaternion(actor.root.quaternion));
+    }
+    return;
+  }
+  actor.reaction=distance<5?'walking':'idle';
   const name=distance<5?'Walk':'Idle';
   if(actor.animation!==name){actor.mixer.stopAllAction();actor.actions[name].reset().play();actor.animation=name;}
   actor.mixer.update(dt);
-  const origin=state.npcOrigin,c=Math.cos(origin.yaw),s=Math.sin(origin.yaw);
-  const x=-spec.halfWidth-1.15,z=spec.seat[2]+1.2+distance;
-  actor.root.rotation.set(0,origin.yaw+Math.PI,0);
-  actor.root.position.set(origin.x+c*x+s*z,origin.y+.025,origin.z-s*x+c*z);
+  actor.root.rotation.set(0,origin.yaw+Math.PI+Math.PI/2*(1-ease((elapsed-2.2)/.25)),0);
 }
 
 export {driver as poseDriver};
