@@ -21,7 +21,16 @@ if(!normal)url.searchParams.set('baked','force');else url.searchParams.delete('b
 for(const k of ['guard','gate','gates'])url.searchParams.set(k,'0');
 const edge=['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync);
 const browser=await puppeteer.launch({executablePath:edge,headless:true,protocolTimeout:180000,args:['--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist','--disable-extensions']});
-const errors=[],results=[];let page;
+const errors=[],results=[];let page,currentCase=null;
+async function diagnostics(){return page.evaluate(()=>{
+ const ctx=window.__ctx,d=ctx?.drive,p=ctx?.playerObj,t=d?.interaction,o=window.__busOriginal,r=o?.record;
+ const near=p&&ctx.services.traffic?.nearestEnterable(p.pos.x,p.pos.z,5.4),v=o&&d?.vehicleById(o.descriptor.id);
+ return{player:p?{position:p.pos.toArray(),fly:p.fly,riding:!!p.riding,jump:p.jump?.phase,inputLock:p.inputLock}:null,
+   drive:{active:d?.active,vehicle:d?.vehicle?.id,interacting:d?.interacting},interaction:t?{vehicle:t.vehicle.id,phase:t.phase,progress:t.progress,time:t.time,occupied:t.occupied,path:t.path.map(q=>q.toArray())}:null,
+   source:o?{id:o.descriptor.id,kind:o.descriptor.kind,status:o.descriptor.status,claimed:r?.claimed,driver:r?.driver,x:r?.x,y:r?.y,z:r?.z,stillSimulated:ctx.services.traffic.sim.vehicles.includes(o.vehicle)}:null,
+   promoted:v?{id:v.id,parked:v.parked,occupied:v.cabin?.occupied,door:v.cabin?.doorAmount}:null,
+   prompt:ctx?.interact?.update()?.id,nearest:near?{id:near.id,kind:near.kind,speed:near.speed}:null,toasts:window.__busToasts||[],trace:(window.__busTrace||[]).slice(-150),runtimeErrors:window.__errors||[]};
+ }).catch(error=>({diagnosticsError:String(error)}));}
 async function capture(name,clear=false){
  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  const png=await page.screenshot({path:path.join(out,`${name}.png`)});
@@ -37,17 +46,21 @@ try{
  await page.waitForFunction(()=>document.body.classList.contains('loaded')&&window.__ctx?.characters?.ready&&__ctx.services.traffic?.nearestEnterable,{timeout:180000});
  if(normal)assert(await page.evaluate(()=>!!__ctx.baked),'normal/deployed run requires baked world');
  await page.click('#go');await page.waitForFunction(()=>getComputedStyle(document.getElementById('intro')).visibility==='hidden');await page.evaluate(()=>document.exitPointerLock());
- await page.evaluate(()=>{window.__busTrace=[];__ctx.onUpdate(()=>{const d=__ctx.drive,t=d.interaction;__busTrace.push({phase:t?.phase,door:t?.vehicle.cabin.doorAmount,npc:t?.vehicle.cabin.npc?.reaction||d.vehicle.cabin?.npc?.reaction});if(__busTrace.length>1000)__busTrace.shift();});});
+ await page.evaluate(()=>{window.__busTrace=[];window.__busToasts=[];const toast=__ctx.ui.toast;__ctx.ui.toast=function(...args){__busToasts.push(String(args[0]));if(__busToasts.length>20)__busToasts.shift();return toast.apply(this,args);};__ctx.onUpdate(()=>{const d=__ctx.drive,t=d.interaction;__busTrace.push({vehicle:t?.vehicle.id,phase:t?.phase,progress:t?.progress,door:t?.vehicle.cabin.doorAmount,npc:t?.vehicle.cabin.npc?.reaction||d.vehicle.cabin?.npc?.reaction});if(__busTrace.length>1000)__busTrace.shift();});});
  await new Promise(r=>setTimeout(r,1500));
  const natural=await page.evaluate(()=>{const p=__ctx.playerObj.pos;return __ctx.services.traffic.sim.vehicles.filter(v=>v.bus&&!v.tram&&!v.arch.tour&&!v.wrecked&&v.rec).sort((a,b)=>Math.hypot(a.x-p.x,a.z-p.z)-Math.hypot(b.x-p.x,b.z-p.z))[0]?.kind;});
  assert(natural,'at least one naturally routed city bus exists');
  const kinds=[natural,...['bus','midi','artic','trolley','trolley2','dd','coach'].filter(k=>k!==natural)];
  for(const [index,kind] of kinds.entries()){
+  currentCase={index,kind,stage:'prepare'};
   const prepared=await page.evaluate(async({kind,naturalOnly})=>{
     const {ARCH,busDoorZ,ARTIC_REAR_OFFSET}=await import(new URL('./src/world/traffic/fleetdata.js',location.href));
     const {carContact}=await import(new URL('./src/world/drive/collision.js',location.href));
     const ctx=__ctx,sim=ctx.services.traffic.sim,p=ctx.playerObj,a=ARCH[kind];
-    if(!naturalOnly&&kind!=='bus'){
+    // Match the actual short approach to entryPose('open',0): a clear staging
+    // point alone does not guarantee the final 37 cm beside the door is free.
+    const approachClear=pose=>{const c=Math.cos(pose.yaw),s=Math.sin(pose.yaw),z=busDoorZ(kind)-.42;for(let i=0;i<=4;i++){const x=-a.wid/2-.75+.37*i/4;if(ctx.physics.columnBlocked(pose.x+c*x+s*z,pose.z-s*x+c*z,.28,pose.y+.3,pose.y+1.6))return false;}return true;};
+    if(!naturalOnly){
       const v=sim.vehicles.filter(q=>!q.tram&&!q.wrecked&&!q.retired).sort((x,y)=>Math.hypot(x.x-p.pos.x,x.z-p.pos.z)-Math.hypot(y.x-p.pos.x,y.z-p.pos.z))[0],spec={...a,W:a.wid,centerZ:(a.front+a.rear)/2};
       if(!v)return null;
       const spots=[];
@@ -66,6 +79,7 @@ try{
         const c=Math.cos(pose.yaw),s=Math.sin(pose.yaw),ex=-a.wid/2-.75,ez=busDoorZ(kind)-.42,x=pose.x+c*ex+s*ez,z=pose.z-s*ex+c*ez;
         if(ctx.physics.columnBlocked(x,z,.3,pose.y+.2,pose.y+1.7))continue;
         await ctx.regions?.ensureAt(x,z);
+        if(!approachClear(pose)||[...ctx.physics.querySolids(pose.x,pose.z,a.len+4)].some(b=>b.source?.vehicle!==v&&carContact(pose,spec,b)))continue;
         Object.assign(v,{kind,arch:a,len:a.len,wid:a.wid,wb:a.wb,fo:a.front-a.wb/2,bus:true,trolley:!!a.trolley,route:a.tour?null:60,rec:null,rec2:null,x:pose.x,px:pose.x,z:pose.z,pz:pose.z,rot:pose.yaw,prot:pose.yaw,x2:pose.x+s*ARTIC_REAR_OFFSET,px2:pose.x+s*ARTIC_REAR_OFFSET,z2:pose.z+c*ARTIC_REAR_OFFSET,pz2:pose.z+c*ARTIC_REAR_OFFSET,rot2:pose.yaw,prot2:pose.yaw,v:0,wrecked:true,collisionUntil:sim.time+180});
         // Wreck-owned poses are not overwritten by the lane solver. No wreck
         // body is created: this is only a frozen test fixture until normal claim.
@@ -78,41 +92,45 @@ try{
       }
       throw Error(`No clear deterministic lane fixture for ${kind}; searched ${spots.length} points`);
     }
-    const candidates=sim.vehicles.filter(v=>!v.tram&&!v.wrecked&&!v.rec?.wrecked&&(!naturalOnly||v.kind===kind)&&(naturalOnly||Math.hypot(v.x-p.pos.x,v.z-p.pos.z)<800)).sort((x,y)=>(x.kind===kind?0:1)-(y.kind===kind?0:1)||Math.hypot(x.x-p.pos.x,x.z-p.pos.z)-Math.hypot(y.x-p.pos.x,y.z-p.pos.z));
+    const candidates=sim.vehicles.filter(v=>v.kind===kind&&!v.wrecked&&!v.rec?.wrecked&&!v.retired).sort((x,y)=>Math.hypot(x.x-p.pos.x,x.z-p.pos.z)-Math.hypot(y.x-p.pos.x,y.z-p.pos.z));
     for(const v of candidates){
-      const fields=['kind','arch','len','wid','wb','fo','bus','trolley','route','rec','rec2','collisionUntil','v'],saved=Object.fromEntries(fields.map(k=>[k,v[k]]));let selected=false;
+      const saved={collisionUntil:v.collisionUntil,v:v.v};let selected=false;
       try{
-      const native=v.kind===kind;
-      if(!native){Object.assign(v,{kind,arch:a,len:a.len,wid:a.wid,wb:a.wb,fo:a.front-a.wb/2,bus:true,trolley:!!a.trolley,route:a.tour?null:60,rec:null,rec2:null});}
       v.collisionUntil=sim.time+180;v.v=0;
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
       const r=v.rec;if(!r)continue;
       const ex=-a.wid/2-.75,ez=busDoorZ(kind)-.42,x=r.x+r.c*ex+r.s*ez,z=r.z-r.s*ex+r.c*ez;
       await ctx.regions?.ensureAt(x,z);
       if(ctx.physics.columnBlocked(x,z,.3,r.y+.2,r.y+1.7))continue;
+      if(!approachClear({x:r.x,y:r.y,z:r.z,yaw:Math.atan2(r.s,r.c)}))continue;
       const tx=r.x+r.c*(-a.wid/2-.4)+r.s*busDoorZ(kind),tz=r.z-r.s*(-a.wid/2-.4)+r.c*busDoorZ(kind);
       p.setPose(x,z,Math.atan2(-(tx-x),-(tz-z))*180/Math.PI,0,r.y+.4,{stand:true});
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
       const d=ctx.services.traffic.nearestEnterable(tx,tz,.5);if(!d||d.kind!==kind)continue;
       if(ctx.services.traffic.nearestEnterable(p.pos.x,p.pos.z,5.4)!==d||ctx.interact.update()?.id!=='drive-traffic')continue;
-      // A larger synthetic body must fit here. In particular, replacing a short
-      // sedan in a queue with an 18 m bus must not manufacture overlapping buses.
+      // The native case must also begin without unresolved body overlap.
       const spec={...a,W:a.wid,centerZ:(a.front+a.rear)/2},pose={x:r.x,y:r.y,z:r.z,yaw:Math.atan2(r.s,r.c)};
       const blocked=[...ctx.physics.querySolids(r.x,r.z,a.len+2)].some(b=>b.source?.vehicle!==v&&b.source?.record!==r&&(!v.rec2||b.source?.record!==v.rec2)&&carContact(pose,spec,b));
       if(blocked)continue;
       selected=true;
       window.__busOriginal={vehicle:v,record:r,descriptor:d};window.__busTrace.length=0;
-      return {id:d.id,kind,color:d.color.getHexString(),plate:d.plate,route:d.route,native};
+      return {id:d.id,kind,color:d.color.getHexString(),plate:d.plate,route:d.route,native:true};
       }finally{if(!selected)Object.assign(v,saved);}
     }
     return null;
   },{kind,naturalOnly:index===0});
+  currentCase.prepared=prepared;currentCase.stage='entry-start';
   assert(prepared,`clear front passenger doorway found for ${kind}`);
-  await page.waitForFunction(()=>__ctx.interact.update()?.id==='drive-traffic',{timeout:7000});await page.keyboard.press('KeyE');
+  await page.waitForFunction(id=>{const ctx=__ctx,p=ctx.playerObj;return ctx.interact.update()?.id==='drive-traffic'&&ctx.services.traffic.nearestEnterable(p.pos.x,p.pos.z,5.4)?.id===id;},{timeout:7000},prepared.id);
+  currentCase.beforeEntry=await diagnostics();await page.keyboard.press('KeyE');
+  await page.waitForFunction(id=>__ctx.drive.interaction?.vehicle.id===id,{timeout:3000,polling:'raf'},prepared.id);
+  currentCase.started=await diagnostics();assert(currentCase.started.interaction?.occupied,`${kind}: entry starts with the source NPC`);currentCase.stage='extract';
   await page.waitForFunction(()=>__ctx.drive.interaction?.phase==='extract'&&__ctx.drive.interaction.progress>.45,{timeout:25000,polling:'raf'});
   await capture(`${kind}-extract`,true);
+  currentCase.stage='climb';
   await page.waitForFunction(()=>__ctx.drive.interaction?.phase==='climb'&&__ctx.drive.interaction.progress>.4,{timeout:25000,polling:'raf'});
   await capture(`${kind}-climb`,true);
+  currentCase.stage='drive';
   await page.waitForFunction(()=>__ctx.drive.active&&!__ctx.drive.interacting,{timeout:25000,polling:'raf'});
   assert.deepEqual(await page.evaluate(()=>window.__errors||[]),[],'caught production update errors');
   assert.deepEqual(errors,[],'production update loop remains healthy after boarding');
@@ -127,13 +145,16 @@ try{
   // ordinary idle return settle before reviewing the forward driver's view.
   await page.evaluate(()=>__ctx.drive.setView(2));await new Promise(r=>setTimeout(r,2500));await capture(`${kind}-cockpit`,true);await page.evaluate(()=>__ctx.drive.setView(0));
   const damage=await page.evaluate(()=>{const d=__ctx.drive;d.damage.hit({type:'hit',v:14,localX:0,localZ:d.vehicle.spec.front,localNX:0,localNZ:-1});return d.damage.amount;});assert(damage>0&&damage<1);
+  currentCase.stage='exit';
   assert(await page.evaluate(()=>__ctx.drive.requestExit()));await page.waitForFunction(()=>!__ctx.drive.active&&!__ctx.drive.interacting,{timeout:25000});
+  currentCase.stage='reentry';
   const again=await page.evaluate(()=>{const d=__ctx.drive;window.__busTrace.length=0;return{ok:d.requestEnter(d.vehicle),damage:d.damage.amount,occupied:d.vehicle.cabin.occupied};});assert(again.ok&&!again.occupied);assert.equal(again.damage,damage);
   await page.waitForFunction(()=>__ctx.drive.active&&!__ctx.drive.interacting,{timeout:25000});assert(!await page.evaluate(()=>__busTrace.some(f=>f.phase==='extract')),'empty reentry does not respawn an occupant');
+  currentCase.stage='movement';
   const movement=await page.evaluate(()=>{const d=__ctx.drive,x=d.car.x,z=d.car.z;d.sim(.5,{thr:1});const moved=Math.hypot(d.car.x-x,d.car.z-z);d.sim(.7,{brk:1,hand:true});d.car.vx=d.car.vz=0;d.car.speed=0;return moved;});assert(movement>.005,`${kind} responds to throttle`);
   if(index===kinds.length-1){await page.evaluate(()=>{const d=__ctx.drive;d.damage.hit({type:'hit',v:300,localX:0,localZ:d.vehicle.spec.front,localNX:0,localNZ:-1});});await page.waitForFunction(()=>document.getElementById('wasted')?.classList.contains('on'),{timeout:5000});await page.screenshot({path:path.join(out,'bus-wasted.png')});assert.equal(await page.evaluate(()=>__ctx.drive.damage.amount),1);}
   results.push({...prepared,...entered,movement,damage});console.log(JSON.stringify(results.at(-1)));await page.evaluate(()=>__ctx.drive.exit(true));
  }
  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({passed:true,url:url.href,normal,results,errors},null,2));console.log('PASS: seven production bus variants, actual routed takeover, right-door NPC extraction/exit/reentry, driving/damage/WASTED and retained appearance');
-}catch(error){if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({passed:false,url:url.href,results,errors,error:error.stack},null,2));if(args.keepOpen){fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({endpoint:browser.wsEndpoint(),pid:process.pid}));console.log(error.stack);console.log('Browser retained for fixture diagnosis; connection details in browser.json');await new Promise(()=>{});}throw error;}
+}catch(error){const state=page?await diagnostics():null;if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({passed:false,url:url.href,currentCase,state,results,errors,error:error.stack},null,2));if(args.keepOpen){fs.writeFileSync(path.join(out,'browser.json'),JSON.stringify({endpoint:browser.wsEndpoint(),pid:process.pid}));console.log(error.stack);console.log('Browser retained for fixture diagnosis; connection details in browser.json');await new Promise(()=>{});}throw error;}
 finally{await browser.close();if(server.listening)await new Promise(r=>server.close(r));}

@@ -147,6 +147,8 @@ jobs:
           node tools/character-player-test.mjs
           node tools/visual-floor-test.mjs
           node tools/character-interaction-test.mjs
+          node tools/character-door-pose-test.mjs
+          node tools/vehicle-entry-clearance-test.mjs
           node tools/traffic-takeover-test.mjs
           node tools/bus-takeover-test.mjs
           node tools/bus-camera-test.mjs
@@ -164,7 +166,13 @@ jobs:
       - name: Aurora visitor boarding, deck inspection, open water and breakable rails
         run: node tools/area.mjs aptekarsky tools/aurora-boarding-test.mjs --integrated
       - name: Physical walking triangles and bridge decks
-        run: node tools/physics-triangle-test.mjs
+        run: |
+          node tools/physics-triangle-test.mjs
+          node tools/area.mjs palace tools/anichkov-bus-test.mjs
+      - name: Mosque overlap silhouette and fountain bench exclusions
+        run: |
+          node tools/mosque-overlap-test.mjs
+          node tools/fountain-bench-test.mjs
       - name: Avtovo water, boats, garage and building grade separation
         run: |
           node tools/area.mjs avtovo tools/water-reachable-test.mjs

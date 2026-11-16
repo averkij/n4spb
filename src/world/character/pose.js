@@ -57,7 +57,7 @@ export function fitDriver(rig,car,seat,wheel,steering=0,floor=.49) {
   for(const [side,sign] of [['l',-1],['r',1]]) {
     const target=new THREE.Vector3(sign*.165,.025,.045).applyQuaternion(turn).add(new THREE.Vector3(...wheel));
     solveLimb(rig.arms[side],car.localToWorld(target),new THREE.Vector3(sign,-.65,.1).transformDirection(car.matrixWorld));
-    const foot=new THREE.Vector3(seat[0]+sign*.105,floor,seat[2]-.66);
+    const foot=new THREE.Vector3(seat[0]+sign*.105,floor+(rig.soleOffsets?.[side]||0),seat[2]-.66);
     solveLimb(rig.legs[side],car.localToWorld(foot),new THREE.Vector3(0,1,-.4).transformDirection(car.matrixWorld));
   }
 }
@@ -69,7 +69,37 @@ export function capturePoses(actor) {
   };
   actor.standing=sample('Idle');actor.root.updateMatrixWorld(true);actor.standHip=position(actor.rig.hips).y-actor.root.position.y;
   actor.standFeet=Object.fromEntries(['l','r'].map(side=>[side,position(actor.rig.legs[side].end).sub(actor.root.position)]));
-  actor.seated=sample('Sitting');actor.mixer.stopAllAction();
+  const bounds=()=>{actor.root.updateMatrixWorld(true);actor.root.traverse(o=>{if(o.isSkinnedMesh)o.skeleton.update();});return new THREE.Box3().setFromObject(actor.root,true);};
+  const standingBounds=bounds(),soles=standingBounds.min.y;actor.rig.soleOffsets=Object.fromEntries(['l','r'].map(side=>[side,position(actor.rig.legs[side].end).y-soles]));
+  // Cache a small support hull of the head, hair and hat at load time. These
+  // vertex samples follow their real skinning during a duck, unlike a fixed
+  // offset from the head bone. No full mesh scan is needed during interaction.
+  actor.headSamples=[];const headY=position(actor.rig.head).y,dirs=[];
+  for(const x of [-1,0,1])for(const y of [-1,0,1])for(const z of [-1,0,1])if(x||y||z)dirs.push(new THREE.Vector3(x,y,z));
+  rootHeadSamples(actor,headY,dirs);
+  actor.seated=sample('Sitting');
+  // Include rigid hats and skinned hair. A few load-time samples allow a
+  // damaged low roof to make the driver duck without lowering hips through
+  // the seat or scanning mesh vertices during a frame.
+  actor.seatedClearance=[0,.2,.4,.6,.8,1,1.2].map(lean=>{blendPose(actor,1);leanTorso(actor.rig,lean);leanTorso({...actor.rig,chest:actor.rig.head},lean*.45);return{lean,top:bounds().max.y-position(actor.rig.hips).y};});
+  actor.seatedTop=actor.seatedClearance[0].top;blendPose(actor,1);
+  actor.mixer.stopAllAction();
+}
+function rootHeadSamples(actor,headY,dirs){
+  const point=new THREE.Vector3();actor.root.traverse(mesh=>{
+    if(!mesh.isMesh||!mesh.geometry?.attributes.position)return;
+    const scores=dirs.map(()=>-Infinity),indices=dirs.map(()=>-1);
+    for(let i=0;i<mesh.geometry.attributes.position.count;i++){
+      mesh.getVertexPosition(i,point);point.applyMatrix4(mesh.matrixWorld);if(point.y<headY-.15)continue;
+      for(let j=0;j<dirs.length;j++){const score=point.dot(dirs[j]);if(score>scores[j]){scores[j]=score;indices[j]=i;}}
+    }
+    const unique=[...new Set(indices.filter(i=>i>=0))];if(unique.length)actor.headSamples.push({mesh,indices:unique});
+  });
+}
+export function headTop(actor,frame){
+  let top=-Infinity;const point=new THREE.Vector3(),inverse=frame.matrixWorld.clone().invert(),matrix=new THREE.Matrix4();
+  for(const {mesh,indices}of actor.headSamples){mesh.skeleton?.update();matrix.multiplyMatrices(inverse,mesh.matrixWorld);for(const i of indices){mesh.getVertexPosition(i,point);top=Math.max(top,point.applyMatrix4(matrix).y);}}
+  return top;
 }
 // Explicit restoration is necessary after IK: AnimationMixer skips writes for
 // unchanged constant tracks, which otherwise leaves last frame's IK in place.
