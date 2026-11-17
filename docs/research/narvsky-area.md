@@ -221,3 +221,11 @@ speed, with stronger losses at higher speeds. In the coast test from 72 km/h,
 the kart holds 69.5 km/h after one second on asphalt, 57.4 km/h with two tyres
 on grass and 48.3 km/h with all four tyres on grass. These are game tuning
 values, without measured rough-surface telemetry.
+
+After rebasing on the upstream character integration, open karts board directly
+and pose the selected player rig through their model's driver callback. The
+placeholder driver mesh is removed. Both shipped rigs keep their pelvis on the
+seat, grip the actual rotating wheel and reach the pedals across yaw, pitch
+and roll changes. First-person view hides the external character as it does
+for the other vehicles. Verify the rig fit with
+`node tools/kart-driver-pose-test.mjs`.

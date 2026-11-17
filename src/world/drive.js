@@ -107,7 +107,7 @@ export async function build(ctx) {
     const { parked: p, spec } = v, sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
     const draft = v.kind === 'boat' ? (spec.draft ?? 0.45) : 0.03;      // reach below the waterline, including the cargo ship's deep hull
     v.box = ph.addBox(p.x + sy * spec.centerZ, p.z + cy * spec.centerZ, spec.W + 0.08, spec.len + 0.08, p.yaw, p.y - draft, p.y - 0.03 + spec.hgt);
-    parkedPhysics.attach(v, v.box);
+    if (v.kind !== 'kart') parkedPhysics.attach(v, v.box);
   };
   const dropBox = (v = V) => { parkedPhysics.release(v); if (v.box) { ph.remove(v.box); v.box = null; } };
   for (const v of vehicles) if (!v.def.carried) addBox(v);      // (the carried car of a hand-off has no box until it is left somewhere: the player's own spot is not a wall for him)
@@ -128,8 +128,8 @@ export async function build(ctx) {
 
   const characters=typeof window!=='undefined'&&window.location?.protocol?.startsWith('http')&&!ctx.recordBake&&player ? await createCharacters(ctx,{manualUpdate:true,maxNpcs:24}) : null;
   const interactions=characters?createCharacterInteractions(ctx,{characters,vehicles,enterNow:enter,exitNow:exit,dropBox,addBox,activeVehicle:()=>V,active:()=>state.active,view}):null;
-  function requestEnter(v){return v?.kind==='boat'||!interactions?enter(v):interactions.enter(v);}
-  function requestExit(){if(!state.active||interactions?.active)return false;return V.kind==='boat'||!interactions?exit():interactions.exit();}
+  function requestEnter(v){return !v?.cabin||!interactions?enter(v):interactions.enter(v);}
+  function requestExit(){if(!state.active||interactions?.active)return false;return !V.cabin||!interactions?exit():interactions.exit();}
   function promoteTraffic(descriptor,claim=true){
     prunePromotions(1);
     if(vehicles.filter(v=>v.kind==='traffic'&&!v.retired).length>=PROMOTED_LIMIT){ctx.ui.toast('Leave the nearby cars before taking another car');return null;}

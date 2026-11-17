@@ -4287,3 +4287,39 @@ storage on Narvsky, and 473 MiB and 1,048 MiB on Palace. Both runs sustained
 60 FPS. The normal Narvsky page also passed a reverse launch in both
 steering directions. All 2,715 products from the 21 rebuilt areas matched
 the previous revision byte for byte.
+
+## Narvskaya integration with playable characters, 15.2.0
+
+Rebased the kart work onto upstream 15.1.3 and fitted both selectable player
+rigs to the SR5 seat, steering wheel and pedals. Chrome 157, Apple M1 Pro,
+1280 × 720, Performance quality, normal fresh-bake loading. GPU jobs ran
+serially after the final bake. These are short integration smoke runs;
+there is no matched 15.1.3 baseline and they do not establish a performance
+improvement or isolate the cost of the driver change.
+
+| Run | Load | Mean / p50 / p95 frame | Frames >40 ms | Mean draw calls | Distance |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Narvsky, club SR5 | 9.4 s | 16.7 / 16.7 / 16.8 ms | 0 | 649 | 25 m in 4 s |
+| Palace, station street car | 16.3 s | 17.9 / 16.7 / 16.8 ms | 4 | 1265 | 59 m in 6 s |
+
+The kart sustained 60 FPS. The station car averaged 56 FPS, attached two
+regions and ended against the station facade after collisions; its path
+differs from the older reports above. Its largest frame was 183.4 ms,
+so occasional loading/simulation stalls remain unresolved. CDP after driving
+reported 448 MiB used heap and 537 MiB backing storage on Narvsky, and
+564 MiB and 1341 MiB at the station. A blocked external analytics request
+was excluded from scene failures; local module/asset failures remained fatal.
+
+All 21 live areas passed manifest validation with 2715 complete products,
+and closure lint passed. Normal-loading screenshots showed both actual
+player characters seated in the kart. E-key boarding and exit passed for
+both a rental and a club kart, without scene errors. The headless driver
+regression checks both rigs against moving wheel grips, seat and pedal
+positions across steering, heading, pitch and roll.
+
+Repeat the existing `tools/drive-bench.mjs` routes at Performance quality:
+Narvsky for 4 seconds from `-4745.35,3639.61,16.158`, and Palace for 6 seconds
+from its default start, with `--json --diagnostics`. For Narvsky, the local
+harness selects `narvskaya-club-1` rather than the default city car before
+the run. It also supplies the Mac Chrome executable and excludes unavailable
+external analytics. No shipping source is changed for the benchmark.

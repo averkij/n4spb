@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { kartTyres } from './handling.js';
 import { sr5Body } from './sr5-body.js';
+import { blendPose, leanTorso, placeHips, solveLimb } from '../character/pose.js';
 
 const SPEC = {
   W: 1.332, len: 1.914, hgt: .67, R: .137, tw: .16, track: 1.0, wb: 1.07,
@@ -48,7 +49,6 @@ export function loadKarts(ctx, course) {
 }
 
 const box = (x, y, z, w, h, d, tilt = 0) => new THREE.BoxGeometry(w, h, d).rotateX(tilt).translate(x,y,z);
-const round = (x, y, z, w, h, d) => new THREE.SphereGeometry(1, 10, 6).scale(w,h,d).translate(x,y,z);
 
 function buildGeometry() {
   const panels = Object.fromEntries(Object.entries(sr5Body).map(([name, { vertices, triangles }]) => {
@@ -71,9 +71,8 @@ function buildGeometry() {
     new THREE.TorusGeometry(.131,.019,6,15),
     box(0,0,0,.246,.024,.019), box(0,-.059,0,.025,.132,.02),
   ]);
-  const driver = merge([round(0,.624,-.288,.195,.222,.119), round(0,.891,-.277,.116,.126,.115),
-    round(-.15,.512,.012,.072,.062,.269), round(.15,.512,.012,.072,.062,.269)]);
-  return { ...panels, wheel, hub, steering, driver };
+  return { ...panels, wheel, hub, steering };
+
 }
 
 function createModel(ctx, geometry, club, number) {
@@ -84,6 +83,7 @@ function createModel(ctx, geometry, club, number) {
   const color = club ? ['#255db2','#2d65ba','#2e56ab'][number % 3] : ['#b73030','#c63932','#ba3a37'][number % 3];
   const add = (kind, material, parent = root) => {
     const object = new THREE.Mesh(geometry[kind], material);
+    object.name = kind;
     object.castShadow = object.receiveShadow = true;
     parent.add(object);
     return object;
@@ -96,8 +96,11 @@ function createModel(ctx, geometry, club, number) {
   const steering = add('steering', rubber);
   steering.position.set(0,.548,.112);
   steering.rotation.x = -.78;
-  const driver = add('driver', ctx.mat.toon(club ? '#283951' : '#77544c'));
-  driver.visible = false;
+  const driverFrame = new THREE.Group();
+  driverFrame.rotation.y = Math.PI;
+  root.add(driverFrame);
+  const driverSeat = new THREE.Vector3(0, .30, .22);
+  const contact = new THREE.Vector3(), bend = new THREE.Vector3();
   const numberPanel = new THREE.Group();
   numberPanel.position.set(0, .553, .275);
   numberPanel.rotation.x = Math.atan(.49);
@@ -120,13 +123,27 @@ function createModel(ctx, geometry, club, number) {
     add('wheel', rubber, spin); add('hub', alloy, spin);
     wheels.push({ pivot, spin, front });
   }
-  let cockpit = false;
   return {
     root, wheels, spec: SPEC,
-    setView(firstPerson) { cockpit = firstPerson; },
+    setView() {},
+    poseDriver(actor) {
+      blendPose(actor, 1);
+      leanTorso(actor.rig, .55);
+      driverFrame.updateWorldMatrix(true, false);
+      driverFrame.getWorldQuaternion(actor.root.quaternion);
+      placeHips(actor.rig, driverFrame.localToWorld(contact.copy(driverSeat)));
+      for (const [side, sign] of [['l', -1], ['r', 1]]) {
+        steering.updateWorldMatrix(true, false);
+        steering.localToWorld(contact.set(-sign * .112, 0, 0));
+        bend.set(sign, -.5, -.1).transformDirection(driverFrame.matrixWorld);
+        solveLimb(actor.rig.arms[side], contact, bend);
+        driverFrame.localToWorld(contact.set(sign * .105, .145 + (actor.rig.soleOffsets?.[side] ?? .04), -.60));
+        bend.set(0, 1, -.3).transformDirection(driverFrame.matrixWorld);
+        solveLimb(actor.rig.legs[side], contact, bend);
+      }
+    },
     set({x, y, z, yaw, pitch, roll, steerAngle, spin, driven}) {
       root.position.set(x,y,z); root.rotation.set(-pitch,yaw,roll);
-      driver.visible = driven && !cockpit;
       steering.rotation.z = -steerAngle*2.7;
       for (const w of wheels) {
         w.pivot.rotation.y = w.front ? steerAngle : 0;
