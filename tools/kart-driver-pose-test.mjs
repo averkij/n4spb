@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createActor } from '../src/world/character/actor.js';
 import { createMaterials } from '../src/core/materials.js';
-import { loadKarts } from '../src/world/karting/karts.js';
+import { loadKarts } from '../src/world/karting/fleet.js';
 
 globalThis.createImageBitmap = async () => ({ width: 1, height: 1 });
 globalThis.ProgressEvent ??= class {};

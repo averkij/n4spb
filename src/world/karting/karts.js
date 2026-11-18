@@ -17,35 +17,43 @@ const VARIATION = [
   [.02, -.03, .06], [-.04, .01, -.08],
 ];
 
-export function loadKarts(ctx, course) {
-  const workshop = buildGeometry();
-  return ['rental', 'club'].flatMap((fleet, side) => VARIATION.map(([launch, top, steering], index) => {
-    const num = index + 1, label = side ? 'Клубный карт' : 'Прокатный карт';
-    const labelEn = side ? 'Club kart' : 'Rental kart';
-    const stagger = num % 2 ? 0 : .18;
-    const x = -4674.9 + index*.64 + side*3.55 + stagger, z = 3559.5 + index*1.62 - side*1.28;
-    const vmax = (side ? 24.45 : 21.02) + top*.72;
-    return {
-      id: 'narvskaya-' + fleet + '-' + num, kind: 'kart', spec: SPEC,
-      parked: { x, z, yaw: .362 + (side ? Math.PI/2 : -Math.PI/2) },
-      tuning: {
-        spec: SPEC, noBoost: true, hf: .95, hr: .92, hw: .65,
-        acc: (side ? 3.55 : 3.12) * (1 + launch), vmax, engineFalloff: 1.7 + top*3,
-        drag: .00039, brake: 4.45, revAcc: 2.6, vrev: 2.2, engBrake: .53,
-        physicalReverseSteer: true, steerIn: 8.6*(1+steering), steerOut: 24, steerLock: .49*(1+steering),
-        tyres: kartTyres, kerbAt: course.kerbAt, roughnessAt: course.roughnessAt, frontMu: 1.32 + 1.17*steering*.60, rearMu: 1.38,
-        rollK: .0023, pitchK: .0041, impactDecay: 10,
-        gearTop: [vmax], maxGear: 1, handDecel: 3.6, handYawMax: 1.65, smokeZ: -.55, smokeY: .17,
-      },
-      label: label + ' №' + num, labelEn: labelEn + ' #' + num,
-      toast: label + ' №' + num + ' · Sodi SR5', reach: 1.55, far: 145,
-      boarding: { x: 1.02, y: .5, z: -.15 },
-      chase: { near: 3.3, far: 6.4, height: 1.68, lookAhead: 3, lookY: .46 },
-      exhaust: [], hud: { noBoost: true, noCondition: true, keys: 'WASD · Пилотирование &nbsp; V · Камера &nbsp; E · Выйти' },
-      sound: { types: ['sawtooth', 'triangle', 'triangle'], f0: 21, fk: 62, lpBase: 165, lpRpm: 740, blip: false, volume: .82 },
-      makeModel: () => createModel(ctx, workshop, side, num),
-    };
-  }));
+const workshops = new WeakMap();
+const TERRAIN_ROUGHNESS = { grass: 1, gravel: .8, setts: .35 };
+
+/** Portable vehicle definition. Its identity determines its model and tuning;
+ * parking and the optional authored surface belong to the destination world. */
+export function createKart(ctx, id, parked, course = {}) {
+  const match = /^narvskaya-(rental|club)-(10|[1-9])$/.exec(id);
+  if (!match) return null;
+  const side = match[1] === 'club' ? 1 : 0, num = Number(match[2]);
+  const [launch, top, steering] = VARIATION[num - 1];
+  const label = side ? 'Клубный карт' : 'Прокатный карт';
+  const labelEn = side ? 'Club kart' : 'Rental kart';
+  const vmax = (side ? 24.45 : 21.02) + top*.72;
+  return {
+    id, kind: 'kart', spec: SPEC, parked: { ...parked },
+    tuning: {
+      spec: SPEC, noBoost: true, hf: .95, hr: .92, hw: .65,
+      acc: (side ? 3.55 : 3.12) * (1 + launch), vmax, engineFalloff: 1.7 + top*3,
+      drag: .00039, brake: 4.45, revAcc: 2.6, vrev: 2.2, engBrake: .53,
+      physicalReverseSteer: true, steerIn: 8.6*(1+steering), steerOut: 24, steerLock: .49*(1+steering),
+      tyres: kartTyres, kerbAt: course.kerbAt,
+      roughnessAt: course.roughnessAt ?? ((x, z) => TERRAIN_ROUGHNESS[ctx.services.environment?.kindAt(x, z)] ?? 0),
+      frontMu: 1.32 + 1.17*steering*.60, rearMu: 1.38,
+      rollK: .0023, pitchK: .0041, impactDecay: 10,
+      gearTop: [vmax], maxGear: 1, handDecel: 3.6, handYawMax: 1.65, smokeZ: -.55, smokeY: .17,
+    },
+    label: label + ' №' + num, labelEn: labelEn + ' #' + num,
+    toast: label + ' №' + num + ' · Sodi SR5', reach: 1.55, far: 145,
+    boarding: { x: 1.02, y: .5, z: -.15 },
+    chase: { near: 3.3, far: 6.4, height: 1.68, lookAhead: 3, lookY: .46 },
+    exhaust: [], hud: { noBoost: true, noCondition: true, keys: 'WASD · Пилотирование &nbsp; V · Камера &nbsp; E · Выйти' },
+    sound: { types: ['sawtooth', 'triangle', 'triangle'], f0: 21, fk: 62, lpBase: 165, lpRpm: 740, blip: false, volume: .82 },
+    makeModel: () => {
+      if (!workshops.has(ctx)) workshops.set(ctx, buildGeometry());
+      return createModel(ctx, workshops.get(ctx), side, num);
+    },
+  };
 }
 
 const box = (x, y, z, w, h, d, tilt = 0) => new THREE.BoxGeometry(w, h, d).rotateX(tilt).translate(x,y,z);

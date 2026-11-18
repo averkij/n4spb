@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { buildCourse } from './karting/course.js';
 import { buildStadium } from './karting/stadium.js';
-import { loadKarts } from './karting/karts.js';
+import { loadKarts } from './karting/fleet.js';
 import { mountLapTimer } from './karting/laps.js';
 
 export const OWNS_GROUPS = ['kirovets-karting'];

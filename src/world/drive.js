@@ -20,6 +20,7 @@
 import * as THREE from 'three';
 import { isInteractionKey } from '../core/ui.js';
 import { loadGarage } from './drive/cars/index.js';
+import { createKart } from './karting/karts.js';
 import { GARAGE } from './lib/area-tables.js';
 import { createHandling, holdInput } from './drive/handling.js';
 import { createCarDamage, crushedSpec } from './drive/damage.js';
@@ -54,7 +55,7 @@ export async function build(ctx) {
   const player = ctx.playerObj || null;                       // set by main.js before the modules are built
   // a page reached in a car by an edge gate (docs/AREAS.md 14, 15.z) must put the player into THAT car even when this area's garage does not keep it (admiralty: ONE purple Zhiguli): the carried car is built too, parked at the arrival pose
   const hoCar = ctx.handoff && ctx.handoff.mode === 'car' && ctx.handoff.ho && ctx.handoff.ho.car && ctx.handoff.pose ? ctx.handoff : null;
-  const garage = await loadGarage(ctx, { carry: hoCar && !['boat','traffic'].includes(hoCar.ho.car.kind) ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // A boat id can coincide with a car id; do not create a car for it.
+  const garage = await loadGarage(ctx, { carry: hoCar && !['boat','traffic','kart'].includes(hoCar.ho.car.kind) ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // Non-garage vehicles have their own portable factories.
   if (!garage.length) { console.warn('[drive] the area has no garage (GARAGE.poses): no cars'); return; }      // an area without cars: no drive service (the callers test ctx.drive)
   const wrecks = await getCarWrecks(ctx);
   // ONE VEHICLE PER CAR: its own model, handling state (parked pose included), damage state, parked physics box. V is the car the player drives or last drove; the closure
@@ -81,7 +82,19 @@ export async function build(ctx) {
       boats.push({ id: def.id, kind: 'boat', def, model, car, parked: { x: p.x, z: p.z, yaw: p.yaw, y: car.y }, damage: noDamage(), spec: def.spec, box: null });
     }
   } catch (e) { console.warn(`[drive] the boats are not available (${e.message}); the cars go on without them`); boats.length = 0; }
-  const karts = (ctx.services.kartingNarvskaya?.loadVehicles() ?? []).map(def => {
+  const course = ctx.services.kartingNarvskaya;
+  const kartDefs = course?.loadVehicles() ?? [];
+  // Restore one incoming vehicle independently of local parking. Reuse its
+  // identity in the venue fleet rather than leaving a duplicate in the pits.
+  const carriedKart = hoCar && (hoCar.ho.car.kind === 'kart' || !hoCar.ho.car.kind)
+    ? createKart(ctx, hoCar.ho.car.id, { x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI }, course)
+    : null;
+  if (carriedKart) {
+    carriedKart.carried = true;
+    const index = kartDefs.findIndex(def => def.id === carriedKart.id);
+    if (index < 0) kartDefs.push(carriedKart); else kartDefs[index] = carriedKart;
+  }
+  const karts = kartDefs.map(def => {
     const model = def.makeModel();
     ctx.add(model.root);
     const car = createHandling(ctx, def.tuning);

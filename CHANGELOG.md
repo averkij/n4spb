@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **16.0.0** (2026-11-18, major): Preserve portable karts and their tuning across area transitions, independently of venue parking
 - **15.2.0** (2026-11-17, minor): Add Narvskaya karting circuit, SR5 fleets, tyre physics and bidirectional lap timing and selected-character kart drivers on current main
 - **15.1.3** (2026-11-16, patch): Rework car entry to step into the cabin before sitting, keep the pelvis on the seat during door closing, and fit ducking to both characters and each roof.
 - **15.1.2** (2026-11-16, patch): Restore bridge, mosque, fountain, door and seated-character fixes; keep vehicle entry and exit stances clear of parked colliders, with real-physics regression coverage.

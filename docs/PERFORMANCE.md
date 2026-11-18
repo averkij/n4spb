@@ -4323,3 +4323,39 @@ from its default start, with `--json --diagnostics`. For Narvsky, the local
 harness selects `narvskaya-club-1` rather than the default city car before
 the run. It also supplies the Mac Chrome executable and excludes unavailable
 external analytics. No shipping source is changed for the benchmark.
+
+## Portable kart transitions, 16.0.0
+
+Separated kart creation and handling from venue parking. Repeated the preceding
+15.2.0 smoke routes on Chrome 157 / Apple M1 Pro, 1280 × 720, Performance,
+with normal fresh-bake loading. Timed runs were serial; the reported station
+run was repeated after a background file check finished.
+
+| Run | Load | Mean / p50 / p95 frame | Frames >40 ms | Mean draw calls | Distance |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Narvsky, club SR5 | 6.8 s | 16.7 / 16.7 / 16.7 ms | 0 | 649 | 25 m in 4 s |
+| Palace, station street car | 13.0 s | 17.0 / 16.7 / 16.8 ms | 1 | 1264 | 59 m in 6 s |
+
+The kart held 60 FPS; the station run averaged 59 FPS and its largest frame
+was 83.4 ms. As before, the station route attached two regions and ended
+against the station facade. Draw counts and distance are effectively unchanged
+from 15.2.0. Loading, heap and stall differences in single runs are not evidence
+of an improvement: font caches, GC and traffic timing are not controlled.
+CDP used heap / backing storage were 532 / 604 MiB on Narvsky and
+529 / 928 MiB at the station. Occasional centre stalls remain.
+
+All 21 live manifests are fresh (2715 products). Every live product is
+byte-identical to the 15.2.0 baseline; the parked strip's 56 products also
+matched. The real drive module passed kart arrival/departure and reboarding
+checks in all 21 live areas, plus existing car/boat handoff and traffic codec
+regressions. Both venue handling regressions retained the same speed targets.
+
+The normal-loading browser journey Narvsky → Admiralty → Palace → Narvsky
+preserved club kart 10, its acceleration/top-speed/front-grip values, selected
+character and E-key exit/reboarding. Foreign pages created one kart; returning
+to the venue kept twenty unique IDs. Screenshots were reviewed. The first
+single-process journey passed Narvsky and Admiralty but timed out loading
+Palace. The completed regression restarts Chrome per destination with one
+persistent profile, preserving storage and the actual outgoing handoff payload;
+it verifies reconstruction rather than long-lived browser memory behaviour.
+Reproduce with `node tools/handoff-kart-browser-test.mjs`.
