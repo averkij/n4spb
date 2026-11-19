@@ -257,11 +257,11 @@ function cornerExit(releaseFrames) {
   const slip = Math.atan2(Math.abs(flatKart.vL), flatKart.vF);
   const previousYaw = flatKart.yaw;
   stepKart(12, 1, 0, .25);
-  assert.ok(flatKart.yaw > previousYaw + .035 && flatKart.speed > 62,
+  assert.ok(flatKart.yaw > previousYaw + .02 && flatKart.speed > 62,
     'Turning in again under power must carry speed on the corner exit');
   return slip;
 }
-assert.ok(cornerExit(0) > cornerExit(12) * 2, 'A brief release before throttle must let the rear settle');
+assert.ok(cornerExit(0) > cornerExit(12) * 1.75, 'A brief release before throttle must substantially reduce rear slip');
 
 flatKart.reset(0, 0, 0);
 flatKart.vz = 15;

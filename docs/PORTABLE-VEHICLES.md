@@ -10,7 +10,11 @@ course)`. The stable vehicle ID selects the rental/club livery, fleet number
 and individual handling values. Geometry is created lazily and shared within
 one world context. The factory does not import the venue, its course or its
 parking coordinates. Without a venue surface service it samples the current
-area's environment for roughness. The same tyre model runs in every area.
+area's surface for roughness. `karting/surfaces.js` gives road ribbons and
+rendered asphalt junction fillets priority over the environment ground paint.
+Pedestrian-only ways, tram reservations and actual verges retain their ground
+roughness. Local course asphalt/lawn rules still take precedence. The same
+tyre model runs in every area.
 
 `world/karting/fleet.js` alone owns the twenty Narvskaya parking positions.
 The venue registers that fleet and its authored asphalt/kerb services.

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { kartTyres } from './handling.js';
-import { sr5Body } from './sr5-body.js';
+import { sr5Body, sr5Steering } from './sr5-body.js';
 import { blendPose, leanTorso, placeHips, solveLimb } from '../character/pose.js';
+import { createKartRoughness } from './surfaces.js';
 
 const SPEC = {
   W: 1.332, len: 1.914, hgt: .67, R: .137, tw: .16, track: 1.0, wb: 1.07,
@@ -18,7 +19,7 @@ const VARIATION = [
 ];
 
 const workshops = new WeakMap();
-const TERRAIN_ROUGHNESS = { grass: 1, gravel: .8, setts: .35 };
+const driverBacks = new WeakMap();
 
 /** Portable vehicle definition. Its identity determines its model and tuning;
  * parking and the optional authored surface belong to the destination world. */
@@ -38,7 +39,7 @@ export function createKart(ctx, id, parked, course = {}) {
       drag: .00039, brake: 4.45, revAcc: 2.6, vrev: 2.2, engBrake: .53,
       physicalReverseSteer: true, steerIn: 8.6*(1+steering), steerOut: 24, steerLock: .49*(1+steering),
       tyres: kartTyres, kerbAt: course.kerbAt,
-      roughnessAt: course.roughnessAt ?? ((x, z) => TERRAIN_ROUGHNESS[ctx.services.environment?.kindAt(x, z)] ?? 0),
+      roughnessAt: course.roughnessAt ?? createKartRoughness(ctx),
       frontMu: 1.32 + 1.17*steering*.60, rearMu: 1.38,
       rollK: .0023, pitchK: .0041, impactDecay: 10,
       gearTop: [vmax], maxGear: 1, handDecel: 3.6, handYawMax: 1.65, smokeZ: -.55, smokeY: .17,
@@ -55,8 +56,6 @@ export function createKart(ctx, id, parked, course = {}) {
     },
   };
 }
-
-const box = (x, y, z, w, h, d, tilt = 0) => new THREE.BoxGeometry(w, h, d).rotateX(tilt).translate(x,y,z);
 
 function buildGeometry() {
   const panels = Object.fromEntries(Object.entries(sr5Body).map(([name, { vertices, triangles }]) => {
@@ -75,10 +74,10 @@ function buildGeometry() {
 
   const wheel = new THREE.CylinderGeometry(.137,.137,.181,14).rotateZ(Math.PI/2);
   const hub = new THREE.CylinderGeometry(.073,.073,.187,11).rotateZ(Math.PI/2);
-  const steering = merge([
-    new THREE.TorusGeometry(.131,.019,6,15),
-    box(0,0,0,.246,.024,.019), box(0,-.059,0,.025,.132,.02),
-  ]);
+  const steering = new THREE.BufferGeometry();
+  steering.setAttribute('position', new THREE.Float32BufferAttribute(sr5Steering.vertices, 3));
+  steering.setIndex(sr5Steering.triangles);
+  steering.computeVertexNormals();
   return { ...panels, wheel, hub, steering };
 
 }
@@ -102,8 +101,11 @@ function createModel(ctx, geometry, club, number) {
   add('trim', ctx.mat.toon('#d9dfe6'));
   add('metal', alloy);
   const steering = add('steering', rubber);
-  steering.position.set(0,.548,.112);
-  steering.rotation.x = -.78;
+  steering.position.fromArray(sr5Steering.position);
+  steering.quaternion.fromArray(sr5Steering.quaternion);
+  steering.scale.fromArray(sr5Steering.scale);
+  const wheelRest = steering.quaternion.clone(), wheelTurn = new THREE.Quaternion();
+  const wheelAxis = new THREE.Vector3(0, 0, 1);
   const driverFrame = new THREE.Group();
   driverFrame.rotation.y = Math.PI;
   root.add(driverFrame);
@@ -136,15 +138,26 @@ function createModel(ctx, geometry, club, number) {
     setView() {},
     poseDriver(actor) {
       blendPose(actor, 1);
-      leanTorso(actor.rig, .55);
+      if (!driverBacks.has(actor.rig)) {
+        let spine = actor.rig.chest;
+        while (spine.parent?.isBone && spine.parent !== actor.rig.hips) spine = spine.parent;
+        const grips = {};
+        for (const side of ['l', 'r']) {
+          const hand = actor.rig.arms[side].end;
+          const finger = hand.children.find(b => /fingermiddle/i.test(b.name)) ?? hand.children.find(b => b.isBone);
+          grips[side] = finger.position.clone().multiplyScalar(.9);
+        }
+        driverBacks.set(actor.rig, { root: actor.root, chest: spine, grips });
+      }
+      leanTorso(driverBacks.get(actor.rig), -.08);
       driverFrame.updateWorldMatrix(true, false);
       driverFrame.getWorldQuaternion(actor.root.quaternion);
       placeHips(actor.rig, driverFrame.localToWorld(contact.copy(driverSeat)));
       for (const [side, sign] of [['l', -1], ['r', 1]]) {
         steering.updateWorldMatrix(true, false);
-        steering.localToWorld(contact.set(-sign * .112, 0, 0));
+        steering.localToWorld(contact.set(-sign * .100, -.078, 0));
         bend.set(sign, -.5, -.1).transformDirection(driverFrame.matrixWorld);
-        solveLimb(actor.rig.arms[side], contact, bend);
+        holdWheel(actor.rig.arms[side], contact, bend, driverBacks.get(actor.rig).grips[side]);
         driverFrame.localToWorld(contact.set(sign * .105, .145 + (actor.rig.soleOffsets?.[side] ?? .04), -.60));
         bend.set(0, 1, -.3).transformDirection(driverFrame.matrixWorld);
         solveLimb(actor.rig.legs[side], contact, bend);
@@ -152,13 +165,28 @@ function createModel(ctx, geometry, club, number) {
     },
     set({x, y, z, yaw, pitch, roll, steerAngle, spin, driven}) {
       root.position.set(x,y,z); root.rotation.set(-pitch,yaw,roll);
-      steering.rotation.z = -steerAngle*2.7;
+      steering.quaternion.copy(wheelRest).multiply(wheelTurn.setFromAxisAngle(wheelAxis, -steerAngle * 2.7));
       for (const w of wheels) {
         w.pivot.rotation.y = w.front ? steerAngle : 0;
         if (driven) w.spin.rotation.x += spin;
       }
     },
   };
+}
+
+// The palm grips the rim; putting the wrist itself on the rim overextends the
+// short stylised arms and forces the driver to lean forward off the backrest.
+function holdWheel(limb, target, pole, palm) {
+  const wrist = limb.end.getWorldPosition(new THREE.Vector3());
+  const reach = limb.end.localToWorld(palm.clone()).distanceTo(wrist);
+  const direction = target.clone().sub(limb.upper.getWorldPosition(new THREE.Vector3())).normalize();
+  solveLimb(limb, target.clone().addScaledVector(direction, -reach), pole);
+  limb.end.getWorldPosition(wrist);
+  const current = limb.end.localToWorld(palm.clone()).sub(wrist).normalize();
+  const desired = target.clone().sub(wrist).normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(current, desired).multiply(limb.end.getWorldQuaternion(new THREE.Quaternion()));
+  limb.end.quaternion.copy(limb.end.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q));
+  limb.end.updateWorldMatrix(false, true);
 }
 
 const SEGMENT_ON = ['abcedf','bc','abged','abgcd','fgbc','afgcd','afgecd','abc','abcdefg','abfgcd'];

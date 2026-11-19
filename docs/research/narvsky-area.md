@@ -229,3 +229,95 @@ seat, grip the actual rotating wheel and reach the pedals across yaw, pitch
 and roll changes. First-person view hides the external character as it does
 for the other vehicles. Verify the rig fit with
 `node tools/kart-driver-pose-test.mjs`.
+
+### Handling/model draft, 18 November 2026
+
+The owner deferred area bakes for this tuning round. These changes are source
+edits and diagnostic previews, not a fresh shipping bake.
+
+`tools/kart-telemetry-reference.mjs` checks the 20 fastest laps of the same
+TrackTakTak measurements export. Smoothed turning samples, adjacent intervals
+≤0.25 s, |aLat|≥0.3 g and |curvature|≥0.005/m give these observed values:
+
+| Speed | Samples | Median radius | 95th percentile lateral g |
+| --- | ---: | ---: | ---: |
+| 15–25 km/h | 0 | — | — |
+| 25–35 km/h | 50 | 11.75 m | 1.01 |
+| 35–45 km/h | 1748 | 13.12 m | 1.20 |
+| 45–55 km/h | 2375 | 20.28 m | 1.23 |
+| 55–65 km/h | 2487 | 31.34 m | 1.25 |
+| 65–75 km/h | 840 | 41.34 m | 1.19 |
+
+These are the driver's paths, not an understeer coefficient. Steering angle,
+pedal input, body heading and wheel RPM are absent; pit-speed response and
+power oversteer cannot be calibrated directly from this GPS record. Source
+CSV SHA-256: `32070e2d64b217762f493cae1e53f6b1eab45a1da6414effbe2524b449b4f30c`.
+Cornering stiffness, peak force and combined slip are treated separately, as
+in the [MathWorks tyre-model documentation](https://www.mathworks.com/help/vdynblks/ref/combinedslipwheel2dof.html);
+the game parameters are not measured Sodi tyre coefficients.
+
+The draft blends a near-kinematic small-slip response into the load-sensitive
+model between 32.4 and 54 km/h, retaining weight transfer and the 1.2 g flat
+force ceiling. For club-1 in the controlled light turn, curvature gain after
+a gas tap changes 0.989→0.970 at 15 km/h and 0.976→0.943 at 25 km/h;
+previously it was 0.988→0.875 and 0.950→0.793. Gain is actual path curvature
+divided by wheel geometric curvature, not a constant-radius measurement.
+
+At 72 km/h, 0.4 s straight braking followed by 0.5 s moderate turn-in while
+braking now produces 5.9–7.1° peak body slip across the twenty karts. The
+subsequent owner correction removed the accumulating power-slip penalty:
+breakaway comes from rear unloading during braking and the rear-only torque
+budget, not simply from holding gas on an ordinary corner or launch. A gas
+tap during the unloaded phase may change the transient, but held gas is not
+required to spin every kart. This is tuning, not a GPS pedal fit.
+The steering comfort limiter also no longer blocks countersteer: when the
+front wheels are being turned into an existing rear slide and against the
+yaw, their physical angle range is restored. Correction remains a tyre-force
+moment, without an injected anti-spin impulse. Scripted recovery from a
+12-degree brake-induced slide takes 0.45–0.48 s across all twenty karts, both
+directions, including with throttle. An 18-degree case verifies the larger
+wheel angle; recovery is checked at 30/60/120 Hz. Ordinary powered circles
+and steered launches are covered separately from braking transients.
+`tools/kart-transient-test.mjs` checks all karts, both steering directions,
+straight-power stability and 30/60/120 Hz agreement. Both venue tests retain
+65.42–66.36 km/h rental and 71.70–72.83 km/h club reference speeds. The flat
+circle is 1.15 g, 18.3 m radius at 51.7 km/h; rough-surface losses are unchanged.
+
+The owner's Blender steering mesh, position and tilt now export exactly;
+the runtime no longer substitutes a procedural wheel. The engine shroud is
+on the driver's right (negative game X). Per the owner's choice, preserve
+the whole wheel pose and use a modest lumbar recline. Palm contacts, rather
+than wrists, hold the lower left/right rim. Both rigs pass turning-wheel,
+seat and pedal checks without limb stretching and were inspected in an
+isolated rendered preview.
+
+The backrest was subsequently brought to the torso: its lower pivot moves
+35 mm forward and its panel rotates 0.4 rad more upright. Both characters
+were reviewed from the side with the revised backrest. Steering and engine
+transforms were preserved. The local ride test uses `baked=force` only as a
+controlled preview: existing district geometry is unchanged, while the kart
+meshes and handling are runtime content. Narvsky loaded without scene errors,
+and E-key boarding/exit passed. Shipping bakes remain deferred at the owner's
+request; ordinary source/bake revision validation has not been relaxed.
+
+City-road roughness correction: environment `kindAt` describes ground paint
+under the street meshes, not the asphalt ribbon on top. Of 6909 Narvsky
+street-centre samples, 4613 were classified as non-asphalt ground; Palace
+had 5037 of 7063. This incorrectly applied lawn/gravel/sett losses on ordinary
+roads. The shared kart sampler now checks drivable road coverage and drawn
+junction fillets first, using a cached spatial index. Course lawns, off-road
+verges, pedestrian-only ways and tram reservations preserve roughness. Both
+area regressions pass; a 72 km/h one-second coast gives 69.5 km/h on road,
+57.4 with two tyres off and 48.3 on grass. Reproduce with
+`node tools/area.mjs narvsky tools/kart-road-surface-test.mjs` and Palace.
+
+### Shipping checkpoint, 2026-11-19 (16.0.1)
+
+The owner subsequently authorized final assembly. All 21 live areas were
+rebaked with the final source, including the lower palm contact at full
+mechanical steering lock. Manifest/hash validation passes for all 2715
+products, and static products remain byte-identical to 16.0.0. Ordinary
+loading no longer requires the controlled `baked=force` preview described
+above. The normal-page browser journey, selected driver, exit/reboarding
+and both-direction lap HUD passed; performance evidence and limitations
+are recorded in `docs/PERFORMANCE.md` under 16.0.1.

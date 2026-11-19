@@ -68,9 +68,17 @@ export function kartTyres(car, longitudinal, step, tuning, handbrake) {
 
   const steerDemand = car.steer * tuning.steerLock;
   const steerRange = .11 + 12 / (12 + forward * forward);
-  const steer = steerRange * Math.tanh(steerDemand / steerRange);
-  const frontSlip = Math.atan2(lateral + car.tyreYaw * frontArm, travel) - steer * Math.sign(forward);
+  const limitedSteer = steerRange * Math.tanh(steerDemand / steerRange);
+  const frontMotion = Math.atan2(lateral + car.tyreYaw * frontArm, travel);
   const rearSlip = Math.atan2(lateral - car.tyreYaw * rearArm, travel);
+  // The keyboard comfort limit must not prevent the front wheels pointing
+  // into an existing slide. Restore their mechanical range for countersteer;
+  // all correction still comes from tyre forces, not an injected yaw impulse.
+  const direction = Math.sign(forward);
+  const catching = steerDemand * direction * frontMotion > 0 && steerDemand * car.tyreYaw * direction < 0;
+  const countersteer = catching ? clamp((Math.abs(rearSlip) - .025) / .10, 0, 1) : 0;
+  const steer = limitedSteer + countersteer * (steerDemand - limitedSteer);
+  const frontSlip = frontMotion - steer * direction;
 
   const contacts = wheelContacts(car, step, tuning, sy, cy);
   const frontExtra = .10 * (contacts?.front ?? 0), rearExtra = .10 * (contacts?.rear ?? 0);
@@ -79,13 +87,27 @@ export function kartTyres(car, longitudinal, step, tuning, handbrake) {
   // Aerodynamic drag acts on the chassis. Engine and brake torque both go
   // through the solid rear axle and consume its available cornering force.
   const rearDrive = Math.abs(longitudinal + Math.sign(forward) * tuning.drag * forward ** 2);
-  const rearPeak = Math.sqrt(Math.max(.04 * rearLimit ** 2, rearLimit ** 2 - rearDrive ** 2));
-  const rear = -rearPeak * (handbrake ? .5 : 1) * Math.tanh(rearSlip * 12 * rearLimit / rearPeak);
+  const rearCapacity = Math.sqrt(Math.max(.04 * rearLimit ** 2, rearLimit ** 2 - rearDrive ** 2));
+  // At pit/corner-exit speeds use a near-kinematic small-slip response.
+  // Load transfer still changes peak grip, but a gas tap must not collapse
+  // steering stiffness on a lightly loaded tyre. Blend to the load-sensitive
+  // response from 32.4 to 54 km/h.
+  const stiffnessScale = Math.min(1, travel / 6);
+  const lowSpeed = 1 - clamp((Math.abs(forward) - 9) / 6, 0, 1);
+  const rearLowStiffness = tuning.rearMu * G * (1 - FRONT_SHARE) * 36 * stiffnessScale;
+  const rearStiffness = rearLimit * 12 + lowSpeed * (rearLowStiffness - rearLimit * 12);
+  // Rear unloading and combined brake/cornering demand cause the breakaway.
+  // Do not accumulate a separate grip penalty merely for holding the gas.
+  const rearPeak = rearCapacity;
+  const rear = -rearPeak * (handbrake ? .5 : 1) * Math.tanh(rearSlip * rearStiffness / rearPeak);
   const frontLimit = tuning.frontMu * G * car.frontLoad * (1 + frontExtra - .25 * frontRough);
-  const onBrake = clamp((car.frontLoad - FRONT_SHARE) * 10, 0, 1);
-  const balancedFront = Math.min(frontLimit, rearPeak * rearArm / frontArm * .92);
-  const frontPeak = frontLimit + onBrake * (balancedFront - frontLimit);
-  const front = -frontPeak * Math.tanh(frontSlip * 10);
+  const brake = clamp((-longitudinal * Math.sign(forward) - .9) / 1.5, 0, 1);
+  // Rear braking may rotate the kart even if turn-in follows straight braking.
+  // After release a centred wheel must again be able to settle the tail.
+  const frontPeak = Math.min(frontLimit, rearCapacity * rearArm / frontArm * (.92 + .12 * brake));
+  const frontLowStiffness = tuning.frontMu * G * FRONT_SHARE * 30 * stiffnessScale;
+  const frontStiffness = frontPeak * 10 + lowSpeed * (frontLowStiffness - frontPeak * 10);
+  const front = -frontPeak * Math.tanh(frontSlip * frontStiffness / frontPeak);
 
   const cornering = front + rear;
   const lateralLimit = 1.2 * G * (1 + (frontExtra + rearExtra) / 2);

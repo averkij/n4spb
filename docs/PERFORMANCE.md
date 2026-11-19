@@ -1,5 +1,64 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-19: Kart handling, road sampling and driver fit (16.0.1)
+
+All 21 live areas have fresh shipping bakes: 2,715 complete products,
+1,088.0 MiB gzip. Every live product is byte-identical to the matching
+16.0.0 baseline; the parked strip's 56 products also match. Changes to the
+kart body, steering, tyre forces and roughness sampling run dynamically.
+Road/junction coverage uses the street network's spatial query plus cached
+32 m fillet cells; it does not scan the city's roads each frame.
+
+Repeated the 16.0.0 routes with Chrome 157 / Apple M1 Pro, 1280 × 720,
+Performance quality, normal loading, serial GPU jobs and no concurrent CPU
+audits during timed intervals. Both runs had zero failed regions.
+
+| Run | Load before → after | Mean / p50 / p95 frame after | Frames >40 ms before → after | Mean calls before → after | Distance before → after |
+| --- | --- | --- | --- | --- | --- |
+| Narvsky club SR5, 4 s | 6.808 → 6.855 s | 16.7 / 16.7 / 16.8 ms | 0 → 0 | 649 → 649 | 25 → 25 m |
+| Palace station street car, 6 s | 13.006 → 13.014 s | 17.0 / 16.7 / 16.8 ms | 1 → 1 | 1264 → 1272 | 58.7 → 59.7 m |
+
+Mean frame times remain 16.7 / 17.0 ms (60 / 59 FPS). Maximum frame times
+after are 16.8 / 66.7 ms, versus 16.8 / 83.4 ms before. The station route
+still ends against the facade, with collisions, two region attachments and
+one 68 ms long task. Traffic and the small route difference affect calls
+and distance. These short smoke runs establish usable driving, not an FPS
+improvement or a long-session memory claim. Centre stalls remain.
+
+CDP used heap / backing storage, before → after: Narvsky 532 / 604 →
+420 / 478 MiB; station 529 / 928 → 535 / 1077 MiB. GC timing and temporary
+decoded buffers vary between single runs. In particular, the larger station
+backing-storage sample must not be described as a memory improvement.
+
+The fresh-bake browser journey Narvsky → Admiralty → Palace → Narvsky
+preserved kart identity, tuning, selected character and E-key exit/reboarding,
+with no page, module or local asset errors. It uses a fresh Chrome process
+per destination with a shared profile, so long-lived renderer memory across
+transitions remains outside this test. Reviewed screenshots include the
+track, garden, station and return to the track. A controlled position/time
+sequence on the normal Narvsky page also verified the real lap HUD in both
+directions, last/best results, hiding away from the track and reset on return;
+this is a UI integration check, not a physically driven timed lap.
+
+Focused regressions pass all twenty karts in both steering directions,
+brake-first rotation, stable powered launches/circles, countersteer recovery,
+30/60/120 Hz, both player rigs at full steering lock, both venue speed targets,
+and road samples in Narvsky/Palace. Portable kart arrivals and reboarding pass
+in all 21 live areas. Reference speed ranges remain 65.42–66.36 km/h rental
+and 71.70–72.83 km/h club.
+
+Evidence: `/tmp/n4-final-kart-manifests.log`, `/tmp/n4-final-products.log`,
+`/tmp/n4-final-browser.log`, `/tmp/n4-final-browser-*.png`,
+`/tmp/n4-final-track-bench.json`, `/tmp/n4-final-centre-bench.json`.
+Reproduce with `tools/handoff-kart-browser-test.mjs`,
+`tools/kart-transient-test.mjs`, `tools/kart-driver-pose-test.mjs`, and
+`tools/area.mjs <area> tools/kart-road-surface-test.mjs`. The benchmark used
+a temporary copy of `tools/drive-bench.mjs` selecting macOS Chrome, its native
+GPU backend, disk-cache disabling and the same club kart as the baseline.
+Use `--area narvsky --q performance --seconds 4 --start
+"-4745.35,3639.61,16.158"` with club kart 1, and
+`--area palace --q performance --seconds 6`, both with `--json --diagnostics`.
+
 ## 2026-11-16: Restored fixes and corrected vehicle entry (15.1.3)
 
 This restores the 15.1.1 bridge, mosque overlap, fountain placement, door and

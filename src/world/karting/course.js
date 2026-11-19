@@ -3,6 +3,7 @@ import { KERB_PROFILE, createTrackSurfaceIndex } from './kerbs.js';
 import { MeshBuilder, addCap } from '../lib/massing.js';
 import { knockBays, splitBays } from '../lib/fence-bays.js';
 import { COURSE, COURSE_LAWN, KERB_RUNS, PIT_LANE, START_FINISH, SPEED_CHECK, WALK_IN, distSqToLine, relief } from './site.js';
+import { createKartRoughness } from './surfaces.js';
 
 const spline = (points, closed) => new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), closed);
 export const racingLine = spline(COURSE, true);
@@ -12,7 +13,6 @@ const circuit = racingLine.getSpacedPoints(Math.ceil(length / 1.35));
 const circuit2D = circuit.map(p => [p.x, p.z]);
 const clamp = THREE.MathUtils.clamp;
 const PAD = [[-4682.5, .073, 3555.4], [-4668.5, .073, 3550.1], [-4657.7, .073, 3581.5], [-4670.2, .073, 3587.2]];
-const TERRAIN_ROUGHNESS = { grass: 1, gravel: .8, setts: .35 };
 function onCourseLawn(x, z) {
   if (x < -4773 || x > -4598 || z < 3479 || z > 3694) return false;
   let inside = false;
@@ -105,6 +105,7 @@ function markingAt(builder, line, precision) {
 }
 
 export function buildCourse(ctx, root) {
+  const cityRoughness = createKartRoughness(ctx);
   const normals = offsets(circuit, true);
   const kerbs = createTrackSurfaceIndex();
   const paved = createTrackSurfaceIndex();
@@ -237,7 +238,7 @@ export function buildCourse(ctx, root) {
     roughnessAt: (x, z) => {
       if (paved.at(x, z)) return 0;
       if (onCourseLawn(x, z)) return 1;
-      return TERRAIN_ROUGHNESS[ctx.services.environment?.kindAt(x, z)] ?? 0;
+      return cityRoughness(x, z);
     },
     kerbAt: kerbs.at, startFinish: START_FINISH, start, speedCheck: SPEED_CHECK, racingLine, length };
 }
