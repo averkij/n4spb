@@ -35,7 +35,7 @@ for (const def of defs) {
   assert.equal(glass.material, glassMaterial); assert.equal(glassMaterial.opacity, opacity); assert.equal(glassMaterial.side, glassSide); assert(glassMaterial.transparent, 'window remains transparent');
   const s = cabin.spec, hw = def.spec.W / 2;
   for(const part of cabin.panels)for(let i=0;i<part.geometry.attributes.position.count;i++)assert(part.geometry.attributes.position.getY(i)>=s.doorBottom-1e-6,`${def.id}: fixed sill/chassis strips stay out of the hinge`);
-  const right=s.entrySide===1,expectedGlass = cutBox(glassBefore, [right?-hw-.3:hw*.63,s.doorBottom,s.rear],[right?-hw*.63:hw+.3,Math.min(s.roof-.045,right?2.55:Infinity),s.front]);
+  const right=s.entrySide===1,expectedGlass = cutBox(glassBefore, [right?-hw-.3:hw*.63,s.doorBottom,s.doorRear??s.rear],[right?-hw*.63:hw+.3,Math.min(s.roof-.045,right?2.55:Infinity),s.front]);
   assert.deepEqual(glass.geometry.attributes.position.array, expectedGlass.inside.attributes.position.array, 'window triangles are not lined or doubled');
   glassBefore.dispose(); expectedGlass.inside.dispose(); expectedGlass.outside.dispose();
   // A ray from the cabin-facing side must actually hit an open opaque door.

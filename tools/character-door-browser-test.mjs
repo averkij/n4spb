@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{if(handleBakedRevision(req,res,root))
 const executablePath=['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync),browser=await puppeteer.launch({executablePath,headless:true,args:['--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist']});const errors=[],results=[];
 try{const page=await browser.newPage();await page.setViewport({width:1280,height:900});await page.setRequestInterception(true);page.on('request',r=>{const m=/^https:\/\/cdn\.jsdelivr\.net\/npm\/three@[^/]+\/(.+)$/.exec(r.url());if(m){const f=path.join(root,'node_modules/three',m[1].split('?')[0]);if(fs.existsSync(f))return r.respond({status:200,contentType:'text/javascript',headers:{'Access-Control-Allow-Origin':'*'},body:fs.readFileSync(f)});}if(/^https:\/\/fonts\.(googleapis|gstatic)\.com/.test(r.url()))return r.abort();r.continue();});page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`http://127.0.0.1:${server.address().port}/index.html?baked=0&only=drive&noroof=1&guard=0&gate=0`,{waitUntil:'load',timeout:120000});await page.waitForFunction(()=>document.body.classList.contains('loaded')&&__ctx.characters?.ready,{timeout:120000});await page.click('#go');await page.waitForFunction(()=>getComputedStyle(document.getElementById('intro')).visibility==='hidden');await page.evaluate(()=>document.exitPointerLock());
- await page.evaluate(async()=>{
+ await page.evaluate(async opening=>{
   const THREE=await import('three'),{animateInteraction,poseDriver}=await import('./src/world/drive/character-poses.js'),{entryPose}=await import('./src/world/drive/entry-poses.js'),{trafficDefinition}=await import('./src/world/drive/traffic-model.js'),{createVehicleCabin,cabinDamageMeshes}=await import('./src/world/drive/vehicle-cabin.js'),{createCarDamage}=await import('./src/world/drive/damage.js');
   const ctx=__ctx,p=ctx.playerObj,origin={x:p.pos.x,z:p.pos.z},q=window.__doorQA={THREE,phase:'drive',progress:0,actor:0,vehicle:null,rear:false,origin,extras:[]};p.enabled=false;
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshBasicMaterial({color:'#8c9297'}));ground.rotation.x=-Math.PI/2;ground.position.set(origin.x,-.025,origin.z);ctx.add(ground);
@@ -15,9 +15,12 @@ try{const page=await browser.newPage();await page.setViewport({width:1280,height
   ctx.onUpdate(()=>{const v=q.vehicle;if(!v)return;for(const car of ctx.drive.fleet)car.model.root.visible=car===v;for(const car of q.extras)car.model.root.visible=car===v;v.model.root.visible=true;v.model.root.position.set(origin.x,0,origin.z);v.model.root.rotation.set(0,0,0);v.model.setView(false);const a=ctx.characters.actor,c=v.cabin;for(const actor of ctx.characters.actors)actor.root.visible=actor===a;for(const car of ctx.drive.fleet)if(car.cabin?.npc)car.cabin.npc.root.visible=false;
    const pose=entryPose(c.spec,q.phase,q.progress,q.occupied);c.door.rotation.y=(c.spec.entrySide??-1)*1.15*(q.phase==='drive'?0:pose.door);v.model.root.updateMatrixWorld(true);
    if(q.phase==='drive')poseDriver(a,c);else animateInteraction(a,c,{phase:q.phase,progress:q.progress,occupied:q.occupied});a.root.visible=true;a.root.updateMatrixWorld(true);a.root.traverse(o=>{if(o.isSkinnedMesh)o.skeleton.update();});
-   const target=c.root.localToWorld(new THREE.Vector3(0,q.rear?.8:.85,c.spec.seat[2])),from=c.root.localToWorld(new THREE.Vector3(q.rear?0:(c.spec.entrySide===1?3.8:-3.8),q.rear?2.15:2.8,q.rear?5:3.5));ctx.camera.position.copy(from);ctx.camera.lookAt(target);ctx.camera.fov=48;ctx.camera.updateProjectionMatrix();
+   const side=c.spec.entrySide??-1;
+   const target=c.root.localToWorld(opening?new THREE.Vector3(side*c.spec.halfWidth,.87,c.spec.handle[2]):new THREE.Vector3(0,q.rear?.8:.85,c.spec.seat[2]));
+   const from=c.root.localToWorld(opening?new THREE.Vector3(side*(c.spec.halfWidth+2.75),1.75,c.spec.handle[2]-2.4):new THREE.Vector3(q.rear?0:side*3.8,q.rear?2.15:2.8,q.rear?5:3.5));
+   ctx.camera.position.copy(from);ctx.camera.lookAt(target);ctx.camera.fov=48;ctx.camera.updateProjectionMatrix();
   });
- });
+ },process.argv.includes('--opening'));
  const pose=async(id,actor,phase,progress=0,severity=0,rear=false,occupied=false)=>{
   await page.evaluate(({id,actor,phase,progress,severity,rear,occupied})=>{const q=__doorQA,v=[...__ctx.drive.fleet,...q.extras].find(v=>v.id===id);if(!v)throw Error('Unknown QA car '+id);__ctx.characters.select(actor);q.vehicle=v;q.phase=phase;q.progress=progress;q.rear=rear;q.occupied=occupied;v.damage.state.front=v.damage.state.rear=severity;v.damage.state.left=v.damage.state.right=severity;v.damage.state.revision++;v.damage.sync();},{id,actor,phase,progress,severity,rear,occupied});
   await page.evaluate(()=>new Promise(r=>{let n=0;const f=()=>++n>6?r():requestAnimationFrame(f);requestAnimationFrame(f);}));
@@ -25,7 +28,9 @@ try{const page=await browser.newPage();await page.setViewport({width:1280,height
   if(phase==='drive')assert(stats.top<=stats.roof-.005,`${id}/${actor}/${severity}: roof clearance`);
   const name=`${id}-${actor}-${phase}-${progress}-${severity}${entry?occupied?'-occupied':'-empty':''}`;await page.screenshot({path:path.join(out,name+'.png')});results.push({name,...stats});
  };
- if(entry){for(const actor of[0,1])for(const id of['coupe','lada','qa-bus'])for(const occupied of[true,false]){for(const p of[0,.25,.5,.75,1])await pose(id,actor,'climb',p,0,false,occupied);for(const p of[.35,.8])await pose(id,actor,'close',p,0,false,occupied);}}
+ if(process.argv.includes('--opening')){
+  for(const actor of [0,1])for(const id of ['lada','qa-bus'])for(const t of [0,.24,.4,.62,.8,1])await pose(id,actor,'open',t);
+ }else if(entry){for(const actor of[0,1])for(const id of['coupe','lada','qa-bus'])for(const occupied of[true,false]){for(const p of[0,.25,.5,.75,1])await pose(id,actor,'climb',p,0,false,occupied);for(const p of[.35,.8])await pose(id,actor,'close',p,0,false,occupied);}}
  else for(const actor of[0,1]){await pose('lada',actor,'open',.75);await pose('lada',actor,'close',.35);for(const id of['coupe','truck','lada','roadster'])await pose(id,actor,'drive',0,0,true);await pose('qa-lada',actor,'drive',0,.65,true);await pose('qa-lada',actor,'drive',0,1,true);await pose('qa-bus',actor,'open',.75);await pose('qa-bus',actor,'climb',.7);}
  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'result.json'),JSON.stringify({results,errors},null,2));console.log(`PASS ${results.length} actual-runtime door/seat screenshots; no errors`);
 }finally{await browser.close();await new Promise(r=>server.close(r));}

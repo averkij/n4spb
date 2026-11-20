@@ -47,6 +47,19 @@ Attribution 4.0. Exact source links, author names and modifications are listed i
 [the character credits](assets/characters/CREDITS.md), also linked from the
 in-game character settings. These assets retain their original licence.
 
+## Anichkov Bridge sculptures
+
+The four posed bronze groups in `assets/sculptures/klodt.glb` and their baked
+scene geometry are licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
+The horse anatomy is adapted from Wildfire Games' [0 A.D. Celtic horse](https://github.com/0ad/0ad/blob/master/binaries/data/mods/public/art/meshes/skeletal/horse_celtic.dae),
+copyright Wildfire Games, under the [0 A.D. art licence](https://github.com/0ad/0ad/blob/master/binaries/data/mods/public/art/LICENSE.txt).
+The human anatomy uses the CC0 [MakeHuman hm08 mesh, skeleton and macro targets](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data)
+by Data Collection AB, Joel Palmius and Jonas Hauquier. Both anatomies were
+reposed for Klodt's four compositions. The new meshes include sculpted hair,
+manes, harnesses, reins and drapery, with Blender surface finishing and baked
+ambient occlusion. The compact bronze material is authored for this scene.
+The poses were checked against [photographs of all four groups](https://static.kulturologia.ru/files/u8921/koni_04.jpg).
+
 ## Reference photographs
 
 Photographs (mostly Wikimedia Commons, each under its own licence) were used **only as visual references** while modelling (shapes,

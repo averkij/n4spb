@@ -38,9 +38,24 @@ for(const def of defs){
     }
    }
   }
+  let planted;
   for(const phase of ['open','close'])for(let step=0;step<=20;step++){
    const progress=step/20,p=entryPose(c.spec,phase,progress,false);c.door.rotation.y=side*1.15*p.door;model.root.updateWorldMatrix(true,true);
    animateInteraction(actor,c,{phase,progress,occupied:false});actor.root.updateWorldMatrix(true,true);
+   if(phase==='open'){
+     const points=[actor.rig.hips,actor.rig.legs.l.end,actor.rig.legs.r.end].map(b=>b.getWorldPosition(new THREE.Vector3()));
+     if(!planted)planted=points;
+     points.forEach((point,i)=>assert((i===0?Math.hypot(point.x-planted[i].x,point.z-planted[i].z):point.distanceTo(planted[i]))<.005,`${def.id}/${name}: slides while opening`));
+     const hipAtDoor=c.door.worldToLocal(points[0].clone());
+     const doorLength=c.spec.front-(c.spec.doorRear??c.spec.rear);
+     const pastEnd=Math.max(0,-hipAtDoor.z,hipAtDoor.z-doorLength);
+     assert(Math.hypot(hipAtDoor.x,pastEnd)>.14,`${def.id}/${name}: opening panel crosses pelvis`);
+     if(progress>=.25&&progress<=.40){
+       const hand=actor.rig.arms[side===1?'l':'r'].end.getWorldPosition(new THREE.Vector3());
+       const error=hand.distanceTo(c.door.localToWorld(c.handle.clone()));
+       assert(error<.075,`${def.id}/${name}: misses outside latch by ${error} m`);
+     }
+   }
    if(phase==='close'&&side===1)continue;
    const handSide=phase==='open'?(side===1?'l':'r'):'l',arm=actor.rig.arms[handSide],sign=handSide==='l'?-1:1;
    const upper=actor.root.worldToLocal(arm.upper.getWorldPosition(new THREE.Vector3())),hand=actor.root.worldToLocal(arm.end.getWorldPosition(new THREE.Vector3())),elbow=actor.root.worldToLocal(arm.lower.getWorldPosition(new THREE.Vector3()));

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {animateActor} from '../character/index.js';
-import {entryPhases,entryPose} from './entry-poses.js';
+import {OPEN_DURATION,entryPhases,entryPose} from './entry-poses.js';
 import {animateInteraction,animateOccupant,poseDriver} from './character-poses.js';
 
 const point=(c,p)=>c.root.localToWorld(new THREE.Vector3(...p));
@@ -39,7 +39,7 @@ export function createCharacterInteractions(ctx,{characters,vehicles,enterNow,ex
     }
     if(exiting){const p=point(c,outside);if(ctx.physics.columnBlocked(p.x,p.z,.3,v.car.y+.3,v.car.y+1.6)){ctx.ui.toast('Нет места у двери · Driver door is blocked');return false;}}
     if(exiting)v.model.setView(false);
-    transition={vehicle:v,exiting,occupied,path:worldPath,phases:exiting?[['close',.28],['climb',side===1?.9:.68],['open',.28]]:entryPhases(occupied,side===1),index:exiting?0:-1,phase:exiting?'close':'approach',time:0,progress:exiting?1:0};
+    transition={vehicle:v,exiting,occupied,path:worldPath,phases:exiting?[['close',.28],['climb',side===1?.9:.68],['open',OPEN_DURATION]]:entryPhases(occupied,side===1),index:exiting?0:-1,phase:exiting?'close':'approach',time:0,progress:exiting?1:0};
     player.inputLock++;characters.busy=true;player.jump=null;player.vy=0;player.vel?.set(0,0,0);dropBox(v);
     v.car.vx=v.car.vz=v.car.yawVel=0;v.car.speed=0;
     return true;

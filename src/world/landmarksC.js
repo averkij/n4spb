@@ -21,7 +21,7 @@ const PARTS = [
   }],
   ['closure', () => import('./landmarksC/closure.js'), async (m, K, M, ctx, root, svc) => { svc.closure = m.buildClosure(K, M, ctx); }],
   ['lamps', () => import('./landmarksC/lamps.js'), async (m, K, M, ctx, root, svc) => { svc.lamps = m.buildLamps(K, M, ctx); }],
-  ['horses', () => import('./landmarksC/horses.js'), async (m, K, M, ctx, root, svc) => { svc.groups = m.buildHorses(K, M, ctx); }],
+  ['horses', () => import('./landmarksC/horses.js'), async (m, K, M, ctx, root, svc) => { svc.groups = await m.buildHorses(K, M, ctx); }],
   ['palace', () => import('./landmarksC/palace.js'), async (m, K) => { m.build(K); }],
   ['bank', () => import('./landmarksC/bank.js'), async (m, K) => { m.build(K); }],
 ];

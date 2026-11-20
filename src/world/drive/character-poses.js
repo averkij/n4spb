@@ -39,13 +39,17 @@ export function insidePull(vehicle,actor){
   const reach=vehicle.door.worldToLocal(actor?actor.rig.arms.l.upper.getWorldPosition(new THREE.Vector3()):world(vehicle,[s.seat[0],s.seat[1]+.35,s.seat[2]]));
   return vehicle.door.localToWorld(vec([-side*.06,Math.max(.1,s.seat[1]+.35-s.hinge[1]),Math.max(.24,Math.min(s.front-s.rear-.15,reach.z))]));
 }
-function leanToPull(actor,target,amount){
+function leanToPull(actor,target,amount,side='l',maxLean=.45){
   if(!amount)return;
   const spine=torsoBase(actor.rig);
-  const arm=actor.rig.arms.l,base=spine.quaternion.clone(),shoulder=arm.upper.getWorldPosition(new THREE.Vector3()),reach=shoulder.distanceTo(arm.lower.getWorldPosition(new THREE.Vector3()))+arm.lower.getWorldPosition(new THREE.Vector3()).distanceTo(arm.end.getWorldPosition(new THREE.Vector3()))-.015;
+  const arm=actor.rig.arms[side],base=spine.quaternion.clone(),shoulder=arm.upper.getWorldPosition(new THREE.Vector3()),reach=shoulder.distanceTo(arm.lower.getWorldPosition(new THREE.Vector3()))+arm.lower.getWorldPosition(new THREE.Vector3()).distanceTo(arm.end.getWorldPosition(new THREE.Vector3()))-.015;
   const direction=target.clone().sub(shoulder);direction.y=0;const axis=new THREE.Vector3(0,1,0).cross(direction.normalize()).normalize(),parent=spine.parent.getWorldQuaternion(new THREE.Quaternion()),worldQ=parent.clone().multiply(base);let angle=0;
-  for(;angle<.45;angle+=.05){spine.quaternion.copy(parent.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle).multiply(worldQ)));spine.updateWorldMatrix(false,true);if(arm.upper.getWorldPosition(new THREE.Vector3()).distanceTo(target)<=reach)break;}
-  spine.quaternion.copy(parent.invert().multiply(new THREE.Quaternion().setFromAxisAngle(axis,Math.min(.45,angle)*amount).multiply(worldQ)));spine.updateWorldMatrix(false,true);
+  for(;angle<maxLean;angle+=.05){spine.quaternion.copy(parent.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle).multiply(worldQ)));spine.updateWorldMatrix(false,true);if(arm.upper.getWorldPosition(new THREE.Vector3()).distanceTo(target)<=reach)break;}
+  spine.quaternion.copy(parent.invert().multiply(new THREE.Quaternion().setFromAxisAngle(axis,Math.min(maxLean,angle)*amount).multiply(worldQ)));spine.updateWorldMatrix(false,true);
+}
+function openingAnkle(actor,spec,hip,side){
+  const sign=side==='l'?-1:1;
+  return [hip[0]+sign*.115,actor.rig.soleOffsets[side],hip[2]+sign*(spec.entrySide??-1)*.075];
 }
 function groundFeet(actor,vehicle,hip,phase=0,stride=0,floor=0) {
   for(const [side,z,offset] of [['l',-.13,0],['r',.13,Math.PI]]){
@@ -62,6 +66,7 @@ export function animateInteraction(actor,vehicle,transition) {
   const pull=insidePull(vehicle),pullLocal=vehicle.root.worldToLocal(pull.clone()),dx=pullLocal.x-spec.seat[0],dz=pullLocal.z-spec.seat[2],distance=Math.hypot(dx,dz),perch=Math.min(.07,Math.max(0,distance-.52))*pullAmount;
   if(distance){p.hip[0]+=dx/distance*perch;p.hip[2]+=dz/distance*perch;}
   posed(actor,vehicle,p.hip,p.sit,p.yaw,p.lean,phase==='climb'&&entrySide!==1);
+  if(phase==='open')leanTorso({...actor.rig,chest:torsoBase(actor.rig)},p.lean*.68);
   if(p.sit<1)leanTorso({...actor.rig,chest:actor.rig.head},fit.lean*.45*p.sit);
   if(p.sit===1){driver(actor,vehicle);if(pullAmount)placeHips(actor.rig,world(vehicle,p.hip));}
   leanToPull(actor,pull,pullAmount);
@@ -84,7 +89,22 @@ export function animateInteraction(actor,vehicle,transition) {
     grip(actor,vehicle,'r',world(vehicle,[spec.wheel[0]+.165,spec.wheel[1]+.025,spec.wheel[2]+.045]));
     for(const [side,sign]of [['l',-1],['r',1]])solveLimb(actor.rig.legs[side],world(vehicle,[spec.seat[0]+sign*.105,spec.floor+(actor.rig.soleOffsets?.[side]||0),spec.seat[2]-.66]),pole(vehicle,[0,1,-.4]));
   }
-  if(['open','reach','extract','recover'].includes(phase))groundFeet(actor,vehicle,p.hip,progress*Math.PI*2,phase==='recover'?.22:phase==='extract'?.15:.06,p.footFloor);
+  if(phase==='open'){
+    for(const side of ['l','r']){
+      const ankle=openingAnkle(actor,spec,p.hip,side);
+      solveLimb(actor.rig.legs[side],world(vehicle,ankle),pole(vehicle,[0,.2,-1]));
+    }
+  }
+  if(phase==='reach'){
+    const from=entryPose(spec,'open',1,occupied).hip;
+    for(const [side,sign] of [['l',-1],['r',1]]){
+      const step=ease((progress-(side==='l'?.32:0))/.68);
+      const foot=vec(openingAnkle(actor,spec,from,side)).lerp(vec([p.hip[0],p.footFloor+.10,p.hip[2]+sign*.13]),step);
+      foot.y+=.095*Math.sin(step*Math.PI);
+      solveLimb(actor.rig.legs[side],vehicle.root.localToWorld(foot),pole(vehicle,[0,.2,-1]));
+    }
+  }
+  if(['extract','recover'].includes(phase))groundFeet(actor,vehicle,p.hip,progress*Math.PI*2,phase==='recover'?.22:phase==='extract'?.15:.06,p.footFloor);
   if(occupied&&npc&&['open','reach','extract','recover'].includes(phase)) {
     if(phase==='open'||phase==='reach')driver(npc,vehicle);
     else {
@@ -110,7 +130,15 @@ export function animateInteraction(actor,vehicle,transition) {
     }
   }
   const handle=vehicle.door.localToWorld(vehicle.handle.clone());
-  if(phase==='open')doorGrip(actor,(entrySide===1?'l':'r'),handle);
+  if(phase==='open'){
+    const side=entrySide===1?'l':'r',arm=actor.rig.arms[side];
+    // Release as the handle swings past the working shoulder.
+    const weight=ease(progress/.22)*(1-ease((p.door-.40)/.48));
+    const extraReach=Math.max(0,p.hip[2]-spec.handle[2]-.30);
+    if(extraReach>0)leanToPull(actor,handle,weight,side,Math.min(.55,extraReach*4));
+    const rest=arm.end.getWorldPosition(new THREE.Vector3());
+    doorGrip(actor,side,rest.lerp(handle,weight));
+  }
   if((phase==='reach'||phase==='extract')&&npc) {
     const amount=phase==='reach'?ease(progress):1;
     npc.root.updateWorldMatrix(true,true);
@@ -125,9 +153,13 @@ export function animateInteraction(actor,vehicle,transition) {
     for(const [side,sign,delay] of [['r',1,0],['l',-1,.3]]) {
       const t=entrySide===1?ease((progress-delay)/(1-delay)):ease((p.boarding-(side==='l'?.40:0))/(side==='l'?.50:.52));
       const ankle=spec.floor+(actor.rig.soleOffsets?.[side]||0),sill=[entrySide*(spec.halfWidth+.30),.12,entryZ+.12+sign*.13];
-      const start=vec([outside[0],.12,outside[2]+sign*.13]);if(entrySide!==1)start.lerp(vec(sill),p.approach);
+      const start=occupied?vec(sill):vec(openingAnkle(actor,spec,outside,side));
+      if(entrySide!==1&&!occupied){
+        const step=ease((p.approach-(side==='l'?.45:0))/.55);
+        start.lerp(vec(sill),step);start.y+=.08*Math.sin(step*Math.PI);
+      }
       const foot=start.lerp(vec([spec.seat[0]+sign*.105,ankle,spec.seat[2]-.66]),t);
-      if(entrySide===1){const start=vec([outside[0],.12,outside[2]+sign*.13]),aisle=vec([.15,ankle,entryZ+.1+sign*.1]),target=vec([spec.seat[0]+sign*.105,ankle,spec.seat[2]-.66]);foot.copy(progress<.45?start.lerp(aisle,ease(progress/.45)):aisle.lerp(target,ease((progress-.45)/.55)));}
+      if(entrySide===1){const aisle=vec([.15,ankle,entryZ+.1+sign*.1]),target=vec([spec.seat[0]+sign*.105,ankle,spec.seat[2]-.66]);foot.copy(progress<.45?start.lerp(aisle,ease(progress/.45)):aisle.lerp(target,ease((progress-.45)/.55)));}
       foot.y+=Math.sin(t*Math.PI)*.22;
       solveLimb(actor.rig.legs[side],vehicle.root.localToWorld(foot),pole(vehicle,[0,1,-.4]));
     }

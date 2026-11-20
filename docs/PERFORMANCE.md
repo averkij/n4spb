@@ -4493,3 +4493,23 @@ Palace. The completed regression restarts Chrome per destination with one
 persistent profile, preserving storage and the actual outgoing handoff payload;
 it verifies reconstruction rather than long-lived browser memory behaviour.
 Reproduce with `node tools/handoff-kart-browser-test.mjs`.
+
+## 16.2.0 · Anichkov Bridge and vehicle entry
+
+The bridge landmark module builds 134,116 triangles in 78 meshes, compared
+with 90,459 in 79 meshes at 9c01e2d5. Its budget is 500,000 triangles.
+The four groups share one bronze material and the editable GLB is 1,732,924 bytes.
+
+The medium Palace drive crossed the bridge from `-389.8,-82.5,76` with
+`tools/drive-bench.mjs --seconds 12 --diagnostics` on both revisions.
+Intro readiness was 28.4 s before and 27.2 s after. The runs covered 271 m
+and 244 m respectively. Mean frame time was 29.4 / 26.4 ms, p95 was
+50.0 / 33.5 ms, and both runs recorded two frames over 80 ms. Mean draw
+calls were 1,380 / 1,425. Traffic and the distance travelled varied between
+runs, so the timing difference cannot be attributed to the sculpture meshes.
+Both runs attached 19 regions with zero failed regions.
+
+The door pose regression exercised 25 vehicle definitions with both characters.
+The independent clearance test passed 200 approaches and 50 obstructed
+approaches. The browser test captured six moments during opening per character
+on the Lada and bus (24 frames).

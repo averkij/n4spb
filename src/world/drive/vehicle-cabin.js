@@ -6,9 +6,9 @@ import {deformPoint} from './damage.js';
 // vehicle factories keep their established +Z/+X frame and damage coordinates.
 const GARAGE_CABINS={
   coupe:{seat:[-.4,.35,.23],wheel:[-.4,.88,-.16],floor:.19,front:.58,rear:-.62,roof:1.27,handleY:.70,handleZ:.28},
-  truck:{seat:[-.37,.75,-.55],wheel:[-.37,1.06,-.98],floor:.49,front:1.25,rear:-.08,roof:1.80,handleY:1.10,handleZ:-.22},
-  lada:{seat:[-.34,.45,.20],wheel:[-.34,.82,-.26],floor:.19,front:.64,rear:-.65,roof:1.40,handleY:.84,handleZ:.12},
-  roadster:{seat:[-.36,.27,-.20],wheel:[-.36,.68,-.65],floor:.13,front:.92,rear:-.80,roof:1.22,handleY:.78,handleZ:.10},
+  truck:{seat:[-.37,.75,-.55],wheel:[-.37,1.06,-.98],floor:.49,front:1.25,rear:-.08,doorRear:.07,roof:1.80,handleY:1.10,handleZ:-.22},
+  lada:{seat:[-.34,.45,.20],wheel:[-.34,.82,-.26],floor:.19,front:.64,rear:-.65,doorRear:-.32,roof:1.40,handleY:.84,handleZ:.12},
+  roadster:{seat:[-.36,.27,-.20],wheel:[-.36,.68,-.65],floor:.13,front:.92,rear:-.80,doorRear:-.34,roof:1.22,handleY:.78,handleZ:.10},
 };
 export function createVehicleCabin(ctx,vehicle){
   if(vehicle.kind==='boat'||vehicle.model.placeholder)return null;
@@ -44,7 +44,7 @@ export function createVehicleCabin(ctx,vehicle){
       // The sill, side skirt and underfloor rails belong to the fixed chassis,
       // not the hinge. Cutting from floor-.01 captured disconnected low strips
       // which swung out separately below the actual door panel.
-      const original=mesh.geometry,split=cutBox(original,[side===1?-hw-.3:hw*.63,config.doorBottom,fit.rear],[side===1?-hw*.63:hw+.3,Math.min(fit.roof-.045,side===1?2.55:Infinity),fit.front]);
+      const original=mesh.geometry,split=cutBox(original,[side===1?-hw-.3:hw*.63,config.doorBottom,fit.doorRear??fit.rear],[side===1?-hw*.63:hw+.3,Math.min(fit.roof-.045,side===1?2.55:Infinity),fit.front]);
       if(mesh===model.body)addDoorInterior(split.inside);
       mesh.geometry=split.outside;original.dispose();const panel=new THREE.Mesh(split.inside,mesh.material);panel.name=mesh.name;panel.castShadow=mesh.castShadow;panel.receiveShadow=true;
       model.root.add(panel);model.root.updateMatrixWorld(true);cabin.door.attach(panel);cabin.panels.push(panel);

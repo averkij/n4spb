@@ -39,6 +39,9 @@ export const DYNAMIC_IMPORTS = {
  * A row whose literal is gone from its file is a hard error; so is an asset-looking literal without a row.
  */
 export const RUNTIME_ASSETS = {
+  'src/world/landmarksC/klodt.js': {
+    '../../../assets/sculptures/klodt.glb': { path: 'assets/sculptures/klodt.glb', hash: true, why: 'four cast groups on Anichkov Bridge' },
+  },
   'src/world/character/settings.js':{'../../../assets/characters/CREDITS.md':{path:'assets/characters/CREDITS.md',hash:false,why:'character model attribution opened from settings'}},
   'src/world/character/index.js': {
     '../../../assets/characters/woman-beret.glb':{path:'assets/characters/woman-beret.glb',hash:true,why:'playable girl rig and animations'},

@@ -1,17 +1,10 @@
 // landmarksC/horses.js - the four bronze "Horse Tamers" (Клодтовы кони, 1838-1851) and their pink granite pedestals at the four ends of the Anichkov Bridge.
-// Pedestal: 4.2 x 2.6 m, 3.2 m high above the deck (stepped base 0.45, die 2.2, cap slab 0.3, black bronze plinth 0.25), standing on the deck end at the outer edge, in line with the
-// railing (photos refs/fontanka 01 15 04).  Each group is built from tapered cylinders and ellipsoids (shared figure kit klodt.js: lofted horse + athletic youth with face and hands, ~8 k triangles per group) from joint coordinates:
-// a rearing horse (hind legs on the plinth) and a naked youth in four different poses (photos 06 07 08 63 14):
-//   A "Конь с идущим юношей" (1838): the youth stands beside the horse, the right arm stretched to the bridle, the left hand low on the rein        -> SW (west bank, unshod)
-//   B "Юноша, берущий коня под уздцы" (1841): the horse rears wildly, the youth faces it with a raised arm on the bridle                         -> NW (plaque + shell scars)
-//   C "Юноша, сдерживающий коня" (1851): the youth kneels and pulls the reins with both hands                                                     -> SE (east bank, shod)
-//   D "Юноша, поверженный конём" (1851): the youth lies at the plinth under the rearing horse, one hand on the bridle                            -> NE
-// The horses' heads point along Nevsky (outward at the ends), the youths stand on the roadway side; the groups never face the river.  Bronze #33372f, patina #566a5c.
-import { figureMats } from '../lib/figures.js';
-import { groupFigs, KLODT_SCALE } from './klodt.js';
+// Each Blender-authored group has its own pose and handedness. Geometry is
+// merged into the bridge's static batch alongside the original pedestals.
+import { bronzeMaterial, loadHorseTamers } from './klodt.js';
 import { CX, CZ, TH, EDGE, FACE, ROAD, yDeck, toWorld, BOX_ROT } from './frame.js';
 
-const SCALE = 1.15;                                       // the groups are drawn 15 % larger than the joint tables (stronger silhouette against the 3.2 m pedestals)
+const SCALE = 1.02;
 
 /** the pedestal block (centre uc, vc at the outer edge, stands on the deck at height y0) */
 function pedestal(P, M, uc, vc, y0) {
@@ -19,28 +12,32 @@ function pedestal(P, M, uc, vc, y0) {
   P.box(M.coping, uc - dx - 0.2, uc + dx + 0.2, yb - 0.1, yd, vc - dz - 0.15, vc + dz + 0.15, 'b', 2.2);
   P.box(M.granite, uc - dx, uc + dx, yd, yc, vc - dz, vc + dz, 'b', 2.2);
   P.box(M.coping, uc - dx - 0.15, uc + dx + 0.15, yc, ys, vc - dz - 0.15, vc + dz + 0.15, '', 2.2);
-  P.box(M.bronzePlinth, uc - dx + 0.1, uc + dx - 0.1, ys, ys + 0.25, vc - dz + 0.1, vc + dz - 0.1, 'b', 1);
+  // The cast base has clipped corners, a rolled edge and a shallow bevel.
+  const tiers = [[ys,2.04,1.25],[ys+.035,2.08,1.29],[ys+.09,2.07,1.28],[ys+.20,2.01,1.22],[ys+.25,1.96,1.18]];
+  const rings = tiers.map(([y,x,z]) => [[-x+.19,-z],[x-.19,-z],[x,-z+.19],[x,z-.19],[x-.19,z],[-x+.19,z],[-x,z-.19],[-x,-z+.19]].map(([u,v])=>[uc+u,y,vc+v]));
+  for(let i=1;i<rings.length;i++)for(let j=0;j<8;j++){
+    const k=(j+1)%8,a=rings[i-1][j],b=rings[i-1][k];
+    P.quad(M.bronzePlinth,a,b,rings[i][k],rings[i][j],[(a[0]+b[0])*.5-uc,0,(a[2]+b[2])*.5-vc]);
+  }
+  P.fan(M.bronzePlinth,rings.at(-1),[0,1,0]);
   return ys + 0.25;
 }
 
-export function buildHorses(K, M, ctx) {
-  const P = K.P, T = ctx.mat.toon;
-  M.bronze = T('#3a3f38', { paint: 0.03, name: 'lmC-bronze' });
-  M.patina = T('#566a5c', { paint: 0.04, name: 'lmC-patina' });
+export async function buildHorses(K, M, ctx) {
+  const P = K.P, sculptures = await loadHorseTamers(), bronze = bronzeMaterial(ctx);
   const rng = ctx.rng('lmC-scars');
   const groups = [];
   P.push(CX, 0, CZ, -TH);
+  // OSM artwork nodes 1594944814 (NW), 1594950131 (SW), 1594950136 (NE), 1594950120 (SE).
   const CORNERS = [
-    { id: 'NE', sx: 1, side: -1, pose: 'D' }, { id: 'SE', sx: 1, side: 1, pose: 'C' },
-    { id: 'SW', sx: -1, side: 1, pose: 'A' }, { id: 'NW', sx: -1, side: -1, pose: 'B' },
+    { id: 'NE', sx: 1, side: -1, pose: 'C' }, { id: 'SE', sx: 1, side: 1, pose: 'D' },
+    { id: 'SW', sx: -1, side: 1, pose: 'B' }, { id: 'NW', sx: -1, side: -1, pose: 'A' },
   ];
   for (const c of CORNERS) {
     const uc = c.sx * 25.0, vc = c.side * (EDGE - 1.3), y0 = yDeck(uc);
     const top = pedestal(P, M, uc, vc, y0);
-    // the horse and the youth (shared figure kit, klodt.js): kit frame +z = forward along Nevsky, +x = left; sgn keeps the groups unmirrored on all four corners
-    const gf = groupFigs(c.pose, c.side * c.sx), mk = figureMats(ctx).keys('bronze', 'bronze'), ry = c.sx > 0 ? Math.PI / 2 : -Math.PI / 2;
-    gf.horse.place(P, mk, uc, top, vc, ry, KLODT_SCALE.horse * SCALE);
-    gf.youth.place(P, mk, uc, top, vc, ry, KLODT_SCALE.youth * SCALE);
+    const yaw = c.sx > 0 ? Math.PI / 2 : -Math.PI / 2;
+    P.geo(bronze, sculptures[c.pose], uc + c.sx * .18, top, vc + c.side * .22, 0, yaw, 0, SCALE);
     const w = toWorld(uc, vc);
     ctx.physics.addBox(w.x, w.z, 4.6, 3.0, BOX_ROT, -6, top + 0.5);
     groups.push({ id: c.id, pose: c.pose, x: w.x, z: w.z, top });
