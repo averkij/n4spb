@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { MeshBuilder, addPrism, addCap, addPolyColliders } from '../lib/massing.js';
 import { mesh, paintStrip, siteFence } from './course.js';
-import { STADIUM_GROUP } from './site.js';
+import { SHELTER_ID, STADIUM_GROUP } from './site.js';
 
 const FLAT = () => 0;
 const FIELD = [-4586.9, 3514.6];
@@ -43,6 +43,20 @@ export function buildStadium(ctx, root) {
     m.scale.set(w, h, d);
     m.castShadow = m.receiveShadow = true;
     root.add(m);
+  }
+  const shelter = polyOf(SHELTER_ID);
+  if (shelter) {
+    const corners = Array.from({ length: shelter.o.length / 2 }, (_, i) => shelter.o.slice(i * 2, i * 2 + 2));
+    const [a, ...open] = corners, b = open.pop();
+    addPrism(walls, slabs, shelter, 3.06, 3.3, { floorCap: true });
+    const dx = b[0] - a[0], dz = b[1] - a[1];
+    const x = (a[0] + b[0]) / 2, z = (a[1] + b[1]) / 2, span = Math.hypot(dx, dz), yaw = Math.atan2(-dz, dx);
+    block(x, 1.53, z, span, 3.06, .20, yaw, ctx.mat.toon('#718076'));
+    ctx.physics.addBox(x, z, span, .20, yaw, 0, 3.06);
+    for (const [px, pz] of open) {
+      block(px, 1.53, pz, .18, 3.06, .18, yaw, dark);
+      ctx.physics.addBox(px, pz, .18, .18, yaw, 0, 3.06);
+    }
   }
   const pitchYaw = Math.atan2(...AXIS);
   for (const side of [-1, 1]) {

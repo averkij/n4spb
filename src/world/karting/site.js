@@ -46,7 +46,8 @@ export const COURSE_LAWN = [
 export const KARTING_GROUND_CLAIMS = [{ module: 'kartingNarvskaya', rings: [COURSE_LAWN] }];
 
 const SITE_WAYS = new Set(['w385655517', 'w564316332', 'w564319999', 'w564320000']);
-export const STADIUM_IDS = ['w222657246', 'w1344693627', 'w222938662', 'w222938686', 'w1344693628'];
+export const SHELTER_ID = 'w1344693624';
+export const STADIUM_IDS = ['w222657246', 'w1344693627', 'w222938662', 'w222938686', 'w1344693628', SHELTER_ID];
 export const STADIUM_GROUP = { key: 'kirovets-karting', name: 'Стадион «Кировец»', nameEn: 'Kirovets Stadium', ids: STADIUM_IDS, osm: ['w1229866327', 'w1229866328', 'w1229866329', 'w1229866330', 'w1229866359'], at: [-4591, 3512] };
 export const START_FINISH = [[-4716.448, 3559.705], [-4683.267, 3548.288]];
 export const SPEED_CHECK = [-4731.8, 3518];

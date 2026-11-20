@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **16.1.0** (2026-11-20, minor): Show the selected driver's hands in the kart cockpit, restore course and tyre-barrier contact, clarify pit access and repair the stadium shelter and Sutugin Bridge rails
 - **16.0.2** (2026-11-19, patch): Keep karting trees clear of buildings, restore parked-kart impact and damage, and refresh loading diagnostics
 - **16.0.1** (2026-11-19, patch): Refine kart low-speed response, brake-induced rotation and countersteering without automatic power spins; sample city asphalt before ground roughness; fit the backrest and lower wheel grips and use edited SR5 steering with the engine on the right
 - **16.0.0** (2026-11-18, major): Preserve portable karts and their tuning across area transitions, independently of venue parking

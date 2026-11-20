@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { createContext } from '../src/core/ctx.js';
 import { Physics } from '../src/core/physics.js';
+import { createKnock } from '../src/core/knock.js';
 import { build } from '../src/world/kartingNarvskaya.js';
 import { createLapTimer } from '../src/world/karting/laps.js';
 import { WALK_IN } from '../src/world/karting/site.js';
@@ -13,6 +14,7 @@ const ctx = createContext({
   scene: new THREE.Scene(), camera: new THREE.PerspectiveCamera(),
   quality: { name: 'medium' }, sunDir: new THREE.Vector3(1, 1, 1).normalize(),
 });
+ctx.knock = createKnock(ctx);
 build(ctx);
 
 const course = ctx.services.kartingNarvskaya;
@@ -22,6 +24,42 @@ assert.equal(karts.length, 20);
 assert.equal(new Set(karts.map(kart => kart.id)).size, 20);
 assert.ok(course.length > 800 && course.length < 815);
 assert.ok(course.start, 'The start-finish gate must intersect the course');
+
+const recovery = createHandling(ctx, karts[10].tuning);
+ctx.drive = { active: true, car: recovery };
+const firstTurn = course.racingLine.getPointAt(0), tangent = course.racingLine.getTangentAt(0);
+const outward = [tangent.z, -tangent.x];
+recovery.reset(firstTurn.x + 7 * outward[0], firstTurn.z + 7 * outward[1], Math.atan2(-outward[0], -outward[1]));
+recovery.vx = -3 * outward[0]; recovery.vz = -3 * outward[1];
+assert.equal(course.roughnessAt(recovery.x, recovery.z), 1);
+for (let i = 0; i < 200; i++) {
+  recovery.step(1 / 120, { thr: .55, brk: 0, steer: 0 });
+  assert.ok(recovery.y >= (course.deckY(recovery.x, recovery.z) ?? 0) - .06, 'the kart stays on top of the graded verge');
+}
+assert.equal(course.roughnessAt(recovery.x, recovery.z), 0, 'the kart can rejoin the raised turn from the lawn');
+
+const exit = [-4669.3, 3582.1], exitYaw = Math.atan2(-4.1, 1.7);
+recovery.reset(...exit, exitYaw);
+recovery.vx = 3 * Math.sin(exitYaw); recovery.vz = 3 * Math.cos(exitYaw);
+for (let i = 0; i < 160; i++) {
+  recovery.step(1 / 120, { thr: .55, brk: 0, steer: 0 });
+  assert.equal(course.roughnessAt(recovery.x, recovery.z), 0, 'the paddock exit stays on pavement');
+}
+assert.ok(recovery.x < exit[0] - 4, 'a kart can drive from the paddock onto the pit lane');
+
+const bank = ctx.knock.list.filter(item => item.kind === 'tyre-bank')
+  .reduce((closest, item) => !closest || Math.hypot(item.x + 4714.9, item.z - 3504.8) < Math.hypot(closest.x + 4714.9, closest.z - 3504.8) ? item : closest, null);
+assert(bank && Math.abs(bank.y - course.deckY(bank.x, bank.z)) < .04, 'the reported tyre bank sits on the modelled verge');
+const nx = -Math.sin(bank.rotY), nz = -Math.cos(bank.rotY), impactYaw = Math.atan2(-nx, -nz);
+recovery.reset(bank.x + 2 * nx, bank.z + 2 * nz, impactYaw);
+recovery.vx = -8 * nx; recovery.vz = -8 * nz;
+let bounced = false;
+for (let i = 0; i < 60; i++) {
+  recovery.step(1 / 120, { thr: 0, brk: 0, steer: 0 });
+  if (recovery.events.some(event => event.obstacle?.source?.knock === bank) && recovery.vx * nx + recovery.vz * nz > .1) bounced = true;
+}
+assert.equal(bank.state, 'stand', 'a kart hit keeps the tied tyre bank in place');
+assert(bounced, 'the kart rebounds from the tyre bank');
 
 const { L, physics } = ctx;
 for (let i = 1; i < WALK_IN.length; i++) {

@@ -8,7 +8,7 @@ import { createKartRoughness } from './surfaces.js';
 const SPEC = {
   W: 1.332, len: 1.914, hgt: .67, R: .137, tw: .16, track: 1.0, wb: 1.07,
   front: .968, rear: -.946, centerZ: .011, mass: 225,
-  eye: { x: 0, y: .91, z: -.24 }, fovRest: 76,
+  eye: { x: 0, y: .87, z: -.33, pitch: -.30 }, fovRest: 76,
 };
 
 // Different launch, top-end and front grip within each ten-kart fleet.
@@ -20,6 +20,7 @@ const VARIATION = [
 
 const workshops = new WeakMap();
 const driverBacks = new WeakMap();
+const driverArms = new WeakMap();
 
 /** Portable vehicle definition. Its identity determines its model and tuning;
  * parking and the optional authored surface belong to the destination world. */
@@ -115,6 +116,8 @@ function createModel(ctx, geometry, club, number) {
   root.add(driverFrame);
   const driverSeat = new THREE.Vector3(0, .30, .22);
   const contact = new THREE.Vector3(), bend = new THREE.Vector3();
+  const inverseKart = new THREE.Matrix4();
+  let cockpit = false, arms = null;
   const numberPanel = new THREE.Group();
   numberPanel.position.set(0, .553, .275);
   numberPanel.rotation.x = Math.atan(.49);
@@ -139,7 +142,13 @@ function createModel(ctx, geometry, club, number) {
   }
   return {
     root, wheels, damageMeshes, spec: SPEC,
-    setView() {},
+    setView(firstPerson) {
+      cockpit = firstPerson;
+      if (!cockpit && arms) {
+        arms.root.removeFromParent();
+        arms = null;
+      }
+    },
     poseDriver(actor) {
       blendPose(actor, 1);
       if (!driverBacks.has(actor.rig)) {
@@ -166,6 +175,20 @@ function createModel(ctx, geometry, club, number) {
         bend.set(0, 1, -.3).transformDirection(driverFrame.matrixWorld);
         solveLimb(actor.rig.legs[side], contact, bend);
       }
+      if (cockpit) {
+        const current = cockpitArms(actor);
+        if (arms !== current || current.root.parent !== root) {
+          arms?.root.removeFromParent();
+          root.add(current.root);
+          arms = current;
+        }
+        actor.root.updateWorldMatrix(true, true);
+        inverseKart.copy(root.matrixWorld).invert();
+        for (const { source, mesh } of arms.meshes) {
+          mesh.matrix.multiplyMatrices(inverseKart, source.matrixWorld);
+          mesh.matrixWorldNeedsUpdate = true;
+        }
+      }
     },
     set({x, y, z, yaw, pitch, roll, steerAngle, spin, driven}) {
       root.position.set(x,y,z); root.rotation.set(-pitch,yaw,roll);
@@ -176,6 +199,56 @@ function createModel(ctx, geometry, club, number) {
       }
     },
   };
+}
+
+// Reuse the driver's arm triangles, skeleton and materials. The full actor
+// is hidden in cockpit view because its head would occlude the camera.
+function cockpitArms(actor) {
+  const cached = driverArms.get(actor);
+  if (cached) return cached;
+  const root = new THREE.Group(), meshes = [];
+  root.name = 'cockpit-arms';
+  const bones = new Set();
+  for (const { upper } of Object.values(actor.rig.arms)) upper.traverse(bone => bones.add(bone));
+  actor.visual.traverse(source => {
+    if (!source.isSkinnedMesh) return;
+    const { geometry, skeleton, material } = source;
+    const skinIndex = geometry.getAttribute('skinIndex');
+    const skinWeight = geometry.getAttribute('skinWeight');
+    const armBones = skeleton.bones.map(bone => bones.has(bone));
+    const armVertices = new Uint8Array(skinIndex.count);
+    for (let i = 0; i < armVertices.length; i++) {
+      let weight = 0;
+      for (let j = 0; j < 4; j++) if (armBones[skinIndex.getComponent(i, j)]) weight += skinWeight.getComponent(i, j);
+      armVertices[i] = weight >= .5;
+    }
+    const subset = new THREE.BufferGeometry(), indices = [];
+    const count = geometry.index?.count ?? armVertices.length;
+    const groups = Array.isArray(material) ? geometry.groups : [{ start: 0, count }];
+    const vertexAt = i => geometry.index ? geometry.index.getX(i) : i;
+    for (const group of groups) {
+      const start = indices.length;
+      for (let i = group.start; i < group.start + group.count; i += 3) {
+        const a = vertexAt(i), b = vertexAt(i + 1), c = vertexAt(i + 2);
+        if (armVertices[a] && armVertices[b] && armVertices[c]) indices.push(a, b, c);
+      }
+      if (indices.length > start && Array.isArray(material)) subset.addGroup(start, indices.length - start, group.materialIndex);
+    }
+    if (!indices.length) return;
+    for (const [name, attribute] of Object.entries(geometry.attributes)) subset.setAttribute(name, attribute);
+    subset.setIndex(indices);
+    const mesh = new THREE.SkinnedMesh(subset, material);
+    mesh.bind(skeleton, source.bindMatrix);
+    mesh.bindMode = source.bindMode;
+    mesh.boundingSphere = source.boundingSphere.clone();
+    mesh.matrixAutoUpdate = false;
+    mesh.receiveShadow = true;
+    root.add(mesh);
+    meshes.push({ source, mesh });
+  });
+  const arms = { root, meshes };
+  driverArms.set(actor, arms);
+  return arms;
 }
 
 // The palm grips the rim; putting the wrist itself on the rim overextends the

@@ -13,6 +13,16 @@ const started=performance.now(),{ctx,THREE,errors}=await buildWorld({modules:['c
 assert.deepEqual(errors,[],'standalone bridge builder must succeed');
 const svc=ctx.services.coastalBridges;assert(svc?.list.length,'exercise real mapped bridges');
 assert(svc.list.every(b=>!b.marine&&!b.seaCanal&&!b.yacht),'harbour pylons/stays require a separate envelope oracle');
+if (process.env.AREA === 'narvsky') {
+  const crossing = ['w228768422', 'w591257589', 'w591257591'];
+  const [bridge, ...duplicates] = svc.list.filter(b => crossing.includes(b.road.id));
+  assert.equal(bridge?.road.id, crossing[0]);
+  assert.deepEqual(duplicates, [], 'Sutugin uses a single deck for the road and both sidewalks');
+  for (const id of crossing) {
+    const { pts: [ax, az, bx, bz] } = ROADS.find(r => r.id === id);
+    assert.ok(Number.isFinite(svc.deckY((ax + bx) / 2, (az + bz) / 2)), 'the deck still reaches the mapped crossing');
+  }
+}
 const CELL=64,grid=new Map(),nodes=new Map();let sourceSegments=0;
 const insert=(record,x0,x1,z0,z1)=>{
   for(let x=Math.floor(x0/CELL);x<=Math.floor(x1/CELL);x++)for(let z=Math.floor(z0/CELL);z<=Math.floor(z1/CELL);z++){

@@ -338,7 +338,7 @@ export async function build(ctx) {
       view.hy += (-0.012 * sp - view.hy) * kh;
       camera.position.copy(model.root.localToWorld(_v.set(EYE.x + view.hx, EYE.y + view.hy, EYE.z + view.hz)));
       _q.copy(model.root.quaternion); _q2.setFromEuler(_e.set(0, Math.PI, 0)); _q.multiply(_q2);
-      _q2.setFromEuler(_e.set(view.orbitP, view.orbitY, 0, 'YXZ')); _q.multiply(_q2);
+      _q2.setFromEuler(_e.set((EYE.pitch ?? 0) + view.orbitP, view.orbitY, 0, 'YXZ')); _q.multiply(_q2);
       camera.quaternion.copy(_q);
       camera.position.x += (Math.random() - 0.5) * amp * 0.3; camera.position.y += (Math.random() - 0.5) * amp * 0.3;
       camera.up.set(0, 1, 0);

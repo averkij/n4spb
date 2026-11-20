@@ -14,6 +14,8 @@ globalThis.ProgressEvent ??= class {};
 const shared = { uNight: { value: .4 } };
 const ctx = { shared, mat: createMaterials(shared), noOutline() {}, add() {} };
 const kart = loadKarts(ctx, {})[0].makeModel();
+kart.setView(true);
+let lastArms;
 const steering = kart.root.getObjectByName('steering');
 assert.ok(steering.position.distanceTo(new THREE.Vector3(0,.548,.1372647))<1e-6,'Preserve the owner-edited steering position');
 assert.ok(steering.quaternion.angleTo(new THREE.Quaternion(.2668812,0,0,.9637294).normalize())<.001,'Preserve the owner-edited steering tilt');
@@ -31,6 +33,18 @@ for (const name of ['woman-beret', 'man-jacket']) {
     kart.set({ x: 7, y: .3, z: -11, yaw, pitch: .06, roll: -.05, steerAngle: angle, spin: 0, driven: true });
     kart.poseDriver(actor);
     actor.root.updateWorldMatrix(true, true);
+    kart.root.updateMatrixWorld(true);
+    const arms = kart.root.getObjectByName('cockpit-arms');
+    assert.ok(arms.children.length > 0, name + ' has renderable cockpit arms');
+    assert.ok(arms.children.every(mesh => mesh.isSkinnedMesh && mesh.geometry.index.count > 0));
+    assert.ok(!lastArms || arms !== lastArms, 'switching characters replaces the cockpit arms');
+    arms.traverse(mesh => {
+      if (!mesh.isSkinnedMesh) return;
+      let source;
+      actor.visual.traverse(object => { if (object.skeleton === mesh.skeleton) source = object; });
+      assert.ok(source && mesh.material === source.material, 'hands use the selected character');
+      assert.ok(mesh.matrixWorld.elements.every((value, i) => Math.abs(value - source.matrixWorld.elements[i]) < 1e-8));
+    });
     const local = bone => kart.root.worldToLocal(bone.getWorldPosition(new THREE.Vector3()));
     const hip = local(actor.rig.hips);
     assert.ok(hip.distanceTo(new THREE.Vector3(0, .30, -.22)) < .001, `${name}: pelvis leaves the seat`);
@@ -47,5 +61,8 @@ for (const name of ['woman-beret', 'man-jacket']) {
       assert.ok(local(actor.rig.arms[side].lower).x * -sign > -.015, `${name}: elbow crosses the torso`);
     }
   }
+  lastArms = kart.root.getObjectByName('cockpit-arms');
 }
-console.log('PASS kart drivers: both player rigs, seat/pedal fit, hands on turning wheel, yaw/pitch/roll transforms');
+kart.setView(false);
+assert.equal(kart.root.getObjectByName('cockpit-arms'), undefined, 'external cameras and exits remove cockpit arms');
+console.log('PASS kart drivers: both player rigs, visible cockpit hands on turning wheel, seat/pedal fit and yaw/pitch/roll transforms');

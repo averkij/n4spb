@@ -43,7 +43,14 @@ export function createTrackSurfaceIndex() {
     },
     at(x, z) {
       const planes = cells.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
-      return planes?.find(plane => plane.contains(x, z)) ?? null;
+      if (!planes) return null;
+      let surface = null, height = -Infinity;
+      for (const plane of planes) {
+        if (!plane.contains(x, z)) continue;
+        const y = plane.height(x, z);
+        if (y > height) { surface = plane; height = y; }
+      }
+      return surface;
     },
   };
 }

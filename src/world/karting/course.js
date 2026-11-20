@@ -10,9 +10,10 @@ export const racingLine = spline(COURSE, true);
 racingLine.arcLengthDivisions = 2048;
 const length = racingLine.getLength();
 const circuit = racingLine.getSpacedPoints(Math.ceil(length / 1.35));
-const circuit2D = circuit.map(p => [p.x, p.z]);
 const clamp = THREE.MathUtils.clamp;
 const PAD = [[-4682.5, .073, 3555.4], [-4668.5, .073, 3550.1], [-4657.7, .073, 3581.5], [-4670.2, .073, 3587.2]];
+const PAD_ACCESS = [[-4678.05, 3581.5], [-4674, 3587.2], [-4665.4, 3583], [-4668.1, 3577.5]]
+  .map(([x, z], i) => [x, i < 2 ? relief(x, z) + .004 : .0735, z]);
 function onCourseLawn(x, z) {
   if (x < -4773 || x > -4598 || z < 3479 || z > 3694) return false;
   let inside = false;
@@ -30,12 +31,6 @@ const cornerWidth = (i) => {
 
 const lane = spline(PIT_LANE, false).getSpacedPoints(54);
 const lane2D = lane.map(p => [p.x, p.z]);
-
-export function deckY(x, z) {
-  if (x < -4768 || x > -4600 || z < 3497 || z > 3689) return null;
-  if (distSqToLine(x, z, circuit2D) < 23 || distSqToLine(x, z, lane2D) < 9) return relief(x, z);
-  return null;
-}
 
 function offsets(points, closed) {
   const n = points.length - (closed ? 1 : 0);
@@ -69,6 +64,25 @@ function face(points, normals, i, lo, hi, base, y0 = 0, y1 = y0) {
 
 function ribbon(builder, points, normals, lo, hi, shift, base, from = 0, to = points.length - 1, high = shift) {
   for (let i = from; i < to; i++) quad(builder, face(points, normals, i, lo, hi, base, shift, high));
+}
+
+// Border paint stops at a joining pavement edge. Subdivide only at junctions
+// so that even a shallow-angle merge does not leave a crossing white line.
+function edgePaint(builder, points, acrossJunction) {
+  if (!acrossJunction) {
+    quad(builder, points);
+    return;
+  }
+  const [a, b, c, d] = points;
+  const steps = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / .16));
+  const lerp = (from, to, t) => from.map((value, i) => value + (to[i] - value) * t);
+  for (let k = 0; k < steps; k++) {
+    const start = k / steps, end = (k + 1) / steps, t = (start + end) / 2;
+    const lo = lerp(a, b, t), hi = lerp(d, c, t);
+    if (!acrossJunction((lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2)) {
+      quad(builder, [lerp(a, b, start), lerp(a, b, end), lerp(d, c, end), lerp(d, c, start)]);
+    }
+  }
 }
 
 export function mesh(root, builder, material, name) {
@@ -108,10 +122,25 @@ export function buildCourse(ctx, root) {
   const cityRoughness = createKartRoughness(ctx);
   const normals = offsets(circuit, true);
   const kerbs = createTrackSurfaceIndex();
-  const paved = createTrackSurfaceIndex();
-  paved.addFace(PAD);
-  const asphalt = new MeshBuilder(), shoulder = new MeshBuilder(), white = new MeshBuilder(), red = new MeshBuilder();
+  const track = createTrackSurfaceIndex(), pit = createTrackSurfaceIndex(), paddock = createTrackSurfaceIndex();
+  const verge = createTrackSurfaceIndex();
+  function support(points, index, section) {
+    index.addFace(points, section);
+    const [a, b, c, d] = points;
+    ctx.physics.addWalkTriangle([a, b, c], .1);
+    ctx.physics.addWalkTriangle([a, c, d], .1);
+  }
+  support(PAD, paddock);
+  support(PAD_ACCESS, paddock);
+  function groundY(x, z) {
+    let height = -Infinity;
+    for (const surface of surfaces) height = Math.max(height, surface.at(x, z)?.height(x, z) ?? -Infinity);
+    return height === -Infinity ? null : height;
+  }
+  const surfaces = [track, pit, paddock, verge, kerbs];
+  const asphalt = new MeshBuilder(), white = new MeshBuilder(), red = new MeshBuilder();
   const grass = new MeshBuilder(), rubber = new MeshBuilder();
+  quad(asphalt, PAD_ACCESS);
   const left = i => -cornerWidth(i), right = i => cornerWidth(i);
 
   // A graded, narrow verge meets the site's base grade, so the raised asphalt has no floating edges.
@@ -121,14 +150,11 @@ export function buildCourse(ctx, root) {
     const outerLeft = [corner(circuit[i+1], normals[i+1], left(i+1) - 2.05, .017, () => 0), corner(circuit[i], normals[i], left(i) - 2.05, .017, () => 0)];
     const innerRight = [corner(circuit[i], normals[i], right(i), -.012, relief), corner(circuit[i+1], normals[i+1], right(i+1), -.012, relief)];
     const outerRight = [corner(circuit[i+1], normals[i+1], right(i+1) + 2.05, .017, () => 0), corner(circuit[i], normals[i], right(i) + 2.05, .017, () => 0)];
-    quad(grass, innerLeft.concat(outerLeft));
-    quad(grass, innerRight.concat(outerRight));
+    for (const points of [innerLeft.concat(outerLeft), innerRight.concat(outerRight)]) {
+      quad(grass, points);
+      support(points, verge);
+    }
   }
-  for (const side of [-1, 1]) {
-    const at = i => side * (cornerWidth(i) - .19);
-    ribbon(white, circuit, normals, i => at(i) - .057, i => at(i) + .057, .009, relief);
-  }
-
   const tyreRuns = [
     [2, 14, -1], [106, 168, 1], [193, 227, -1], [276, 310, 1], [327, 377, -1],
     [380, 423, 1], [441, 482, -1], [521, 554, -1], [567, 592, 1],
@@ -150,10 +176,7 @@ export function buildCourse(ctx, root) {
       for (let section = 0; section < KERB_PROFILE.length - 1; section++) {
         const points = [point(i, section), point(i + 1, section), point(i + 1, section + 1), point(i, section + 1)];
         quad(color, points);
-        kerbs.addFace(points, section);
-        const [a, b, c, d] = points;
-        ctx.physics.addWalkTriangle([a, b, c], .1);
-        ctx.physics.addWalkTriangle([a, c, d], .1);
+        support(points, kerbs, section);
       }
     }
   }
@@ -169,7 +192,10 @@ export function buildCourse(ctx, root) {
         const j = Math.min(i + 3, end);
         const b = corner(circuit[j], normals[j], at(j) + side * 1.48, 0, relief);
         // The pit entry and exit cross the eastern edge of the race track.
-        if (distSqToLine((a[0] + b[0]) / 2, (a[2] + b[2]) / 2, lane2D) > 14) bays.push({ x0: a[0], z0: a[2], x1: b[0], z1: b[2], y: a[1], ye: b[1] });
+        if (distSqToLine((a[0] + b[0]) / 2, (a[2] + b[2]) / 2, lane2D) > 14) {
+          const foot = p => verge.at(p[0], p[2])?.height(p[0], p[2]) ?? .012;
+          bays.push({ x0: a[0], z0: a[2], x1: b[0], z1: b[2], y: foot(a), ye: foot(b) });
+        }
       }
       if ((i - start) % 5 < 4) {
         const trace = j => at(j) * .67 + .24 * Math.sin(j * .09);
@@ -180,10 +206,34 @@ export function buildCourse(ctx, root) {
   const laneNormal = offsets(lane, false);
   for (let i = 0; i < lane.length - 1; i++) {
     const points = face(lane, laneNormal, i, () => -2.18, () => 2.18, relief, .004);
-    quad(shoulder, points);
-    paved.addFace(points);
+    quad(asphalt, points);
+    support(points, pit);
   }
-  for (const side of [-1, 1]) ribbon(white, lane, laneNormal, () => side * 1.97 - .043, () => side * 1.97 + .043, .013, relief, 5, lane.length - 5);
+  for (let i = 0; i < circuit.length - 1; i++) {
+    const points = face(circuit, normals, i, left, right, relief);
+    quad(asphalt, points);
+    support(points, track);
+  }
+  for (const side of [-1, 1]) {
+    const at = i => side * (cornerWidth(i) - .19);
+    const underPit = (x, z) => pit.at(x, z);
+    const underJunction = (x, z) => track.at(x, z) || paddock.at(x, z);
+    for (let i = 0; i < circuit.length - 1; i++) {
+      const { x, z } = circuit[i];
+      const near = x > -4710 && x < -4655 && z > 3545 && z < 3623;
+      edgePaint(white, face(circuit, normals, i, j => at(j) - .057, j => at(j) + .057, relief, .009), near ? underPit : null);
+    }
+    for (let i = 0; i < lane.length - 1; i++) {
+      edgePaint(white, face(lane, laneNormal, i, () => side * 1.97 - .043, () => side * 1.97 + .043, relief, .013), underJunction);
+    }
+  }
+  const arrow = [-4669.3, 3582.1], tip = [-4673.4, 3583.8];
+  const padHeight = (x, z) => groundY(x, z) ?? .073;
+  for (const start of [arrow, [-4672.1, 3584.2], [-4672.5, 3583]]) {
+    const steps = Math.ceil(Math.hypot(tip[0] - start[0], tip[1] - start[1]) / .25);
+    const at = i => start.map((x, axis) => x + (tip[axis] - x) * i / steps);
+    for (let i = 0; i < steps; i++) paintStrip(white, at(i), at(i + 1), .18, .017, padHeight);
+  }
 
   const start = markingAt(white, START_FINISH, .34);
   const nearStart = circuit.findIndex(p => Math.hypot(p.x - start[0], p.z - start[1]) < 1.4);
@@ -204,39 +254,32 @@ export function buildCourse(ctx, root) {
   mesh(root, pavingPad(), ctx.mat.toon('#625f65'), 'pit-paddock');
   mesh(root, grass, ctx.mat.toon('#63784c'), 'circuit-graded-verges');
   mesh(root, floor, ctx.mat.toon('#ada192'), 'kirovets-walking-approach');
-  mesh(root, shoulder, ctx.mat.toon('#51535a'), 'narvskaya-pit-lane');
   mesh(root, white, ctx.mat.toon('#e8e5d8'), 'narvskaya-whites');
   mesh(root, red, ctx.mat.toon('#c4443c'), 'narvskaya-red-kerbs');
   mesh(root, rubber, ctx.mat.toon('#353941'), 'narvskaya-tyre-marks');
 
-  // Match the rendered asphalt, pedestrian support and tyre contact to one surface.
-  for (let i = 0; i < circuit.length - 1; i++) {
-    const points = face(circuit, normals, i, left, right, relief);
-    quad(asphalt, points);
-    paved.addFace(points);
-    const [a, b, c, d] = points;
-    ctx.physics.addWalkTriangle([a, b, c], .1);
-    ctx.physics.addWalkTriangle([a, c, d], .1);
-  }
-
   mesh(root, asphalt, ctx.mat.toon('#42464d'), 'narvskaya-asphalt');
 
   const tyre = new THREE.TorusGeometry(.24, .088, 5, 10).rotateX(Math.PI / 2);
-  knockBays(ctx, {
+  const { items: tyreColliders } = knockBays(ctx, {
     name: 'karting-tyre-banks', bays, far: 380, cell: 64,
     parts: [
-      { geo: tyre, mat: ctx.mat.toon('#303139'), ats: () => [.10, .28, .46, .64, .82, .98], y: .13 },
-      { geo: tyre, mat: ctx.mat.toon('#e2dcc9'), ats: () => [.10, .28, .46, .64, .82, .98], y: .29, when: (_, i) => i % 4 < 2 },
-      { geo: tyre, mat: ctx.mat.toon('#a53432'), ats: () => [.10, .28, .46, .64, .82, .98], y: .29, when: (_, i) => i % 4 >= 2 },
+      { geo: tyre, mat: ctx.mat.toon('#303139'), ats: () => [.08, .25, .42, .58, .75, .92], y: .077 },
+      { geo: tyre, mat: ctx.mat.toon('#e2dcc9'), ats: () => [.08, .25, .42, .58, .75, .92], y: .237, when: (_, i) => i % 4 < 2 },
+      { geo: tyre, mat: ctx.mat.toon('#a53432'), ats: () => [.08, .25, .42, .58, .75, .92], y: .237, when: (_, i) => i % 4 >= 2 },
     ],
-    collider: b => ({ thick: .67, y0: b.y - .05, y1: Math.max(b.y, b.ye) + .48 }),
-    rec: { kind: 'tyre-bank', mass: 33, h: .48, anchored: 23, hitK: .34, loosen: true },
+    collider: b => ({ thick: .67, y0: Math.min(b.y, b.ye) - .05, y1: Math.max(b.y, b.ye) + .33 }),
+    // The tied banks yield and rebound through the existing anchored collision
+    // path. Every SR5 tops out below their break speed.
+    rec: { kind: 'tyre-bank', mass: 110, h: .33, anchored: 120, hitK: .12 },
   });
+  // Even a low tied stack blocks wheels when the chassis overlaps it.
+  for (const box of tyreColliders) box.solidForVehicles = true;
 
   return {
-    deckY: (x, z) => kerbs.at(x, z)?.height(x, z) ?? deckY(x, z),
+    deckY: groundY,
     roughnessAt: (x, z) => {
-      if (paved.at(x, z)) return 0;
+      if (track.at(x, z) || pit.at(x, z) || paddock.at(x, z)) return 0;
       if (onCourseLawn(x, z)) return 1;
       return cityRoughness(x, z);
     },

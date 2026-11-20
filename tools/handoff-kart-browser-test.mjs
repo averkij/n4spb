@@ -86,6 +86,15 @@ try {
     assert.deepEqual(result.errors, []); assert.deepEqual(errors, []);
     if (results.length) for (const key of ['acc', 'vmax', 'frontMu']) assert.equal(result[key], results[0][key]);
     await page.screenshot({ path: `${out}-${results.length}-${area}.png` });
+    await page.evaluate(() => __ctx.drive.setView(2));
+    await page.waitForFunction(() => !__ctx.characters.actor.root.visible &&
+      __ctx.drive.model.root.getObjectByName('cockpit-arms')?.children.length > 0);
+    await page.screenshot({ path: `${out}-${results.length}-${area}-cockpit.png` });
+    await page.evaluate(() => __ctx.drive.sim(.3, { thr: 0, steer: .75 }));
+    assert(await page.evaluate(() => __ctx.drive.car.steer > 0));
+    await page.evaluate(() => __ctx.drive.setView(0));
+    await page.waitForFunction(() => __ctx.characters.actor.root.visible &&
+      !__ctx.drive.model.root.getObjectByName('cockpit-arms'));
     await page.keyboard.press('KeyE');
     await page.waitForFunction(() => !__ctx.drive.active);
     await page.evaluate(() => {
