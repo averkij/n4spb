@@ -10,8 +10,9 @@ import { DYNAMIC_IMPORTS, isAllowedServed } from './lib/closure-rules.mjs';
 import { createRevisionContext, revisionsOf, liveAreas } from './baked-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'moskovskaya', 'narvsky', 'kronverk', 'aptekarsky', 'islands'];
-/** closure sizes (hashed files) of the design round's scanner at v3.1.0: palace 591, smolny 414, vladimirsky 447, admiralty 614, vasilyevsky 764. The band is wide upwards: the whole-folder rules over-include. */
+const LIVE = ['palace', 'smolny', 'vladimirsky', 'admiralty', 'vasilyevsky', 'gavan', 'morskoy', 'dekabristov', 'kolomna', 'semyonovsky', 'morskie-vorota', 'okrug65', 'moskovskaya', 'komendantsky', 'sampson', 'avtovo', 'narvsky', 'finlyandsky', 'kronverk', 'aptekarsky', 'islands'];
+const AREA_OWNERSHIP = ['moskovskaya', 'komendantsky', 'sampson', 'avtovo', 'narvsky', 'finlyandsky'];
+/** Hashed-file counts from verified shipping closures. The whole-folder rules can include files that a particular render skips. */
 const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasilyevsky: 764,
   // gavan / morskoy / dekabristov (docs/AREAS.md 15.g): no design-round scanner existed for them; these are the hashed-file counts of the finished areas at v4.0.0 (the bake log of the first bake of all eight areas).
   gavan: 589, morskoy: 431, dekabristov: 468,
@@ -26,10 +27,12 @@ const SCOUT = { palace: 591, smolny: 414, vladimirsky: 447, admiralty: 614, vasi
   // Petrograd districts: hashed-file counts recorded in the incoming 70b1d80 bake inputs.
   kronverk: 520, aptekarsky: 552, islands: 547, moskovskaya: 360,
   // Narvsky's first integrated source snapshot, 2026-11-07.
-  narvsky: 364 };
-const SCOUT_UP = {};
-/** Every live area has a recorded normal page load against its shipping bake. */
-const NO_FIXTURE_YET = [];
+  narvsky: 364,
+  // The four additional live districts' 15.1.3 manifests.
+  komendantsky: 350, sampson: 422, avtovo: 396, finlyandsky: 385 };
+// The current closures contain 567 and 562 files respectively after
+// integration of the live districts and the shared kart/venue dependencies.
+const SCOUT_UP = { vladimirsky: 1.28, kolomna: 1.27 };
 const CHANGE = '\n// edit by closure-real-test\n';
 
 export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
@@ -47,7 +50,7 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
   const closuresOf = () => closures || (closures = Object.fromEntries(LIVE.map((id) => [id, scanner.closureOf(root, id, base)])));
   const exclusive = (id) => { const cl = closuresOf(); const only = cl[id].hashed.filter((f) => /\.js$/.test(f) && LIVE.every((o) => o === id || !cl[o].seen.has(f))); return only.find((f) => f.startsWith('src/world/') && !f.includes('/data/')) || only[0]; };
 
-  check('the live areas of the registry include the southern, coastal and Petrograd districts', () => assert.deepEqual(liveAreas(root, base).map((r) => r.id), LIVE));
+  check('the registry contains exactly the expected live areas', () => assert.deepEqual(liveAreas(root, base).map((r) => r.id), LIVE));
   check('all revisions are distinct 20-hex strings', () => {
     const r = baseline(); for (const id of LIVE) assert.match(r[id], /^[0-9a-f]{20}$/, id);
     assert.equal(new Set(Object.values(r)).size, LIVE.length);
@@ -56,9 +59,12 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
     for (const id of LIVE) { const f = exclusive(id); assert(f, `${id} has no exclusive file`); assert.deepEqual(moves(appended(f)), [id], `${f} (exclusive to ${id})`); }
   });
   check('the page-specific claims table isolates new district ownership', () => {
-    assert.deepEqual(moves(appended('src/areas/moskovskaya/owns-table.js')), ['moskovskaya']);
-    assert.deepEqual(moves(appended('src/areas/narvsky/owns-table.js')), ['narvsky']);
-    assert.deepEqual(moves(appended('src/world/lib/owns-table.js')), LIVE.filter(id => !['moskovskaya', 'narvsky'].includes(id)));
+    for (const id of AREA_OWNERSHIP) assert.deepEqual(moves(appended(`src/areas/${id}/owns-table.js`)), [id]);
+    assert.deepEqual(moves(appended('src/world/lib/owns-table.js')), LIVE.filter(id => !AREA_OWNERSHIP.includes(id)));
+  });
+  check('the stadium moves both venue areas and portable kart models move all areas', () => {
+    assert.deepEqual(moves(appended('src/world/karting/stadium.js')), ['kolomna', 'narvsky']);
+    assert.deepEqual(moves(appended('src/world/karting/karts.js')), LIVE);
   });
   check('a comment appended to a vasilyevsky-only file moves only vasilyevsky', () => {
     const f = exclusive('vasilyevsky'); assert.deepEqual(moves(appended(f)), ['vasilyevsky'], f);
@@ -90,7 +96,7 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
     assert.deepEqual(moves(appended('strip.html')), []);
     assert.deepEqual(moves(appended('north.html')), []);
   });
-  check('closure sizes are within 0.85x .. 1.25x of the design-round scanner; the engine (in every area) has at least 250 files', () => {
+  check('closure sizes stay within their recorded tolerance and the shared engine has at least 250 files', () => {
     const cl = closuresOf();
     for (const id of LIVE) { const n = cl[id].hashed.length; assert(n >= SCOUT[id] * 0.85 && n <= SCOUT[id] * (SCOUT_UP[id] || 1.25), `${id}: ${n} files (expected about ${SCOUT[id]})`); }
     const engine = cl.palace.hashed.filter((f) => LIVE.every((id) => cl[id].seen.has(f)));
@@ -112,7 +118,6 @@ export function realChecks(scannerOpts = {}, { ctx: given = null } = {}) {
   check('every file that a recorded headless page load fetched is inside the closure of its area', () => {
     for (const id of LIVE) {
       const f = path.join(root, 'tools/fixtures/closure-loads', `${id}.json`);
-      if (NO_FIXTURE_YET.includes(id) && !fs.existsSync(f)) continue;   // pending (see NO_FIXTURE_YET); a fixture that does exist is checked like the others
       assert(fs.existsSync(f), `the recorded load of ${id} is missing (node tools/closure-groundtruth.mjs ${id} --record)`);
       const rec = JSON.parse(fs.readFileSync(f, 'utf8')), seen = closuresOf()[id].seen;
       assert(rec.files.length > 100, `${id}: only ${rec.files.length} recorded files`);

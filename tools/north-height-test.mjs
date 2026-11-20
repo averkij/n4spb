@@ -259,8 +259,11 @@ section('7. the Digit4 pose (915, -1010)');
   ok(SAVED.length > 0 && same(SAVED.map((p) => p.id), ['paradny', 'garden']), `the page's own patch list holds the Paradny patch and the garden relief (T1 / T2: landmarksTauride is in MODULES): [${SAVED.map((p) => p.id)}]`);
   { const live = HEIGHT_PATCHES.slice(); setPatches(SAVED); const bad = [L.HERO, ...L.VIEWS].filter((q) => !(L.heightAt(q.x, q.z) >= -0.5 && L.heightAt(q.x, q.z) <= 1.5)).map((q) => `${q.key || 'HERO'} ${L.heightAt(q.x, q.z).toFixed(2)}`); setPatches(live); ok(bad.length === 0, `with the page's real patch list every pose of HERO / VIEWS stands on ground of -0.5 .. 1.5 m (views-check): ${bad.join(', ') || 'none out of band'}`); }
   ok(P.inParadny(v.x, v.z), 'the pose stands inside the podium polygon');
-  const p = mkPlayer(ph); p.setPose(v.x, v.z, v.yaw, v.pitch);
-  near(p.pos.y, 3.3, 1e-9, 'the pose stands on the podium (feet)'); near(p.camera.position.y, 3.3 + p.eye, 0.05, 'the eye is 1.52 m over the podium');
+  const p = mkPlayer(ph);
+  p.setView(2);
+  p.setPose(v.x, v.z, v.yaw, v.pitch);
+  near(p.pos.y, 3.3, 1e-9, 'the pose stands on the podium (feet)');
+  near(p.camera.position.y, 3.3 + p.eye, 0.05, 'the first-person camera is at eye height above the podium');
   ok(!p.isUnderground(), 'not underground');
   const ys = []; let pushed = 0;
   for (const yaw of [0, 90, 180, 270].map((d) => d * Math.PI / 180)) {
