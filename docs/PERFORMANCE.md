@@ -1,5 +1,43 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-20 — Narvskaya track and cockpit (16.1.0)
+
+The Narvskaya venue samples the rendered asphalt, kerbs and graded verges
+for wheel height. The surface queries use local cells, and the portable
+cockpit displays the selected driver's skinned arms using their existing
+skeleton and materials. It creates the arm meshes on first use and removes
+them from the scene when leaving the cockpit.
+
+All 21 live areas passed the bake revision and SHA-256 checks. Of 2,715
+products, six differ from 16.0.2. These are the city tile, complete city
+mesh and roof capture for each of Narvsky and Kolomna.
+
+The Narvsky and Kolomna driving fixtures cover return from grass to the
+asphalt, the paved paddock exit, and rebound from a tyre bank that stays
+in place. All 21 live areas pass the portable kart arrival check. Both
+driver rigs pass the steering pose regression. The road and marking audits
+passed for Narvsky and Kolomna. The water datum audit passed in every real
+area, and a boat sailed 55 m under Sutugin Bridge without contact.
+
+The normal-loading browser journey Narvsky → Admiralty → Palace → Narvsky
+preserved the kart, selected driver, cockpit hands and E-key reboarding
+at each stop. The three street-car routes below reuse the 16.0.2 starts,
+with Edge, 1280 × 720, Medium quality and eight seconds of throttle.
+
+| Area | Load (s) | Mean / p50 / p95 frame (ms) | Frames >40 / >80 ms | Mean calls | Distance (m) |
+| --- | --- | --- | --- | --- | --- |
+| Narvsky | 14.8 | 17.2 / 16.7 / 16.8 | 0 / 0 | 943 | 288 |
+| Palace | 28.2 | 23.8 / 16.7 / 33.4 | 6 / 0 | 1369 | 266 |
+| Admiralty | 27.9 | 26.4 / 16.7 / 50.1 | 28 / 6 | 1341 | 168 |
+
+All three routes had zero failed region loads. Admiralty had 16 long
+tasks in this sample. The maximum frame was 216.5 ms.
+
+The Narvsky boat passage audit still reports five water pockets cut off by
+the area boundary, with the same bounds and sizes on `main` at `ee1c90f9`.
+The Finlyandsky claims audit reports the same four existing Liteyny Bridge
+overlaps on both revisions.
+
 ## 2026-11-20: Narvskaya merge verification (16.0.2)
 
 All 21 live areas passed bake revision and SHA-256 checks. Of 2,715 products,
