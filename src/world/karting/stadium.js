@@ -148,7 +148,7 @@ function addTrees(ctx, root) {
     [-4706.2,3486.1],[-4736,3503.5],[-4737,3488],
     [-4729,3483],[-4756,3494],[-4763.7,3501.3],[-4771,3516],[-4611,3682],[-4620,3684],
     [-4632,3687],[-4650,3693],[-4669,3693],[-4683,3684],
-  ].filter(([x, z]) => !net || net.cover(x, z, { skipSet }) < -2.25);
+  ].filter(([x, z]) => !ctx.L.insideBuilding(x, z, 3.5) && (!net || net.cover(x, z, { skipSet }) < -2.25));
   const rng = ctx.rng('narvskaya-track-trees'), matrix = new THREE.Matrix4(), q = new THREE.Quaternion();
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.095,.17,1,7), ctx.mat.toon('#676051'), places.length);
   const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), ctx.mat.toon('#5e7752'), places.length * 3);

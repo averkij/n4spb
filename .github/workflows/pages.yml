@@ -159,6 +159,7 @@ jobs:
           node tools/vehicle-door-interior-test.mjs
           node tools/vehicle-traction-test.mjs
           node tools/owned-car-physics-test.mjs
+          node tools/kart-parked-collision-test.mjs
           node tools/drive-wasted-test.mjs
           node tools/touch-logic-test.mjs
       - name: Audio names, silent construction calls and bounded sound scheduling
@@ -214,6 +215,11 @@ jobs:
           node tools/area.mjs narvsky tools/narvsky-height-test.mjs
           node tools/area.mjs narvsky tools/area-garage-check.mjs
           node tools/area.mjs narvsky tools/water-level-test.mjs
+      - name: Narvskaya karting in both venue areas and portable kart arrivals
+        run: |
+          node tools/area.mjs narvsky tools/narvskaya-karting-test.mjs
+          node tools/area.mjs kolomna tools/narvskaya-karting-test.mjs
+          node tools/each-live-area.mjs tools/handoff-kart-test.mjs
       - name: Closed vegetation, supported quay fixtures and two-way natural banks
         run: |
           node tools/area.mjs moskovskaya tools/hedge-geometry-test.mjs

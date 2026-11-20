@@ -100,7 +100,8 @@ export async function build(ctx) {
     const car = createHandling(ctx, def.tuning);
     const parked = { ...def.parked, y: car.groundAt(def.parked.x, def.parked.z) };
     car.reset(parked.x, parked.z, parked.yaw);
-    return { id: def.id, kind: def.kind, def, model, car, parked, damage: noDamage(), spec: def.spec, box: null };
+    const damage = createCarDamage(model, { spec: def.spec, meshes: model.damageMeshes });
+    return { id: def.id, kind: def.kind, def, model, car, parked, damage, spec: def.spec, box: null };
   });
   const vehicles = fleet.concat(boats, karts), wake = boats.length ? createWake(ctx) : null;
   let V = fleet[0], car = V.car, model = V.model, damage = V.damage, parked = V.parked, SPEC = V.spec, EYE = V.spec.eye;
@@ -120,7 +121,7 @@ export async function build(ctx) {
     const { parked: p, spec } = v, sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
     const draft = v.kind === 'boat' ? (spec.draft ?? 0.45) : 0.03;      // reach below the waterline, including the cargo ship's deep hull
     v.box = ph.addBox(p.x + sy * spec.centerZ, p.z + cy * spec.centerZ, spec.W + 0.08, spec.len + 0.08, p.yaw, p.y - draft, p.y - 0.03 + spec.hgt);
-    if (v.kind !== 'kart') parkedPhysics.attach(v, v.box);
+    parkedPhysics.attach(v, v.box);
   };
   const dropBox = (v = V) => { parkedPhysics.release(v); if (v.box) { ph.remove(v.box); v.box = null; } };
   for (const v of vehicles) if (!v.def.carried) addBox(v);      // (the carried car of a hand-off has no box until it is left somewhere: the player's own spot is not a wall for him)

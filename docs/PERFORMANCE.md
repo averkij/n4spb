@@ -1,5 +1,42 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-20: Narvskaya merge verification (16.0.2)
+
+All 21 live areas passed bake revision and SHA-256 checks. Of 2,715 products,
+2,703 match `main` at `ee1c90f9` byte for byte. The 12 differences are confined
+to Narvsky and Kolomna and cover the venue's field claims, street and city
+products at its tile, and roof captures.
+
+Normal-loading, 8-second street-car drives used Edge 157, an RTX 3090 Ti
+(D3D11), 1280 × 720, Medium quality, and identical starts and inputs in each
+pair. Every run had zero failed regions. Table entries are `main` → `16.0.2`.
+
+| Area | Load (s) | Mean / p50 / p95 frame (ms) | Frames >40 ms | Mean calls | Distance (m) | CDP heap / backing storage (MiB) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Narvsky | 18.85 → 16.99 | 17.3 / 16.7 / 16.8 → 18.7 / 16.7 / 33.3 | 0 → 1 | 936 → 898 | 289.1 → 289.1 | 521 / 607 → 420 / 554 |
+| Palace | 32.67 → 30.97 | 28.4 / 33.3 / 33.5 → 27.8 / 33.3 / 33.4 | 13 → 11 | 1368 → 1367 | 268.0 → 266.8 | 537 / 1390 → 522 / 1248 |
+| Admiralty | 31.62 → 30.23 | 29.6 / 33.3 / 50.0 → 33.9 / 33.3 / 66.6 | 16 → 37 | 1342 → 1331 | 168.5 → 166.0 | 505 / 718 → 473 / 703 |
+| Admiralty, reversed run order | 31.05 → 31.17 | 30.9 / 33.3 / 50.0 → 29.8 / 33.3 / 50.0 | 21 → 21 | 1336 → 1340 | 166.0 → 165.9 | 539 / 1321 → 554 / 1319 |
+
+The Admiralty drives slowed near the end and showed streaming hitches on both
+versions. The first candidate sample averaged 29.5 FPS with 19 long tasks,
+and the repeat averaged 33.5 FPS with 9. The baseline had 5 and 7 long tasks.
+The repeat recovered the frame-time difference. Short samples and the variation
+in CDP memory limit what these runs establish about sustained performance.
+
+The normal-page Narvsky → Admiralty → Palace → Narvsky browser journey passed
+with the same kart, tuning and selected driver, including E-key reboarding.
+The new collision regression covers parked-kart movement, visible damage to
+the struck kart only, and reboarding at the displaced position. Both venue
+claims, road, marking and water checks passed.
+
+```powershell
+node tools/drive-bench.mjs --area narvsky --q medium --seconds 8 --start "-4562.977,3356.261,-111.407" --json --diagnostics
+node tools/drive-bench.mjs --area palace --q medium --seconds 8 --start "498.2286,135.1625,76.0322" --json --diagnostics
+node tools/drive-bench.mjs --area admiralty --q medium --seconds 8 --start "-2493.919,-687.663,-52.605" --json --diagnostics
+node tools/handoff-kart-browser-test.mjs
+```
+
 ## 2026-11-19: Kart handling, road sampling and driver fit (16.0.1)
 
 All 21 live areas have fresh shipping bakes: 2,715 complete products,

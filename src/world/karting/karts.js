@@ -95,9 +95,13 @@ function createModel(ctx, geometry, club, number) {
     parent.add(object);
     return object;
   };
-  add('bumper', rubber);
+  const bumper = add('bumper', rubber);
   add('chassis', ctx.mat.toon('#21242a'));
-  add('painted', ctx.mat.toon(color));
+  const fairing = add('painted', ctx.mat.toon(color));
+  // Only the deformable shell needs private buffers. The chassis, wheels,
+  // steering and trim still share geometry across the fleet.
+  const damageMeshes = [bumper, fairing];
+  for (const mesh of damageMeshes) mesh.geometry = mesh.geometry.clone();
   add('trim', ctx.mat.toon('#d9dfe6'));
   add('metal', alloy);
   const steering = add('steering', rubber);
@@ -134,7 +138,7 @@ function createModel(ctx, geometry, club, number) {
     wheels.push({ pivot, spin, front });
   }
   return {
-    root, wheels, spec: SPEC,
+    root, wheels, damageMeshes, spec: SPEC,
     setView() {},
     poseDriver(actor) {
       blendPose(actor, 1);
