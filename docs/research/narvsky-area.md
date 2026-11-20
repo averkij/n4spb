@@ -159,3 +159,165 @@ or per-frame work. The actual physics column from6.1 to10.9m remains clear.
 streets/city/landmarksNarvsky/coastalBridges modules on these two source records and verifies drawn
 buffers, wall colliders, the clear covered-ramp column, and the measured bridge
 envelope. It is a focused CPU geometry test, not a loading/FPS benchmark.
+
+## Pit-Stop Narvskaya and Kirovets Stadium
+
+Both Narvsky and Kolomna build the same site in their overlap. The 808 m
+in-game centreline follows OSM way `w385655517` and was checked against the
+submitted overhead image and TrackTakTak telemetry. The club gives a nominal
+track length of 815 m. The pedestrian route begins at Perekopskaya Street and
+passes the gatehouse and stadium arch before reaching the two kart rows.
+The grass verges, kerb heights and track elevations are approximations from
+the available references.
+
+The TrackTakTak clockwise start/finish gate is the finite line from
+(59.900469928, 30.266926778) to (59.900572405, 30.267520222). The painted line
+uses its intersection with the mapped track. The speed reference is separate,
+at approximately X −4731.8, Z 3518, before the left turn marked by the owner.
+A repeatable run enters the back straight at 61.2 km/h and lifts through the
+right-hand bend. At the reference, it measures 65.4–66.4 km/h for rental karts
+and 71.7–72.8 km/h for club karts. The pace depends on the line and throttle.
+
+Crossing start/finish in either direction starts the timer. Three intermediate
+sectors must be crossed in order for the next crossing to record a lap. The HUD
+shows the current time and the last and best times for the active direction. Leaving the kart or going
+more than 45 m from the racing line cancels the current lap and hides the HUD.
+Results are kept until the scene reloads.
+
+References [track and photos](https://kartingpitstop.ru/trassy/narvskaya/),
+[driver footage](https://www.youtube.com/watch?v=Bs-fz2zajrI), and
+[Sodi SR5 technical drawings](https://www.sodikart.com/en-gb/karts/rental/sr5-30.html).
+
+The kerbs use three surfaces: a gradual ramp, a slightly uneven crown and a
+steeper outside edge. The rendered triangles also define the wheel contact
+surfaces. An oblique strike can rotate or lift the kart. A wheel on the kerb
+has more grip than it does on asphalt.
+
+The SR5 body comes from `assets/models/sodi-sr5.blend` and uses the published
+1,914 × 1,332 mm footprint and the 262 / 291 mm front and rear tyre diameters.
+Use `tools/export-sodi-sr5.py` to regenerate the game mesh after Blender edits.
+
+For longitudinal tuning, the TrackTakTak export is a clockwise session from
+1 August 2026 with 51 laps at roughly 10 Hz. Among the 20 fastest laps, the
+80th percentile of smoothed positive acceleration on near-straight samples
+(`|aLat| < 2 m/s²`) was 2.22 m/s² at 40–50 km/h, 1.55 at 50–60, 1.14 at
+60–65 and 0.98 at 65–70. The median of braking samples below −2 m/s² with
+the same straight-line filter was −4.16 m/s². These are GPS-derived estimates.
+The export does not identify the fleet or record pedal position. The game
+uses them as a tuning reference and retains the owner's different speed targets
+for each fleet. Source analysis is in TrackTakTak's
+`product_analysis/outputs/pitstop_measurements/measurements.json`.
+
+On flat asphalt, the model caps the tyres' combined lateral acceleration at
+1.2 g. The measured regression draws an 18.5 m radius at 51.4 km/h
+(1.13 g). It also verifies that releasing the brake and centring the wheel for
+0.2 s reduces exit slip, and that a kart can turn again while accelerating.
+
+The steering wheel turns in the key's direction both forwards and in reverse.
+The rough surface calculation samples each tyre. Track asphalt, the pit lane
+and the paddock are sampled from their rendered geometry, and the kerbs retain
+their own contact response. Grass, gravel and setts reduce grip and dissipate
+speed, with stronger losses at higher speeds. In the coast test from 72 km/h,
+the kart holds 69.5 km/h after one second on asphalt, 57.4 km/h with two tyres
+on grass and 48.3 km/h with all four tyres on grass. These are game tuning
+values, without measured rough-surface telemetry.
+
+After rebasing on the upstream character integration, open karts board directly
+and pose the selected player rig through their model's driver callback. The
+placeholder driver mesh is removed. Both shipped rigs keep their pelvis on the
+seat, grip the actual rotating wheel and reach the pedals across yaw, pitch
+and roll changes. First-person view hides the external character as it does
+for the other vehicles. Verify the rig fit with
+`node tools/kart-driver-pose-test.mjs`.
+
+### Handling/model draft, 18 November 2026
+
+The owner deferred area bakes for this tuning round. These changes are source
+edits and diagnostic previews, not a fresh shipping bake.
+
+`tools/kart-telemetry-reference.mjs` checks the 20 fastest laps of the same
+TrackTakTak measurements export. Smoothed turning samples, adjacent intervals
+≤0.25 s, |aLat|≥0.3 g and |curvature|≥0.005/m give these observed values:
+
+| Speed | Samples | Median radius | 95th percentile lateral g |
+| --- | ---: | ---: | ---: |
+| 15–25 km/h | 0 | — | — |
+| 25–35 km/h | 50 | 11.75 m | 1.01 |
+| 35–45 km/h | 1748 | 13.12 m | 1.20 |
+| 45–55 km/h | 2375 | 20.28 m | 1.23 |
+| 55–65 km/h | 2487 | 31.34 m | 1.25 |
+| 65–75 km/h | 840 | 41.34 m | 1.19 |
+
+These are the driver's paths, not an understeer coefficient. Steering angle,
+pedal input, body heading and wheel RPM are absent; pit-speed response and
+power oversteer cannot be calibrated directly from this GPS record. Source
+CSV SHA-256: `32070e2d64b217762f493cae1e53f6b1eab45a1da6414effbe2524b449b4f30c`.
+Cornering stiffness, peak force and combined slip are treated separately, as
+in the [MathWorks tyre-model documentation](https://www.mathworks.com/help/vdynblks/ref/combinedslipwheel2dof.html);
+the game parameters are not measured Sodi tyre coefficients.
+
+The draft blends a near-kinematic small-slip response into the load-sensitive
+model between 32.4 and 54 km/h, retaining weight transfer and the 1.2 g flat
+force ceiling. For club-1 in the controlled light turn, curvature gain after
+a gas tap changes 0.989→0.970 at 15 km/h and 0.976→0.943 at 25 km/h;
+previously it was 0.988→0.875 and 0.950→0.793. Gain is actual path curvature
+divided by wheel geometric curvature, not a constant-radius measurement.
+
+At 72 km/h, 0.4 s straight braking followed by 0.5 s moderate turn-in while
+braking now produces 5.9–7.1° peak body slip across the twenty karts. The
+subsequent owner correction removed the accumulating power-slip penalty:
+breakaway comes from rear unloading during braking and the rear-only torque
+budget, not simply from holding gas on an ordinary corner or launch. A gas
+tap during the unloaded phase may change the transient, but held gas is not
+required to spin every kart. This is tuning, not a GPS pedal fit.
+The steering comfort limiter also no longer blocks countersteer: when the
+front wheels are being turned into an existing rear slide and against the
+yaw, their physical angle range is restored. Correction remains a tyre-force
+moment, without an injected anti-spin impulse. Scripted recovery from a
+12-degree brake-induced slide takes 0.45–0.48 s across all twenty karts, both
+directions, including with throttle. An 18-degree case verifies the larger
+wheel angle; recovery is checked at 30/60/120 Hz. Ordinary powered circles
+and steered launches are covered separately from braking transients.
+`tools/kart-transient-test.mjs` checks all karts, both steering directions,
+straight-power stability and 30/60/120 Hz agreement. Both venue tests retain
+65.42–66.36 km/h rental and 71.70–72.83 km/h club reference speeds. The flat
+circle is 1.15 g, 18.3 m radius at 51.7 km/h; rough-surface losses are unchanged.
+
+The owner's Blender steering mesh, position and tilt now export exactly;
+the runtime no longer substitutes a procedural wheel. The engine shroud is
+on the driver's right (negative game X). Per the owner's choice, preserve
+the whole wheel pose and use a modest lumbar recline. Palm contacts, rather
+than wrists, hold the lower left/right rim. Both rigs pass turning-wheel,
+seat and pedal checks without limb stretching and were inspected in an
+isolated rendered preview.
+
+The backrest was subsequently brought to the torso: its lower pivot moves
+35 mm forward and its panel rotates 0.4 rad more upright. Both characters
+were reviewed from the side with the revised backrest. Steering and engine
+transforms were preserved. The local ride test uses `baked=force` only as a
+controlled preview: existing district geometry is unchanged, while the kart
+meshes and handling are runtime content. Narvsky loaded without scene errors,
+and E-key boarding/exit passed. Shipping bakes remain deferred at the owner's
+request; ordinary source/bake revision validation has not been relaxed.
+
+City-road roughness correction: environment `kindAt` describes ground paint
+under the street meshes, not the asphalt ribbon on top. Of 6909 Narvsky
+street-centre samples, 4613 were classified as non-asphalt ground; Palace
+had 5037 of 7063. This incorrectly applied lawn/gravel/sett losses on ordinary
+roads. The shared kart sampler now checks drivable road coverage and drawn
+junction fillets first, using a cached spatial index. Course lawns, off-road
+verges, pedestrian-only ways and tram reservations preserve roughness. Both
+area regressions pass; a 72 km/h one-second coast gives 69.5 km/h on road,
+57.4 with two tyres off and 48.3 on grass. Reproduce with
+`node tools/area.mjs narvsky tools/kart-road-surface-test.mjs` and Palace.
+
+### Shipping checkpoint, 2026-11-19 (16.0.1)
+
+The owner subsequently authorized final assembly. All 21 live areas were
+rebaked with the final source, including the lower palm contact at full
+mechanical steering lock. Manifest/hash validation passes for all 2715
+products, and static products remain byte-identical to 16.0.0. Ordinary
+loading no longer requires the controlled `baked=force` preview described
+above. The normal-page browser journey, selected driver, exit/reboarding
+and both-direction lap HUD passed; performance evidence and limitations
+are recorded in `docs/PERFORMANCE.md` under 16.0.1.

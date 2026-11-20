@@ -32,7 +32,7 @@ export function carContact(car, spec, b, out = {}) {
       feet += ((px - car.x) * s + (pz - car.z) * c) * Math.tan(car.slope);
     }
   }
-  if (top <= feet + STEP_HEIGHT || b.y0 >= car.y + spec.hgt) return null;
+  if (top <= feet + (b.solidForVehicles ? 0 : STEP_HEIGHT) || b.y0 >= car.y + spec.hgt) return null;
   const dx = cx - b.cx, dz = cz - b.cz;
   let nx, nz, depth, px, pz;
   if (b.type === 'cyl') {

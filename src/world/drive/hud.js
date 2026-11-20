@@ -98,6 +98,7 @@ export function createDriveHud({ isTouch, onExit, onNitro, onHand, onBrake, onJu
       prof = p || {}; $('.d-nlab').textContent = prof.boost || 'NITRO'; lastGear = '';
       // the motor boat has no nitro tank, no body damage and its own key line (drive/boat/index.js); a car profile restores all three (the key line is only rewritten when it changes: its hop span is looked up again)
       $('.d-nlab').style.display = $('.d-nitro').style.display = prof.noBoost ? 'none' : ''; $('.d-condition').style.display = prof.noCondition ? 'none' : '';
+      $('.d-touch [data-k="nitro"]').hidden = !!prof.noBoost;
       const keys = prof.keys || keysDefault;
       if (keys !== keysShown) { keysShown = keys; el.keys.innerHTML = keys; el.hopKey = $('.d-hopk') || { hidden: true }; }
       hasHop = hop; el.hopKey.hidden = el.hopBtn.hidden = el.flipBtn.hidden = !hop; el.touch.classList.toggle('hop', hop);

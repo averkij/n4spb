@@ -116,6 +116,9 @@ export function createCharacterInteractions(ctx,{characters,vehicles,enterNow,ex
     else if(active()&&activeVehicle().cabin)characters.override(actor=>{
       const c=activeVehicle().cabin;poseDriver(actor,c,activeVehicle().car.steer);actor.root.visible=view.mode!==2;
     });
+    else if(active()&&activeVehicle().model.poseDriver)characters.override(actor=>{
+      activeVehicle().model.poseDriver(actor);actor.root.visible=view.mode!==2;
+    });
     else characters.override(null);
     characters.update(ctx.ui?.modalOpen?0:dt);
   }

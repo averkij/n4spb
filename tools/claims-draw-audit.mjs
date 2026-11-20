@@ -354,6 +354,9 @@ for (const child of targets) if (child.building && child.claim && ownsKey(child.
 /** the deepest point of a footprint (a 12 x 12 sampling of its bbox): decides how much of the band of rule 2 / 3 a small building can bear */
 function maxDepthOf(fp) { let best = 0; const [x0, z0, x1, z1] = fp.bbox; for (let a = 0; a <= 12; a++) for (let b = 0; b <= 12; b++) { const d = depthIn(fp, x0 + (x1 - x0) * a / 12, z0 + (z1 - z0) * b / 12); if (d > best) best = d; } return best; }
 function ownerHeightBand(r) {
+  // The Narodovolets is a museum ship mounted on cradles above the Gavan
+  // yard. The imported relation's layer=-1 does not put the hull underground.
+  if (AREA === 'gavan' && r.id === 'r14595064') return { above: 2.25, below: 12.65 };
   const top = Number.isFinite(r.hEst) ? r.hEst : Number.isFinite(r.h) ? r.h : null;
   const bottom = Number.isFinite(r.minH) ? r.minH : 0;
   const underground = r.layer < 0 || r.underground || (bottom < 0 && (top === null || top <= 0));

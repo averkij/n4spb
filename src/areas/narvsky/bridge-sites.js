@@ -15,6 +15,8 @@ const SHARED_BRIDGE_IDS = new Set(YACHTNY_GROUP.osm);
 // These three mapped access jetties belong to the authored Flag Square. Its
 // exact platforms/approaches replace the old generic bridge slabs completely.
 const FLAG_ACCESS_IDS = new Set(['w1426773313', 'w1426773301', 'w1426773295']);
+const SUTUGIN = 'w228768422';
+const SUTUGIN_WALKS = ['w591257589', 'w591257591'];
 
 const pedestrian = r => /^(footway|path|cycleway|pedestrian|steps)$/.test(r.hw);
 const whsd = r => r.name === 'ЗСД' || r.ref === 'ЗСД';
@@ -62,12 +64,16 @@ function sampleLine(p) {
 
 /** Pure constructor also used by the bridge continuity regression fixtures. */
 export function coastalSites(roads) {
-  const bridges=roads.filter(r=>r.bridge&&!r.tunnel&&r.pts?.length>=4&&!SHARED_BRIDGE_IDS.has(r.id)&&!FLAG_ACCESS_IDS.has(r.id)).map(r=>{
+  // The mapped footways are the two sidewalks of the same bridge. Model
+  // the full mapped road deck with one pair of perimeter rails.
+  const sutugin = roads.some(r => r.id === SUTUGIN && r.bridge) && SUTUGIN_WALKS.every(id => roads.some(r => r.id === id && r.bridge));
+  const bridges=roads.filter(r=>r.bridge&&!r.tunnel&&r.pts?.length>=4&&!SHARED_BRIDGE_IDS.has(r.id)&&!FLAG_ACCESS_IDS.has(r.id)&&!(sutugin&&SUTUGIN_WALKS.includes(r.id))).map(r=>{
     const p=sampleLine(r.pts),isWhsd=whsd(r),northbound=direction(r)<0;
     let len=0;for(let i=2;i<p.length;i+=2)len+=Math.hypot(p[i]-p[i-2],p[i+1]-p[i-1]);
     const yacht=/Яхтен/.test(r.name||''),marine=false;
     return {id:'coast-'+r.id,road:r,pts:p,cx:(p[0]+p.at(-2))/2,cz:(p[1]+p.at(-1))/2,len,
       w:yacht?16.5:Math.max(pedestrian(r)?1.8:3,r.w||6),foot:pedestrian(r),whsd:isWhsd,marine,northbound,yacht,
+      osm:sutugin&&r.id===SUTUGIN?[r.id,...SUTUGIN_WALKS]:[r.id],
       // The low park footbridges have slender half-metre slabs, matching
       // their visible fascia and the shared floating-hull slab contract.
       depth:isWhsd?2.6:yacht?1.6:pedestrian(r)?.5:.65,seaCanal:false};
@@ -106,7 +112,7 @@ function groupAnchor(b) {
   }
   return at;
 }
-export const COASTAL_BRIDGE_GROUPS=COASTAL_BRIDGES.map(b=>({key:b.id,name:b.road.name||'Мост',nameEn:'Mapped bridge',ids:[],osm:[b.road.id],at:groupAnchor(b)}));
+export const COASTAL_BRIDGE_GROUPS=COASTAL_BRIDGES.map(b=>({key:b.id,name:b.road.name||'Мост',nameEn:'Mapped bridge',ids:[],osm:b.osm,at:groupAnchor(b)}));
 // Match the northern area's openings along the mapped approach curve. These
 // only open the quay; the shared authored builder supplies every raised floor.
 export const YACHTNY_BRIDGE_ZONES = ROADS.filter(r => SHARED_BRIDGE_IDS.has(r.id) && r.bridge && r.pts).flatMap(r => {

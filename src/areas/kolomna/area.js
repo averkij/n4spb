@@ -11,6 +11,10 @@ import { GROUPS_LIST as BALTIC } from '../../world/landmarksBaltic/groups.js';
 import { YEKATERINGOFKA_RINGS, PARK_POND_RINGS } from './rings.js';
 import { makeHooks, makeHeightPatches } from '../north/hooks.js';
 
+import { KARTING_GROUND_CLAIMS, STADIUM_GROUP, STADIUM_IDS, WALK_IN, withKartingHooks } from '../../world/karting/site.js';
+
+export const PAVED_RINGS = KARTING_GROUND_CLAIMS;
+
 export const ID = 'kolomna';
 export const BAKE_DIR = 'baked/kolomna/';
 export const REQUIRE_BAKE = true;
@@ -30,11 +34,12 @@ export const MODULES = [
   'bridges',
   'props',
   'traffic',
+  'kartingNarvskaya',
   'people',
   'wildlife',
   'drive',
 ];
-export const LABELS = {
+export const LABELS = { kartingNarvskaya: 'Картодром «Пит-Стоп Нарвская»',
   landmarksMariinsky: 'Мариинский театр и Театральная площадь',
   landmarksNikolsky: 'Никольский морской собор',
   landmarksNewHolland: 'Новая Голландия',
@@ -55,7 +60,7 @@ export const OBELISK = { x: 592.2, z: 164.9, h: 36 };
 export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, tower: { x: 602.1, z: 246.4 } };
 
 const bridgeKeys = new Set(['blagoveshchensky', 'lviny', 'kharlamov', 'novo-nikolsky', 'pikalov', 'krasnogvardeysky', 'mogilevsky', 'staro-nikolsky', 'kashin', 'torgovy', 'dekabristov', 'matveev', 'krasnoflotsky', 'potseluev', 'khrapovitsky', 'krushtein1', 'krushtein2', 'admiralteysky', 'izmailovsky', 'south-r5727608', 'south-r5489278']);
-export const GROUPS = {
+export const GROUPS = { kartingNarvskaya: [STADIUM_GROUP],
   landmarksMariinsky: MARIINSKY,
   landmarksNikolsky: NIKOLSKY,
   landmarksNewHolland: NEW_HOLLAND,
@@ -80,8 +85,10 @@ export function makeAreas() {
   ];
 }
 export function makeViews({ yawToward }) {
+  const [x, z] = [-4566.3, 3368.5];
+  const pitstop = { key: 'Place.pitstop-narvskaya', label: 'Пит-Стоп Нарвская', x, z, yaw: yawToward(x, z, ...WALK_IN[2]), pitch: 0 };
   const HERO = { x: -3058, z: 771, yaw: yawToward(-3058, 771, -3058, 736), pitch: 8 };
-  return { HERO, VIEWS: [{ key: 'Digit1', label: 'Мариинский театр', ...HERO }, { key: 'Place.mariinsky', label: 'Мариинский театр', ...HERO }] };
+  return { HERO, VIEWS: [{ key: 'Digit1', label: 'Мариинский театр', ...HERO }, { key: 'Place.mariinsky', label: 'Мариинский театр', ...HERO }, pitstop] };
 }
 export const TEST = {
   claimed: [
@@ -189,7 +196,8 @@ export const GARAGE = { poses: { lada: { x: -3061.5, z: 790.7, yaw: 225 * DEG } 
 export const PRUNE_SERVICES = ['city', 'landmarksMariinsky', 'landmarksNikolsky', 'landmarksNewHolland'];
 import { withFountainKeepouts } from '../fountain-keepout.js';
 import { FOUNTAIN_SITES } from './fountain-rings.js';
-export const HOOKS = withFountainKeepouts(makeHooks(MODULES), FOUNTAIN_SITES);
+export const OPEN_GROUND_BUILDING_IDS = STADIUM_IDS;
+export const HOOKS = withKartingHooks(withFountainKeepouts(makeHooks(MODULES), FOUNTAIN_SITES));
 export const HEIGHT_PATCHES = makeHeightPatches(MODULES);
 export const CROSS_PLACES = [];
 

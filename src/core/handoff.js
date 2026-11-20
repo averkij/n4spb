@@ -42,6 +42,7 @@ export function makeHo({ from, to, via = 'gate', gate = '', car = null, mute = f
   const ho = { v: HANDOFF_V, from, to, via, gate, car: null, mute: !!mute, noui: !!noui, ret: null, n: Math.max(1, Math.min(50, Math.round(n) || 1)) };
   if (car) {
     ho.car = { id: String(car.id), view: car.view ?? 0, d: (car.d || [0, 0, 0, 0]).slice(0, 4).map((x) => Math.round((Number(x) || 0) * 1000) / 1000) };
+    if (car.kind === 'kart') ho.car.kind = 'kart';
     if (car.kind === 'boat') {
       ho.car.kind = 'boat';
       if (typeof car.dock === 'string' && car.dock) ho.car.dock = car.dock;
@@ -72,7 +73,8 @@ export function validateHo(ho, { to } = {}) {
   if (ho.car !== null) {
     const c = ho.car;
     if (!c || typeof c.id !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(c.id)) return bad('car.id');
-    if (c.kind !== undefined && c.kind !== 'boat' && c.kind !== 'traffic') return bad('car.kind');
+    if (c.kind !== undefined && !['boat', 'traffic', 'kart'].includes(c.kind)) return bad('car.kind');
+    if (c.kind === 'kart' && !/^narvskaya-(rental|club)-(10|[1-9])$/.test(c.id)) return bad('car.kart.id');
     if (c.kind === 'traffic') {
       const t = c.traffic;
       if (!/^traffic-car-\d{1,10}$/.test(c.id)) return bad('car.traffic.id');

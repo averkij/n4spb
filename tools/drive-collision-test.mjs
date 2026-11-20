@@ -62,6 +62,14 @@ check('overhead bridge and low pavement do not block the car', () => {
   const { physics, car } = world(); physics.addBox(0, 4, 20, 2, 0, 5, 6); physics.addWalkBox(0, 3, 20, 2, 0, 0.12);
   car.vz = 15; assert.equal(run(car, 0.5).length, 0); assert(car.z > 6);
 });
+check('a low tied barrier blocks wheels only when the chassis overlaps it', () => {
+  const { physics, car } = world();
+  const barrier = physics.addBox(0, 1, 20, .67, 0, 0, .33);
+  assert.equal(carContact(car, SPEC, barrier), null);
+  barrier.solidForVehicles = true;
+  assert.ok(carContact(car, SPEC, barrier));
+  assert.equal(carContact({ ...car, y: .4 }, SPEC, barrier), null);
+});
 check('zero-time updates and reset cannot leave NaNs or residual spin', () => {
   const { car } = world(); car.step(0, input); assert(Number.isFinite(car.aLong));
   car.impactSpin = 8; car.reset(10, 10, 0); assert.equal(car.impactSpin, 0); assert.equal(car.events.length, 0);

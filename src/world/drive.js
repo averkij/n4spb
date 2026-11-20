@@ -20,6 +20,7 @@
 import * as THREE from 'three';
 import { isInteractionKey } from '../core/ui.js';
 import { loadGarage } from './drive/cars/index.js';
+import { createKart } from './karting/karts.js';
 import { GARAGE } from './lib/area-tables.js';
 import { createHandling, holdInput } from './drive/handling.js';
 import { createCarDamage, crushedSpec } from './drive/damage.js';
@@ -54,7 +55,7 @@ export async function build(ctx) {
   const player = ctx.playerObj || null;                       // set by main.js before the modules are built
   // a page reached in a car by an edge gate (docs/AREAS.md 14, 15.z) must put the player into THAT car even when this area's garage does not keep it (admiralty: ONE purple Zhiguli): the carried car is built too, parked at the arrival pose
   const hoCar = ctx.handoff && ctx.handoff.mode === 'car' && ctx.handoff.ho && ctx.handoff.ho.car && ctx.handoff.pose ? ctx.handoff : null;
-  const garage = await loadGarage(ctx, { carry: hoCar && !['boat','traffic'].includes(hoCar.ho.car.kind) ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // A boat id can coincide with a car id; do not create a car for it.
+  const garage = await loadGarage(ctx, { carry: hoCar && !['boat','traffic','kart'].includes(hoCar.ho.car.kind) ? { id: hoCar.ho.car.id, x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI } : null });      // Non-garage vehicles have their own portable factories.
   if (!garage.length) { console.warn('[drive] the area has no garage (GARAGE.poses): no cars'); return; }      // an area without cars: no drive service (the callers test ctx.drive)
   const wrecks = await getCarWrecks(ctx);
   // ONE VEHICLE PER CAR: its own model, handling state (parked pose included), damage state, parked physics box. V is the car the player drives or last drove; the closure
@@ -81,7 +82,28 @@ export async function build(ctx) {
       boats.push({ id: def.id, kind: 'boat', def, model, car, parked: { x: p.x, z: p.z, yaw: p.yaw, y: car.y }, damage: noDamage(), spec: def.spec, box: null });
     }
   } catch (e) { console.warn(`[drive] the boats are not available (${e.message}); the cars go on without them`); boats.length = 0; }
-  const vehicles = fleet.concat(boats), wake = boats.length ? createWake(ctx) : null;
+  const course = ctx.services.kartingNarvskaya;
+  const kartDefs = course?.loadVehicles() ?? [];
+  // Restore one incoming vehicle independently of local parking. Reuse its
+  // identity in the venue fleet rather than leaving a duplicate in the pits.
+  const carriedKart = hoCar && (hoCar.ho.car.kind === 'kart' || !hoCar.ho.car.kind)
+    ? createKart(ctx, hoCar.ho.car.id, { x: hoCar.pose.x, z: hoCar.pose.z, yaw: hoCar.pose.yaw * DEG + Math.PI }, course)
+    : null;
+  if (carriedKart) {
+    carriedKart.carried = true;
+    const index = kartDefs.findIndex(def => def.id === carriedKart.id);
+    if (index < 0) kartDefs.push(carriedKart); else kartDefs[index] = carriedKart;
+  }
+  const karts = kartDefs.map(def => {
+    const model = def.makeModel();
+    ctx.add(model.root);
+    const car = createHandling(ctx, def.tuning);
+    const parked = { ...def.parked, y: car.groundAt(def.parked.x, def.parked.z) };
+    car.reset(parked.x, parked.z, parked.yaw);
+    const damage = createCarDamage(model, { spec: def.spec, meshes: model.damageMeshes });
+    return { id: def.id, kind: def.kind, def, model, car, parked, damage, spec: def.spec, box: null };
+  });
+  const vehicles = fleet.concat(boats, karts), wake = boats.length ? createWake(ctx) : null;
   let V = fleet[0], car = V.car, model = V.model, damage = V.damage, parked = V.parked, SPEC = V.spec, EYE = V.spec.eye;
   const sound = createCarSound(ctx.audio);
   const fx = createFx(ctx);
@@ -120,8 +142,8 @@ export async function build(ctx) {
 
   const characters=typeof window!=='undefined'&&window.location?.protocol?.startsWith('http')&&!ctx.recordBake&&player ? await createCharacters(ctx,{manualUpdate:true,maxNpcs:24}) : null;
   const interactions=characters?createCharacterInteractions(ctx,{characters,vehicles,enterNow:enter,exitNow:exit,dropBox,addBox,activeVehicle:()=>V,active:()=>state.active,view}):null;
-  function requestEnter(v){return v?.kind==='boat'||!interactions?enter(v):interactions.enter(v);}
-  function requestExit(){if(!state.active||interactions?.active)return false;return V.kind==='boat'||!interactions?exit():interactions.exit();}
+  function requestEnter(v){return !v?.cabin||!interactions?enter(v):interactions.enter(v);}
+  function requestExit(){if(!state.active||interactions?.active)return false;return !V.cabin||!interactions?exit():interactions.exit();}
   function promoteTraffic(descriptor,claim=true){
     prunePromotions(1);
     if(vehicles.filter(v=>v.kind==='traffic'&&!v.retired).length>=PROMOTED_LIMIT){ctx.ui.toast('Leave the nearby cars before taking another car');return null;}
@@ -278,6 +300,10 @@ export async function build(ctx) {
       if (state.active && v === V) { v.model.root.visible = true; continue; }
       parkedPhysics.sync(v);
       const p = v.parked, dx = p.x - camera.position.x, dz = p.z - camera.position.z, near = dx * dx + dz * dz < 70 * 70;
+      if (v.def.far && dx * dx + dz * dz > v.def.far ** 2) {
+        v.model.root.visible = false;
+        continue;
+      }
       let seen = near;
       if (!seen) {
         if (!frustum) { _vm.compose(camera.position, camera.quaternion, _one).invert(); _pm.multiplyMatrices(camera.projectionMatrix, _vm); cullF.setFromProjectionMatrix(_pm); frustum = true; }
@@ -312,7 +338,7 @@ export async function build(ctx) {
       view.hy += (-0.012 * sp - view.hy) * kh;
       camera.position.copy(model.root.localToWorld(_v.set(EYE.x + view.hx, EYE.y + view.hy, EYE.z + view.hz)));
       _q.copy(model.root.quaternion); _q2.setFromEuler(_e.set(0, Math.PI, 0)); _q.multiply(_q2);
-      _q2.setFromEuler(_e.set(view.orbitP, view.orbitY, 0, 'YXZ')); _q.multiply(_q2);
+      _q2.setFromEuler(_e.set((EYE.pitch ?? 0) + view.orbitP, view.orbitY, 0, 'YXZ')); _q.multiply(_q2);
       camera.quaternion.copy(_q);
       camera.position.x += (Math.random() - 0.5) * amp * 0.3; camera.position.y += (Math.random() - 0.5) * amp * 0.3;
       camera.up.set(0, 1, 0);
@@ -522,7 +548,7 @@ export async function build(ctx) {
     // also a car model name. Older hand-offs omit kind and mean a car.
     const incoming = spec.kind==='traffic' ? vehicles.find(v=>v.kind==='traffic'&&v.id===spec.id)||promoteTraffic({...spec,x,z,rotY:yawDeg*DEG+Math.PI},false) : spec.kind === 'boat'
       ? boats.find((v) => v.def.carried && v.def.carriedFrom === spec.id) || boats.find((v) => spec.dock && v.def.dock === spec.dock) || boats.find((v) => v.id === spec.id && (!spec.dock || !v.def.dock))
-      : fleet.find((v) => v.id === spec.id);
+      : fleet.concat(karts).find((v) => v.id === spec.id);
     if (!incoming || !enter(incoming)) return false;
     if (!placeVehicle(x, z, yawDeg)) {
       exit(true);
@@ -555,7 +581,7 @@ export async function build(ctx) {
     /** the garage: one vehicle per car { id, def, model, car (handling state), parked, damage, spec, box }; `vehicle` is the current / last driven one; enter('truck') gets into a car by id */
     fleet, get vehicle() { return V; }, vehicleById: (id) => vehicles.find((f) => f.id === id),
     /** the motor boats ({ id: 'boat', kind: 'boat', def, model, car, parked, damage (empty), spec, box }), docs/AREAS.md "The motor boat"; `vehicles` = the cars and the boats */
-    boats, vehicles, wake,
+    boats, karts, vehicles, wake,
     setView(i) { view.mode = i; model.setView(i === 2); damage.hideDetached(); if (i !== 2) cockpitNear(false); view.snap = true; if (i !== 2) view.camYaw = car.yaw; },
     /** test hook: step the physics for `seconds` with a fixed input ({ thr, brk, steer, hand, nitro, jump (X hop), flip (C barrel hop) }) in 1/60 s frames, then refresh the model / camera / player */
     sim(seconds, inp = {}, frames = null) {
