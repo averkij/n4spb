@@ -20,7 +20,8 @@ export function entryPose(spec,phase,progress,occupied) {
   // route is checked; an animation handle alone is not a safe walking anchor.
   const handle=doorHandle(spec,0);
   // Stand behind the trailing edge, with the working shoulder towards the car.
-  const start=[side*(w+.40),.89,Math.max(handle[2]+.24,-(spec.doorRear??spec.rear)+.12)];
+  const trailingEdge=-(spec.doorRear??spec.rear??-handle[2]);
+  const start=[side*(w+.40),.89,Math.max(handle[2]+.24,trailingEdge+.12)];
   const reach=bus?[.15,spec.floor+.94,z+.1]:[side*(w+.21),.92,z+.32];
   const stanceYaw=side*.16;
   const pull=[side*(w+1.32),.92,z+.64],climb=[side*(w+.30),.92,z+.12];
