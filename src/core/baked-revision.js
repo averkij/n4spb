@@ -15,12 +15,12 @@ export const BAKED_REVISIONS = {
   moskovskaya: '85a6c01bbe4615fba04e',
   narvsky: '4df40445c20b002892ee',
   okrug65: '15d76b6eb6e55d8336fa',
-  palace: '6a9593cea54b91717465',
+  palace: '74dc4d8fa5598c2fbe03',
   sampson: 'c309b6b08dd23380c54a',
   semyonovsky: '2dc53fc8eb7b70a1351f',
-  smolny: '7fa519d68293f5a01368',
+  smolny: '817dad2c850412b1bcd8',
   vasilyevsky: 'c5a347d5fcbb24415160',
-  vladimirsky: '37627212974778525e53',
+  vladimirsky: '5de1aea5a8983075d965',
 };
 const AREA = typeof document !== 'undefined' ? document.documentElement?.dataset?.area : undefined;       // (Node tools stub a bare document: no documentElement there -> 'none')
 /** the revision of THIS page's area; 'none' for an unknown or parked area, which never matches a manifest */

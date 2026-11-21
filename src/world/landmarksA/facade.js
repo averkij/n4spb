@@ -1,5 +1,5 @@
 // landmarksA/facade.js - the street front of the Moscow Railway Station (K. Thon, 1851): the 69.8 m central block (11 bays: 2 drive-through gateways at the
-// ends, 9 round arches with a pair of arched windows and an oculus each, the middle three are the doors; two-storey paired Corinthian columns; paired
+// ends, 9 round arches with a pair of arched windows and an oculus each, the middle three are the doors; two stacked orders of engaged Corinthian columns; paired
 // first-floor windows with white surrounds; deep modillion cornice and parapet), the two curved wings, the dark roofs with chimneys and the roof lettering
 // "МОСКОВСКИЙ ВОКЗАЛ".  Photos: SP/refs/station 02 (frontal), 51 (aerial), 82 (tower + arches), 05-06; spec docs/research/station.md "Modelling spec".
 // Frame: station frame of common.js (u along the facade, d into the building).  Heights: plinth 1.0, ground storey to 8.3, impost 8.7, upper storey to 15.85,
@@ -104,23 +104,34 @@ export function buildFacade(Cc) {
   // two steps in front of the three doors (granite, 0.12 m each, visual; the player's feet stay at y = 0)
   P.box(M.granite, PU(4) + PW, PU(7) - PW, 0, 0.1, -1.2, -0.3, 'b'); P.box(M.granite, PU(4) + PW + 0.2, PU(7) - PW - 0.2, 0.1, 0.2, -0.8, -0.3, 'b');
 
-  // ================================================================ columns: pairs at the 12 piers, two storeys
-  const colMat = M.trim;
+  // Thon's two orders share a pier axis. Only the two outer returns are doubled.
+  // The survey shows fluting above a collar on the lower third of each shaft.
   for (let k = 0; k <= BAYS; k++) {
-    for (const s of [-1, 1]) {
-      let u = PU(k) + s * 0.52; if (k === 0 && s < 0) u = -34.3; if (k === BAYS && s > 0) u = 34.3;
-      const z = -0.36;
-      // lower column
-      P.cyl(colMat, u, z, PL + 0.1, 7.7, 0.31, 0.27, 12); P.box(colMat, u - 0.37, u + 0.37, PL + 0.1, PL + 0.32, z - 0.37, z + 0.37);       // base
-      P.cyl(colMat, u, z, 7.65, 8.15, 0.27, 0.36, 12); P.box(colMat, u - 0.44, u + 0.44, 8.15, 8.3, z - 0.44, z + 0.44);                         // capital + abacus
-      // upper column
-      P.box(colMat, u - 0.37, u + 0.37, IMP, IMP + 0.22, z - 0.37, z + 0.37);
-      P.cyl(colMat, u, z, IMP + 0.2, 15.0, 0.31, 0.27, 12);
-      P.cyl(colMat, u, z, 14.95, 15.55, 0.27, 0.36, 12); P.box(colMat, u - 0.44, u + 0.44, 15.55, 15.7, z - 0.44, z + 0.44);
+    const xs = [PU(k)];
+    if (k === 0) xs.push(-34.5);
+    if (k === BAYS) xs.push(34.5);
+    for (const x of xs) {
+      for (const [base, top] of [[PL, G1], [IMP, UP]]) {
+        const z = -0.32, collar = base + (top - base) * 0.33;
+        P.box(M.trimShade, x - 0.52, x + 0.52, base, base + 0.15, z - 0.48, 0.25);
+        P.cyl(M.trim, x, z, base + 0.15, base + 0.38, 0.50, 0.41, 16);
+        P.cyl(M.trim, x, z, base + 0.38, top - 0.82, 0.40, 0.35, 24);
+        P.cyl(M.trimShade, x, z, collar, collar + 0.09, 0.41, 0.41, 20);
+        // Rounded arrises on the exposed half of the engaged shaft.
+        for (let i = -4; i <= 4; i++) {
+          const angle = i * Math.PI / 10;
+          P.cyl(M.trim, x + 0.34 * Math.sin(angle), z - 0.34 * Math.cos(angle),
+            collar + 0.14, top - 0.82, 0.048, 0.044, 6);
+        }
+        P.cyl(M.trim, x, z, top - 0.82, top - 0.25, 0.35, 0.51, 16);
+        for (let i = -3; i <= 3; i++) {
+          const angle = i * Math.PI / 7;
+          P.cyl(M.trimShade, x + 0.37 * Math.sin(angle), z - 0.37 * Math.cos(angle),
+            top - 0.72, top - 0.37, 0.085, 0.035, 6);
+        }
+        P.box(M.trim, x - 0.58, x + 0.58, top - 0.25, top, z - 0.53, 0.24);
+      }
     }
-    // wall pilaster behind the pair (white) and entablature block over the pair
-    const a = PU(k) - 0.95, b = PU(k) + 0.95;
-    P.box(M.trim, Math.max(-34.9, a), Math.min(34.9, b), 15.7, UP + 0.2, -0.5, 0.0, 'b');
   }
 
   // ================================================================ impost cornice between the two storeys
@@ -130,24 +141,21 @@ export function buildFacade(Cc) {
   for (let k = 0; k < BAYS; k++) {
     const uc = BAY_C(k);
     const sh = new THREE.Shape(); rectPath(sh, -PITCH / 2, IMP, PITCH / 2, UP);
-    for (const s of [-1, 1]) sh.holes.push(rectPath(new THREE.Path(), s * 0.6 - 0.475, 9.9, s * 0.6 + 0.475, 12.4, true));
+    for (const s of [-1, 1]) sh.holes.push(rectPath(new THREE.Path(), s * 0.88 - 0.70, 9.65, s * 0.88 + 0.70, 14.05, true));
     P.extrude(M.stucco, sh, 0.3, uc, 0, 0);
     for (const s of [-1, 1]) {
-      const x = uc + s * 0.6;
-      P.quad(((k * 3 + (s > 0 ? 2 : 0) + 7) % 4) ? winLit : winMat, [x + 0.475, 9.9, 0.28], [x - 0.475, 9.9, 0.28], [x - 0.475, 12.4, 0.28], [x + 0.475, 12.4, 0.28], [0, 0, -1], [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [1 - a, b]));
+      const x = uc + s * 0.88;
+      P.quad(((k * 3 + (s > 0 ? 2 : 0) + 7) % 4) ? winLit : winMat, [x + 0.70, 9.65, 0.28], [x - 0.70, 9.65, 0.28], [x - 0.70, 14.05, 0.28], [x + 0.70, 14.05, 0.28], [0, 0, -1], [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [1 - a, b]));
     }
     // surround: jambs, lintel, hood, sill, apron frame
-    P.box(M.trim, uc - 1.4, uc - 1.075, 9.85, 12.75, -0.1, 0.3, 'r'); P.box(M.trim, uc + 1.075, uc + 1.4, 9.85, 12.75, -0.1, 0.3, 'l');
-    P.box(M.trim, uc - 0.1, uc + 0.1, 9.9, 12.4, -0.06, 0.3, 'bt');
-    P.box(M.trim, uc - 1.4, uc + 1.4, 12.4, 12.75, -0.1, 0.3, 'b');
-    P.box(M.trim, uc - 1.55, uc + 1.55, 12.75, 13.05, -0.4, 0.2); P.box(M.trimShade, uc - 1.5, uc + 1.5, 13.05, 13.15, -0.3, 0.1);
-    P.box(M.trim, uc - 1.5, uc + 1.5, 9.65, 9.9, -0.25, 0.3, 'b');
+    P.box(M.trim, uc - 1.85, uc - 1.58, 9.85, 14.40, -0.1, 0.3, 'r'); P.box(M.trim, uc + 1.58, uc + 1.85, 9.85, 14.40, -0.1, 0.3, 'l');
+    P.box(M.trim, uc - 0.1, uc + 0.1, 9.65, 14.05, -0.06, 0.3, 'bt');
+    P.box(M.trim, uc - 1.85, uc + 1.85, 14.05, 14.40, -0.1, 0.3, 'b');
+    P.box(M.trim, uc - 2.00, uc + 2.00, 14.40, 14.65, -0.4, 0.2); P.box(M.trimShade, uc - 1.95, uc + 1.95, 14.65, 14.77, -0.3, 0.1);
+    P.box(M.trim, uc - 1.95, uc + 1.95, 9.42, 9.65, -0.25, 0.3, 'b');
     // apron frame (panel below the sill)
-    P.box(M.trim, uc - 1.4, uc + 1.4, 8.95, 9.0, -0.04, 0.02, 'b'); P.box(M.trim, uc - 1.4, uc + 1.4, 9.5, 9.55, -0.04, 0.02, 'b');
-    P.box(M.trim, uc - 1.4, uc - 1.35, 9.0, 9.5, -0.04, 0.02, ''); P.box(M.trim, uc + 1.35, uc + 1.4, 9.0, 9.5, -0.04, 0.02, '');
-    // frieze panel between hood and cornice
-    P.box(M.panel, uc - 1.1, uc + 1.1, 13.55, 15.15, -0.03, 0.02, 'bt');
-    P.box(M.trim, uc - 1.15, uc + 1.15, 15.15, 15.22, -0.06, 0.02, 'b'); P.box(M.trim, uc - 1.15, uc + 1.15, 13.5, 13.57, -0.06, 0.02, 'b');
+    P.box(M.trim, uc - 1.85, uc + 1.85, 8.95, 9.0, -0.04, 0.02, 'b'); P.box(M.trim, uc - 1.85, uc + 1.85, 9.5, 9.55, -0.04, 0.02, 'b');
+    P.box(M.trim, uc - 1.85, uc - 1.80, 9.0, 9.5, -0.04, 0.02, ''); P.box(M.trim, uc + 1.80, uc + 1.85, 9.0, 9.5, -0.04, 0.02, '');
   }
 
   // ================================================================ entablature: architrave, frieze, modillion cornice, corona, parapet
@@ -163,20 +171,6 @@ export function buildFacade(Cc) {
   for (let k = 0; k <= BAYS; k++) P.box(M.trim, PU(k) - 0.5, PU(k) + 0.5, 17.62, PAR + 0.1, -0.34, 0.0, 'b');
   P.box(M.trim, -34.9, 34.9, PAR, PAR + 0.14, -0.3, 0.9, 'b');
 
-  // ================================================================ stucco relief: keystones, rosettes, window pediments, balustrade
-  for (let k = 0; k < BAYS; k++) {
-    const uc = BAY_C(k), gate = GATEWAYS.includes(k), door = DOORS.includes(k), crown = (gate || door ? 0 : PL) + (gate || door ? 4.35 : 3.35) + WAY / 2;
-    P.box(M.trim, uc - 0.26, uc + 0.26, crown + 0.42, crown + 1.25, -0.2, 0.0, 'bs'); P.box(M.trimShade, uc - 0.34, uc + 0.34, crown + 1.25, crown + 1.4, -0.24, 0.0, 'bs');        // keystone
-    // rosette (diamond) on the frieze
-    P.box(M.trim, uc - 0.2, uc + 0.2, UP + 0.45, UP + 0.45 + 0.4, -0.1, 0.0, 'bs');
-    // triangular pediment over every second window pair, flat hood on the rest (already drawn)
-    if (k % 2 === 0) { const tri = new THREE.Shape(); tri.moveTo(-1.6, 0); tri.lineTo(1.6, 0); tri.lineTo(0, 0.7); tri.closePath(); P.extrude(M.trim, tri, 0.22, uc, 13.15, -0.42); }
-    // window sill brackets
-    for (const s of [-1, 1]) P.box(M.trimShade, uc + s * 1.2 - 0.12, uc + s * 1.2 + 0.12, 9.3, 9.65, -0.2, -0.05, 'bs');
-  }
-  // balustrade over the parapet: rail + balusters every 0.7 m between the pier blocks
-  P.box(M.trim, -34.9, 34.9, PAR + 0.8, PAR + 0.92, -0.3, 0.1, 'b');
-  for (let u = -34.5; u < 34.6; u += 0.7) { let near = false; for (let k = 0; k <= BAYS; k++) if (Math.abs(u - PU(k)) < 0.65) near = true; if (!near) P.box(M.trim, u - 0.06, u + 0.06, PAR + 0.14, PAR + 0.8, -0.2, -0.08, 'bs'); }
   // iron-and-glass canopies over the three doors with a lamp each
   const glassC = T('#9fbccb', { paint: 0, transparent: true, opacity: 0.45, depthWrite: false, name: 'st-canopy-glass' }); glassC.userData.noOutline = true;
   for (const k of DOORS) {
@@ -212,9 +206,9 @@ export function buildFacade(Cc) {
     const tex = lettersTex(ctx, text, key);
     const m = Cc.night.toon(T('#ffffff', { map: tex, alphaTest: 0.35, side: 'double', paint: 0, name: 'st-letters-' + key }), '#ffffff', 1.1, 0.5);
     m.userData.noOutline = true;
-    const y0 = PAR + 1.05, hh = 2.2, tilt = 0.2, d0 = 2.6;
+    const y0 = PAR + 0.25, hh = 2.2, tilt = 0.2, d0 = 2.6;
     P.quad(m, [u1, y0, d0], [u0, y0, d0], [u0, y0 + hh * Math.cos(tilt), d0 + hh * Math.sin(tilt)], [u1, y0 + hh * Math.cos(tilt), d0 + hh * Math.sin(tilt)], [0, 0.2, -1], [[1, 0], [0, 0], [0, 1], [1, 1]].map(([a, b]) => [1 - a, b]));
-    P.box(M.ironLight, u0, u1, PAR + 0.92, y0 + 0.1, d0 - 0.1, d0 + 0.18);                                          // base rail
+    P.box(M.ironLight, u0, u1, PAR + 0.16, y0 + 0.1, d0 - 0.1, d0 + 0.18);                                          // base rail
     for (let u = u0 + 1; u < u1; u += 5) P.box(M.ironLight, u - 0.05, u + 0.05, PAR + 0.1, y0 + 1.6, d0 - 0.05, d0 + 0.5);   // stays
   };
   lw('МОСКОВСКИЙ', 'st_l1', 7.5, 34); lw('ВОКЗАЛ', 'st_l2', -34, -7.5);

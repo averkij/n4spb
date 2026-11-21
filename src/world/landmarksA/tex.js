@@ -65,9 +65,11 @@ export function dialTex(ctx, lit = false) {
       g.lineWidth = big ? 5 : 2; g.beginPath(); g.moveTo(c + Math.sin(a) * r0, c - Math.cos(a) * r0); g.lineTo(c + Math.sin(a) * r1, c - Math.cos(a) * r1); g.stroke();
     }
     g.fillStyle = '#16161a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.strokeStyle = g.fillStyle; g.lineWidth = 3;
+    for (const radius of [0.88, 0.54]) { g.beginPath(); g.arc(c, c, c * radius, 0, Math.PI * 2); g.stroke(); }
     const R = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
-    g.font = `700 ${w * 0.075}px ${FONT}`;
-    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, r = c * 0.66; g.save(); g.translate(c + Math.sin(a) * r, c - Math.cos(a) * r); g.rotate(a); g.fillText(R[i], 0, 0); g.restore(); }
+    g.font = `700 ${w * 0.142}px ${FONT}`;
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, r = c * 0.70; g.save(); g.translate(c + Math.sin(a) * r, c - Math.cos(a) * r); g.rotate(a); g.fillText(R[i], 0, 0); g.restore(); }
   }, { key: lit ? 'st_dial_lit' : 'st_dial' });
 }
 

@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **16.2.3** (2026-11-21, patch): Correct the Moscow Railway Station facade orders, paired windows, parapet and clock tower.
 - **16.2.2** (2026-11-21, patch): Rework the Klodt horses from a scanned equine sculpture, with a fitted bridle, modeled ears and detailed bronze relief.
 - **16.2.1** (2026-11-20, patch): Support handle-only door fittings and refresh diagnostic entry pages.
 - **16.2.0** (2026-11-20, minor): Resculpt the four Klodt Horse Tamers and plant the player's feet while opening vehicle doors.

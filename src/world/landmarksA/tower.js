@@ -36,10 +36,18 @@ export function buildTower(Cc) {
 
   // ---- shaft
   P.box(M.stucco, -U, U, Y0, Y4, D0, D1, 'bt');
-  // corner posts (white, projecting 0.12 beyond both faces)
-  for (const su of [-1, 1]) for (const sd of [-1, 1]) {
-    const u0 = su > 0 ? U - 0.48 : -U - 0.12, u1 = su > 0 ? U + 0.12 : -U + 0.48, d0 = sd < 0 ? D0 - 0.12 : D1 - 0.48, d1 = sd < 0 ? D0 + 0.48 : D1 + 0.12;
-    P.box(M.trim, u0, u1, Y0, Y4, d0, d1, 'b');
+  // Two engaged columns turn each corner, one on each face; the shaft
+  // restarts above the clock-stage string course (central facade survey).
+  for (const side of [-1, 1]) for (const end of [-1, 1]) {
+    const z = end < 0 ? D0 : D1;
+    for (const [x, d] of [[side * (U - 0.20), z], [side * U, z - end * 0.20]]) {
+      for (const [bottom, top] of [[Y0, Y1], [Y2, Y3 + 0.72]]) {
+        P.cyl(M.trim, x, d, bottom, top - 0.42, 0.25, 0.22, 14);
+        P.cyl(M.trimShade, x, d, bottom + 1.40, bottom + 1.48, 0.26, 0.26, 14);
+        P.cyl(M.trim, x, d, top - 0.42, top - 0.10, 0.22, 0.34, 14);
+        P.box(M.trim, x - 0.35, x + 0.35, top - 0.10, top, d - 0.35, d + 0.35);
+      }
+    }
   }
   // string courses and cornices
   P.box(M.trim, -U - 0.3, U + 0.3, Y1, Y2, D0 - 0.3, D1 + 0.3);
@@ -72,8 +80,9 @@ export function buildTower(Cc) {
     P.push(f.ox, 0, f.oz, f.rotY);          // local z = INTO the tower on every face (front: rotY 0); x = along the face
     P.box(M.trim, -0.72, -0.5, 19.9, 22.9, -0.12, 0.2, 'r'); P.box(M.trim, 0.5, 0.72, 19.9, 22.9, -0.12, 0.2, 'l');
     P.box(M.trim, -0.72, 0.72, 22.4, 22.75, -0.12, 0.2, 'b');
-    P.quad(M.pane, [0.5, 20.0, 0.02], [-0.5, 20.0, 0.02], [-0.5, 22.4, 0.02], [0.5, 22.4, 0.02], [0, 0, -1]);
-    P.box(M.frame, -0.02, 0.02, 20.0, 22.4, -0.01, 0.03);
+    P.quad(M.pane, [0.5, 20.0, -0.035], [-0.5, 20.0, -0.035], [-0.5, 22.4, -0.035], [0.5, 22.4, -0.035], [0, 0, -1]);
+    P.box(M.frame, -0.02, 0.02, 20.0, 22.4, -0.075, -0.035);
+    for (const y of [20.8, 21.65]) P.box(M.frame, -0.5, 0.5, y, y + 0.05, -0.075, -0.035);
     // pediment
     const tri = new THREE.Shape(); tri.moveTo(-0.95, 0); tri.lineTo(0.95, 0); tri.lineTo(0, 0.5); tri.lineTo(-0.95, 0);
     P.extrude(M.trim, tri, 0.3, 0, 22.75, -0.32);
