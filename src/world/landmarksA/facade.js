@@ -6,9 +6,10 @@
 // cornice top 17.5, parapet 18.5; wings: cornice 14.4.  Colliders: the facade line is solid except the three doors and the two gateways.
 import * as THREE from 'three';
 import { Parts, TH, W, wbox, C, archPath, rectPath, makeCommon, O } from './common.js';
+import { stationFont } from './roof-letters.js';
 import { hipRoof } from './geom.js';
 import { styledWalls } from './walls.js';
-import { windowTex, archWinTex, lettersTex } from './tex.js';
+import { windowTex, archWinTex } from './tex.js';
 import { C as COL } from './common.js';
 
 export const PITCH = 6.145;
@@ -101,8 +102,13 @@ export function buildFacade(Cc) {
   }
   // plinth top moulding
   for (let k = 0; k < BAYS; k++) { const a = PU(k), b = PU(k + 1); if (GATEWAYS.includes(k) || DOORS.includes(k)) { P.box(M.plinthDark, a, a + PW, PL, PL + 0.1, -0.36, 0.0, 'b'); P.box(M.plinthDark, b - PW, b, PL, PL + 0.1, -0.36, 0.0, 'b'); } else P.box(M.plinthDark, a, b, PL, PL + 0.1, -0.36, 0.0, 'b'); }
-  // two steps in front of the three doors (granite, 0.12 m each, visual; the player's feet stay at y = 0)
-  P.box(M.granite, PU(4) + PW, PU(7) - PW, 0, 0.1, -1.2, -0.3, 'b'); P.box(M.granite, PU(4) + PW + 0.2, PU(7) - PW - 0.2, 0.1, 0.2, -0.8, -0.3, 'b');
+  // Separate tread footprints avoid hidden overlapping faces. Carry the landing through each reveal.
+  P.box(M.granite, PU(4) + PW, PU(7) - PW, 0, 0.16, -1.2, -0.8, 'b');
+  P.box(M.granite, PU(4) + PW, PU(7) - PW, 0, 0.24, -0.8, -0.30, 'b');
+  for (const k of DOORS) {
+    const uc = BAY_C(k);
+    P.box(M.granite, uc - 1.35, uc + 1.35, 0, 0.24, -0.30, 1.46, 'b');
+  }
 
   // Thon's two orders share a pier axis. Only the two outer returns are doubled.
   // The survey shows fluting above a collar on the lower third of each shaft.
@@ -202,16 +208,22 @@ export function buildFacade(Cc) {
   for (const [ring, tag] of [[WING_W, 'w'], [WING_E, 'e']]) wing(P, M, T, ring, winMat, cream, winLit);
 
   // ================================================================ roof lettering "МОСКОВСКИЙ ВОКЗАЛ"
-  const lw = (text, key, u0, u1) => {
-    const tex = lettersTex(ctx, text, key);
-    const m = Cc.night.toon(T('#ffffff', { map: tex, alphaTest: 0.35, side: 'double', paint: 0, name: 'st-letters-' + key }), '#ffffff', 1.1, 0.5);
-    m.userData.noOutline = true;
-    const y0 = PAR + 0.42, hh = 2.2, tilt = 0.12, d0 = -0.18;
-    P.quad(m, [u1, y0, d0], [u0, y0, d0], [u0, y0 + hh * Math.cos(tilt), d0 + hh * Math.sin(tilt)], [u1, y0 + hh * Math.cos(tilt), d0 + hh * Math.sin(tilt)], [0, 0.2, -1], [[1, 0], [0, 0], [0, 1], [1, 1]].map(([a, b]) => [1 - a, b]));
-    P.box(M.ironLight, u0, u1, PAR + 0.16, y0 + 0.1, d0 - 0.1, d0 + 0.18);                                          // base rail
-    for (let u = u0 + 1; u < u1; u += 5) P.box(M.ironLight, u - 0.05, u + 0.05, PAR + 0.1, y0 + 1.6, d0 - 0.05, d0 + 0.5);   // stays
-  };
-  lw('МОСКОВСКИЙ', 'st_l1', 7.5, 34); lw('ВОКЗАЛ', 'st_l2', -34, -7.5);
+  const enamel = Cc.night.toon(T('#f5f4ee', { paint: 0, name: 'station-letter-enamel' }), '#ffffff', 1.1, 0.5);
+  function roofWord(word, u0, u1) {
+    const pitch = (u1 - u0) / word.length, base = PAR + 0.27;
+    P.box(M.ironLight, u0, u1, PAR + 0.14, base, -0.17, 0.10);
+    [...word].forEach((letter, i) => {
+      const shapes = stationFont.generateShapes(letter, 1.72);
+      const glyph = new THREE.ExtrudeGeometry(shapes, {depth: 0.11, bevelEnabled: false, curveSegments: 4});
+      glyph.computeBoundingBox();
+      const bounds = glyph.boundingBox;
+      glyph.translate(-(bounds.min.x + bounds.max.x) / 2, 0, 0);
+      P.geo(enamel, glyph, u1 - (i + 0.5) * pitch, base, -0.06, 0, Math.PI, 0);
+      glyph.dispose();
+    });
+  }
+  roofWord('МОСКОВСКИЙ', 7.5, 34);
+  roofWord('ВОКЗАЛ', -34, -7.5);
 
   const g = new THREE.Group(); g.name = 'station-front'; g.position.set(O.x, 0, O.z); g.rotation.y = TH;
   P.build(g, {});

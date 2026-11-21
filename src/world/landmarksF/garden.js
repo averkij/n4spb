@@ -72,11 +72,27 @@ export function build(K) {
   }
   // rose beds: low ellipses along the lawn edges (pink and red mounds)
   const roses = [[-8, -1.2, 6.5, 2.2, 0.2], [8.5, -0.5, 6.0, 2.0, -0.25], [-30, -22, 8, 2.0, 0.55], [32, -22, 8, 2.0, -0.55], [-5, 8, 6, 1.6, 0.1], [5, 8, 6, 1.6, -0.1]];
+  const petal = new THREE.SphereGeometry(1, 6, 4);
+  const bloomColors = [M.rose1, M.rose2, M.rose3];
   roses.forEach(([cx, cz, rx, rz, a], i) => {
     const ring = []; for (let k = 0; k < 14; k++) { const t = k / 14 * Math.PI * 2; ring.push([cx + Math.cos(t) * rx * Math.cos(a) - Math.sin(t) * rz * Math.sin(a), cz + Math.cos(t) * rx * Math.sin(a) + Math.sin(t) * rz * Math.cos(a)]); }
-    mound(P, M.hedge2, ring, LAWN_Y - 0.02, 0.9, { bump: (x, z, j) => (j ? Math.sin(x * 3.1 + z * 2.3) * 0.12 : 0) });
-    for (let k = 0; k < 16; k++) { const t = rng() * Math.PI * 2, r = Math.sqrt(rng()), x = cx + Math.cos(t) * r * rx * 0.85, z = cz + Math.sin(t) * r * rz * 0.85; P.box([M.rose1, M.rose2, M.rose3][(k + i) % 3], x - 0.13, x + 0.13, 0.9, 1.1, z - 0.13, z + 0.13, 'b'); }
+    const foot = LAWN_Y - 0.02, height = 0.62, top = foot + height;
+    mound(P, M.hedge2, ring, foot, height, {prof: [[1, 0], [0.94, 0.56], [0.74, 1], [0, 1]]});
+    for (let k = 0; k < 24; k++) {
+      const angle = rng() * TAU, radius = Math.sqrt(rng()) * 0.69;
+      const dx = Math.cos(angle) * radius * rx, dz = Math.sin(angle) * radius * rz;
+      const x = cx + dx * Math.cos(a) - dz * Math.sin(a), z = cz + dx * Math.sin(a) + dz * Math.cos(a);
+      const color = bloomColors[(k + i) % 3];
+      for (let j = 0; j < 5; j++) {
+        const turn = angle + TAU * j / 5;
+        P.geo(color, petal, x + 0.066 * Math.sin(turn), top + 0.045, z + 0.066 * Math.cos(turn),
+          -0.35, turn, 0, 0.064, 0.042, 0.088);
+      }
+      P.geo(bloomColors[(k + i + 1) % 3], petal, x, top + 0.067, z, 0, angle, 0, 0.052, 0.053, 0.052);
+    }
   });
+
+  petal.dispose();
 
   // ------------------------------------------------------------------------------------------------ fountain
   const fo = fountainAt();

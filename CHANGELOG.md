@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **16.2.5** (2026-11-21, patch): Repair station roof letters and entrance thresholds, and seat Kazan rose blossoms on the planting beds.
 - **16.2.4** (2026-11-21, patch): Refine Kazan Cathedral's drum, dome and north pediment and bring the station lettering forward.
 - **16.2.3** (2026-11-21, patch): Correct the Moscow Railway Station facade orders, paired windows, parapet and clock tower.
 - **16.2.2** (2026-11-21, patch): Rework the Klodt horses from a scanned equine sculpture, with a fitted bridle, modeled ears and detailed bronze relief.

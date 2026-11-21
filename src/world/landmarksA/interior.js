@@ -90,11 +90,15 @@ export function buildInterior(Cc) {
   const vs = IN.vu0, ve = IN.vu1;
   // inner front wall with the three doors (2.7 x 2.9 m) cut out
   const doorC = Cc.parts.doorBays || [-6.14, 0, 6.14];
-  {
-    const sh = new THREE.Shape(); rectPath(sh, vs, 0, ve, VEST_CEIL);
-    for (const uc of doorC) sh.holes.push(rectPath(new THREE.Path(), uc - 1.35, 0, uc + 1.35, 2.9, true));
-    P.extrude(plaster, sh, 0.45, 0, 0, 0.95);
+  let jamb = vs;
+  for (const uc of doorC) {
+    P.box(plaster, jamb, uc - 1.35, 0, VEST_CEIL, 0.95, 1.4, 'b');
+    P.box(marbleDark, jamb, uc - 1.35, 0, 0.9, 1.4, 1.46, 'b');
+    P.box(plaster, uc - 1.35, uc + 1.35, 2.9, VEST_CEIL, 0.95, 1.4, 'b');
+    jamb = uc + 1.35;
   }
+  P.box(plaster, jamb, ve, 0, VEST_CEIL, 0.95, 1.4, 'b');
+  P.box(marbleDark, jamb, ve, 0, 0.9, 1.4, 1.46, 'b');
   P.box(plaster, vs - 0.5, vs, 0, VEST_CEIL, 1.4, 19.9); P.box(plaster, ve, ve + 0.5, 0, VEST_CEIL, 1.4, 19.9);
   // hall front wall: pieces beside the opening (u -9 .. 7), lintel above
   P.box(plaster, IN.u0, -9, 0, CEIL, 19.4, 19.9); P.box(plaster, 7, IN.u1, 0, CEIL, 19.4, 19.9);
@@ -103,7 +107,7 @@ export function buildInterior(Cc) {
   for (const u of [vs + 0.2, ve - 0.2]) for (let d = 4; d < 19; d += 4.4) { P.box(marble, u - 0.35, u + 0.35, 0, 3.2, d - 0.35, d + 0.35); P.box(marbleDark, u - 0.42, u + 0.42, 3.2, 3.4, d - 0.42, d + 0.42); P.box(marble, u - 0.35, u + 0.35, 3.4, VEST_CEIL, d - 0.35, d + 0.35); }
   P.box(marble, -9.5, -8.9, 0, 7.0, 18.2, 19.4); P.box(marble, 7.0, 7.6, 0, 7.0, 18.2, 19.4);
   // dado, cornice
-  P.box(marbleDark, vs, ve, 0, 0.9, 1.4, 1.46, 'b'); P.box(M.trim, vs, ve, VEST_CEIL - 0.5, VEST_CEIL, 1.4, 19.4, 'b');
+  P.box(M.trim, vs, ve, VEST_CEIL - 0.5, VEST_CEIL, 1.4, 19.4, 'b');
   // ceiling with the 1950s painting
   P.quad(plafond, [vs, VEST_CEIL, 1.4], [ve, VEST_CEIL, 1.4], [ve, VEST_CEIL, 19.4], [vs, VEST_CEIL, 19.4], [0, -1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
   for (const d of [6, 12]) {      // two bronze chandeliers: ring + 6 candle torches
