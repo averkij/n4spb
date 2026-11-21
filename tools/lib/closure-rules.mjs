@@ -40,6 +40,7 @@ export const DYNAMIC_IMPORTS = {
  */
 export const RUNTIME_ASSETS = {
   'src/world/landmarksC/klodt.js': {
+    '../../../assets/sculptures/klodt-bronze.jpg': { path: 'assets/sculptures/klodt-bronze.jpg', hash: true, why: 'bronze detail of the four Anichkov groups' },
     '../../../assets/sculptures/klodt.glb': { path: 'assets/sculptures/klodt.glb', hash: true, why: 'four cast groups on Anichkov Bridge' },
   },
   'src/world/character/settings.js':{'../../../assets/characters/CREDITS.md':{path:'assets/characters/CREDITS.md',hash:false,why:'character model attribution opened from settings'}},
@@ -88,6 +89,7 @@ export function isAllowedServed(rel) {
  * The count is exact, so a new fetch( in the same file fails the lint until somebody reads it.
  */
 export const RUNTIME_CALLS = {
+  'src/world/landmarksC/klodt.js': { 'fetch(': { count: 1, why: 'reads the bronze map URL hashed by RUNTIME_ASSETS for the Anichkov Bridge' } },
   'src/menu/loading-photos.js': { 'fetch(': {count:2,why:'destination sightseeing manifest and twenty Russian facts; presentation only, never scene geometry'} },
   'src/menu/menu.js': { 'fetch(': {count:1,why:'menu geography only'} },
   'src/menu/entry.js': { 'new URL(': {count:1,why:'shared view destination page'} },

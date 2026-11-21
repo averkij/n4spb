@@ -51,13 +51,14 @@ in-game character settings. These assets retain their original licence.
 
 The four posed bronze groups in `assets/sculptures/klodt.glb` and their baked
 scene geometry are licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
-The horse anatomy is adapted from Wildfire Games' [0 A.D. Celtic horse](https://github.com/0ad/0ad/blob/master/binaries/data/mods/public/art/meshes/skeletal/horse_celtic.dae),
-copyright Wildfire Games, under the [0 A.D. art licence](https://github.com/0ad/0ad/blob/master/binaries/data/mods/public/art/LICENSE.txt).
-The human anatomy uses the CC0 [MakeHuman hm08 mesh, skeleton and macro targets](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data)
-by Data Collection AB, Joel Palmius and Jonas Hauquier. Both anatomies were
-reposed for Klodt's four compositions. The new meshes include sculpted hair,
-manes, harnesses, reins and drapery, with Blender surface finishing and baked
-ambient occlusion. The compact bronze material is authored for this scene.
+The horse anatomy and surface relief are adapted from Rico Cilliers' CC0
+[Horse Statue 01 scan for Poly Haven](https://polyhaven.com/a/horse_statue_01).
+The four adaptations remove the porcelain mount, repose the neck and limbs,
+reshape the mane and add ears, tails, tack and drapery. The shared
+`assets/sculptures/klodt-bronze.jpg` is a bronze finish derived from the scan's
+normal and occlusion maps. The human anatomy uses the CC0
+[MakeHuman hm08 mesh, skeleton and macro targets](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data)
+by Data Collection AB, Joel Palmius and Jonas Hauquier.
 The poses were checked against [photographs of all four groups](https://static.kulturologia.ru/files/u8921/koni_04.jpg).
 
 ## Reference photographs

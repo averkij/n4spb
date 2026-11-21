@@ -4513,3 +4513,17 @@ The door pose regression exercised 25 vehicle definitions with both characters.
 The independent clearance test passed 200 approaches and 50 obstructed
 approaches. The browser test captured six moments during opening per character
 on the Lada and bus (24 frames).
+
+## 16.2.2 Anichkov Bridge casts
+
+The four scanned and reposed horses share a 1024-pixel bronze atlas.
+The shipping groups contain 16,973 to 23,624 triangles each. The full landmark
+module builds 143,254 triangles in 78 meshes (previously 134,116 in 78).
+The GLB is 2,049,800 bytes and its JPEG atlas is 167,412 bytes.
+
+The medium Palace benchmark ran from `-389.8,-82.5,76` for 12 seconds.
+The 16.2.1 control travelled 244 m, with mean 33.6 ms and p95 50.2 ms.
+A higher-detail work mesh took 36.5 to 36.8 ms on average (p95 66.6 ms).
+After mesh reduction the shipping build travelled 245 m, with mean 34.8 ms
+and p95 50.1 ms. These are individual runs in the streamed city. Five
+integrated camera views cover the four groups and the southwest horse in profile.

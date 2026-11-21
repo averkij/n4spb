@@ -24,5 +24,5 @@ cached('myKey', () => human({ ... })).place(P, mk, x, y, z, rotY, scale);   // P
 ## Monuments (module, file, triangles after)
 Kutuzov 13.3 k / Barclay 12.4 k (`landmarksF/statues.js`), Catherine II 6.4 k + nine associates 23 k (`landmarksE/statues.js`), Apollo quadriga 25 k (`landmarksE/statues.js`), Nicholas I group 13 k + four
 women 10 k (`landmarksJ/statues.js`), Alexander Column angel + cross + serpent (`landmarksG/angel.js`), Palace Pier lions 6 k each (`environment/lions.js`, vertex coloured), Admiralty nymph groups 5.9 k each and
-seated warriors 3.5 k (`landmarksH/statues.js`), Alexander Garden busts 2.8 k each, Przhevalsky + camel, Hercules 7 k, Flora 4.6 k (same file), Klodt horse tamers about 19 k per group (four posed meshes in `assets/sculptures/klodt.glb`, bronze UVs encode ambient visibility and surface orientation),
+seated warriors 3.5 k (`landmarksH/statues.js`), Alexander Garden busts 2.8 k each, Przhevalsky + camel, Hercules 7 k, Flora 4.6 k (same file), Klodt horse tamers, four individually posed groups in `assets/sculptures/klodt.glb` (about 17-24 k triangles each, one shared 1024 px bronze map with scanned surface relief),
 Bankovsky griffins 4.4 k each (`bridges/sculpt.js` + kit), Dostoevsky 6.6 k (`landmarksD/statues.js`), Hermitage atlantes (`landmarksI/hermitage.js`), Chariot of Glory warriors / Victory (`landmarksG/sculpt.js`).

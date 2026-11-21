@@ -23,20 +23,22 @@ export async function loadHorseTamers() {
   return sculptures;
 }
 
-export function bronzeMaterial(ctx) {
-  // Sculpt UVs encode baked ambient visibility (U) and broad reflected light (V).
-  // This keeps recesses warm and rubbed, sky-facing bronze cooler in one draw.
-  const palette = ctx.tex.draw(64, 64, (g, w, h) => {
-    for (let y = 0; y < h; y++) {
-      const sky = 1 - y / (h - 1);
-      const grad = g.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, '#191918');
-      grad.addColorStop(.50, `rgb(${42+38*sky|0},${38+40*sky|0},${31+39*sky|0})`);
-      const shade = [52 + sky * 151, 48 + sky * 157, 40 + sky * 147];
-      grad.addColorStop(1, 'rgb(' + shade.map(Math.round).join(',') + ')');
-      g.fillStyle = grad;
-      g.fillRect(0, y, w, 1);
-    }
-  }, { key: 'lmC-cast-bronze' });
-  return ctx.mat.toon('#e0dbd2', { map: palette, name: 'lmC-cast-bronze' });
+export async function bronzeMaterial(ctx) {
+  const url = new URL('../../../assets/sculptures/klodt-bronze.jpg', import.meta.url);
+  // The CPU world builder measures geometry and texture allocation with a
+  // canvas stub. The browser and the shipping baker both paint the actual scan.
+  let bitmap;
+  if (url.protocol !== 'file:') {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Klodt bronze texture HTTP ' + response.status);
+    bitmap = await createImageBitmap(await response.blob());
+  }
+  try {
+    const map = ctx.tex.draw(1024, 1024, g => {
+      if (bitmap) g.drawImage(bitmap, 0, 0);
+    }, { key: 'lmC-cast-bronze' });
+    return ctx.mat.toon('#faf6ec', { map, name: 'lmC-cast-bronze' });
+  } finally {
+    bitmap?.close();
+  }
 }

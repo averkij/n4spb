@@ -24,7 +24,8 @@ function pedestal(P, M, uc, vc, y0) {
 }
 
 export async function buildHorses(K, M, ctx) {
-  const P = K.P, sculptures = await loadHorseTamers(), bronze = bronzeMaterial(ctx);
+  const P = K.P;
+  const [sculptures, bronze] = await Promise.all([loadHorseTamers(), bronzeMaterial(ctx)]);
   const rng = ctx.rng('lmC-scars');
   const groups = [];
   P.push(CX, 0, CZ, -TH);
