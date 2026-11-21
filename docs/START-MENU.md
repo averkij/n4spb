@@ -67,8 +67,9 @@ Each live area's `views.json` defines five camera views and captions in
 shipping bake (105 images across 21 areas). One random screenshot
 is preserved for the whole load. Only destination images
 are requested. A separate `facts.json` contains twenty short Russian facts for
-each live area (420 total). One is picked randomly per load and stays fixed;
-there are no image or fact rotation timers. Sight captions never overwrite it.
+each live area (420 total). The selected view's optional fact references narrow
+the random choice to facts about that place. Other views use the whole area
+collection. Both the image and the fact stay fixed while the area loads.
 See [PRELOADER-FACTS.md](PRELOADER-FACTS.md) for the content files and sources.
 
 `node tools/capture-menu-sights.mjs --prepare` prepares the camera manifests from
@@ -76,8 +77,9 @@ authored viewpoints and landmark groups. Review these before capture. Run
 `node tools/capture-menu-sights.mjs` against current bakes to capture serially;
 `--area <id> --force` replaces one area's screenshots after a camera correction.
 Do not run capture concurrently with a bake or another GPU test.
-The capture tool retains reviewed camera overrides for landmarks obscured by
-foreground trees, poles, or nearby walls in the walking viewpoints.
+Preparing a manifest keeps the camera and fact links of reviewed views with
+the same caption. Review the framing of buildings and monuments from an
+elevated viewpoint before replacing a street-level photograph.
 
 ## Share a viewpoint
 

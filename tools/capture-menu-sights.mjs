@@ -27,7 +27,15 @@ if(arg>=0){
  if(unique.length<5)for(const g of groups){if(unique.length===5)break;const [x,z]=g.at;if(unique.some(p=>Math.hypot(p.x-x,p.z-z)<120))continue;unique.push({label:g.name,x:x+100,y:65,z:z+120,yaw:39.8,pitch:-17});}
  if(unique.length<5)unique.push({...L.HERO,y:160,z:L.HERO.z+240,yaw:0,pitch:-30,label:'Панорама · '+REGISTRY[id].title});
  if(unique.length!==5)throw Error(id+': fewer than five sights');
- fs.mkdirSync(`assets/splash/${id}`,{recursive:true});fs.writeFileSync(`assets/splash/${id}/views.json`,JSON.stringify(unique.map(v=>({caption:v.label===REGISTRY[id].title?displayNames[id]:v.label,cam:PHOTO_CAMERAS[id]?.[v.label]||(v.y===undefined?[v.x,v.z,v.yaw,v.pitch]:[v.x,v.y,v.z,v.yaw,v.pitch])})),null,2)+'\n');
+ const file=`assets/splash/${id}/views.json`;
+ const authored=new Map(fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')).map(view=>[view.caption,view]):[]);
+ const views=unique.map(v=>{
+  const caption=v.label===REGISTRY[id].title?displayNames[id]:v.label;
+  const cam=PHOTO_CAMERAS[id]?.[v.label]||(v.y===undefined?[v.x,v.z,v.yaw,v.pitch]:[v.x,v.y,v.z,v.yaw,v.pitch]);
+  return authored.get(caption)??{caption,cam};
+ });
+ fs.mkdirSync(`assets/splash/${id}`,{recursive:true});
+ fs.writeFileSync(file,JSON.stringify(views,null,2)+'\n');
  console.log(id+': '+unique.map(v=>v.label).join(' / '));
 }else{
  const only=process.argv.indexOf('--area'),rows=Object.values(REGISTRY).filter(r=>!r.parked&&r.status!=='planned'&&(only<0||r.id===process.argv[only+1]));
