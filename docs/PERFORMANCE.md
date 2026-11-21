@@ -4534,3 +4534,16 @@ The station arcade and clock tower follow the [architectural survey elevations](
 The cathedral drum, oval dormers and north pediment follow the [cathedral photograph](https://kazansky-spb.ru/image/gallery/1.jpg) and [architectural description](https://kazansky-spb.ru/texts/architecture). The relative elevations of the drum and the crossing are estimated from the street view.
 
 On the isolated module check, the station changed from 298,336 to 313,906 triangles with 294 meshes and 352 colliders. The cathedral module changed from 351,200 to 354,145 triangles with 115 meshes and 483 colliders. The control is revision `421d84fa`. Four integrated views cover the station from Vosstaniya Square and the cathedral from Nevsky and the garden.
+
+The Palace area drive uses medium quality, the production bake and 12 seconds of throttle at 1280 × 720 on an RTX 3090 Ti. Start poses are `498.2286,135.1625,76.0322` for the station and `-1450,-350,76` for the cathedral. Reproduce with `node tools/drive-bench.mjs --area palace --q medium --seconds 12 --start <pose> --json --diagnostics`.
+
+| Route and version | Load (s) | Distance (m) | Frame mean / p50 / p95 (ms) | Frames >80 ms | Mean draws | JS heap / backing storage (MiB) |
+|---|---:|---:|---|---:|---:|---:|
+| Station control | 28.4 | 364 | 23.9 / 16.7 / 33.4 | 3 | 1288 | 584 / 1227 |
+| Station final | 27.9 | 441 | 22.9 / 16.7 / 33.4 | 1 | 1370 | 432 / 756 |
+| Cathedral control | 27.4 | 312 | 28.3 / 33.2 / 50.0 | 5 | 1280 | 590 / 1089 |
+| Cathedral final | 28.4 | 312 | 25.4 / 16.8 / 33.5 | 2 | 1263 | 594 / 1307 |
+
+The station control ended at 36 km/h and the final run at 158 km/h, so the station runs sampled different stretches of road. Both cathedral runs stopped at the same position. These single runs include traffic and streaming variability.
+
+The normal baked garage-entry test passed occupied entry, exit and empty re-entry with both actors in the coupe and Lada. The legacy drive smoke checks the seat after 700 ms and missed the animated entry. A diagnostic run waiting for the animation reached acceleration and braking; it timed out attempting to exit after reporting 14 km/h.
