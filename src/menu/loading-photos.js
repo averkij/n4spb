@@ -16,17 +16,22 @@ export async function loadingPhotos(area) {
   ]);
   const views = photos.status === 'fulfilled' && Array.isArray(photos.value) ? photos.value : [];
   const facts = content.status === 'fulfilled' && Array.isArray(content.value)
-    ? content.value.filter(text => typeof text === 'string' && text.trim()) : [];
+    ? content.value : [];
   if (document.body.classList.contains('playing') || !intro.isConnected) return;
   // The inline startup has already picked a random screenshot. Keep it, avoiding
   // a second image flashing in while metadata arrives. A standalone caller can
   // still initialize its image here. Neither image nor fact rotates during load.
   const initialArt = intro.style.getPropertyValue('--art');
-  const hasPhoto = views.some((_,i) => initialArt.includes(`./assets/splash/${area}/${i+1}.jpg`));
-  if (views.length && !hasPhoto) {
-    const slide = Math.floor(Math.random() * views.length);
+  let slide = views.findIndex((_, i) => initialArt.includes(`./assets/splash/${area}/${i + 1}.jpg`));
+  if (views.length && slide < 0) {
+    slide = Math.floor(Math.random() * views.length);
     intro.style.setProperty('--art', `url("./assets/splash/${area}/${slide+1}.jpg")`);
   }
-  if (facts.length) fact.textContent = facts[Math.floor(Math.random() * facts.length)];
+  const isFact = text => typeof text === 'string' && text.trim();
+  const references = views[slide]?.facts;
+  const related = Array.isArray(references)
+    ? references.filter(Number.isInteger).map(number => facts[number - 1]).filter(isFact) : [];
+  const choices = related.length ? related : facts.filter(isFact);
+  if (choices.length) fact.textContent = choices[Math.floor(Math.random() * choices.length)];
   fact.dataset.ready = '';
 }

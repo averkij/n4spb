@@ -11,11 +11,18 @@ import { publishedEntry } from './lib/pages-entry.mjs';
 const areas=Object.values(REGISTRY).filter(r=>!r.parked&&r.status!=='planned');
 const catalogue=JSON.parse(fs.readFileSync('assets/menu/map.json')).catalogue;
 const facts=Object.fromEntries(areas.map(r=>[r.id,JSON.parse(fs.readFileSync(`assets/splash/${r.id}/facts.json`))]));
+const views=Object.fromEntries(areas.map(r=>[r.id,JSON.parse(fs.readFileSync(`assets/splash/${r.id}/views.json`))]));
 for(const area of areas){
  const rows=facts[area.id];
  assert.equal(rows.length,20,area.id+' has twenty facts');
  assert.equal(new Set(rows).size,20,area.id+' has no duplicate facts');
  assert.ok(rows.every(s=>typeof s==='string'&&s.length>=30&&s.length<=240&&/[а-яё]/i.test(s)&&!/[<>\n]/.test(s)),area.id+' has short plain Russian sentences');
+ assert.equal(views[area.id].length,5,area.id+' has five views');
+ for(const v of views[area.id]){
+  const refs=v.facts??[];
+  assert.ok(Array.isArray(refs)&&refs.every(n=>Number.isInteger(n)&&n>=1&&n<=rows.length),area.id+' has valid fact references');
+  assert.equal(new Set(refs).size,refs.length,area.id+' has no repeated references for one image');
+ }
  assert.equal(AREA_LABELS[area.id],catalogue.find(r=>r.id===area.id).name,area.id+' shares its menu name');
 }
 const server=http.createServer((req,res)=>{
@@ -62,20 +69,24 @@ try{
   assert.equal(await page.evaluate(()=>window.__preloaderTicks.size),0,area.id+' schedules no slideshow or fact rotation');
   const art=await page.$eval('#intro',e=>e.style.getPropertyValue('--art'));
   assert.ok(art.includes('/'+area.id+'/'),'uses an image of the selected area');
+  const slide=views[area.id].findIndex((_,i)=>art.includes(`/${i+1}.jpg`));
+  assert.ok(slide>=0,area.id+' shows an authored image');
+  const refs=views[area.id][slide].facts;
+  if(refs?.length)assert.ok(refs.map(n=>facts[area.id][n-1]).includes(await page.$eval('#fact',e=>e.textContent)),area.id+' matches the picture to its fact');
+
   if(['palace','vasilyevsky','finlyandsky'].includes(area.id)){
    await page.screenshot({path:path.join(os.tmpdir(),`n4spb-preloader-${area.id}.png`)});
   }
  }
- // Every fact and all five images remain reachable on separate visits.
- const seen=new Set(), images=new Set();
- for(let i=0;i<20;i++){
-  await page.goto(base+'/index.html?play=1&__testRandom='+((i+.25)/20));await ready(REGISTRY.palace);
-  assert.equal(await page.$eval('#fact',e=>e.textContent),facts.palace[i]);
-  seen.add(await page.$eval('#fact',e=>e.textContent));
-  const art=await page.$eval('#intro',e=>e.style.getPropertyValue('--art'));images.add(art);
-  assert.ok(art.includes('/'+(Math.floor((i+.25)/20*5)+1)+'.jpg'),'preserves the original inline image choice');
+ // Exercise the existing image choice, linked facts and an unpaired fallback.
+ for(const [i,fraction] of [0.02,0.24,0.44,0.68,0.9].entries()){
+  await page.goto(base+'/index.html?play=1&__testRandom='+fraction);await ready(REGISTRY.palace);
+  const refs=views.palace[i].facts;
+  const choices=refs?.length?refs.map(n=>facts.palace[n-1]):facts.palace;
+  assert.equal(await page.$eval('#fact',e=>e.textContent),choices[Math.floor(fraction*choices.length)]);
+  const art=await page.$eval('#intro',e=>e.style.getPropertyValue('--art'));
+  assert.ok(art.includes('/'+(i+1)+'.jpg'),'preserves the original inline image choice');
  }
- assert.equal(seen.size,20);assert.equal(images.size,5);
  const stationary=()=>page.evaluate(()=>[document.getElementById('fact').textContent,document.getElementById('intro').style.getPropertyValue('--art')]);
  const original=await stationary();await new Promise(r=>setTimeout(r,9500));
  assert.deepEqual(await stationary(),original,'one fact and image stay fixed beyond the old rotation intervals');
@@ -98,5 +109,5 @@ try{
   await page.screenshot({path:path.join(os.tmpdir(),`n4spb-preloader-${id}-mobile.png`),fullPage:true});
  }
  assert.deepEqual(errors,[]);
- console.log('PASS 21 clean area names, 420 short facts, all random choices reachable, static fact/image per load, no caption overwrite, asset failure fallback and published mobile preloaders.');
+ console.log('PASS 21 clean area names, 420 short facts, selected images agree with their facts, static fact/image per load, no caption overwrite, asset failure fallback and published mobile preloaders.');
 }finally{await browser.close();await new Promise(r=>server.close(r));}

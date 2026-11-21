@@ -6,8 +6,11 @@ the original central preloader: concise, factual sentences about local history,
 architecture, names and city geography, without game instructions or sales copy.
 Neighbouring landmarks can recur where the implemented territories overlap.
 
-One fact is selected at random for each load. The image selected by the inline
-startup is preserved, so fetching metadata does not flash a second photograph.
+The image selected by the inline startup stays in place. A view's optional
+`facts` array in `views.json` lists one-based positions in the area's
+`facts.json`. The preloader randomly picks one of those facts for the selected
+image. Views without links draw from the area's full collection. If facts are
+reordered, update the corresponding positions in `views.json`.
 Neither fact nor photograph rotates during that load. Facts and image metadata
 load independently: a failed request leaves the other content and loading
 controls usable. The old inline facts remain a network-failure fallback only.
