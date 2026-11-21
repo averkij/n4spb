@@ -206,7 +206,7 @@ export function buildFacade(Cc) {
     const tex = lettersTex(ctx, text, key);
     const m = Cc.night.toon(T('#ffffff', { map: tex, alphaTest: 0.35, side: 'double', paint: 0, name: 'st-letters-' + key }), '#ffffff', 1.1, 0.5);
     m.userData.noOutline = true;
-    const y0 = PAR + 0.25, hh = 2.2, tilt = 0.2, d0 = 2.6;
+    const y0 = PAR + 0.42, hh = 2.2, tilt = 0.12, d0 = -0.18;
     P.quad(m, [u1, y0, d0], [u0, y0, d0], [u0, y0 + hh * Math.cos(tilt), d0 + hh * Math.sin(tilt)], [u1, y0 + hh * Math.cos(tilt), d0 + hh * Math.sin(tilt)], [0, 0.2, -1], [[1, 0], [0, 0], [0, 1], [1, 1]].map(([a, b]) => [1 - a, b]));
     P.box(M.ironLight, u0, u1, PAR + 0.16, y0 + 0.1, d0 - 0.1, d0 + 0.18);                                          // base rail
     for (let u = u0 + 1; u < u1; u += 5) P.box(M.ironLight, u - 0.05, u + 0.05, PAR + 0.1, y0 + 1.6, d0 - 0.05, d0 + 0.5);   // stays

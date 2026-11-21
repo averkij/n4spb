@@ -1,5 +1,5 @@
 // landmarksF/dome.js - the drum, the ribbed copper dome, the lantern, the gilded ball and cross of Kazan Cathedral (71.6 m to the tip of the cross).  Profile calibrated on photo 18 (cross 71.6 m = 570 px):
-// round attic with a relief frieze 35.0-39.6, drum (ochre, R 11, 16 windows between paired pilasters) 40.2-47.0, cornice to 48.2, parapet + 16 dormers with oval windows, dome shell R 9.4 / height 11
+// round attic with a relief frieze 30.2-34.8, drum (ochre, R 11, 16 windows between paired pilasters) 35.4-47.0, cornice to 48.2, parapet + 16 dormers with oval windows, dome shell R 9.4 / height 11
 // (16 ribs), neck with leaf scrolls to 65.5, gilded ball (r 1) at 66.5, cross 67.5-71.6.  Centre of the dome: OSM parts (-1493.3, -200.3) = (0.0, 72.7) in the model frame.
 import * as THREE from 'three';
 import { arcWall, arcFlat, lathe, pol, DEG } from './prims.js';
@@ -18,11 +18,11 @@ export function domeStack(K) {
   P.cyl(M.stoneWarm, [0, y0 + 4.6, 0], [0, y0 + 5.2, 0], 13.5, 13.5, 40, true);
   P.cyl(M.stoneShade, [0, y0 + 0.0, 0], [0, y0 + 0.6, 0], 13.35, 13.35, 40, false);
   // ---- drum
-  const yd0 = y0 + 5.2, yd1 = yd0 + 6.8, R = 11.0, Rf = R * Math.cos(Math.PI / 32);
+  const yd0 = y0 + 5.2, yd1 = 47.0, R = 11.0, Rf = R * Math.cos(Math.PI / 32);
   P.cyl(M.drum, [0, yd0, 0], [0, yd1, 0], R, R, 32, false);
   for (let k = 0; k < 16; k++) {
     const a = k * TAU / 16;
-    frameAt(Rf, a, 0, () => win(P, M, 0, yd0 + 1.5, 1.9, 4.2, { sw: 0.28, d: 0.2, rows: 3 }));
+    frameAt(R + 0.02, a, 0, () => win(P, M, 0, yd0 + 1.15, 2.05, yd1 - yd0 - 2.65, { sw: 0.28, d: 0.2, rows: 3 }));
     for (const sg of [-1, 1]) {                                            // a pair of pilasters between the windows
       const b = a + TAU / 32 + sg * 0.062;
       frameAt(Rf, b, 0, () => { P.box(M.drumLight, -0.38, 0.38, yd0 + 0.3, yd1 - 1.0, 0, 0.3, 'kb'); P.box(M.stoneWarm, -0.5, 0.5, yd1 - 1.0, yd1 - 0.15, 0, 0.42, 'kb'); P.box(M.stoneWarm, -0.5, 0.5, yd0, yd0 + 0.3, 0, 0.36, 'kb'); });
@@ -39,24 +39,33 @@ export function domeStack(K) {
   const a = 9.4, b = 11.0, prof = [];
   for (let i = 0; i <= 12; i++) { const t = (i / 12) * 78 * DEG; prof.push([a * Math.cos(t), b * Math.sin(t)]); }
   lathe(P, M.dome, 'kdome', prof, 0, yb, 0, 1, 1, 48);
+  const rim = new THREE.TorusGeometry(0.82, 0.16, 6, 20);
+  const pane = new THREE.CircleGeometry(0.81, 20);
   for (let k = 0; k < 16; k++) {
-    const phi = (k + 0.5) * TAU / 16 + TAU / 32, s = Math.sin(phi), c = Math.cos(phi), tx = Math.cos(phi) * 0.2, tz = -Math.sin(phi) * 0.2;
-    for (let i = 3; i < 12; i++) {
-      const t0 = (i / 12) * 78 * DEG, t1 = ((i + 1) / 12) * 78 * DEG, r0 = a * Math.cos(t0) + 0.13, r1 = a * Math.cos(t1) + 0.13, h0 = yb + b * Math.sin(t0), h1 = yb + b * Math.sin(t1);
-      const w0 = 0.22 * Math.cos(t0 * 0.4), w1 = 0.2 * Math.cos(t1 * 0.4);
-      P.quad(M.domeRib, [r0 * s - tx * w0 / 0.2, h0, r0 * c - tz * w0 / 0.2], [r0 * s + tx * w0 / 0.2, h0, r0 * c + tz * w0 / 0.2], [r1 * s + tx * w1 / 0.2, h1, r1 * c + tz * w1 / 0.2], [r1 * s - tx * w1 / 0.2, h1, r1 * c - tz * w1 / 0.2], [s * 0.8, 0.6, c * 0.8]);
-    }
-  }
-  for (let k = 0; k < 16; k++) {                                          // dormers: ornate frames with an oval window
-    const phi = k * TAU / 16 + TAU / 32;
-    frameAt(9.7, phi, yb, () => {
-      P.box(M.drumLight, -0.75, 0.75, 0.0, 2.5, -0.1, 0.95, '');
-      P.box(M.stoneWarm, -0.95, -0.7, 0.1, 2.4, 0.2, 1.0, 'b'); P.box(M.stoneWarm, 0.7, 0.95, 0.1, 2.4, 0.2, 1.0, 'b');
-      P.box(M.stoneWarm, -1.0, 1.0, 2.5, 2.8, 0.1, 1.15, '');
-      P.cyl(M.glass, [0, 1.35, 0.94], [0, 1.35, 0.98], 0.42, 0.42, 10, true);
-      P.cyl(M.stoneWarm, [0, 1.35, 0.9], [0, 1.35, 0.95], 0.62, 0.62, 10, true);
+    const phi = k * TAU / 16;
+    frameAt(0, phi, yb, () => {
+      // Each standing seam has two sloping faces and narrows towards the lantern.
+      const section = ([radius, height]) => {
+        const width = 0.15 * radius / a;
+        return [[-width, height, radius], [0, height + 0.07, radius + 0.13], [width, height, radius]];
+      };
+      let lower = section(prof[0]);
+      for (const point of prof.slice(1)) {
+        const upper = section(point);
+        for (let side = 0; side < 2; side++) {
+          P.quad(M.domeRib, lower[side], lower[side + 1], upper[side + 1], upper[side], [0, 1, 1]);
+        }
+        lower = upper;
+      }
+    });
+    frameAt(10.6, phi + TAU / 32, yb, () => {
+      P.box(M.stoneWarm, -0.96, 0.96, 0, 1.22, -0.95, 0.08, 'b');
+      P.geo(M.stoneWarm, rim, 0, 1.95, 0.12, 0, 0, 0, 1, 1.2, 1);
+      P.geo(M.glass, pane, 0, 1.95, 0.06, 0, 0, 0, 1, 1.2, 1);
     });
   }
+  rim.dispose();
+  pane.dispose();
   // ---- neck / lantern with leaf scrolls, ball, cross
   const yN = yb + b - 0.2;                                                 // 59.0
   const neck = [[0, 0], [2.3, 0], [2.3, 0.5], [1.9, 1.0], [1.6, 1.6], [1.45, 3.0], [1.6, 4.2], [2.0, 5.0], [1.8, 5.5], [1.2, 6.0], [0.6, 6.3], [0, 6.5]];
@@ -69,7 +78,7 @@ export function domeStack(K) {
   cross(P, M.gold, 0, 67.4, 0, 4.2);
   P.pop();
   K.domeTop = 71.6;
-  // ---- colliders: the drum / dome are above the roofs (not reachable on foot); the player can land on the crossing roof (35 m)
+  // ---- colliders: the drum / dome are above the roofs (not reachable on foot); the player can land on the crossing roof
   cylAt(K.ctx.physics, cx, cz, 13.4, 25.0, 80);                // above the crossing roof only: the hall below is walkable
 }
 

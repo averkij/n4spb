@@ -4527,3 +4527,10 @@ A higher-detail work mesh took 36.5 to 36.8 ms on average (p95 66.6 ms).
 After mesh reduction the shipping build travelled 245 m, with mean 34.8 ms
 and p95 50.1 ms. These are individual runs in the streamed city. Five
 integrated camera views cover the four groups and the southwest horse in profile.
+
+## Moscow Railway Station and Kazan Cathedral (16.2.3–16.2.4)
+
+The station arcade and clock tower follow the [architectural survey elevations](https://photogrammetria.ru/106-arhitekturnye-obmery-moskovskogo-vokzala.html).
+The cathedral drum, oval dormers and north pediment follow the [cathedral photograph](https://kazansky-spb.ru/image/gallery/1.jpg) and [architectural description](https://kazansky-spb.ru/texts/architecture). The relative elevations of the drum and the crossing are estimated from the street view.
+
+On the isolated module check, the station changed from 298,336 to 313,906 triangles with 294 meshes and 352 colliders. The cathedral module changed from 351,200 to 354,145 triangles with 115 meshes and 483 colliders. The control is revision `421d84fa`. Four integrated views cover the station from Vosstaniya Square and the cathedral from Nevsky and the garden.

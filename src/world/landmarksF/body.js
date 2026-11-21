@@ -6,7 +6,7 @@ import { ringEdges, onEdge, band, localOnEdge } from './kit.js';
 import { boxAt } from './frame.js';
 
 export const TX = 16.3, NZ = 41.3, SZ = 98.0, NVN = 57.4, NVS = 88.4, L1 = -41.5, R1 = 25.3, DOME = { x: 0, z: 72.7 };
-export const Y_FLOOR = 1.2, Y_ENT = 15.0, Y_WALL = 24.0, Y_ROOF = 24.9, Y_CROSS = 35.0;
+export const Y_FLOOR = 1.2, Y_ENT = 15.0, Y_WALL = 24.0, Y_ROOF = 24.9, Y_CROSS = 30.2;
 
 export function outline() {
   const apse = [], A = Math.acos(2.5 / 8.5), cx = 22.8, cz = 72.9, R = 8.5;
@@ -79,7 +79,7 @@ export function churchBody(K) {
   // ---- roof of the cross
   P.cap(M.roof, ring, Y_ROOF, true, 8);
   // ---- the crossing block (above the nave / transept roofs): ashlar with big recessed panels, crown cornice
-  const x0 = -TX, x1 = TX, z0 = NVN, z1 = NVS, yb = Y_ROOF, yt = 34.4;
+  const x0 = -TX, x1 = TX, z0 = NVN, z1 = NVS, yb = Y_ROOF, yt = Y_CROSS - 0.6;
   for (const [fx, fz, rot, len] of [[0, z0, Math.PI, x1 - x0], [0, z1, 0, x1 - x0], [x1, 0, Math.PI / 2, z1 - z0], [x0, 0, -Math.PI / 2, z1 - z0]]) {
     P.push(fx, 0, fz === 0 ? (z0 + z1) / 2 : fz, rot);
     const h = len / 2;

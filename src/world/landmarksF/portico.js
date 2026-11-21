@@ -37,7 +37,9 @@ export function portico(K, o, frameAt) {
   const hw = half + 0.6, apex = yT + rise;
   const tri = new THREE.Shape(); tri.moveTo(-hw, yT); tri.lineTo(hw, yT); tri.lineTo(0, apex); tri.lineTo(-hw, yT);
   P.extrude(M.stoneWarm, tri, 0, zfront + 0.7 - 0.55, 1, 4);
-  const iw = hw - 1.1, ib = yT + 0.45, ia = apex - 1.05;
+  const ib = yT + 0.34, ia = apex - 0.36;
+  // Leave stone all around the opening, including at its two acute corners.
+  const iw = hw * (ia - ib) / rise;
   const inner = new THREE.Shape(); inner.moveTo(-iw, ib); inner.lineTo(iw, ib); inner.lineTo(0, ia); inner.lineTo(-iw, ib);
   const g = new THREE.ShapeGeometry(inner, 1), pa = g.attributes.position, ua = g.attributes.uv;
   for (let i = 0; i < pa.count; i++) ua.setXY(i, (pa.getX(i) + iw) / (2 * iw), (pa.getY(i) - ib) / (ia - ib));
@@ -45,7 +47,19 @@ export function portico(K, o, frameAt) {
   const outer = new THREE.Shape(); outer.moveTo(-hw - 0.15, yT); outer.lineTo(hw + 0.15, yT); outer.lineTo(0, apex + 0.45); outer.lineTo(-hw - 0.15, yT);
   const hole = new THREE.Path(); hole.moveTo(-iw, ib); hole.lineTo(0, ia); hole.lineTo(iw, ib); hole.lineTo(-iw, ib); outer.holes.push(hole);
   P.extrude(M.stoneWarm, outer, zfront + 0.7 - 0.62, 0.62 + 0.12, 1, 4);
-  // dentils under the raking cornice are skipped (texture of the frame is plain)
+  if (o.gildedRays) {
+    // Gilded fan on the Nevsky front. Clip each ray to the sloping stone cornice.
+    const cy = ib + 0.23, depth = zfront + 0.87, slope = (ia - ib) / iw;
+    for (let ray = 0; ray <= 32; ray++) {
+      const theta = (ray + 0.6) * Math.PI / 33.2;
+      const dx = Math.cos(theta), dy = Math.sin(theta);
+      const length = (ia - cy - 0.08) / (dy + slope * Math.abs(dx)) * (ray % 2 ? 0.83 : 1);
+      const point = (r, w, z) => [r * dx - w * dy, cy + r * dy + w * dx, z];
+      P.fan(M.gold, [point(0.32, -0.04, depth), point(length * 0.62, -0.135, depth),
+        point(length, 0, depth + 0.06), point(length * 0.62, 0.135, depth),
+        point(0.32, 0.04, depth)], [0, 0, 1]);
+    }
+  }
   // ---- solid end piers (west portico)
   if (o.piers) for (const sg of [-1, 1]) P.box(M.stone, sg > 0 ? o.piers : -half, sg > 0 ? half : -o.piers, yFloor, yc, 0, zfront - 0.5, 'kb');
   return { yT, apex, zf, zfront, yc, rs };
@@ -66,7 +80,7 @@ export function porticoColliders(K, o, at) {
 export function porticos(K) {
   const P = K.P, M = K.M;
   const defs = {
-    north: { half: 14.6, xs: [-12.25, -7.35, -2.45, 2.45, 7.35, 12.25], rows: [4.4, 0.95], yFloor: 1.2, nSteps: 8, platform: 5.5, rise: 4.5, at: { mx: 0, mz: 41.3, rot: Math.PI } },
+    north: { gildedRays: true, half: 14.6, xs: [-12.25, -7.35, -2.45, 2.45, 7.35, 12.25], rows: [4.4, 0.95], yFloor: 1.2, nSteps: 8, platform: 5.5, rise: 4.5, at: { mx: 0, mz: 41.3, rot: Math.PI } },
     west: { half: 15.5, xs: [-11.5, -6.9, -2.3, 2.3, 6.9, 11.5], rows: [6.6, 2.4], yFloor: 1.35, nSteps: 9, platform: 7.75, rise: 5.0, piers: 13.2, at: { mx: -41.5, mz: 72.9, rot: -Math.PI / 2 } },
     south: { half: 12.3, xs: [-10.2, -6.12, -2.04, 2.04, 6.12, 10.2], rows: [4.9, 1.2], yFloor: 1.2, nSteps: 8, platform: 6.1, rise: 4.0, at: { mx: 0, mz: 98.0, rot: 0 } },
   };
