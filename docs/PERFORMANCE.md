@@ -4547,3 +4547,67 @@ The Palace area drive uses medium quality, the production bake and 12 seconds of
 The station control ended at 36 km/h and the final run at 158 km/h, so the station runs sampled different stretches of road. Both cathedral runs stopped at the same position. These single runs include traffic and streaming variability.
 
 The normal baked garage-entry test passed occupied entry, exit and empty re-entry with both actors in the coupe and Lada. The legacy drive smoke checks the seat after 700 ms and missed the animated entry. A diagnostic run waiting for the animation reached acceleration and braking; it timed out attempting to exit after reporting 14 km/h.
+
+## 16.3.0 Third-person camera, crowd turns and Trinity Cathedral doors
+
+The chase camera tests the terrain height at each point of its existing
+collision sweep. It retracts before crossing the terrain and returns to the
+wheel-selected distance when clear. The wheel ranges from 50% to 150% of each
+third-person preset. The same controls regression covers walls, metro floors
+and the bed beneath water.
+
+Crowd rendering eases yaw across simulation ticks and uses the displayed
+angular velocity to bank bicycles and scooters. Route and simulation checks
+match the control revision `d690ded3`, including the same 57 building samples
+in the arcade at `-1060,-200` in the ten-minute test. The focused heading and
+banking test passes for walking, bicycles, electric scooters and kick scooters.
+
+The fitted dress has additional waist clearance and a smaller thigh split on
+the running jump. Both character rigs pass the 25-cabin pose regression. At
+`-2572.8,2.6,1770.9,-127.3,6.3`, the depth probe on Trinity Cathedral's portals
+went from 21 flickering pixels to zero. A second angle also returned zero in
+the module preview. The full Central South landmark module builds 198,416
+triangles, up 48, with the same 93 meshes.
+
+The full Semyonovsky scene returned zero flickering pixels at both doorway
+angles. In the same area's normal-loading playthrough, scroll up and down
+reached both zoom limits, and a steep upward look brought the camera about
+2.3 m from the avatar while keeping it above the paving. A standing jump
+and a running jump were captured. The rider test exercised a turn of about
+1.4 to 1.5 radians on a bicycle, an electric scooter and a kick scooter.
+
+The strip road audits and both areas' marking audits matched the control.
+Semyonovsky's surface audit reported 140 samples in 40 clusters against a
+budget of 120 on both revisions.
+
+The table compares eight seconds of throttle on the normal bakes at Medium
+quality in Edge, 1280 × 720, on the RTX 3090 Ti. Reproduce with
+`node tools/drive-bench.mjs --area <area> --q medium --seconds 8 --start <pose> --json --diagnostics`.
+The Palace start was `498.2286,135.1625,76.0322`. The Semyonovsky start on
+Troitsky Prospect was `-2483.8,1823.8,88.66`.
+
+| Route and version | Load (s) | Distance (m) | Frame mean / p50 / p95 / max (ms) | Frames >40 / >80 ms | Mean draws | CDP heap / backing storage (MiB) |
+| --- | ---: | ---: | --- | --- | ---: | --- |
+| Vosstaniya control | 29.9 | 266 | 26.3 / 33.3 / 33.4 / 50.1 | 6 / 0 | 1370 | 527 / 1315 |
+| Vosstaniya 16.3.0 | 29.8 | 267 | 25.0 / 16.8 / 33.4 / 50.1 | 6 / 0 | 1368 | 539 / 1382 |
+| Trinity control | 18.5 | 112 | 24.5 / 16.7 / 33.4 / 316.8 | 9 / 3 | 1014 | 647 / 701 |
+| Trinity 16.3.0 | 19.1 | 108 | 20.4 / 16.7 / 33.4 / 233.4 | 5 / 3 | 1012 | 651 / 703 |
+
+All runs loaded their regions without failures. Vehicle interactions and
+frame timings varied between these single runs. Long hitches remain on the
+Trinity route, and Palace's final backing storage was 67 MiB higher in this
+sample.
+
+The normal-loading Palace browser test passed traffic-car entry, exit,
+re-entry and throttle, and exercised the brakes. Character settings and
+camera cycling passed in the 844 × 390 touch viewport. The Semyonovsky
+playthrough used a 1280 × 720 desktop viewport.
+The static test server returned the expected fallback for
+`/__baked_revision`. The scene loaded its packaged bake with no runtime
+errors.
+
+The bake manifest check passed for all 21 live areas and 2,715 products.
+Of these, 2,652 are byte-identical to the frozen control. The other 63
+products differ only in their packed PNG fields of unchanged dimensions
+in `street-textures`, `street-surfaces` and `city-base`. All other decoded
+data in those products match, including geometry and texture settings.
