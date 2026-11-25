@@ -12,6 +12,8 @@ const CX=-2540.08,CZ=1777.22,ROT=.026;
 const PLAN=[[-15,-31],[15,-31],[15,-15],[31,-15],[31,15],[15,15],[15,31],[-15,31],[-15,15],[-31,15],[-31,-15],[-15,-15]];
 // Stasov's unusual scheme: the four small domes stand over the CROSS ARMS, not its corners.
 const SIDE_DOMES=[[0,-24],[24,0],[0,24],[-24,0]];
+const PORCH_DOORS=[[-6,2.3],[0,3],[6,2.3]];
+const DOOR_SURROUND=.24;
 function world(x,z){return [CX+Math.cos(ROT)*x+Math.sin(ROT)*z,CZ-Math.sin(ROT)*x+Math.cos(ROT)*z];}
 const poly={o:PLAN.flatMap(p=>world(...p)),h:[]};
 
@@ -34,7 +36,15 @@ export function buildTrinity(K,root) {
     K.wallQuad(stone,0,len,0,29,4);
     // Side walls of the Greek-cross arms; opaque pale wall behind every window.
     for(const x of K.bays(1,len-1,5.6))K.window({x,y:8,w:2.1,h:9.0,head:'arch',sw:.24,surMat:shade,frame:'white',sill:false});
-    P.box(shade,0,len,4.25,4.5,0,.12,'kb');
+    let start=0;
+    // Every third edge is the end of a cross arm. Stop this course at
+    // each portal surround so it never shares the door leaf's depth.
+    if(e.i%3===0)for(const [x,w] of PORCH_DOORS){
+      const center=len/2+x,half=w/2+DOOR_SURROUND;
+      P.box(shade,start,center-half,4.25,4.5,0,.12,start===0?'kbr':'kblr');
+      start=center+half;
+    }
+    P.box(shade,start,len,4.25,4.5,0,.12,e.i%3===0?'kbl':'kb');
   });
   for(const [y0,y1,d] of [[0,.85,.13],[27.3,27.7,.28],[28.45,29.05,.6]])band(P,edges,y0,y1,d,{front:stone,top:stone,under:shade},{draw:()=>true});
   P.cap(roof,PLAN.map(p=>world(...p)),29.11,true,5);
@@ -61,7 +71,7 @@ export function buildTrinity(K,root) {
     P.fan(shade,[[-15.8,24.9,-.3],[0,29.1,-.3],[15.8,24.9,-.3]],[0,0,-1]);
     P.quad(roof,[-15.8,24.9,-.3],[-15.8,24.9,6.5],[0,29.1,6.5],[0,29.1,-.3],[-1,1,0]);
     P.quad(roof,[0,29.1,-.3],[0,29.1,6.5],[15.8,24.9,6.5],[15.8,24.9,-.3],[1,1,0]);
-    for(const x of [-6,0,6])K.gate(x,1.0,x===0?3.0:2.3,5.4,{sw:.24,doorMat:K.mats.doorWood});
+    for(const [x,w] of PORCH_DOORS)K.gate(x,1.0,w,5.4,{sw:DOOR_SURROUND,doorMat:K.mats.doorWood});
     P.pop();P.pop();
   }
   P.pop();

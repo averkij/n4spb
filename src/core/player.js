@@ -1,4 +1,4 @@
-// Third-person walker: V cycles near / far / first person. Pointer-lock mouse look (drag-look fallback), WASD / arrows, Shift run, Space jump,
+// Third-person walker: V cycles near / far / first person, wheel zooms either chase view. Pointer-lock mouse look (drag-look fallback), WASD / arrows, Shift run, Space jump,
 // F flight (take-off, then W/S fly along the view, Space/E up, Q/C down, F lands), touch joystick + drag look on phones.
 //
 // Underground support (docs/UNDERGROUND.md): the walker follows ANY surface of core/physics.js (terrain, decks, ramps, escalators, stairs, floors
@@ -40,7 +40,7 @@ export class Player {
     this.vy = 0;
     this.yaw = 0; this.pitch = 0;
     this.facingYaw=0;this.speed=0;this.animation='Idle';this.jump=null;
-    this.view=0;this.cameraDistance=4.6;this.cameraSnap=true;
+    this.view=0;this.cameraDistance=4.6;this.cameraZoom=1;this.cameraSnap=true;
     this.cameraTarget=new THREE.Vector3();this.cameraOffset=new THREE.Vector3();
     this.shotView=typeof location!=='undefined'&&new URLSearchParams(location.search).has('shot');
     this.eye = 1.52; this.radius = 0.3; this.height = 1.7;
@@ -94,6 +94,12 @@ export class Player {
       if (document.pointerLockElement === d) { if (Math.abs(e.movementX) < LOOK_SPIKE && Math.abs(e.movementY) < LOOK_SPIKE) { this.look.dx += e.movementX; this.look.dy += e.movementY; } }
       else if (dragging) { this.look.dx += (e.clientX - lx) * 1.4; this.look.dy += (e.clientY - ly) * 1.4; lx = e.clientX; ly = e.clientY; }
     });
+    d.addEventListener('wheel', (e) => {
+      if (!this.enabled || this.inputLock > 0 || this.firstPerson || e.ctrlKey || e.metaKey || !e.deltaY) return;
+      e.preventDefault();
+      const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 800 : 1);
+      this.cameraZoom = THREE.MathUtils.clamp(this.cameraZoom * Math.exp(pixels * .0015), .5, 1.5);
+    }, { passive: false });
     // touch: left half = move stick, right half = look
     const touches = new Map();
     d.addEventListener('touchstart', (e) => {
@@ -417,12 +423,16 @@ export class Player {
     else this.smoothY += (eyeY - this.smoothY) * Math.min(1, dt * 14);
     if (Math.abs(this.smoothY - eyeY) > 1.2) this.smoothY = eyeY;
     if(!this.firstPerson){
-      const distance=this.view===1?7.2:4.6,pitch=THREE.MathUtils.clamp(this.pitch,-1.05,.45),cp=Math.cos(pitch);
+      const distance=(this.view===1?7.2:4.6)*this.cameraZoom,pitch=THREE.MathUtils.clamp(this.pitch,-1.05,.45),cp=Math.cos(pitch);
       const target=this.cameraTarget.set(this.pos.x,this.smoothY-this.eye+1.12,this.pos.z);
       const offset=this.cameraOffset.set(Math.sin(this.yaw)*cp*distance,.65-Math.sin(pitch)*distance,Math.cos(this.yaw)*cp*distance);
       const length=offset.length(),allowed=length*footCameraFraction(this.physics,target,offset);
       this.cameraDistance=this.cameraSnap||allowed<this.cameraDistance?allowed:THREE.MathUtils.lerp(this.cameraDistance,allowed,1-Math.exp(-7*dt));
-      this.camera.position.copy(target).addScaledVector(offset,this.cameraDistance/length);this.camera.lookAt(target);this.cameraSnap=false;return;
+      // Aim along the boom even when an obstruction retracts it all the way.
+      this.camera.position.copy(target).addScaledVector(offset,Math.max(.01,this.cameraDistance)/length);
+      this.camera.lookAt(target);
+      if(this.cameraDistance===0)this.camera.position.copy(target);
+      this.cameraSnap=false;return;
     }
     this.cameraSnap=true;
     this.camera.position.set(this.pos.x, this.smoothY + bobY, this.pos.z);

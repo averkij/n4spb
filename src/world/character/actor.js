@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
 import {createPoseRig,capturePoses,settledSitting,blendPose} from './pose.js';
+import {dressRunningJump,easeDressWaist} from './jump.js';
 
-export function createActor(gltf,ctx) {
+export function createActor(gltf,ctx,{dress=false}={}) {
   const root=new THREE.Group(),visual=clone(gltf.scene);visual.rotation.y=Math.PI;root.add(visual);
+  if(dress)easeDressWaist(visual);
   const materialCache=new Map();
   visual.traverse(o=>{
     if(!o.isMesh)return;
@@ -15,10 +17,18 @@ export function createActor(gltf,ctx) {
     o.material=Array.isArray(o.material)?o.material.map(convert):convert(o.material);
     o.castShadow=true;o.receiveShadow=true;
   });
-  const mixer=new THREE.AnimationMixer(visual),actions={};
-  for(const source of gltf.animations){const clip=source.name==='Sitting'?settledSitting(source):source;const action=mixer.clipAction(clip);if(/Jump/.test(clip.name)){action.setLoop(THREE.LoopOnce,1);action.clampWhenFinished=true;}actions[clip.name]=action;}
+  const mixer=new THREE.AnimationMixer(visual),actions={},rig=createPoseRig(root);
+  const idle=gltf.animations.find(clip=>clip.name==='Idle');
+  for(const source of gltf.animations){
+    let clip=source;
+    if(source.name==='Sitting')clip=settledSitting(source);
+    if(dress&&idle&&source.name==='RunningJump')clip=dressRunningJump(source,idle,rig);
+    const action=mixer.clipAction(clip);
+    if(/Jump/.test(clip.name)){action.setLoop(THREE.LoopOnce,1);action.clampWhenFinished=true;}
+    actions[clip.name]=action;
+  }
   for(const name of ['Idle','Walk','Run','Jump','RunningJump','Sitting'])if(!actions[name])throw Error(`Character missing ${name}`);
-  const actor={root,visual,mixer,actions,rig:createPoseRig(root),animation:'',activeAction:null};
+  const actor={root,visual,mixer,actions,rig,animation:'',activeAction:null};
   capturePoses(actor);blendPose(actor,0);root.updateMatrixWorld(true);
   // SkeletonUtils clones require current bone matrices before computing their
   // bounds. A bound measured before this update can cull the whole body while

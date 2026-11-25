@@ -15,7 +15,7 @@ import {createMaterials} from '../src/core/materials.js';
 import {createDamageState} from '../src/world/drive/damage.js';
 globalThis.createImageBitmap=async()=>({width:1,height:1});globalThis.ProgressEvent??=class{};
 const shared={uNight:{value:.6}},ctx={rng:()=>()=>.4,tex:{draw:()=>new THREE.Texture()},shared,noOutline(){},mat:createMaterials(shared),add(){}};
-const actors=[];for(const name of ['woman-beret','man-jacket']){const b=fs.readFileSync(new URL(`../assets/characters/${name}.glb`,import.meta.url)),g=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');actors.push({name,actor:createActor(g,ctx)});}
+const actors=[];for(const name of ['woman-beret','man-jacket']){const b=fs.readFileSync(new URL(`../assets/characters/${name}.glb`,import.meta.url)),g=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');actors.push({name,actor:createActor(g,ctx,{dress:name==='woman-beret'})});}
 const npcBytes=fs.readFileSync(new URL('../assets/characters/civilian.glb',import.meta.url)),npc=createActor(await new GLTFLoader().parseAsync(npcBytes.buffer.slice(npcBytes.byteOffset,npcBytes.byteOffset+npcBytes.byteLength),''),ctx);
 const defs=await loadGarage(ctx);defs.push(...DRIVABLE_KINDS.map((kind,i)=>trafficDefinition({id:`traffic-car-${i}`,kind,color:new THREE.Color('#275c8a'),plate:0})));
 const rows=[];

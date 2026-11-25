@@ -16,7 +16,8 @@ export function appendCharacterSettings(container,system,doc=document){
   select.value=String(system.index);select.disabled=system.busy;
   select.addEventListener('change',()=>{if(!system.select(Number(select.value)))select.value=String(system.index);});section.append(select);
   const hint=doc.createElement('p');hint.textContent=system.busy?'Выбор доступен после посадки · Finish entering the car to change character.':'Выбор сохраняется между районами · Your choice follows you between districts.';section.append(hint);
-  const camera=doc.createElement('p');camera.textContent='V: от третьего лица → дальше → от первого лица · near → far → first person';section.append(camera);
+  const camera=doc.createElement('p');camera.textContent='V: от третьего лица → дальше → от первого лица · near → far → first person';
+  const zoom=doc.createElement('p');zoom.textContent='Колесо мыши: расстояние камеры · Mouse wheel: camera distance';section.append(camera,zoom);
   const credits=doc.createElement('a');credits.href=new URL('../../../assets/characters/CREDITS.md',import.meta.url).href;credits.textContent='Авторы моделей и лицензии · Model credits';credits.target='_blank';credits.rel='noopener';section.append(credits);
   container.append(section);return section;
 }

@@ -6,7 +6,8 @@ import {JUMPS,jumpClipTime} from '../src/world/character/jump-timing.js';
 import {loadCharacterChoice,saveCharacterChoice,CHARACTER_STORAGE_KEY} from '../src/world/character/settings.js';
 
 globalThis.addEventListener=()=>{};
-const dom={addEventListener(){},requestPointerLock(){}},bounds={x0:-100,z0:-100,x1:100,z1:100};
+const listeners=new Map();
+const dom={addEventListener(type,listener){listeners.set(type,listener);},requestPointerLock(){}},bounds={x0:-100,z0:-100,x1:100,z1:100};
 const physics=new Physics(()=>0,()=>null),camera=new THREE.PerspectiveCamera(60,1,.1,500);
 const player=new Player(camera,dom,physics,bounds);player.enabled=true;player.setPose(0,0);
 const step=(seconds)=>{for(let i=0;i<Math.round(seconds*60);i++)player.update(1/60);};
@@ -15,6 +16,26 @@ player.cycleView();assert.equal(player.view,1);assert(camera.position.distanceTo
 player.cycleView();assert.equal(player.view,2);assert(Math.abs(camera.position.y-player.eye)<.01);assert.equal(camera.position.x,0);assert.equal(camera.position.z,0);
 player.cycleView();const wall=physics.addBox(0,2,5,.4,0,0,5);player.applyCamera(0);assert(camera.position.z<1.7,'Chase camera contracts before a wall');physics.remove(wall);
 step(.5);assert(camera.position.z>4.3,'Camera extends after obstruction clears');
+
+const wheel=(deltaY,options={})=>{
+ let consumed=false;
+ listeners.get('wheel')({deltaY,deltaMode:0,preventDefault(){consumed=true;},...options});
+ return consumed;
+};
+assert(wheel(-1000));step(.5);assert.equal(player.cameraZoom,.5);assert(Math.abs(camera.position.z-2.3)<.01);
+assert(wheel(1000));step(1);assert.equal(player.cameraZoom,1.5);assert(Math.abs(camera.position.z-6.9)<.01);
+player.setView(1);assert(Math.abs(camera.position.z-10.8)<.01,'Far camera uses the same zoom range');
+player.setView(2);assert(!wheel(-1000));assert.equal(player.cameraZoom,1.5);
+player.setView(1);player.inputLock=1;assert(!wheel(-1000));player.inputLock=0;
+assert(!wheel(-1000,{ctrlKey:true}),'Browser pinch zoom is left alone');
+player.setPose(0,0,0,85);
+assert(camera.position.y>=.299&&camera.position.z<5,'Low camera retracts before crossing the terrain');
+player.setPose(0,0);assert(camera.position.z>10,'An unobstructed chase view recovers its selected zoom');
+const underground=physics.addWalkBox(0,0,30,30,0,-10,-11);
+player.setPose(0,0,0,85,-10,{stand:true});
+assert(camera.position.y>-10&&camera.position.y<-9,'Underground camera follows the local floor');
+physics.remove(underground);
+player.cameraZoom=1;player.setView(0);
 
 for(const running of [false,true]){
  player.setPose(0,0);player.keys.clear();if(running){player.keys.add('KeyW');player.keys.add('ShiftLeft');step(.5);}
@@ -32,6 +53,8 @@ assert(player.requestJump());player.setPose(1,1);assert.equal(player.jump,null,'
 player.toggleFly(true);assert(player.firstPerson,'Flight preserves its existing free camera');player.setPose(0,0);
 player.board({frame:()=>({x:0,y:0,z:0,yaw:0}),local:{x:0,y:0,z:0}});assert(player.firstPerson,'Train interior preserves first person');player.alight();assert.equal(player.view,0);
 const wet=new Physics(()=>-2,()=>0),wader=new Player(new THREE.PerspectiveCamera(),dom,wet,bounds);wader.enabled=true;wader.setPose(0,0);wader.update(1/60);assert.equal(wader.depth,2);assert(wader.requestJump());assert.equal(wader.jump.launchSpeed,3,'Water keeps its weaker bed push-off');
+wader.setPose(0,0,0,85);
+assert(wader.camera.position.y>=-1.701&&wader.camera.position.y<0,'The sweep stops at the bed while allowing an underwater view');
 
 const memory=new Map(),storage={getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v)};
 assert.equal(loadCharacterChoice(storage),0,'Girl is default');saveCharacterChoice(storage,1);assert.equal(memory.get(CHARACTER_STORAGE_KEY),'man-jacket');assert.equal(loadCharacterChoice(storage),1);

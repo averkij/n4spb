@@ -1,10 +1,13 @@
-// A bounded sphere sweep through the existing collision service. The same
-// building, train, car and breakable-wall solids block the camera and walker.
+// Sweep against both collision solids and terrain, which is a separate
+// height field. Below the street, let the metro's own solids bound the boom.
 export function footCameraFraction(physics,origin,delta) {
   const length=Math.hypot(delta.x,delta.y,delta.z),steps=Math.max(1,Math.ceil(length/.28));
+  const clipTerrain=origin.y>=physics.heightAt(origin.x,origin.z);
   const blocked=f=>{
     const x=origin.x+delta.x*f,y=origin.y+delta.y*f,z=origin.z+delta.z*f;
-    return physics.columnBlocked(x,z,.2,y-.2,y+.2);
+    // Allow clearance for the near plane and the paving above the physics datum.
+    return (clipTerrain&&y-.30<physics.heightAt(x,z)&&!physics.inHole(x,z))||
+      physics.columnBlocked(x,z,.2,y-.2,y+.2);
   };
   if(blocked(0))return 0;
   let clear=0;

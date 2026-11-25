@@ -166,7 +166,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
   sim.spawn = (spec, o = {}) => {
     const i = crowd.add(spec);
     const a = {
-      i, spec, r: spec.r, vpref: spec.speed, x: 0, z: 0, y: PAVE, yaw: R() * TAU, speed: 0, dist: R() * 50, turn: 0, px: 0, pz: 0, py: PAVE, pyaw: 0, pdist: 0, pspeed: 0,
+      i, spec, r: spec.r, vpref: spec.speed, x: 0, z: 0, y: PAVE, yaw: R() * TAU, speed: 0, dist: R() * 50, px: 0, pz: 0, py: PAVE, pyaw: 0, pdist: 0, pspeed: 0,
       tu: 0, zqx: NaN, zqz: NaN, zqk: -1, rtFailT: -1e9, kind: 'walk', hidden: true, rt: null, goal: null, comp: -1, until: 0, lane: (R() < 0.8 ? 1 : -1) * rr(0.15, 0.9), crossIdx: -1, waitCw: -1, waitNode: -1,
       leader: null, side: 0, back: 0, followers: [], mode: spec.vehicle ? MODE.RIDE : MODE.WALK, seatH: 0.45, g: 0, gTarget: 0, gEnd: 0, gk: 0, look: 0, lookK: 0, lookT: 0,
       prefs: o.prefs || { wander: 10, door: 1.5, bench: 1, stop: 1, spot: 1 }, scene: o.scene || 'walk', rank: R(), retire: false, stuck: 0, seat: null, cov: -9, covAge: 9,
@@ -174,7 +174,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
     };
     a.pyaw = a.yaw; agents.push(a); return a;
   };
-  const place = (a, x, z, yaw, y = PAVE) => { y = nav.surfaceY(x, z, y); a.x = a.px = x; a.z = a.pz = z; a.yaw = a.pyaw = yaw; a.y = a.py = y; a.hidden = false; a.speed = a.pspeed = 0; };
+  const place = (a, x, z, yaw, y = PAVE) => { y = nav.surfaceY(x, z, y); a.x = a.px = x; a.z = a.pz = z; a.yaw = a.pyaw = yaw; a.y = a.py = y; a.hidden = false; a.speed = a.pspeed = 0; a.drawTime = undefined; };
   sim.place = place;
   sim.placeAtNode = (a, node, jitter = 1.0) => {
     const x = N.x[node] + (R() - 0.5) * jitter, z = N.z[node] + (R() - 0.5) * jitter;
@@ -348,7 +348,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
   const turnAndGo = (a, dt, dx, dz, vdes, allowRoad) => {
     steer(a, dx, dz);
     const want = Math.atan2(OUT.x, OUT.z), dy = wrap(want - a.yaw), maxT = (a.kind === 'play' ? 7 : 5) * dt, step = clamp(dy, -maxT, maxT);
-    a.yaw += step; a.turn = step / dt;
+    a.yaw += step;
     let vt = vdes * OUT.slow * Math.max(0.25, 1 - Math.abs(dy) * 0.45);
     a.speed += clamp(vt - a.speed, -4.5 * dt, 2.4 * dt); if (a.speed < 0.02 && vt < 0.05) a.speed = 0;
     a.dist += a.speed * dt; a.mv = 1; move(a, dt, allowRoad);
@@ -486,7 +486,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
           const sp = slotPos(a, c, nodeId), dx = sp.x - a.x, dz = sp.z - a.z, d = hyp(dx, dz);
           a.kind = 'wait';
           if (d > 0.25) turnAndGo(a, dt, dx, dz, Math.min(a.vpref, 0.6 + d), false);
-          else { a.speed = Math.max(0, a.speed - 5 * dt); const want = Math.atan2(sp.ux, sp.uz), dy = wrap(want - a.yaw); a.yaw += clamp(dy, -3 * dt, 3 * dt); a.turn = 0; }
+          else { a.speed = Math.max(0, a.speed - 5 * dt); const want = Math.atan2(sp.ux, sp.uz), dy = wrap(want - a.yaw); a.yaw += clamp(dy, -3 * dt, 3 * dt); }
           groundY(a, nav.surfaceY(a.x, a.z, a.y)); return;
         }
       }
@@ -526,7 +526,7 @@ export function createSim(ctx, nav, crowd, opts = {}) {
   const stepUg = (a, t, dt) => {
     const dx = a.tx - a.x, dz = a.tz - a.z, d = hyp(dx, dz);
     if (d < 0.2) { a.speed = 0; const g = a.goal; a.goal = null; a.kind = 'stand'; if (g && g.fn) g.fn(a, t); else a.until = t + 4; return; }
-    const want = Math.atan2(dx, dz), dy = wrap(want - a.yaw), step = clamp(dy, -5 * dt, 5 * dt); a.yaw += step; a.turn = step / dt;
+    const want = Math.atan2(dx, dz), dy = wrap(want - a.yaw); a.yaw += clamp(dy, -5 * dt, 5 * dt);
     const vt = Math.min(a.vpref * 0.85, 0.4 + d) * Math.max(0.3, 1 - Math.abs(dy) * 0.5); a.speed += clamp(vt - a.speed, -4.5 * dt, 2.4 * dt);
     a.dist += a.speed * dt; a.x += Math.sin(a.yaw) * a.speed * dt; a.z += Math.cos(a.yaw) * a.speed * dt;
   };
@@ -676,9 +676,20 @@ export function createSim(ctx, nav, crowd, opts = {}) {
       a.far = isFar;
       const alpha = clamp((t - a.tu) / STEP, 0, 1);
       S.x = a.px + (a.x - a.px) * alpha; S.z = a.pz + (a.z - a.pz) * alpha; S.y = a.py + (a.y - a.py) * alpha + 0.02;
-      S.yaw = a.pyaw + wrap(a.yaw - a.pyaw) * alpha;
+      const yaw = a.pyaw + wrap(a.yaw - a.pyaw) * alpha;
+      const dt = t - a.drawTime;
+      // The rider and vehicle share one eased heading. Bank with its filtered
+      // angular velocity so a new steering tick cannot snap the wheels over.
+      if (!a.shown || lodChange || !(dt >= 0) || dt > 0.5 || a.kind === 'sit') {
+        a.drawYaw = yaw; a.drawTurn = 0;
+      } else if (dt > 0) {
+        const step = wrap(yaw - a.drawYaw) * (1 - Math.exp(-(a.spec.vehicle ? 8 : 14) * dt));
+        a.drawYaw += step;
+        a.drawTurn += (step / dt - a.drawTurn) * (1 - Math.exp(-7 * dt));
+      }
+      a.drawTime = t; S.yaw = a.drawYaw;
       if (isFar) { crowd.renderFar(a.i, S); a.shown = true; continue; }
-      S.speed = a.pspeed + (a.speed - a.pspeed) * alpha; S.dist = a.pdist + (a.dist - a.pdist) * alpha; S.turn = a.turn;
+      S.speed = a.pspeed + (a.speed - a.pspeed) * alpha; S.dist = a.pdist + (a.dist - a.pdist) * alpha; S.turn = a.drawTurn;
       S.mode = a.kind === 'sit' ? MODE.SIT : a.spec.vehicle ? MODE.RIDE : MODE.WALK; S.seatH = a.seatH; S.gesture = a.g; S.gk = a.g === G.NONE ? 0 : a.gk; S.look = a.look; S.lookK = a.lookK;
       crowd.render(a.i, S, t); a.shown = true;
     }

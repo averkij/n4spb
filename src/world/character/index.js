@@ -17,7 +17,7 @@ const URLS=[
 export async function createCharacters(ctx,{manualUpdate=false,maxNpcs=12}={}) {
   if(ctx.characters)return ctx.characters;
   const loader=new GLTFLoader(),templates=await Promise.all(URLS.map(url=>loader.loadAsync(url)));
-  const actors=templates.slice(0,2).map(gltf=>createActor(gltf,ctx)),npcs=[],free=[];
+  const actors=[createActor(templates[0],ctx,{dress:true}),createActor(templates[1],ctx)],npcs=[],free=[];
   const player=ctx.playerObj;let storage=null;try{storage=globalThis.localStorage;}catch{}
   let index=loadCharacterChoice(storage),override=null,lastOverride=false,footLift=0;
   const cross=globalThis.document?.getElementById('cross');
