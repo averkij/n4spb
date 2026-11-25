@@ -8,6 +8,9 @@ implementation and verification guidance. The agent brief contains historical
 context and specialist assignments; check its introductory note and current code
 before assuming its old project paths or ownership assignments still apply.
 
+When bumping the game version, follow the diagnostic page regeneration and
+verification steps in [Versioning](CLAUDE.md#versioning-the-owners-rule-2026-10-25).
+
 ## Planning and porting areas
 
 - [maps/intro-draft.html](maps/intro-draft.html) is the evolving planning map.
