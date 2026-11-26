@@ -3,7 +3,35 @@ import { registerLOD } from '../../core/spatial.js';
 import { nearCrossing } from './net.js';
 import { MB, PointGrid, rgb } from './util.js';
 
-const crust = rgb('#eaedef'), packed = rgb('#c3cbd0'), grit = rgb('#989997');
+const crust = rgb('#eaedef'), packed = rgb('#c3cbd0'), grit = rgb('#99918a');
+
+// Broken pieces of compacted plough snow have broad chipped faces. Embed
+// the lower ring in the bank so the pieces still meet the slope on bends.
+function snowBlock(b,x,y,z,size,angle,radii,sideColour) {
+  const foot=[],cap=[];
+  for(let i=0;i<5;i++){
+    const a=angle+i*2*Math.PI/5;
+    const dx=size*radii[i]*Math.cos(a), dz=.84*size*radii[i]*Math.sin(a);
+    foot.push(b.vert(x+dx,y-size*.55,z+dz,0,0,undefined,sideColour));
+    cap.push(b.vert(x+dx*.7+size*.10,y+size*(.42+.26*radii[(i+2)%5]),z+dz*.73,0,0,undefined,crust));
+  }
+  for(let i=0;i<5;i++){const next=(i+1)%5;b.quad(foot[i],foot[next],cap[next],cap[i]);}
+  for(let i=1;i<4;i++)b.tri(cap[0],cap[i],cap[i+1]);
+}
+
+function bankHeight(b,row,p,offset) {
+  let prevX,prevY;
+  for(const index of row){
+    const i=index*3;
+    const lateral=(b.pos[i]-p.x)*p.ox+(b.pos[i+2]-p.z)*p.oz, y=b.pos[i+1];
+    if(offset<=lateral){
+      if(prevX===undefined)return y;
+      return prevY+(y-prevY)*(offset-prevX)/(lateral-prevX);
+    }
+    prevX=lateral;prevY=y;
+  }
+  return prevY;
+}
 
 // Follow the actual kerb samples, including parking pockets. Interrupt piles
 // at lowered kerbs, boarding areas and driveway mouths. Heights are in metres.
@@ -36,19 +64,20 @@ export function buildSnowbanks(ctx, net, stops, entrances) {
           const r = (heap ? width + .54 : width) * (0.42 + taper * (0.5 + rng() * 0.4));
           const v = (offset, y, col) => b.vert(p.x + p.ox * offset, y, p.z + p.oz * offset, 0, 0, undefined, col);
           const rim = 0.04 + 0.23 * rng();
-          const row = [v(-r, 0.035, grit), v(-r * 0.55, 0.05 + h * 0.53, packed),
+          const row = heap ? [
+            v(-r,.035,grit),v(-r*.65,.06+h*.49,grit),v(-r*.33,.10+h*.78,packed),
+            v(rim-r*.14,.13+h,crust),v(rim+r*.22,.12+h*.96,crust),
+            v(rim+r*.69,.12+h*.48,packed),v(rim+r,.116,packed),
+          ] : [v(-r, 0.035, grit), v(-r * 0.55, 0.05 + h * 0.53, packed),
             v(rim, 0.14 + h, crust), v(rim + r * 0.49, 0.13 + h * 0.62, packed), v(rim + r, 0.116, crust)];
           if (heap && taper>.5) {
-            // Rough blocks tipped by the plough, embedded along the dirty slope.
             for (let k=0;k<6;k++) {
-              const offset=(rng()-.5)*1.65*r, half=.12+.20*rng();
-              const y=.12+h*(1-.78*Math.abs(offset)/r);
-              const x=p.x+p.ox*offset+.8*(rng()-.5)*p.oz, z=p.z+p.oz*offset-.8*(rng()-.5)*p.ox;
-              const lump=[];
-              for(let q=0;q<5;q++){const a=q*2*Math.PI/5,rad=half*(.8+.4*rng());
-                lump.push(b.vert(x+Math.cos(a)*rad,y-half*.25,z+Math.sin(a)*rad,0,0,undefined,k%3?packed:grit));}
-              const top=b.vert(x+half*.15,y+half*.76,z,0,0,undefined,crust);
-              for(let q=0;q<5;q++) b.tri(lump[(q+1)%5],lump[q],top);
+              const offset=(rng()-.5)*2.05*r, size=.15+.25*rng();
+              const along=(rng()-.5)*1.6, angle=rng()*Math.PI*2;
+              const x=p.x+p.ox*offset+p.oz*along, z=p.z+p.oz*offset-p.ox*along;
+              const y=bankHeight(b,row,p,offset);
+              const radii=Array.from({length:5},()=>.68+.56*rng());
+              snowBlock(b,x,y,z,size,angle,radii,k%3===0?grit:packed);
             }
           }
           if (prev) for (let k = 1; k < row.length; k++) b.quad(prev[k-1], prev[k], row[k], row[k-1]);
