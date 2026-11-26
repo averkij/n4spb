@@ -39,8 +39,13 @@ export function build(K) {
     for (const [key, g] of Object.entries(bf.geos)) P.geo(bk[key] || bk.main, g, 0, 2.26, 0, 0, 0, 0, 1.15, 1.15, 1.15);
     // the terracotta bowl with red geraniums at the foot (a lathe bowl + a mound of flower dots)
     revolve(P, M.terra, [[0.0, 0.0], [0.2, 0.0], [0.33, 0.08], [0.42, 0.18], [0.44, 0.23], [0.39, 0.24], [0.33, 0.18], [0.0, 0.12]], 12, { crease: 40, uRep: 2, vTile: 1, cx: 0, cz: 0.55 });
-    revolve(P, M.leaf, [[0.0, 0.16], [0.36, 0.2], [0.42, 0.3], [0.32, 0.42], [0.14, 0.5], [0.0, 0.52]], 10, { crease: 80, uRep: 1, vTile: 1, cx: 0.0, cz: 0.55 });          // the leaves (green: the pale mint of the workers' house read as a teal ball)
-    for (let i = 0; i < 12; i++) { const a = i * 2.4, r = 0.05 + (i % 4) * 0.09, bx = Math.cos(a) * r, bz = 0.55 + Math.sin(a) * r, by = 0.5 - r * 0.4; P.box(M.terra, bx - 0.07, bx + 0.07, by, by + 0.13, bz - 0.07, bz + 0.07, 'b', 1); }     // red geranium heads
+    if (ctx.season === 'winter') {
+      const snow = ctx.mat.toon('#dce3e7', { name: 'planter-snow', paint: 0.08 });
+      revolve(P, snow, [[0.37, 0.21], [0.32, 0.26], [0.13, 0.29], [0, 0.29]], 12, { cx: 0, cz: 0.55 });
+    } else {
+      revolve(P, M.leaf, [[0.0, 0.16], [0.36, 0.2], [0.42, 0.3], [0.32, 0.42], [0.14, 0.5], [0.0, 0.52]], 10, { crease: 80, uRep: 1, vTile: 1, cx: 0.0, cz: 0.55 });          // the leaves (green: the pale mint of the workers' house read as a teal ball)
+      for (let i = 0; i < 12; i++) { const a = i * 2.4, r = 0.05 + (i % 4) * 0.09, bx = Math.cos(a) * r, bz = 0.55 + Math.sin(a) * r, by = 0.5 - r * 0.4; P.box(M.terra, bx - 0.07, bx + 0.07, by, by + 0.13, bz - 0.07, bz + 0.07, 'b', 1); }     // red geranium heads
+    }
     // the boulder 5 m in front: a sloping-faced granite block with the bronze plate
     const bz = 5.0, w = 0.75, d = 0.55;
     hexa(P, M.graniteP, [[-w, 0, bz - d], [w, 0, bz - d], [w * 0.9, 0, bz + d + 0.1], [-w * 0.9, 0, bz + d + 0.1], [-w * 0.6, 0.62, bz - d * 0.55], [w * 0.75, 0.66, bz - d * 0.5], [w * 0.6, 0.34, bz + d * 0.5], [-w * 0.7, 0.3, bz + d * 0.5]], 1.6);

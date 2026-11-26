@@ -1,5 +1,28 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-26 — Winter in three neighbouring districts (17.5.0)
+
+Eight seconds of throttle on the normal district pages in headless Edge, at Medium quality and 1280 × 720. Palace was winter on both versions. The other three routes compare the previous summer default to the new winter default. Each pair uses the same starting lane and input. Traffic, region attachment and other machine activity vary between runs.
+
+| Area and release | Load (s) | Distance (m) | Frame mean / median / p95 / max (ms) | Frames >40 / >80 ms | Mean draws | CDP heap / backing storage (MiB) |
+|---|---:|---:|---|---:|---:|---:|
+| palace 17.4.12 | 40.6 | 267 | 38.9 / 33.4 / 66.7 / 83.4 | 66 / 2 | 1388 | 526 / 1456 |
+| palace 17.5.0 | 36.4 | 269 | 36.0 / 33.3 / 50.1 / 100.1 | 42 / 2 | 1396 | 535 / 1461 |
+| admiralty 17.4.12 | 40.4 | 169 | 46.0 / 33.4 / 66.7 / 333.4 | 81 / 8 | 1322 | 506 / 1329 |
+| admiralty 17.5.0 | 36.5 | 168 | 35.1 / 33.3 / 50.1 / 316.6 | 33 / 5 | 1274 | 560 / 1385 |
+| semyonovsky 17.4.12 | 24.9 | 125 | 30.8 / 33.3 / 49.9 / 333.5 | 15 / 5 | 1014 | 650 / 713 |
+| semyonovsky 17.5.0 | 24.1 | 109 | 27.1 / 16.8 / 33.6 / 333.3 | 14 / 4 | 950 | 642 / 790 |
+| aptekarsky 17.4.12 | 30.8 | 53 | 38.3 / 33.3 / 66.6 / 350.0 | 37 / 6 | 1043 | 347 / 590 |
+| aptekarsky 17.5.0 | 27.3 | 47 | 25.7 / 16.7 / 33.5 / 300.1 | 12 / 5 | 1030 | 344 / 627 |
+
+Palace and Admiralty exceeded the 33.3 ms mean frame target. Every final drive loaded its requested regions. Separate normal playthroughs visited the four districts at night, dusk and midday. Summer selection on the Admiralty page restored water and removed the festive props and snowfall.
+
+Reproduce with `node tools/drive-bench.mjs --area <area> --q medium --seconds 8 --start <pose> --json --diagnostics`. The Palace, Admiralty, Semyonovsky and Aptekarsky poses respectively are `498.2286,135.1625,76.0322`, `-2493.919,-687.663,-52.605`, `-2483.8,1823.8,88.66` and `-1942.856,-3160.215,25.586`.
+
+All four marking audits passed. Palace and Aptekarsky passed the road audit. Admiralty retained two fence intrusions (1.93 and 1.89 m). Semyonovsky retained 140 surface samples in 40 clusters against a budget of 120. Both failures matched the baseline at the same coordinates.
+
+The 21 regenerated manifests contain 2,715 products. SHA-256 matched the baseline for 2,706, including every navigation product. Seven roof products and two street products changed.
+
 ## 2026-11-26 — Central winter release (17.4.7)
 
 On the RTX 3090 Ti at medium quality, the Palace start screen was ready in

@@ -86,7 +86,18 @@ function portal(K, M, ctx, e) {
   for (const s of [-1, 1]) { P.box(M.brass, X0 + s * (W - 0.17) - 0.15, X0 + s * (W - 0.17) + 0.15, 3.1, 3.75, 0.6, 0.9, 'b'); P.box(M.dark, X0 + s * (W - 0.17) - 0.1, X0 + s * (W - 0.17) + 0.1, 3.15, 3.7, 0.62, 0.88, 'b'); }
   P.box(M.graniteWarm, X0 - 1.9, X0 + 1.9, 0, 0.17, 0.0, 1.05, 'b'); P.box(M.granite, X0 - 2.1, X0 + 2.1, 0, 0.08, 0.0, 1.3, 'b');
   // two terracotta pots with white flowers beside the steps (photo 14)
-  for (const s of [-1, 1]) { const px = X0 + s * 2.05; P.cyl(M.pot, [px, 0, 1.25], [px, 0.34, 1.25], 0.2, 0.31, 10, true); P.cyl(M.pot, [px, 0.34, 1.25], [px, 0.42, 1.25], 0.33, 0.33, 10, true); P.geo(M.leafy, new THREE.SphereGeometry(0.3, 8, 5), px, 0.62, 1.25); P.geo(M.flower, new THREE.SphereGeometry(0.25, 7, 4), px, 0.78, 1.25); }
+  for (const s of [-1, 1]) {
+    const px = X0 + s * 2.05;
+    P.cyl(M.pot, [px, 0, 1.25], [px, 0.34, 1.25], 0.2, 0.31, 10, true);
+    P.cyl(M.pot, [px, 0.34, 1.25], [px, 0.42, 1.25], 0.33, 0.33, 10, true);
+    if (ctx.season === 'winter') {
+      const snow = ctx.mat.toon('#dce3e7', { name: 'planter-snow', paint: 0.08 });
+      P.geo(snow, new THREE.SphereGeometry(1, 8, 5), px, 0.42, 1.25, 0, 0, 0, 0.32, 0.08, 0.32);
+    } else {
+      P.geo(M.leafy, new THREE.SphereGeometry(0.3, 8, 5), px, 0.62, 1.25);
+      P.geo(M.flower, new THREE.SphereGeometry(0.25, 7, 4), px, 0.78, 1.25);
+    }
+  }
   // the curved copper canopy: a side profile (z out, y up) extruded along the door width
   const sh = new THREE.Shape();
   sh.moveTo(0, 4.9); sh.bezierCurveTo(0.2, 5.7, 0.6, 6.05, 1.0, 5.8); sh.bezierCurveTo(1.25, 5.65, 1.4, 5.4, 1.6, 5.2);

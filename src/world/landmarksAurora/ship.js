@@ -14,6 +14,7 @@ import { SHIP, shipWaterY, shipAfloat, TICKET_ID, STELE, pairs } from './frame.j
 import { buildHull, half, topY, deckY, hullPt, UD, FC, BULWARK, BREAK, AFT_END, STERN } from './hull.js';
 import { partsGeos, addInstanced } from './inst.js';
 import { knockBays, unitBox } from '../lib/fence-bays.js';
+import { bowerAnchorGeometry } from './bower-anchor.js';
 
 const FUNNELS = [0.2, 11.8, 23.5], FORE = 28.5, MAIN = -27.7, FUN_TOP = 23.5, FORE_TOP = 39, MAIN_TOP = 43.5;
 const SIDE_GUNS = [34.3, 25.5, 15.5, -13.5, -28.5, -40.5];
@@ -205,16 +206,25 @@ export function build(K) {
     }
 
     // ================================================================== bow and stern: anchors, hawse rings, stars, the name
-    const anchor = (s, sd) => {
-      const hp = hullPt(s, 5.2, sd, 0.28), x = hp.p[0], z = hp.p[2];
-      P.cyl(M.black, [x, 3.3, z], [x, 6.5, z], 0.13, 0.1, 6, true);
-      P.box(M.black, x - 0.98, x + 0.98, 2.95, 3.38, z - 0.21, z + 0.21, '');
-      for (const d of [-1, 1]) { P.fan(M.black, [[x + d * 0.98, 3.05, z + sd * 0.23], [x + d * 0.4, 3.1, z + sd * 0.23], [x + d * 0.8, 4.7, z + sd * 0.23], [x + d * 1.28, 4.1, z + sd * 0.23]], [0, 0, sd]); P.box(M.black, x + d * 0.42, x + d * 1.0, 3.05, 3.9, z - 0.2, z + 0.22, ''); }
-      const g = new THREE.TorusGeometry(0.17, 0.045, 5, 10); P.geo(M.black, g, x, 6.62, z, 0, Math.PI / 2, 0); g.dispose();
-      const top = hullPt(s + 0.3, topY(s) - 0.35, sd, 0.12).p;
-      tub(M.black, [[x, 6.78, z], [x + 0.1, 7.5, z], top], 0.055, { seg: 5, per: 3 });
-    };
-    anchor(50.6, 1); anchor(46.4, 1); anchor(50.6, -1);
+    const anchor = bowerAnchorGeometry();
+    for (const [s, sd] of [[50.6, 1], [46.4, 1], [50.6, -1]]) {
+      // Lean the shank against the actual flare of each side. The cast lip at
+      // its foot and the canopied cathead holding the chain are visible from the quay.
+      const foot = hullPt(s, 3.1, sd, 0.32);
+      const lean = -Math.asin(foot.n[1]);
+      P.push(...foot.p, foot.yaw);
+      P.geo(M.black, anchor, 0, 0, 0, lean);
+      P.box(M.grey, -.54,.54,-.12,.025,-.36,.23,'k');
+      P.pop();
+      const eye = hullPt(s, 3.1 + 3.45 * Math.cos(lean), sd, .32).p;
+      const top = hullPt(s, topY(s) - .23, sd, .55);
+      P.push(...top.p, top.yaw);
+      P.box(M.greyDark, -.48,.48,-.1,.16,-.66,.15,'k');
+      for (const x of [-.37,.37]) P.cyl(M.grey, [x,-.82,-.5], [x,-.1,.07], .06,.08,5);
+      P.pop();
+      tub(M.black, [eye, [(eye[0]+top.p[0])/2, (eye[1]+top.p[1])/2, (eye[2]+top.p[2])/2], top.p], .04, { seg: 5, per: 2 });
+    }
+    anchor.dispose();
     for (const sd of [-1, 1]) {
       const hw = hullPt(57.2, 5.0, sd, 0.02);                                                              // hawse ring
       const g = new THREE.TorusGeometry(0.5, 0.15, 6, 14); P.geo(M.grey, g, hw.p[0], hw.p[1], hw.p[2], 0, hw.yaw, 0); g.dispose();

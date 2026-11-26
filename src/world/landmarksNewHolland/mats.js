@@ -78,7 +78,7 @@ export function makeMats(ctx) {
     speckle(g, w, h, r, 1800, ['#76b648', '#4e902f', '#6aae40', '#82be52'], 1.5, 4);
     g.fillStyle = 'rgba(255,255,255,0.045)'; for (let i = 0; i < 8; i += 2) g.fillRect(0, i * 32, w, 32);   // mow stripes (tile 12 m)
   });
-  const bedTex = tex(256, 256, 'bed', (g, w, h) => {                                           // herb-garden bed: tall grass + flowers
+  const bedTex = ctx.season === 'winter' ? null : tex(256, 256, 'bed', (g, w, h) => {                                           // herb-garden bed: tall grass + flowers
     const r = lcg(157); g.fillStyle = '#6a8a3c'; g.fillRect(0, 0, w, h);
     speckle(g, w, h, r, 1600, ['#7c9c48', '#5a7a30', '#8aa856', '#a8b46a', '#4e6e2c'], 1.5, 5);
     for (let i = 0; i < 90; i++) { g.fillStyle = ['#8a4ea8', '#b070c8', '#e8e0d0', '#d86a98'][(r() * 4) | 0]; g.beginPath(); g.arc(r() * w, r() * h, 2 + r() * 3, 0, 6.3); g.fill(); }
@@ -133,7 +133,7 @@ export function makeMats(ctx) {
     gravel: T('#ffffff', { map: gravelTex, name: 'lmNH-gravel', paint: 0.05, polygonOffset: -2 }),
     plates: T('#ffffff', { map: concreteTex, name: 'lmNH-plates', paint: 0.04, polygonOffset: -2 }),
     lawn: T('#ffffff', { map: lawnTex, name: 'lmNH-lawn', paint: 0.06, polygonOffset: -1 }),
-    bed: T('#ffffff', { map: bedTex, name: 'lmNH-bed', paint: 0.06, polygonOffset: -3 }),
+    bed: T('#ffffff', { map: bedTex, name: 'lmNH-flowers', paint: 0.06, polygonOffset: -3 }),
     sand: T('#ffffff', { map: sandTex, name: 'lmNH-sand', paint: 0.05, polygonOffset: -2 }),
     deck: T('#ffffff', { map: woodDeckTex, name: 'lmNH-deck', paint: 0.04 }),
     deckEdge: T('#6e5a46', { name: 'lmNH-deckEdge', paint: 0.03 }),

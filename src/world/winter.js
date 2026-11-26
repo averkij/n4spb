@@ -1,9 +1,12 @@
-// Seasonal content for the connected central districts. World-space placements
+// Seasonal content for connected winter districts. World-space placements
 // are shared by overlapping pages. The regular area bake serves both seasons.
 import * as THREE from 'three';
+import { registerLOD } from '../core/spatial.js';
 import { VB, mtx } from './traffic/vb.js';
+import { buildPalaceFestival } from './winter-palace-square.js';
+import { buildDistrictSquares } from './winter-district-squares.js';
 
-const districts = new Set(['palace', 'smolny', 'vladimirsky']);
+const districts = new Set(['palace', 'smolny', 'vladimirsky', 'admiralty', 'semyonovsky', 'aptekarsky']);
 const storageKey = 'piter.season';
 export function seasonFor(area, params) {
   if (!districts.has(area) || params.has('bake')) return 'summer';
@@ -87,6 +90,9 @@ function decoratedFir(ctx, id, x, z, h, glow) {
   tree.add(canopy, new THREE.Mesh(bulbs.build(), glow));
   tree.position.set(x, 0.04, z);
   ctx.add(tree);
+  tree.updateMatrixWorld(true);
+  registerLOD(canopy, Math.max(240, h * 26));
+  registerLOD(tree.children[1], Math.max(180, h * 18));
   const item = ctx.physics.addCylinder(x, z, radius * 0.42, 0, h);
   ctx.knock?.register({ kind: 'tree', x, z, y: 0.04, mass: h * 27, h, r: radius * 0.42,
     anchored: 22, item, parts: [{ obj: tree }] });
@@ -150,5 +156,7 @@ export function buildWinter(ctx) {
       if (id === 'vosstaniya' || id === 'palace-square') snowman(ctx, x + h * 0.3, z + 2, id === 'vosstaniya' ? -1 : 0.8);
     }
   }
+  buildPalaceFestival(ctx, glow);
+  buildDistrictSquares(ctx, glow, decoratedFir, snowman);
   snowfall(ctx);
 }

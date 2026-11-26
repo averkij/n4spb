@@ -5,6 +5,7 @@
 // the fountain circle, every monument, the paths (footways) and the buildings.  The list is published as ctx.services.landmarksH.trees.
 import * as THREE from 'three';
 import { prepareTreeLods } from '../lib/tree-bounds.js';
+import { landmarkTreeSeason } from '../lib/landmark-tree-season.js';
 import * as L from '../layout.js';
 import { SPECIES, FAMILIES, canopyGeometry, trunkGeometry } from './treegeo.js';
 import { canopyMaterial, trunkMaterial } from './leafmat.js';
@@ -114,22 +115,27 @@ export function buildGardenTrees(K, ctx, H, o) {
   const T = THREE, col = new T.Color();
   const byFam = {}; for (const f of FAMILIES) byFam[f] = [];
   for (const t of list) byFam[t.fam].push(t);
-  for (const t of list) { col.set(t.hex).multiplyScalar(t.bright); t.rgb = [col.r, col.g, col.b]; }
   const matLobe = canopyMaterial(ctx);
-  const barkMat = {}; for (const k of ['birch', 'pale', 'lime', 'oak', 'ash', 'maple', 'brown']) barkMat[k] = trunkMaterial(ctx, barkTexture(ctx, k), 'env-bark-pb-' + k);
+  const barkMat = {};
   const group = new T.Group(); group.name = 'lmH-trees'; ctx.addStatic(group);
   const M = {}, TR = {};
   for (const fam of FAMILIES) {
     const n = byFam[fam].length; if (!n) continue;
     const F = SPECIES[fam]; if (F.kind === 'tiers') continue;
+    const season = landmarkTreeSeason(ctx, fam, F, colors[F.sp], matLobe, canopyGeometry);
+    for (const t of byFam[fam]) {
+      col.set(season.bare ? season.palette[0] : t.hex).multiplyScalar(t.bright);
+      t.rgb = [col.r, col.g, col.b];
+    }
     M[fam] = []; TR[fam] = [];
     for (let l = 0; l < 4; l++) {
-      const im = new T.InstancedMesh(canopyGeometry(fam, l), matLobe, n);
+      const im = new T.InstancedMesh(season.geometry(l), season.material, n);
       im.instanceMatrix.setUsage(T.DynamicDrawUsage); im.setColorAt(0, col.setRGB(1, 1, 1)); im.instanceColor.setUsage(T.DynamicDrawUsage);
       im.count = 0; im.castShadow = l <= 1; im.receiveShadow = l <= 1; im.name = `lmH-tree-${fam}-${l}`; im.visible = false;
       group.add(im); M[fam].push(im);
       if (l <= 1) {
-        const tg = trunkGeometry(fam, l);
+        const tg = season.bare ? null : trunkGeometry(fam, l);
+        if (tg) barkMat[F.bark] ??= trunkMaterial(ctx, barkTexture(ctx, F.bark), 'env-bark-pb-' + F.bark);
         if (tg) { const tm = new T.InstancedMesh(tg, barkMat[F.bark], n); tm.instanceMatrix = im.instanceMatrix; tm.count = 0; tm.castShadow = true; tm.receiveShadow = true; tm.name = `lmH-trunk-${fam}-${l}`; tm.visible = false; group.add(tm); TR[fam].push(tm); }
         else TR[fam].push(null);
       }

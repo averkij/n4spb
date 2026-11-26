@@ -2,6 +2,7 @@
 // with chains (photo refs/admiralty 085, 103), small-leaved limes / maples / elms (instanced, the environment's tree geometry copied into this folder: the generic modules paint the whole OSM `square`
 // polygon w638328792 as paving and plant nothing on it, so the garden is drawn here), a kerb round the garden.  Benches / bins are the props module's (OSM nodes).
 import * as THREE from 'three';
+import { landmarkTreeSeason } from '../lib/landmark-tree-season.js';
 import { prepareTreeLods } from '../lib/tree-bounds.js';
 import { GREEN, ROADS, FURNITURE } from '../data/city.js';
 import * as L from '../layout.js';
@@ -50,7 +51,8 @@ export function build(K) {
     }
   }
   // ---- the oval central lawn: brighter lawn, a rose bed ring and black posts with chains
-  const oval = greenRing(OVAL), blossom = new THREE.SphereGeometry(1, 5, 4);
+  const oval = greenRing(OVAL);
+  const blossom = ctx.season === 'winter' ? null : new THREE.SphereGeometry(1, 5, 4);
   let oc = [-2455, -76];
   if (oval) {
     oc = centroid(oval);
@@ -64,7 +66,12 @@ export function build(K) {
       P.quad(M.soil, [a[0], yb - 0.01, a[1]], [b[0], yb - 0.01, b[1]], [b[0] + nx * w, yb - 0.01, b[1] + nz * w], [a[0] + nx * w, yb - 0.01, a[1] + nz * w], [0, 1, 0]);
       P.quad(M.hedge2, [a[0], yb + 0.28, a[1]], [b[0], yb + 0.28, b[1]], [b[0] + nx * w * 0.8, yb + 0.28, b[1] + nz * w * 0.8], [a[0] + nx * w * 0.8, yb + 0.28, a[1] + nz * w * 0.8], [0, 1, 0]);
       const k = Math.max(2, Math.round(l / 0.45));
-      for (let j = 0; j < k; j++) { const t = (j + rng()) / k, off = 0.15 + rng() * w * 0.65, x = a[0] + dx * t + nx * off, z = a[1] + dz * t + nz * off; P.geo([M.rose1, M.rose2, M.rose3, M.white2][(j + (rng() * 3 | 0)) & 3], blossom, x, yb + 0.33, z, 0, 0, 0, 0.17, 0.12, 0.17); }
+      for (let j = 0; j < k; j++) {
+        const t = (j + rng()) / k, off = 0.15 + rng() * w * 0.65;
+        const x = a[0] + dx * t + nx * off, z = a[1] + dz * t + nz * off;
+        const bloom = [M.rose1, M.rose2, M.rose3, M.white2][(j + (rng() * 3 | 0)) & 3];
+        if (blossom) P.geo(bloom, blossom, x, yb + 0.33, z, 0, 0, 0, 0.17, 0.12, 0.17);
+      }
     }
     // posts + chains on the path side of the bed (every ~3.2 m)
     const fence = scaleRing(1.2), pts = [];
@@ -110,15 +117,16 @@ export function build(K) {
   const group = new THREE.Group(); group.name = 'landmarksJ-garden-trees';
   for (const [fam, list] of Object.entries(byFam)) {
     const F = SPECIES[fam], matrices = [];
-    const im = new THREE.InstancedMesh(canopyGeometry(fam, 0), matLobe, list.length);
+    const crown = landmarkTreeSeason(ctx, fam, F, LEAF[fam], matLobe, canopyGeometry);
+    const im = new THREE.InstancedMesh(crown.geometry(0), crown.material, list.length);
     im.setColorAt(0, col.setRGB(1, 1, 1));
     list.forEach((t, i) => {
       qt.setFromAxisAngle(new THREE.Vector3(0, 1, 0), t.yaw); m4.compose(v.set(t.x, LAWN_Y, t.z), qt, sc.set(t.s, t.s, t.s)); im.setMatrixAt(i, m4); matrices.push(m4.clone());
-      const hex = LEAF[fam][i % LEAF[fam].length]; col.set(hex).multiplyScalar(0.94 + rng() * 0.12); im.setColorAt(i, col);
+      const hex = crown.palette[i % crown.palette.length]; col.set(hex).multiplyScalar(0.94 + rng() * 0.12); im.setColorAt(i, col);
     });
     im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.castShadow = true; im.receiveShadow = true; im.name = 'lmJ-tree-' + fam;
     ctx.noBatch(im); group.add(im);
-    const tg = trunkGeometry(fam, 0); let tm = null;
+    const tg = crown.bare ? null : trunkGeometry(fam, 0); let tm = null;
     if (tg) {
       const bk = F.bark;
       const bm = barkMats[bk] || (barkMats[bk] = trunkMaterial(ctx, ctx.tex.draw(128, 256, (g, w, h) => {

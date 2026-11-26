@@ -11,3 +11,9 @@ The seasonal post office beside the main tree has a distinctive oversized readin
 ## Trinity-Izmailovsky Cathedral
 
 In the street-level photographs the lighter blue metal panels read separately, with staggered rows of gilded stars. Each of the five domes carries a white arched lantern, gilded cupola and cross. The central drum has a deep white colonnade, with windows visible in the intervals. The four smaller domes sit on the arms of the cross-shaped plan. [City tourism photo gallery](https://visit-petersburg.ru/leisure/places/tp-195647-svyato-troitskiy-izmaylovskiy-sobor/) · [City heritage committee restoration account](https://www.gov.spb.ru/gov/otrasl/c_govcontrol/news/104072/)
+
+## District squares and maritime landmarks
+
+The Sennaya light arches draw on the city's illuminated arches and fir photo areas. The historic Christmas fair outside the Youth Theatre informed the walk-through grouping on Pionerskaya Square. The station and garden arrangements are original seasonal compositions for the game. [City decoration centre interview](https://spbdnevnik.ru/news/2025-12-24/kak-ukrasili-k-novomu-godu-peterburg) · [Pionerskaya fair](https://www.gov.spb.ru/gov/otrasl/inspek/news/102522/)
+
+The Admiralty restoration photographs show the fretwork hull, gilt sails and rigging of the ship vane. On Aurora the two starboard bower anchors have visible stocks, shackles and broad flukes. The Blender source for both meshes is [model-maritime-details.py](../../tools/model-maritime-details.py). [Ship restoration](https://spbvedomosti.ru/news/nasledie/operatsiya-shpil-kak-restavrirovali-korablik-na-admiralteystve/) · [Aurora bow photograph](https://commons.wikimedia.org/wiki/File:Cruiser_Aurora_anchors_%284082720660%29.jpg)

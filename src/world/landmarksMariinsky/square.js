@@ -57,7 +57,7 @@ export function build(K, M, D, svc) {
   const RKU = -22.95, RKN = 31.44;
   quadS(M.paving, -36, g.link - 1.7, g.a2 + 1.7, g.a1 - 1.7, Y_PAVE, 2);
   kerbRect(-36.1, g.link - 1.6, g.a2 + 1.6, g.a1 - 1.6);
-  const bed = T('#ffffff', { map: tex.draw(256, 256, (gg, ww, hh) => {
+  const bed = ctx.season === 'winter' ? M.lawn : T('#ffffff', { map: tex.draw(256, 256, (gg, ww, hh) => {
     const r = ctx.rng('lmM-bed'); gg.fillStyle = '#4f8a3a'; gg.fillRect(0, 0, ww, hh);
     const pal = ['#8a4fb8', '#f0c030', '#f2f0e6', '#e87aa0', '#d63a3a', '#5a6fd0'];
     for (let i = 0; i < 700; i++) { gg.fillStyle = pal[Math.floor(r() * pal.length)]; const x = r() * ww, y = r() * hh, s = 2 + r() * 4; gg.beginPath(); gg.arc(x, y, s, 0, 7); gg.fill(); }

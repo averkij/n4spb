@@ -10,6 +10,8 @@ import { ellip } from './sculpt.js';
 import { figureMats } from '../lib/figures.js';
 import { nymphGroup, warrior } from './statues.js';
 import { band } from './kit.js';
+import { registerLOD } from '../../core/spatial.js';
+import { shipVaneGeometry } from './ship-vane.js';
 
 const FZ = 12, HW = 18;                                    // lower cube: front plane Z = 12, half width 18, depth 24
 const RIN = 4.6, ROUT = 7.0, SPR = 4.6;                    // arch: inner radius (opening), archivolt outer radius, springing height
@@ -282,18 +284,16 @@ function wreath(K, M, x, y, z, r) {
   P.box(M.white, x - 0.18, x + 0.18, y - r - 0.3, y - r + 0.2, z - 0.05, z + 0.12, '');
 }
 
-/** the gilded ship vane: hull, three masts with sails (about 1.9 m long, 1.6 m high) */
+/** Pierced copper broadside, bent sails, rigging and crown from the Blender model. */
 function ship(K, M, y0) {
-  const P = K.P;
-  P.push(0, y0, 0, 0);
-  P.cyl(M.gold, [-0.9, 0.2, 0], [0.9, 0.35, 0], 0.18, 0.12, 6, true);
-  P.box(M.gold, -0.85, 0.85, 0.0, 0.3, -0.12, 0.12, '');
-  for (const [x, h] of [[-0.45, 1.5], [0.05, 1.7], [0.55, 1.35]]) {
-    P.cyl(M.gold, [x, 0.3, 0], [x, h, 0], 0.03, 0.02, 4, true);
-    P.quad(M.gold, [x - 0.28, 0.55, 0.0], [x + 0.28, 0.55, 0.0], [x + 0.22, h - 0.1, 0.0], [x - 0.22, h - 0.1, 0.0], [0, 0, 1]);
-    P.quad(M.gold, [x - 0.28, 0.55, 0.0], [x + 0.28, 0.55, 0.0], [x + 0.22, h - 0.1, 0.0], [x - 0.22, h - 0.1, 0.0], [0, 0, -1]);
-  }
-  P.pop();
+  const vane = new THREE.Mesh(shipVaneGeometry(), M.gold);
+  vane.name = 'admiralty-ship-vane';
+  vane.position.set(TX, y0, TZ);
+  vane.rotation.y = ROT;
+  K.root.add(vane);
+  vane.updateMatrixWorld();
+  registerLOD(vane, 500);
+  K.tris += vane.geometry.index.count / 3;
 }
 void M2W;
 
