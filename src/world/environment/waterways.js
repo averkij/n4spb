@@ -238,7 +238,15 @@ function build() {
     if (!key || !WATERWAYS[key]) return;
     (AREA_WATER.riverRings[r.id]||r.polys.map(p=>p.o)).forEach((o,pi)=>rings.push({key,o,id:ri+':'+pi,kind:'data'}));
   });
-  for (const dw of AREA_WATER.dataWater) WATER.forEach((w) => { if (w.id === dw.id) w.polys.forEach((p, i) => rings.push({ key: dw.key, o: p.o, id: dw.key + i, kind: 'data' })); });      // WATER.dataWater of the area (the strip: the castle moat r15750440, which the data keeps as a plain pond; ids 'moat0', 'moat1' ...)
+  for (const dw of AREA_WATER.dataWater) for (const water of WATER) {
+    if (water.id !== dw.id) continue;
+    water.polys.forEach((poly, i) => {
+      // A single mapped relation may include both an open basin and a filled
+      // former channel. Correct the shared mask before cutting ground or banks.
+      if (dw.filledAt && pointInFlat(...dw.filledAt, poly.o)) return;
+      rings.push({ key: dw.key, o: poly.o, id: dw.key + i, kind: 'data' });
+    });
+  }
   // WATER.dataRings of the area: a scenery ring (FAR_SOURCES name) that the area holds as REAL water inside its data region (Vasilyevsky-Okrug 7: the Malaya Neva between the Spit and the Gulf runs through the middle of the territory, and the
   // bake of the source holds it as a data polygon but this repo's data cut has none): the ring clipped to the box of the data region is a data ring (kind 'data': real banks inside, no bank on the cut), the scenery source starts beyond it (inData false above)
   if (AREA_WATER.dataRings.length) {

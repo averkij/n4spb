@@ -633,7 +633,7 @@ export const WATER = {
     [-744, -1034.5, -757.4, -1054.4],      // the Moika leaves the Fontanka under the 1st Engineer Bridge
     [-859.3, -992, -849.4, -997.8],        // the Swan Canal ends on the long north edge of the Moika under the Lower Swan Bridge (the end edge of its polygon; environment/waterways.js splits the Moika edge at its ends)
   ],
-  dataWater: [{ id: 'r15750440', key: 'moat' }],            // the castle moat (the data keeps it as a plain pond)
+  dataWater: [{ id: 'r15750440', key: 'moat', filledAt: [-636.8, -863.9] }],            // the castle moat (the data keeps it as a plain pond)
   slopeReaches: SLOPE_REACHES,
 };
 

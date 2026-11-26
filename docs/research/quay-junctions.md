@@ -48,3 +48,7 @@ vertical normals, front-sided material, outline exclusion and unchanged water
 polygons/datums. Equal-level synthetic joins generate no geometry. Per-area
 logs and the aggregate result are `*-geometry.log` and
 `registry-geometry-summary.json` in the same log directory.
+
+## Filled crossing at the Castle moat
+
+At the Second Engineer Bridge the water relation contains a separate polygon under the present road. The Palace and strip area definitions mark this filled component with a point inside it. The open moat and the Fontanka still use their original water boundaries. With the buried polygon excluded, the ordinary road surface and granite Fontanka wall continue across the former mouth. Run `node tools/area.mjs palace tools/castle-quay-road-test.mjs` to check the river view at `-619.2,-2.4,-863.2,101.6,0`, the road above it, and both open water bodies.
