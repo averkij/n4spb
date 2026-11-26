@@ -1,5 +1,6 @@
 // tools/boat-test.mjs - the MOTOR BOAT (src/world/drive/boat/, docs/AREAS.md "The motor boat"), CPU only, no GPU, no bake:
 //   node tools/area.mjs palace tools/boat-test.mjs [--quick]       (the smolny run proves that an area whose territory lacks the dock has no boat)
+//   node tools/area.mjs admiralty tools/boat-test.mjs --winter     (board from the ice using E, drive off, dismount)
 // It builds the REAL modules of the area headlessly (tools/lib/headless-world.mjs: environment, bridges, the landmark modules ... no city / people / traffic), then the REAL drive module (cars + boats) with a real Player,
 // and proves with the real colliders and the real water:
 //   1  the dock: the boat is in the water, hull parallel to the quay, 2-4 m off the water edge, clear of every collider, the interaction prompt 'E to take' is offered within reach; the four cars are unchanged
@@ -21,7 +22,8 @@ const AREA = process.env.AREA || 'palace';
 let checks = 0, fails = 0;
 const check = (name, fn) => { try { fn(); checks++; console.log('PASS', name); } catch (e) { fails++; console.log('FAIL', name, '\n    ', String(e.message).split('\n').slice(0, 6).join('\n     ')); } };
 const t0 = Date.now();
-const { ctx, L, THREE, built, errors } = await buildWorld({ log: null });
+const winter = process.argv.includes('--winter');
+const { ctx, L, THREE, built, errors } = await buildWorld({ season: winter ? 'winter' : 'summer', log: null });
 console.log(`area ${AREA}: built ${built.length} modules in ${((Date.now() - t0) / 1000).toFixed(0)} s; ${ctx.physics.items.length} colliders`);
 const ph = ctx.physics, DEG = 180 / Math.PI;
 globalThis.__frame = await import('../src/world/landmarksC/frame.js');      // the Anichkov bridge's frame (u along the bridge, v along the river): the piers
@@ -47,13 +49,32 @@ await driveMod.build(ctx);
 const d = ctx.drive;
 const {GARAGE}=await import('../src/world/lib/area-tables.js');
 check('the drive module builds exactly the area car garage', () => { assert.ok(d,'no drive service');assert.deepEqual(d.fleet.map(f=>f.id).sort(),Object.keys(GARAGE.poses).sort()); });
-if(AREA!=='palace'&&d.boats.length){
- check('the configured district boats are present',()=>assert.deepEqual(d.boats.map(b=>b.id).sort(),GARAGE.boats.map(b=>b.id).sort()));
+const { DOCKS } = await import('../src/world/lib/docks.js');
+const localDocks = (GARAGE.boats ?? DOCKS).filter(p => L.inPlay(p.x,p.z) && ph.waterLevel(p.x,p.z) !== null);
+if((AREA!=='palace'||winter)&&localDocks.length){
+ check('the configured district craft are present',()=>assert.deepEqual(d.boats.map(b=>b.id).sort(),localDocks.map(b=>b.id).sort()));
  for(const b of d.boats){
   check(b.id+': full hull is on navigable water and clear of solid objects',()=>{
    const p=b.parked,s=b.spec,c=Math.cos(p.yaw),sn=Math.sin(p.yaw);
    for(const a of [s.rear,0,s.front])for(const v of [-s.W/2,0,s.W/2])assert.notEqual(ph.waterLevel(p.x+sn*a+c*v,p.z+c*a-sn*v),null);
    for(const q of ph.querySolids(p.x,p.z,8))if(q!==b.box)assert(!cc({x:p.x,z:p.z,y:ph.waterLevel(p.x,p.z),yaw:p.yaw,floats:true},s,q,{}),'obstruction '+q.type);
+  });
+  if(winter && b.def.vessel !== 'container-ship') check(b.id+': a walker boards the snowmobile from the ice, drives and dismounts',()=>{
+    assert.equal(b.model.root.name,'drive-snowmobile');
+    const p=b.parked, side=2.4, x=p.x+Math.cos(p.yaw)*side, z=p.z-Math.sin(p.yaw)*side;
+    const level=ph.waterLevel(x,z);
+    assert.notEqual(level,null);
+    player.setPose(x,z,Math.atan2(x-p.x,z-p.z)*DEG,0,level+.1,{stand:true});
+    assert(Math.abs(player.pos.y-level)<.05,'walker stands on the ice next to the vehicle');
+    ctx.camera.lookAt(p.x,p.y+.8,p.z);
+    player.inputLock=0;
+    assert.equal(ctx.interact.update()?.labelEn,'Ride snowmobile');
+    assert(ctx.interact.use() && d.active && d.vehicle===b,'normal E interaction boards the vehicle');
+    const start={x:b.car.x,z:b.car.z};
+    d.sim(1.6,{thr:.65});
+    assert(Math.hypot(b.car.x-start.x,b.car.z-start.z)>2,'leaves its berth on the ice');
+    assert(Math.abs(b.car.y-ph.waterLevel(b.car.x,b.car.z))<.05,'stays at the frozen water level');
+    assert(d.exit(true) && !d.active);
   });
   check(b.id+': boarding, exit and reboarding retain the district boat',()=>{assert(d.enter(b.id));d.sim(.1,{});assert.equal(d.vehicle.id,b.id);assert(d.exit(true));assert(d.enter(b.id));assert(d.exit(true));});
  }
