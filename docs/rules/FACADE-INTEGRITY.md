@@ -89,6 +89,6 @@ The landmark kit hid a whole facade edge when 2 of 3 sample points were within 0
 
 ## Through passages and projecting masonry
 
-Generate the facade opening, reveal, inner vault and side-wall collision from the same mouth on each surveyed facade. Both ends of a bent passage must join their respective facade planes. Retain narrow strips of masonry beside a gateway. A building footprint may contain a drive-through lane. Check the clear width and trace a walker and a car from the street into the courtyard and back, including the inner mouth at (324.1, 53.5).
+Generate the facade opening, reveal, inner vault and side-wall collision from the same mouth on each surveyed facade. Both ends of a bent passage must join their respective facade planes. Retain narrow strips of masonry beside a gateway. Where a mapped lane crosses another building part, cut its wall and collision to the vault profile. At bends and junctions, trim the side lining and its collider together so both branches stay open. A building footprint may contain a drive-through lane. Check the clear width and trace a walker and a car from the street into the courtyard and back, including the inner mouth at (324.1, 53.5).
 
 Give deep projecting pavilions and rusticated podiums their visible side faces and matching collision envelope. Inspect them diagonally at street height. Check the Beloselsky-Belozersky frontage near (-390, -64) and the Admiralty's east Neva pavilion from (-2315.7, -819.9), including the riverfront panorama.

@@ -206,13 +206,19 @@ export function buildWalls(ctx, rec, streams, env) {
         const sliver = pc.yLow <= 0.2 && pc.t1 - pc.t0 < SLIVER;
         if (pc.yLow > 0.2 || sliver) {
           // firewall: the wall above a lower neighbour
-          const len = pc.t1 - pc.t0; if (len < 0.05 || pc.yLow >= st.H - 0.3) continue;
+          const len = pc.t1 - pc.t0; if (len < .0001 || pc.yLow >= st.H) continue;
           const N = Math.max(1, Math.round(len / 3)), bw = len / N;
           const a = [e.a[0] + e.dx * pc.t0, e.a[1] + e.dz * pc.t0], bb = [e.a[0] + e.dx * pc.t1, e.a[1] + e.dz * pc.t1];
           // (st.noFirewall, archetypes.js: a free-standing block of a new complex. The wall above its own lower wing is a facade with windows, not a blank party wall with brick patches)
           const up = !!st.noFirewall && !sliver;
           const at = wallAttr({ arch: up ? st.arch : ARCH.FIREWALL, floors: tab.floors, H: st.H, bw, N, i0: 0, seed: st.seed, flags: up ? wearFlags(st.wear) : F.BLANK | wearFlags(Math.max(2, st.wear)), plinth: 1, G: tab.G, PN: tab.PN, centre: -1 });
           const mid = [(a[0] + bb[0]) / 2, (a[1] + bb[1]) / 2];
+          if(pc.h0!=null){
+            const h0=Math.min(pc.h0,st.H),h1=Math.min(pc.h1,st.H);
+            streams(...mid).face([[a[0],y0+h0,a[1]],[bb[0],y0+h1,bb[1]],[bb[0],y0+st.H,bb[1]],[a[0],y0+st.H,a[1]]],
+              [e.nx,0,e.nz],[[0,h0],[N,h1],[N,st.H],[0,st.H]],at,st.color);
+            continue;
+          }
           streams(mid[0], mid[1]).quad(a, bb, y0 + pc.yLow, y0 + st.H, e.nx, e.nz, 0, N, pc.yLow, st.H, at, st.color);
           continue;
         }

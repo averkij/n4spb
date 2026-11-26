@@ -136,18 +136,30 @@ const ALLOW = {
   'landmark-owned': 'masses of landmark modules (occluders): their owner draws the wall',
 };
 // every arch / doorway opening of every edge as a world segment: a hidden duplicate wall behind a neighbour's arch has the same hole
-const gateSegs = [], GC = 24, ggrid = new Map();
-for (const [, rec] of net.rec) for (const ring of rec.rings) for (const e of ring.edges) for (const g of (e.gates || [])) {
-  const f = { a: [e.a[0] + e.dx * (g.s - g.w / 2), e.a[1] + e.dz * (g.s - g.w / 2)], b: [e.a[0] + e.dx * (g.s + g.w / 2), e.a[1] + e.dz * (g.s + g.w / 2)], nx: e.nx, nz: e.nz, top: GATE_SPRING + g.w / 2 + 0.05 };
-  gateSegs.push(f);
-  for (const q of [f.a, f.b]) { const k = Math.floor(q[0] / GC) + ',' + Math.floor(q[1] / GC); let a = ggrid.get(k); if (!a) ggrid.set(k, (a = [])); if (!a.includes(f)) a.push(f); }
+const GC = 24, ggrid = new Map();
+for (const [, rec] of net.rec) for (const ring of rec.rings) for (const e of ring.edges) {
+  const openings = (e.gates || []).map(g => ({
+    t0: g.s - g.w / 2, t1: g.s + g.w / 2, h0: GATE_SPRING + g.w / 2, h1: GATE_SPRING + g.w / 2,
+  }));
+  // Interior walls crossed by a mapped driveway follow its graded vault.
+  openings.push(...e.pieces.filter(p => p.h0 != null));
+  for (const {t0,t1,h0,h1} of openings) {
+    const a = [e.a[0] + e.dx * t0, e.a[1] + e.dz * t0], b = [e.a[0] + e.dx * t1, e.a[1] + e.dz * t1];
+    const f = {a,b,nx:e.nx,nz:e.nz,h0,h1};
+    for (let x = Math.floor((Math.min(a[0],b[0])-.4)/GC); x <= Math.floor((Math.max(a[0],b[0])+.4)/GC); x++)
+      for (let z = Math.floor((Math.min(a[1],b[1])-.4)/GC); z <= Math.floor((Math.max(a[1],b[1])+.4)/GC); z++) {
+        const key = x + ',' + z;
+        if (!ggrid.has(key)) ggrid.set(key, []);
+        ggrid.get(key).push(f);
+      }
+  }
 }
 const gateNear = (x, z, h, nx, nz) => {
   const a = ggrid.get(Math.floor(x / GC) + ',' + Math.floor(z / GC)); if (!a) return false;
   for (const f of a) {
-    if (f.nx * nx + f.nz * nz < 0.5 || h > f.top) continue;
+    if (f.nx * nx + f.nz * nz < 0.5) continue;
     const dx = f.b[0] - f.a[0], dz = f.b[1] - f.a[1], l2 = dx * dx + dz * dz, u = ((x - f.a[0]) * dx + (z - f.a[1]) * dz) / l2;
-    if (u < -0.03 || u > 1.03) continue;
+    if (u < -0.03 || u > 1.03 || h > f.h0 + u * (f.h1-f.h0) + .05) continue;
     const d = (x - f.a[0]) * f.nx + (z - f.a[1]) * f.nz;
     if (d > -0.4 && d < 0.4) return true;
   }

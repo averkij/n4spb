@@ -18,7 +18,7 @@ export function planPassages(ctx, net, list) {
   for (const [, r] of net.rec) for (const ring of r.rings) for (const e of ring.edges) {
     if(r.b.waterfront)continue; // panorama never adds gates, tunnel colliders or navigation
     if ((r.b.minH || 0) > 0.5) continue;                 // a raised part (room over the arch) is the roof of the passage: the arch belongs to the body below it, never cut into the part (its spring line is above the part's top: a hole)
-    if (!e.pieces.some((p) => p.yLow < 0.2 && p.t1 - p.t0 > 3)) continue;
+    if (!e.pieces.some((p) => p.yLow < 0.2 && p.t1 - p.t0 > 0.05)) continue;
     const x0 = Math.min(e.a[0], e.b[0]) - 2, x1 = Math.max(e.a[0], e.b[0]) + 2, z0 = Math.min(e.a[1], e.b[1]) - 2, z1 = Math.max(e.a[1], e.b[1]) + 2;
     for (let cx = Math.floor(x0 / GRID); cx <= Math.floor(x1 / GRID); cx++) for (let cz = Math.floor(z0 / GRID); cz <= Math.floor(z1 / GRID); cz++) { const k = cx + ',' + cz; let a = grid.get(k); if (!a) grid.set(k, (a = [])); a.push(e); }
   }
@@ -89,8 +89,121 @@ export function planPassages(ctx, net, list) {
     const hit = nearEdge(d.x, d.z, 1.8, d.w || 3);
     if (hit) addGate(hit.e, hit.t, d.w || 3, { metro: true, id: d.id });
   }
+  cutCrossingWalls(tunnels, grid);
   ctx._cityTunnels = tunnels;
   return gates;
+}
+
+// Clip a line starting at (x,z), with unit tangent (tx,tz), to an oriented
+// passage rectangle. The returned interval is in metres along that line.
+function clipToLane(x,z,tx,tz,length,lane,radius,overhang){
+  let lo=0,hi=length;
+  function clip(start,speed,min,max){
+    if(Math.abs(speed)<1e-8)return start>=min && start<=max;
+    const a=(min-start)/speed,b=(max-start)/speed;
+    lo=Math.max(lo,Math.min(a,b));hi=Math.min(hi,Math.max(a,b));
+    return hi-lo>.015;
+  }
+  const {ax,az,ux,uz,len}=lane,dx=x-ax,dz=z-az;
+  const lateral=dz*ux-dx*uz,dl=tz*ux-tx*uz;
+  if(!clip(dx*ux+dz*uz,tx*ux+tz*uz,-overhang,len+overhang)||!clip(lateral,dl,-radius,radius))return null;
+  return {lo,hi,lateral,dl,r:radius};
+}
+
+function laneSegments(tunnels){
+  const index=new Map();
+  for(const {pts,w} of tunnels)for(let i=2;i<pts.length;i+=2){
+    const ax=pts[i-2],az=pts[i-1],bx=pts[i],bz=pts[i+1],len=Math.hypot(bx-ax,bz-az);
+    if(len<.05)continue;
+    const lane={pts,offset:i,ax,az,bx,bz,ux:(bx-ax)/len,uz:(bz-az)/len,len,r:w/2};
+    const pad=lane.r+2;
+    for(let x=Math.floor((Math.min(ax,bx)-pad)/GRID);x<=Math.floor((Math.max(ax,bx)+pad)/GRID);x++)
+      for(let z=Math.floor((Math.min(az,bz)-pad)/GRID);z<=Math.floor((Math.max(az,bz)+pad)/GRID);z++){
+        const key=x+','+z;if(!index.has(key))index.set(key,[]);index.get(key).push(lane);
+      }
+  }
+  return index;
+}
+
+// At a junction of mapped passages, trim both the brick lining and its collider
+// wherever another passage opens through it. This also handles short doglegs.
+function remainingWall(a,b,index,pts,offset){
+  const dx=b[0]-a[0],dz=b[2]-a[2],len=Math.hypot(dx,dz),cuts=[],seen=new Set();
+  if(len<.015)return [];
+  for(let x=Math.floor(Math.min(a[0],b[0])/GRID);x<=Math.floor(Math.max(a[0],b[0])/GRID);x++)
+    for(let z=Math.floor(Math.min(a[2],b[2])/GRID);z<=Math.floor(Math.max(a[2],b[2])/GRID);z++)
+      for(const lane of index.get(x+','+z)||[]){
+        if(seen.has(lane))continue;seen.add(lane);
+        const own=lane.pts===pts && lane.offset===offset;
+        const cut=clipToLane(a[0],a[2],dx/len,dz/len,len,lane,own ? Math.min(.88,lane.r-.10) : lane.r-.10,.60);
+        if(cut)cuts.push(cut);
+      }
+  const runs=[];let t=0;
+  for(const {lo,hi} of cuts.sort((a,b)=>a.lo-b.lo)){
+    if(lo-t>.025)runs.push([t/len,lo/len]);t=Math.max(t,hi);
+  }
+  if(len-t>.025)runs.push([t/len,1]);
+  return runs;
+}
+
+// A driveway can cut several building parts, or meet a facade at a surveyed
+// vertex shared by two short edges. Clip every intersecting wall to the vault,
+// including walls between the two mouths. Keep the primary portal's own trim.
+function cutCrossingWalls(tunnels, grid) {
+  const affected = new Map();
+  for (const {pts,w,mouths} of tunnels) for (let i=2;i<pts.length;i+=2) {
+    const ax=pts[i-2], az=pts[i-1], bx=pts[i], bz=pts[i+1];
+    const len=Math.hypot(bx-ax,bz-az), r=w/2;
+    if (len<.05) continue;
+    const ux=(bx-ax)/len, uz=(bz-az)/len, pad=r+1.8, edges=new Set();
+    for(let x=Math.floor((Math.min(ax,bx)-pad)/GRID);x<=Math.floor((Math.max(ax,bx)+pad)/GRID);x++)
+      for(let z=Math.floor((Math.min(az,bz)-pad)/GRID);z<=Math.floor((Math.max(az,bz)+pad)/GRID);z++)
+        for(const edge of grid.get(x+','+z)||[]) edges.add(edge);
+    for(const e of edges){
+      if(len>w && mouths?.some(hit=>hit?.e===e && e.gates?.some(g=>Math.abs(g.s-hit.t)<.1)))continue;
+      const cut=clipToLane(e.a[0],e.a[1],e.dx,e.dz,e.len,{ax,az,ux,uz,len},r,1.8);
+      if(!cut)continue;
+      if(!affected.has(e))affected.set(e,[]);
+      affected.get(e).push(cut);
+    }
+  }
+  for(const [e,cuts] of affected){
+    const pieces=[];
+    for(const pc of e.pieces){
+      const spans=cuts.filter(c=>c.lo<pc.t1 && c.hi>pc.t0);
+      if(!spans.length || pc.yLow>GATE_SPRING+3){pieces.push(pc);continue;}
+      const breaks=new Set([pc.t0,pc.t1]);
+      const add=t=>{if(t>pc.t0 && t<pc.t1)breaks.add(t);};
+      for(const c of spans){
+        add(c.lo);add(c.hi);
+        for(let k=1;k<10 && Math.abs(c.dl)>1e-8;k++){
+          const t=(c.r*Math.cos(k*Math.PI/10)-c.lateral)/c.dl;
+          if(t>c.lo && t<c.hi)add(t);
+        }
+      }
+      // Do not split an existing decorated facade arch into wall fragments.
+      for(const g of e.gates||[]){
+        const l=g.s-g.w/2,r=g.s+g.w/2;
+        for(const t of breaks)if(t>l&&t<r && t!==pc.t0 && t!==pc.t1)breaks.delete(t);
+        add(l);add(r);
+      }
+      const ts=[...breaks].sort((a,b)=>a-b);
+      for(let j=1;j<ts.length;j++){
+        const t0=ts[j-1],t1=ts[j],mid=(t0+t1)/2;
+        const active=spans.filter(c=>mid>c.lo && mid<c.hi);
+        if(!active.length || e.gates?.some(g=>Math.abs(mid-g.s)<g.w/2)){
+          pieces.push({...pc,t0,t1});continue;
+        }
+        const at=t=>Math.max(pc.yLow,...active.map(c=>{
+          const q=Math.min(1,Math.max(-1,(c.lateral+t*c.dl)/c.r));
+          return GATE_SPRING+c.r*Math.sqrt(Math.max(0,1-q*q));
+        }));
+        const h0=at(t0),h1=at(t1);
+        pieces.push({t0,t1,yLow:Math.min(h0,h1),h0,h1});
+      }
+    }
+    e.pieces=pieces;
+  }
 }
 
 /** Collider intervals of the piece [t0, t1] of an edge: [[a, b, under]] - solid pieces between the gates, and 'under' boxes above the arch openings. */
@@ -112,6 +225,7 @@ export function buildPassages(ctx, { M }) {
   if (!tunnels.length) return { triangles: 0 };
   let tris = 0;
   const wallC = new THREE.Color('#6d604c'), vaultC = new THREE.Color('#7a6d58'), floorC = new THREE.Color('#554f40');
+  const lanes=laneSegments(tunnels);
   for (const tn of tunnels) {
     const n = tn.pts.length / 2, r = tn.w / 2, cy = GATE_SPRING;
     // The end sections lie on the actual facade planes. Interior sections are
@@ -135,12 +249,9 @@ export function buildPassages(ctx, { M }) {
         const [x,z,sx,sz] = section[t===0 ? i : i+1];
         return [x+sx*lat,y,z+sz*lat];
       };
-      // side walls (facing the axis)
-      cB.quad([P(0, r, 0), P(L, r, 0), P(L, r, cy), P(0, r, cy)], [-mx, 0, -mz], wallC);
-      cB.quad([P(0, -r, 0), P(L, -r, 0), P(L, -r, cy), P(0, -r, cy)], [mx, 0, mz], wallC);
       // floor (paving, a hair above the ground plane)
       cB.quad([P(0, -r, 0.03), P(L, -r, 0.03), P(L, r, 0.03), P(0, r, 0.03)], [0, 1, 0], floorC);
-      // vault: semicircle, 8 segments, facing down / inward
+      // vault: semicircle, 10 segments, facing down / inward
       const K = 10;
       for (let k = 0; k < K; k++) {
         const t0 = (k / K) * Math.PI, t1 = ((k + 1) / K) * Math.PI;
@@ -150,8 +261,15 @@ export function buildPassages(ctx, { M }) {
       }
       // colliders: the side walls (the hollow building interior must not be reachable from the passage)
       for (const side of [-1, 1]) {
-        const a=P(0,side*(r+.15),0), b=P(L,side*(r+.15),0);
-        ctx.physics.addBox((a[0]+b[0])/2,(a[2]+b[2])/2,Math.hypot(b[0]-a[0],b[2]-a[2]),.30,Math.atan2(a[2]-b[2],b[0]-a[0]),0,5);
+        const a=P(0,side*r,0), b=P(L,side*r,0), dx=b[0]-a[0], dz=b[2]-a[2], len=Math.hypot(dx,dz);
+        if(len<.015)continue;
+        const nx=dz/len*side,nz=-dx/len*side;
+        for(const [lo,hi] of remainingWall(a,b,lanes,tn.pts,(i+1)*2)){
+          const point=(t,y)=>[a[0]+t*dx,y,a[2]+t*dz];
+          cB.quad([point(lo,0),point(hi,0),point(hi,cy),point(lo,cy)],[nx,0,nz],wallC);
+          const mid=(lo+hi)/2;
+          ctx.physics.addBox(a[0]+mid*dx-nx*.15,a[2]+mid*dz-nz*.15,(hi-lo)*len,.30,Math.atan2(-dz,dx),0,5);
+        }
       }
     }
   }

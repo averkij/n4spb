@@ -314,7 +314,7 @@ check('8 hand-off arrival: on water the boat comes along, on land the player is 
 check('9 the cars: the fleet of four, each enters and exits, the HUD / sound profiles come back after the boat, the boat is not in the fleet', () => {
   assert.deepEqual(d.fleet.map((f) => f.id), ['coupe', 'truck', 'lada', 'roadster']);
   for (const v of d.fleet) { walker(v.parked.x, v.parked.z + 6); assert.ok(d.enter(v.id), v.id); step(0.5, { thr: 1 }); assert.ok(d.car.speed > 0.5 && !d.car.floats, v.id); assert.ok(d.exit(true)); }
-  const ids = ctx.interact.list().map((i) => i.id).sort(); assert.deepEqual(ids, ['drive-boat', 'drive-car', 'drive-lada', 'drive-roadster', 'drive-truck']);
+  const ids = ctx.interact.list().map((i) => i.id).sort(); assert.deepEqual(ids, ['drive-boat', 'drive-car', 'drive-lada', 'drive-roadster', 'drive-traffic', 'drive-truck']);
 });
 // ---------------------------------------------------------------- 10 the model: the helmsman, the windshield, the hull shell (the owner's look fixes)
 const M = boat.model;

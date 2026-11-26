@@ -163,7 +163,10 @@ export function analyse(list, occluders = []) {
           // overlapping footprints: a wall whose INNER side lies inside another building's mass is embedded in it (a ghost wall seen from behind): hide it
           const ci = coverAt(wx - nx * 0.25, wz - nz * 0.25, r.bi, Y0, CUT);
           // QA fix: two overlapping footprints of equal height that share a boundary each saw the other's mass behind the wall and BOTH hid it (a hole in the street wall): a taller cover hides, an equal one only for the lower index
-          if (ci && (ci.h > He + 0.3 || (ci.h >= He - 0.3 && ci.bi < r.bi)) && !(c && c.bi === ci.bi)) { pushRun(runs, -1, t0, t1, { yLow: 0 }); continue; }
+          // A raised rooftop detail in the river panorama can be narrower than the
+          // inner probe. Only the mass touching its skin can cover its face.
+          const touchesInner = !r.b.waterfront || Y0 === 0 || (ci && inPr(ci.pr, wx - nx * .012, wz - nz * .012));
+          if (ci && touchesInner && (ci.h > He + 0.3 || (ci.h >= He - 0.3 && ci.bi < r.bi)) && !(c && c.bi === ci.bi)) { pushRun(runs, -1, t0, t1, { yLow: 0 }); continue; }
           if (c) {
             const [fx, fz] = nearestNormal(c.pr, px, pz);
             const same = fx * nx + fz * nz > 0.5;
