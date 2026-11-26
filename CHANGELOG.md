@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.4.7** (2026-11-26, patch): Ship all district bakes with the final winter vegetation and ploughed snowbanks.
 - **17.4.6** (2026-11-26, patch): Shape large ploughed snowbanks with dirty flanks, uneven crowns and chipped blocks.
 - **17.4.5** (2026-11-26, patch): Keep the camera-centred summer grass under the snow in winter.
 - **17.4.4** (2026-11-26, patch): Rebuild all 21 live district scenes for the central winter review.
