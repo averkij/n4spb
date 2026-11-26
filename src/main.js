@@ -24,6 +24,7 @@ import { compactStaticAttributes } from './core/compact-static.js';
 import { createAudio } from './core/audio.js';
 import { createKnock } from './core/knock.js';
 import { createTimeOfDay } from './core/timeofday.js';
+import { seasonFor, installSeasonControl, buildWinter } from './world/winter.js';
 import { createZones } from './core/zones.js';
 import { createUI, createInteract } from './core/ui.js';
 import { createMinimap } from './core/minimap.js';
@@ -118,13 +119,16 @@ if (params.has('ndfar')) pipeline.ndFar = Number(params.get('ndfar')) || 1e9;   
 const audio = createAudio();
 const ctx = createContext({ scene, camera, renderer, audio, quality, sunDir });
 ctx.area = A;      // the area module of this page: ctx.area.ID, BAKE_DIR, MODULES ... (a test hook: __ctx.area.ID)
+ctx.season = seasonFor(A.ID, params);
+ctx.shared.season = ctx.season;
+if (ctx.season === 'winter') ctx.physics.frozenRivers = true;
 ctx.sky = sky;
 ctx.knock = createKnock(ctx);      // the knockable street furniture (core/knock.js): modules register their instances during the build (guard: if (ctx.knock))
 const zones = createZones({ scene, camera, sky, pipeline, shared: ctx.shared, staticRoot: ctx.staticRoot, dynamicRoot: ctx.dynamicRoot, indoor: ctx.indoor, heightAt: L.heightAt });
 ctx.zones = zones;
 if (params.get('nofreeze') === '1' || params.get('nofreeze') === 'zones') zones.config.freezeHidden = false;
 if (params.has('freezekinds')) zones.config.freezeKinds = params.get('freezekinds');      // debug / A-B
-const tod = createTimeOfDay({ sky, scene, shared: ctx.shared, sunDir, pipeline, overlay: zones.overlay, fogScale: params.has('fogx') ? Number(params.get('fogx')) || 1 : (quality.fogScale || 1) });      // ?fogx= multiplies every preset's fog density
+const tod = createTimeOfDay({ sky, scene, shared: ctx.shared, sunDir, pipeline, season: ctx.season, overlay: zones.overlay, fogScale: params.has('fogx') ? Number(params.get('fogx')) || 1 : (quality.fogScale || 1) });
 if (params.has('tod')) tod.set(params.get('tod'), true);
 if (params.has('nofog')) Object.defineProperty(scene.fog, 'density', { get: () => 0, set: () => {} });   // debug: clear air (tools/overlay.mjs looks from 1+ km)
 window.__ctx = ctx; window.__tod = tod; window.__zones = zones; window.THREE = THREE; window.__pipeline = pipeline; window.__camera = camera;   // debug / test hooks
@@ -214,6 +218,7 @@ async function build() {
     i++;
   }
   if (SHOT && ctx.regions) await ctx.regions.ensureAll();
+  if (ctx.season === 'winter' && list.includes('environment')) buildWinter(ctx);
   setProgress(list.length / (list.length + 1), 'последние штрихи…');
   await new Promise(r => setTimeout(r, 0));
   const TF = performance.now(); stats.timing.modulesMs = Math.round(TF - T0);
@@ -604,6 +609,7 @@ async function main() {
     });
   }
   const q = $('quality');
+  installSeasonControl(q, A.ID, ctx.season);
   if (q) { q.value = qName; q.addEventListener('change', () => { try { localStorage.setItem('piter.q', q.value); } catch (e) {} location.reload(); }); }
   const mute = $('mute'); if (mute) mute.addEventListener('click', () => { audio.muted = !audio.muted; mute.setAttribute('aria-pressed', String(audio.muted)); });
   if (params.has('stats')) $('stats').hidden = false;

@@ -20,7 +20,7 @@ import { BUILDINGS, GREEN, EXTENT, TREES, TREE_ROWS } from '../data/city.js';
 import * as L from '../layout.js';
 import { isOwned } from '../lib/claims.js';
 import { HOOKS, WATER as AREA_WATER } from '../lib/area-tables.js';
-import { SPECIES, FAMILIES, canopyGeometry, trunkGeometry } from './treegeo.js';
+import { SPECIES, FAMILIES, canopyGeometry, trunkGeometry, winterTreeGeometry } from './treegeo.js';
 import { canopyMaterial, coniferMaterial, trunkMaterial } from './leafmat.js';
 import { riverBanks, waterBanks } from './river.js';
 import { hash2, clamp, polyArea, polyBox, pointInPoly, sstep, lonLatToXZ } from './util.js';
@@ -332,7 +332,11 @@ export function buildTrees(ctx, root, field, owned, extraAvoid = []) {
   const byFam = {}; for (const f of FAMILIES) byFam[f] = [];
   for (const t of list) byFam[t.fam].push(t);
   const col = new T.Color();
-  for (const t of list) { col.set(t.hex).multiplyScalar(t.bright); t.rgb = [col.r, col.g, col.b]; }
+  const winter = ctx.season === 'winter';
+  for (const t of list) {
+    col.set(winter ? (t.sp === 'spruce' ? '#91b4ae' : '#79706a') : t.hex).multiplyScalar(t.bright);
+    t.rgb = [col.r, col.g, col.b];
+  }
 
   const matLobe = canopyMaterial(ctx), matTier = coniferMaterial(ctx);
   const barkMat = {}; for (const k of ['birch', 'pale', 'lime', 'oak', 'ash', 'maple', 'brown']) barkMat[k] = trunkMaterial(ctx, barkTexture(ctx, k), 'env-bark-pb-' + k);
@@ -342,11 +346,13 @@ export function buildTrees(ctx, root, field, owned, extraAvoid = []) {
     const n = byFam[fam].length; if (!n) continue;
     const F = SPECIES[fam]; M[fam] = []; TR[fam] = [];
     for (let l = 0; l < 4; l++) {
-      const im = new T.InstancedMesh(canopyGeometry(fam, l), F.kind === 'tiers' ? matTier : matLobe, n);
+      const bare = winter && F.sp !== 'spruce';
+      const im = new T.InstancedMesh(bare ? winterTreeGeometry(fam, l) : canopyGeometry(fam, l),
+        bare ? ctx.mat.toon('#ffffff', { name: 'bare-branches' }) : F.kind === 'tiers' ? matTier : matLobe, n);
       im.instanceMatrix.setUsage(T.DynamicDrawUsage); im.setColorAt(0, col.setRGB(1, 1, 1)); im.instanceColor.setUsage(T.DynamicDrawUsage);
       im.count = 0; im.frustumCulled = false; im.castShadow = l <= 1; im.receiveShadow = l <= 1; im.name = `env-tree-${fam}-${l}`; im.visible = false;
       group.add(im); M[fam].push(im);
-      if (l <= 1) {
+      if (l <= 1 && !bare) {
         const tg = trunkGeometry(fam, l);
         if (tg) { const tm = new T.InstancedMesh(tg, barkMat[F.bark], n); tm.instanceMatrix = im.instanceMatrix; tm.count = 0; tm.frustumCulled = false; tm.castShadow = true; tm.receiveShadow = true; tm.name = `env-trunk-${fam}-${l}`; tm.visible = false; group.add(tm); TR[fam].push(tm); }
         else TR[fam].push(null);

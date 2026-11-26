@@ -232,7 +232,7 @@ export function buildBoats(ctx, root, quay) {
     { id: 'neva-meteor', key: 'neva', type: 'meteor', pts: [[-2520, -800], [-2700, -700], [-2950, -520], [-3000, -492]], v: 7.5, off: 0, phase: 0.3 },
   ];
   const moving = [];
-  for (const R of REACHES) {
+  for (const R of ctx.season === 'winter' ? [] : REACHES) {
     const pts = R.pts, seg = [], tot = []; let s = 0;
     for (let i = 0; i + 1 < pts.length; i++) { const l = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); seg.push(l); tot.push(s); s += l; }
     const Lr = s, G = types[R.type], sz = R.size || 1;

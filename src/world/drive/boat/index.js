@@ -65,6 +65,7 @@ export function loadBoats(ctx, { carry = null, docks: suppliedDocks = null } = {
     ] : null;
     out.push({
       id: d.id || 'boat', kind: 'boat', vessel: ship ? 'container-ship' : undefined, dock: d.dock || null, carried: !!d.carried, carriedFrom: d.carriedFrom || null, ...PRESENTATION,
+      ...(ctx.season === 'winter' && !ship ? { name: 'Судно на воздушной подушке', nameEn: 'Hovercraft', label: 'Сесть на судно', labelEn: 'Board hovercraft', toast: 'Судно на воздушной подушке · Hovercraft' } : {}),
       ...(ship ? { name: 'Контейнеровоз', nameEn: 'Container ship', label: 'Управлять контейнеровозом', labelEn: 'Take the container ship helm', toast: 'Контейнеровоз · W S тяга / реверс · A D руль · V мостик', reach: 9,
         boarding: boardingPoints[0], boardingPoints, chase: { near: 295, far: 430, height: 110, lookY: 24, lookAhead: 65 } } : {}),
       spec, tuning: ship ? { ...CONTAINER_SHIP_TUNING, edgeMargin: 6 } : boatTuning(spec), parked: { x: d.x, z: d.z, yaw: Number.isFinite(d.yaw) ? d.yaw : 0 },

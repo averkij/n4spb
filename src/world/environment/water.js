@@ -63,6 +63,7 @@ export function waterMaterial(ctx, field, opts = {}) {
   uniforms.uTime = ctx.shared.uTime; uniforms.uSunDir = ctx.shared.uSunDir; uniforms.uNight = ctx.shared.uNight || { value: 0 };
   if (ctx.shared.uSkyLow) { uniforms.uSkyLow = ctx.shared.uSkyLow; uniforms.uSkyMid = ctx.shared.uSkyMid; uniforms.uSkyHigh = ctx.shared.uSkyTop; }
   const m = new THREE.ShaderMaterial({
+    defines: ctx.season === 'winter' && opts.river ? { RIVER_ICE: 1 } : {},
     uniforms, fog: true,
     vertexShader: /* glsl */`
       #include <common>
@@ -93,6 +94,13 @@ export function waterMaterial(ctx, field, opts = {}) {
       float dl(vec2 w){ vec2 q = w - uBox.xy; float raw = distFiltered(q * uDistInv).b * 255.0; return clamp((128.0 - raw) / 8.0, 0.0, 16.0); }
       void main(){
         vec3 V = normalize(cameraPosition - vW);
+        #ifdef RIVER_ICE
+        float frost = vn(vW.xz * 0.12) * 0.65 + vn(vW.xz * 0.7) * 0.35;
+        float drift = smoothstep(0.47, 0.67, frost + 0.18 * vn(vW.xz * 0.023));
+        vec3 ice = mix(vec3(0.31, 0.48, 0.59), vec3(0.78, 0.84, 0.88), drift);
+        gl_FragColor = vec4(mix(ice, uSkyLow, 0.15 * (1.0 - V.y)) * mix(1.0, 0.26, uNight), 1.0);
+        #include <fog_fragment>
+        #else
         vec3 S = normalize(uSunDir);
         float t = uTime;
         float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 3.0);
@@ -166,6 +174,7 @@ export function waterMaterial(ctx, field, opts = {}) {
         col *= mix(1.0, 0.42, uNight);
         gl_FragColor = vec4(col, 1.0);
         #include <fog_fragment>
+        #endif
       }`,
   });
   m.name = 'env-water-' + (opts.key || 'fontanka');
@@ -212,7 +221,7 @@ export function buildWater(ctx, root, field) {
     const nor = new Float32Array(P.length); for (let q = 1; q < nor.length; q += 3) nor[q] = 1; g.setAttribute('normal', new T.BufferAttribute(nor, 3));
     g.computeBoundingSphere();
     const zones = [...BRIDGE_ZONES.filter((z) => z.key === key && !z.noShade && !(key === 'neva' && z.id === 'palace')), ...BRIDGE_SHADES.filter((z) => z.key === key)];      // (the whole Palace deck replaces the half that the old row shaded)
-    const m = new T.Mesh(g, waterMaterial(ctx, field, { key, wallH: WATERWAYS[key].shadeH, zones, cut: key === 'fontanka' }));
+    const m = new T.Mesh(g, waterMaterial(ctx, field, { key, river: true, wallH: WATERWAYS[key].shadeH, zones, cut: key === 'fontanka' }));
     m.name = 'env-water-' + key; m.receiveShadow = false; m.castShadow = false; m.frustumCulled = false; ctx.noBatch(m); ctx.noOutline(m); root.add(m);
     out.bodies++; out.triangles += n; out.meshes.push(m);
   }

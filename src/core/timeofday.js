@@ -42,7 +42,13 @@ export const PRESETS = [
     disc: 0, glowAmt: 0.22, haze: 0.4, cumulus: 0, cirrus: 0, overcast: 0.92, stars: 0, moon: 0, antiAmt: 0 },
 ];
 
-export const SEASONS = { summer: PRESETS };
+const december = [
+  { label: 'Зимний день', clock: 12 * 60 + 40, dir: [-0.23, 0.16, 0.96], sunColor: '#ffdfb8', sunI: 1.55, hemiGround: '#bdcbda', zenith: '#628ab4', horizon: '#dae3e8', fog: '#ccdae5', cumulus: 0.25, sat: 0.92 },
+  { label: 'Зимние сумерки', clock: 16 * 60, dir: [-0.73, 0.08, 0.67], night: 0.66, zenith: '#304873', mid: '#75849d', horizon: '#d5afb0', fog: '#acaec1', hemiGround: '#9eaabc', sunI: 1.1 },
+  { label: 'Зимняя ночь', clock: 22 * 60, zenith: '#0c142b', mid: '#23334f', horizon: '#45516a', fog: '#414d64', sunI: 0.55, hemiI: 1.05, stars: 0.55, moon: 0.8 },
+  { label: 'Пасмурный зимний день', clock: 24 * 60 + 10 * 60, dir: [0.5, 0.12, 0.85], hemiGround: '#c3cdd7', horizon: '#dee2e7', fog: '#c4ced8', fogD: 0.00065 },
+];
+export const SEASONS = { summer: PRESETS, winter: PRESETS.map((p, i) => ({ ...p, ...december[i] })) };
 
 /** Names accepted by `?tod=` / tod.set besides the preset names. */
 const ALIASES = { dusk: 'golden', evening: 'golden', sunset: 'golden', white: 'night', cloudy: 'overcast', grey: 'overcast', gray: 'overcast', milk: 'overcast' };
@@ -69,7 +75,7 @@ export function createTimeOfDay({ sky, scene, shared, sunDir, pipeline, season =
   function preset(i) {
     const n = count(), idx = ((i % n) + n) % n;
     const p = { ...table[idx] };
-    if (idx === 0) p.dir = dayDir.toArray();
+    if (idx === 0 && table === PRESETS) p.dir = dayDir.toArray();
     if (variant && VARIANTS[variant]) {
       for (const [key, v] of Object.entries(VARIANTS[variant])) { if (/^x[A-Z]/.test(key)) { const base = key[1].toLowerCase() + key.slice(2); p[base] *= v; } else p[key] = v; }
     }

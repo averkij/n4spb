@@ -39,7 +39,11 @@ export const TORSOS = ['tee', 'tank', 'shirt', 'dress', 'dressS', 'jacket', 'hoo
 /** kind: one of TORSOS (slots A main, B second, C accent, SK skin) */
 export function torsoGeo(kind) {
   const G = new Geo();
-  if (kind === 'tee') { addLoft(G, rowsOf(BODY), SA); }
+  if (kind === 'parka' || kind === 'overcoat') {
+    const hem = kind === 'parka' ? -0.21 : -0.35;
+    addLoft(G, rowsOf([[hem, 0.21, 0.15], [-0.05, 0.20, 0.14], [0.26, 0.185, 0.13], [0.48, 0.21, 0.14], [0.56, 0.09, 0.085]]), SA);
+    slotted(G, SB, g => { g.cyl(0.09, 0.11, 0.085, [0, 0.55, 0], '#ffffff', 8); g.box(0.06, 0.21, 0.036, [0.048, 0.425, 0.13], '#ffffff'); });
+  } else if (kind === 'tee') { addLoft(G, rowsOf(BODY), SA); }
   else if (kind === 'tank') {
     const r = rowsOf(BODY); addLoft(G, r.slice(0, 4), SA, '#ffffff', 8, false);
     addLoft(G, r.slice(3), SK, '#ffffff', 8, true);
@@ -116,7 +120,10 @@ export function shinGeo(kind) {
 /** origin at the ankle; sole bottom 0.09 below it; toe +Z */
 export function footGeo(kind) {
   const G = new Geo();
-  if (kind === 'sneaker') {
+  if (kind === 'boot') {
+    slotted(G, SB, g => { g.cyl(0.06, 0.056, 0.15, [0, 0.05, 0], '#ffffff', 6); g.box(0.11, 0.09, 0.245, [0, -0.03, 0.055], '#ffffff'); });
+    slotted(G, SC, g => g.box(0.115, 0.024, 0.255, [0, -0.078, 0.056], '#ffffff'));
+  } else if (kind === 'sneaker') {
     slotted(G, SB, (g) => g.box(0.096, 0.06, 0.26, [0, -0.04, 0.07], '#ffffff'));
     slotted(G, SC, (g) => g.box(0.102, 0.03, 0.29, [0, -0.075, 0.075], '#ffffff'));
   } else if (kind === 'flat') {

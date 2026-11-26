@@ -224,6 +224,7 @@ export function buildBoats(K, M, ctx) {
   const wrap = (kind, withWake) => {
     const grp = new T.Group(), spec = SPECS[kind], inner = models[kind].clone(true);
     grp.add(inner);
+    if (ctx.season === 'winter') return grp;
     const fr = plan(spec.Ln, spec.B, spec.bowL, 0.5, 1.07).map((p) => new T.Vector2(p[0], -p[1]));
     const fg = new T.ShapeGeometry(new T.Shape(fr), 1); fg.rotateX(-Math.PI / 2); fg.translate(0, 0.02, 0);
     const foam = new T.Mesh(fg, foamMat); foam.renderOrder = 2; ctx.noOutline(foam); grp.add(foam);
@@ -231,7 +232,7 @@ export function buildBoats(K, M, ctx) {
     grp.userData.noWater = true; return grp;
   };
   // ---- moving boats on the loop
-  const FLEET = [['tramA', 0.0], ['vintageRed', 0.2], ['tramB', 0.4], ['vintageNavy', 0.6], ['tramA', 0.8]];
+  const FLEET = ctx.season === 'winter' ? [] : [['tramA', 0.0], ['vintageRed', 0.2], ['tramB', 0.4], ['vintageNavy', 0.6], ['tramA', 0.8]];
   const speed = 3.0, boats = [], moored = [], BOAT_FAR = 900, BOAT_FAR2 = BOAT_FAR * BOAT_FAR; let mooredTick = 0;      // (round 3, 2026-10-15: a boat is ~17 draws; beyond BOAT_FAR m of the camera the group hides: 85-133 boat calls at 0.8-3 km from Nevsky)
   FLEET.forEach(([kind, ph], i) => {
     const g = wrap(kind, true); g.name = `boat-${i}-${kind}`; g.position.set(0, WATER, 0); rootB.add(g);

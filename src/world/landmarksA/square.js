@@ -33,7 +33,7 @@ export function buildSquare(Cc) {
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const t = 0.9 + r() * 0.2, pink = r() < 0.35; g.fillStyle = pink ? `rgb(${Math.round(176 * t)},${Math.round(150 * t)},${Math.round(146 * t)})` : `rgb(${Math.round(160 * t)},${Math.round(156 * t)},${Math.round(152 * t)})`; g.fillRect(i * s + 1, j * s + 1, s - 2, s - 2); }
     g.strokeStyle = 'rgba(90,86,82,0.6)'; g.lineWidth = 2; for (let i = 0; i <= 2; i++) { g.beginPath(); g.moveTo(i * w / 2, 0); g.lineTo(i * w / 2, h); g.moveTo(0, i * h / 2); g.lineTo(w, i * h / 2); g.stroke(); }
   }, { key: 'sq_paving', repeat: [1, 1] });
-  const pavMat = T('#ffffff', { map: pavTex, paint: 0.03 });
+  const pavMat = T('#ffffff', { map: pavTex, paint: 0.03, name: 'sq-paving' });
   const sq = AREAS.find((a) => a.id === 'w638352776');
   if (sq) {
     for (const poly of sq.polys) {
@@ -155,7 +155,8 @@ export function buildSquare(Cc) {
   for (const u of [-62, -38, -14, 14, 38, 62]) lamp3(u, -11);
   for (const u of [-52, -26, 26, 52]) lamp3(u, -32);
   // round white planters with petunias
-  const white = T('#f0ede6'), pet = [T('#c63d8e', { paint: 0.1 }), T('#f3f1ec', { paint: 0.1 }), T('#7c4fa0', { paint: 0.1 })];
+  const white = T('#f0ede6'), pet = (ctx.season === 'winter'
+    ? ['#d4e0e4', '#cbdadf', '#dee6e7'] : ['#c63d8e', '#f3f1ec', '#7c4fa0']).map(color => T(color, { paint: 0.1 }));
   let pi = 0;
   for (const [u, d] of [[-50, -8], [-44, -26], [-20, -22], [20, -22], [44, -26], [50, -8], [-70, -16], [70, -16], [-30, -42], [30, -42]]) {
     if (!clear(u, d)) continue;

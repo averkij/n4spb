@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.0.0** (2026-11-26, major): Add default New Year winter to the three central districts with snow, winter clothing, holiday lights and drivable frozen rivers.
 - **16.4.1** (2026-11-26, patch): Add red briefs under the beret character's dress for coverage during jumps.
 - **16.4.0** (2026-11-26, minor): Add Ctrl crouching and crouch-walking, restore the original jump with a fitted skirt, and open the Alexander Garden fountain basin.
 - **16.3.0** (2026-11-25, minor): Add third-person wheel zoom and fix camera clipping, running-jump dress clipping, crowd turns and Trinity Cathedral door trim.

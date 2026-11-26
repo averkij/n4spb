@@ -83,6 +83,7 @@ export function createHandling(ctx, tuning = null) {
   function groundAt(x, z, ref = car.y, deckRef = ref) {
     const dk = deckAt(x, z, deckRef); if (dk !== null) return dk;
     const S = ph.surfaceAt(x, z, Math.min(ref, 0.5), false, _s), th = L.heightAt(x, z);
+    if (ph.frozenRivers && S.kind === 'terrain' && S.y > th) return S.y + 0.03;
     if (S.kind === 'walk' && S.item && !S.item.sticky && S.y <= 0.3) {
       if (S.y > 0.03) return S.y;                                          // a kerb / pavement slab
       if (th < -0.2 && S.y > th + 0.05) return S.y + 0.03;                 // a floor over the trench: a pier deck, a landing

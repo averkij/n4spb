@@ -394,7 +394,10 @@ function carDoor(sr, r) {                  // a car door shut: a dull thump, a b
 function footstep(sr, r, surf) {           // one footfall on granite pavers / asphalt / sand and gravel / dry grass
   const x = arr(sr, surf === 'sand' ? 0.24 : 0.17);
   if (surf === 'asphalt') { thump(x, sr, 0, 140, 70, 0.035, 0.8); burst(x, sr, r, 0, 0.05, 'bp', 1200, 0.8, 0.4, 0.012); }
-  else if (surf === 'sand') {
+  else if (surf === 'snow') {
+    thump(x, sr, 0, 125, 55, 0.065, 0.42);
+    for (let i = 0; i < 6; i++) burst(x, sr, r, i * 0.015, 0.045, 'bp', r.range(950, 3100), 0.65, 0.3, 0.008);
+  } else if (surf === 'sand') {
     thump(x, sr, 0, 120, 70, 0.03, 0.4);
     for (let k = 0; k < 7; k++) burst(x, sr, r, 0.004 + k * r.range(0.008, 0.02), 0.06, 'bp', r.range(1500, 3600), 0.7, 0.3 + 0.1 * r(), 0.016);
   } else if (surf === 'grass') { burst(x, sr, r, 0, 0.15, 'bp', 2400, 0.4, 0.3, 0.05, 0.012); thump(x, sr, 0, 100, 60, 0.04, 0.3); }
@@ -1201,6 +1204,7 @@ export function createAudio(options = {}) {
     FS.acc -= stride; FS.flip ^= 1;
     let surf = 'paved';
     try { const c = globalThis.__ctx, env = c && c.services && c.services.environment; if (env && env.kindAt) { const k = env.kindAt(LS.x, LS.z); surf = k === 'asphalt' || k === 'grass' ? k : k === 'gravel' || k === 'sand' ? 'sand' : 'paved'; } } catch (e) { /* setts / granite slabs / anything else: paved */ }
+    if (globalThis.__ctx?.season === 'winter' && (surf === 'sand' || surf === 'grass')) surf = 'snow';
     playSrc('stp_' + surf + '_' + Math.floor(R() * 4), N.sfx, now + 0.01, (v > 6 ? 0.2 : 0.14) * R.range(0.85, 1.1), (FS.flip ? 1.03 : 0.97) * R.range(0.97, 1.03));
   }
 

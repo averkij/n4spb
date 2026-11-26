@@ -251,7 +251,11 @@ export class Physics {
       const top = t === 'walk' ? it.top : it.yA + (it.yB - it.yA) * (lz / (2 * it.hd) + 0.5);
       if (top <= lim && top > y) { y = top; kind = t; item = it; }
     }
-    const th = this.heightAt(x, z);
+    let th = this.heightAt(x, z);
+    if (this.frozenRivers && this.waterway) {
+      const ice = this.waterway(x, z);
+      if (ice != null) th = Math.max(th, ice);
+    }
     if (terrain && th <= lim && th >= y) { y = th; kind = 'terrain'; item = null; }
     if (roofs) { const rt = this.roofTop(x, z); if (rt <= lim && rt > y) { y = rt; kind = 'roof'; item = null; } }     // NaN (no roof) fails both tests
     out.y = y; out.kind = kind; out.item = item;

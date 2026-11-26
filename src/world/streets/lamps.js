@@ -29,13 +29,19 @@ const FLOWERS = [['#e0457b', '#f08cb4', '#d6336c'], ['#d0242e', '#e8667a', '#f08
 const GLOBE = '#fff3d6';
 
 /** Nevsky pedestal lamp. variant: 0 pink / 1 red / 2 white-magenta bowl; stacked: two stacked globes on the shaft instead of two arms. Arms run along local +-X. */
-function lampA(variant, stacked) {
+function lampA(variant, stacked, winter) {
   const V = new VB(), G = new VB(), H = stacked ? 8.4 : 7.6;
   // pedestal: plinth, fluted vase (both open: nobody sees the caps), rim + bowl
   V.cyl(0.36, 0.42, 0.62, IRON, [0, 0.31, 0], null, 6, null, true);
   V.cyl(0.41, 0.3, 0.9, IRON, [0, 1.07, 0], null, 6, null, true);
   V.cyl(0.46, 0.3, 0.42, IRON, [0, 1.7, 0], null, 6);
-  const fl = FLOWERS[variant % 3];
+  const fl = winter ? ['#beced2', '#347055'] : FLOWERS[variant % 3];
+  if (winter) {
+    for (let i = 0; i < 16; i++) {
+      const a = i * 0.85, x = 0.29 * Math.cos(a), z = 0.29 * Math.sin(a);
+      G.ball(0.09, GLOBE, [x, 2.3 + i * 0.17, z], null, 'oct');
+    }
+  }
   V.ball(0.27, fl[0], [-0.1, 2.02, 0.04], [1, 0.85, 1]);
   V.ball(0.23, fl[1], [0.14, 2.06, -0.06], [1, 0.85, 1]);
   // shaft
@@ -158,7 +164,8 @@ export function buildLamps(ctx, net, T, root, opts = {}) {
 
   const mVC = ctx.mat.toon('#ffffff', { vertexColors: true, paint: 0.02, name: 'pt-lamp' });
   const mGlow = new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff0cc'), toneMapped: false, name: 'pt-lamp-glow' });
-  const models = { A0: lampA(0, false), A1: lampA(1, false), A2: lampA(2, true), D: lampD(), S0: lampS(false), S1: lampS(true), L: lampL(), L2: lampL2() };
+  const winter = ctx.season === 'winter';
+  const models = { A0: lampA(0, false, winter), A1: lampA(1, false, winter), A2: lampA(2, true, winter), D: lampD(), S0: lampS(false), S1: lampS(true), L: lampL(), L2: lampL2() };
   // light pools on the road at night: ONE shared mesh (1 draw), built before the posts so that a knocked lamp can zero its own entry (poolBase[key] + the index in sites[key])
   const poolBase = {}; let pool = null, mPool = null;
   {

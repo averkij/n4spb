@@ -219,6 +219,18 @@ export function createMaterials(shared) {
     patchPaint(m, opts.paint ?? 0.05, opts.grime ?? 0, !!opts.vpaint);
     m.userData.toon = { paint: opts.paint ?? 0.05, grime: opts.grime ?? 0, polygonOffset: opts.polygonOffset || 0, vpaint: !!opts.vpaint };
     Object.defineProperty(m.userData.toon, 'obc', { value: m.onBeforeCompile, enumerable: false });
+    if (shared.season === 'winter' && /^(pt-(slab|paver|strip|kerb|area|foot)|sq-paving|lmG-pave)|[-_]roof$/i.test(m.name)) {
+      const paint = m.onBeforeCompile;
+      m.onBeforeCompile = (shader, renderer) => {
+        paint.call(m, shader, renderer);
+        shader.fragmentShader = shader.fragmentShader.replace('#include <alphamap_fragment>', `
+          #include <alphamap_fragment>
+          float drift = pn_noise(vPWorld * 0.24) * 0.68 + pn_noise(vPWorld * 1.5) * 0.32;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72,0.79,0.84), smoothstep(0.27,0.62,drift) * 0.88);
+        `);
+      };
+      m.customProgramCacheKey = () => 'snow-covered-paint';
+    }
     cache.set(key, m);
     return m;
   }

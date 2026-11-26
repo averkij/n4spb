@@ -155,6 +155,10 @@ const BODY = /* glsl */`
   // far away the patchwork melts into its mean colour (atmospheric perspective, no shimmer)
   vec3 mean = Wn.x * (uGrassA * 0.95) + Wn.y * uAsphA + Wn.z * mix(uSettA, uPaverA, 0.3) + Wn.w * uGravA;
   col = mix(col, mean, smoothstep(160.0, 1100.0, vFogDepth) * 0.8);
+  #ifdef DECEMBER
+    float depth = clamp(0.28 + 0.67 * mG + 0.45 * mV - 0.24 * mA + 0.25 * dust, 0.0, 1.0);
+    col = mix(col, mix(vec3(0.54,0.64,0.73), vec3(0.83,0.88,0.91), n2.g), depth);
+  #endif
   diffuseColor.rgb = col;
 }
 `;
@@ -241,6 +245,7 @@ export function buildGround(ctx, root, field) {
   mat.onBeforeCompile = (shader, renderer) => {
     if (prev) prev.call(mat, shader, renderer);
     Object.assign(shader.uniforms, U);
+    if (ctx.season === 'winter') shader.defines = { ...shader.defines, DECEMBER: 1 };
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\n' + PRE)
       .replace('#include <map_fragment>', '#include <map_fragment>\n' + BODY)

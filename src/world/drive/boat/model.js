@@ -94,6 +94,13 @@ export function createBoatModel(ctx) {
   const H = hullGeometries();
   const add = (f, col) => { const g = f.geo(); V.add(g, col); g.dispose(); };
   add(H.bottom, NAVY_DK); add(H.lower, NAVY); add(H.pin, RED); add(H.side, WHITE); add(H.deck, CREAM); add(H.coam, WHITE); add(H.floor, TEAK); add(H.inner, CREAM); add(H.trans, WHITE);
+  const winter = ctx.season === 'winter';
+  if (winter) {
+    V.box(2.25, 0.47, 5.5, BLACK, [0, -0.18, 0], null);
+    V.torus(0.66, 0.09, '#cc6942', [0, 1.25, -2.04], null);
+    V.rod([-0.84, 0.25, -2.05], [0, 1.25, -2.04], 0.05, GREY, 6);
+    V.rod([0.84, 0.25, -2.05], [0, 1.25, -2.04], 0.05, GREY, 6);
+  }
 
   // ---- the console (a block with a sloped dash), the helm, the windshield frame, the seats, the rear bench, the bow rail, the cleats, the life ring
   V.box(1.34, 0.46, 0.46, WHITE, [0, 0.58, 0.68]);                                        // console body (front wall of the cockpit to z 0.45)
@@ -171,6 +178,12 @@ export function createBoatModel(ctx) {
   const prop = mk(PR, { name: 'boat-motor-prop', side: 'double' }); prop.name = 'boat-motor-prop'; prop.position.set(0, -0.88, -0.62);
   ctx.noOutline(leg); ctx.noOutline(prop);                                                    // below the waterline: no outline pass (see above)
   const motor = new THREE.Group(); motor.position.set(0, 0.58, -2.63); motor.add(outboard, leg, prop);
+  if (winter) {
+    motor.position.set(0, 1.25, -2.04);
+    outboard.visible = leg.visible = false;
+    prop.position.set(0, 0, 0);
+    prop.scale.setScalar(3.9);
+  }
   const root = new THREE.Group(); root.name = 'drive-boat'; root.rotation.order = 'YXZ';
   root.add(body, glass, lamps, driver, steerWheel, motor);
   root.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
@@ -187,7 +200,8 @@ export function createBoatModel(ctx) {
     set(p) {
       const t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000, k = 1 + Math.min(1, (p.kmh || 0) / 40) * 0.6;
       const heave = 0.028 * Math.sin(t * 1.7 + phase) * k, roll = 0.016 * Math.sin(t * 1.25 + phase * 1.7) * k, pitch = 0.010 * Math.sin(t * 1.05 + phase * 0.6) * k;
-      root.position.set(p.x, p.y + heave, p.z); root.rotation.set(-(p.pitch + pitch), p.yaw, p.roll + roll);
+      root.position.set(p.x, p.y + (winter ? 0.44 : heave), p.z);
+      root.rotation.set(-(p.pitch + (winter ? 0 : pitch)), p.yaw, p.roll + (winter ? 0 : roll));
       motor.rotation.y = -(p.steerAngle || 0) * 0.9;
       prop.rotation.z += (p.dt || 0.016) * (p.driven ? 5 + (p.kmh || 0) * 1.1 : 0.4);        // the propeller turns with the speed (a lazy drift at rest)
       steerWheel.rotation.z = -(p.steer || 0) * 2.0;

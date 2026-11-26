@@ -39,6 +39,13 @@ export function createCrowd(ctx) {
     if (finalized) throw new Error('crowd.add after finalize');
     const L = spec.look, p = { i: persons.length, spec, sc: L.sc, legK: L.legK, headK: L.headK, wid: L.wid, seed: spec.seed, fem: spec.fem, vehicle: spec.vehicle, pram: spec.pram, dog: spec.dog };
     spec.id = p.i;
+    if (ctx.season === 'winter') {
+      const coats = ['#773846', '#30465b', '#5d6657', '#a37b55', '#455059', '#81667d'];
+      const pick = Math.floor(spec.seed) % coats.length;
+      Object.assign(L, { torso: pick % 2 ? 'parka' : 'overcoat', upper: 'bulk', fore: 'bulk',
+        head: pick % 3 ? 'crochet' : 'beret', thigh: 'std', shin: 'std', foot: 'boot',
+        A: coats[pick], B: L.C, pants: '#424854', shoeB: '#493f3b', shoeC: '#312f32' });
+    }
     const age = spec.age, h = spec.h;
     p.strideW = h * (age === 'elder' ? 0.72 : age === 'child' ? 0.72 : age === 'teen' ? 0.78 : 0.8) * (spec.pram ? 0.92 : 1) * (L.carry && L.carry.suitcase ? 0.94 : 1);
     p.strideJ = h * (age === 'child' ? 1.0 : 1.15);

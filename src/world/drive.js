@@ -103,7 +103,7 @@ export async function build(ctx) {
     const damage = createCarDamage(model, { spec: def.spec, meshes: model.damageMeshes });
     return { id: def.id, kind: def.kind, def, model, car, parked, damage, spec: def.spec, box: null };
   });
-  const vehicles = fleet.concat(boats, karts), wake = boats.length ? createWake(ctx) : null;
+  const vehicles = fleet.concat(boats, karts), wake = boats.length && ctx.season !== 'winter' ? createWake(ctx) : null;
   let V = fleet[0], car = V.car, model = V.model, damage = V.damage, parked = V.parked, SPEC = V.spec, EYE = V.spec.eye;
   const sound = createCarSound(ctx.audio);
   const fx = createFx(ctx);
