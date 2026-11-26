@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.4.11** (2026-11-26, patch): Match the Anichkov landing deck to the water level so walkers can board from the steps and return.
 - **17.4.10** (2026-11-26, patch): Keep stop lines attached to the correct road fragments and clear gates and fences from carriageways.
 - **17.4.9** (2026-11-26, patch): Make both playable riders follow the turning snowmobile handlebars and summer boat helm.
 - **17.4.8** (2026-11-26, patch): Restore the Fontanka embankment and its road over the filled castle moat mouth.

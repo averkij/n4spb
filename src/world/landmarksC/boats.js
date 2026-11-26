@@ -184,7 +184,7 @@ function buildPier(ctx, K, quayStair, idx) {
   const green = T('#3c6a5a', { paint: 0.03, name: 'lmC-pier-canopy' }), wood = T('#7a5a3c', { paint: 0.04, name: 'lmC-pier-bench' }), buoy = T('#e8692a', { paint: 0.03, name: 'lmC-pier-buoy' }), kiosk = T('#d8d4c8', { paint: 0.03, name: 'lmC-pier-kiosk' });
   const win = ctx.mat.glass ? T('#2a3948', { paint: 0.02, name: 'lmC-pier-glass' }) : T('#2a3948');
   // frame: local +x = along the descent direction (tx, tz), local +z = toward the water (-n)
-  const len = 15, wid = 3.0, top = -2.72;
+  const len = 15, wid = 3.0, top = quayStair.pontoonTop ?? (quayStair.landingY + 0.26);
   P.box(steel, 0, len, WATER - 0.4, top - 0.06, 0.05, 0.05 + wid, '');
   P.box(deck, 0.05, len - 0.05, top - 0.06, top, 0.1, wid, 'b');
   // railing on the outer (water) side and the far end, orange life buoys, benches, kiosk with a green canopy
