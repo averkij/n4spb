@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.1.0** (2026-11-26, minor): Add ploughed snowbanks, slushy tyre tracks and grey winter mornings in the centre, bare park trees, snowmen and new pedestrian faces
 - **17.0.0** (2026-11-26, major): Add default New Year winter to the three central districts with snow, winter clothing, holiday lights and drivable frozen rivers.
 - **16.4.1** (2026-11-26, patch): Add red briefs under the beret character's dress for coverage during jumps.
 - **16.4.0** (2026-11-26, minor): Add Ctrl crouching and crouch-walking, restore the original jump with a fitted skirt, and open the Alexander Garden fountain basin.

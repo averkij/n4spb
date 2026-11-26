@@ -361,7 +361,7 @@ const CROWN = [...LEAF.lime, ...LEAF.maple, ...LEAF.ash, ...LEAF.birch];
 const shadeHex = (hex, k) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString();
 /** the tree template (FIX ROUND 2): a big old leafless tree whose crown starts LOW (the trunk is ~2.2 m of 8) and is full: a tapering trunk, six forked boughs and fourteen small irregular grey-brown twig masses (an octahedron with every
  *  vertex pushed by the hash and turned at random: no two share a plane) spread over an egg-shaped crown ~4.4 m across (wide low, narrower at the top, lighter towards the sky); ONE mass carries a muted spring tint. 8 m tall at scale 1 */
-export function treeGeometry() {
+export function treeGeometry(winter = false) {
   const g = new GB(), trunk = '#5a4c3e', br = '#4a3f35';
   g.cyl(0, 0, 0, 3.4, 0.17, 0.08, 6, trunk);
   const stick = (a, b, w, col, full) => {
@@ -376,6 +376,7 @@ export function treeGeometry() {
     const mid = [(a[0] + e[0]) / 2, (a[1] + e[1]) / 2, (a[2] + e[2]) / 2], ang2 = ang + (k % 2 ? 0.7 : -0.7);
     stick(mid, [mid[0] + Math.cos(ang2) * 0.9, mid[1] + 0.9, mid[2] + Math.sin(ang2) * 0.9], 0.035, br, false);
   }
+  if (winter) return g.build();
   const mass = (x, y, z, r, col, seed) => {
     const J = (i) => 0.76 + 0.46 * h3(seed, i, 61), ya = h3(seed, 7, 71) * Math.PI * 2, xt = (h3(seed, 8, 73) - 0.5) * 1.3, cy = Math.cos(ya), sy = Math.sin(ya), cx = Math.cos(xt), sx = Math.sin(xt);
     const rot = (v) => { const y1 = v[1] * cx - v[2] * sx, z1 = v[1] * sx + v[2] * cx; return [x + v[0] * cy + z1 * sy, y + y1, z + z1 * cy - v[0] * sy]; };
@@ -463,7 +464,7 @@ export function buildNursery(ctx, parent, plan, noise, opts = {}) {
   if (gl.tris) reg(new THREE.Mesh(gl.build(), matG), 'tauride-nursery-glass', { noOutline: true });
   // ---- 3. the bare young trees (one instanced mesh)
   if (plan.trees.length) {
-    const tg = treeGeometry(), matT = T('#ffffff', { vertexColors: true, side: 'double', paint: 0.03, name: 'tauride-nursery-trees' });
+    const tg = treeGeometry(ctx.season === 'winter'), matT = T('#ffffff', { vertexColors: true, side: 'double', paint: 0.03, name: 'tauride-nursery-trees' });
     const im = new THREE.InstancedMesh(tg, matT, plan.trees.length), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), V = new THREE.Vector3(), S = new THREE.Vector3(), C = new THREE.Color();
     plan.trees.forEach((t, i) => { const s = t.h / 8, sw = s * (t.w || 1); E.set(0, t.rot, 0); Q.setFromEuler(E); M.compose(V.set(t.x, 0, t.z), Q, S.set(sw, s, sw)); im.setMatrixAt(i, M); C.setRGB(t.tint * (1 + 0.07 * (t.warm || 0)), t.tint, t.tint * (1 - 0.07 * (t.warm || 0))); im.setColorAt(i, C); });
     im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; im.frustumCulled = true;

@@ -6,16 +6,33 @@ import { seasonFor, buildWinter } from '../src/world/winter.js';
 import { createHandling } from '../src/world/drive/handling.js';
 import { waterCuts } from '../src/world/environment/river.js';
 import { Player } from '../src/core/player.js';
+import { createTimeOfDay } from '../src/core/timeofday.js';
 
 const area = process.env.AREA;
 assert.equal(seasonFor(area, new URLSearchParams()), 'winter');
 assert.equal(seasonFor(area, new URLSearchParams('season=summer')), 'summer');
 assert.equal(seasonFor('admiralty', new URLSearchParams('season=winter')), 'summer');
 assert.equal(seasonFor(area, new URLSearchParams('bake=1')), 'summer');
-const { ctx, L, THREE } = await buildWorld({ modules: ['environment', 'streets', 'bridges', 'landmarksC', 'landmarksGarden', 'landmarksK'] });
-ctx.season = 'winter';
-ctx.physics.frozenRivers = true;
+const { ctx, L, THREE, errors } = await buildWorld({ season: 'winter', modules: ['environment', 'streets', 'bridges', 'landmarksC', 'landmarksE', 'landmarksGarden', 'landmarksK'] });
+assert.deepEqual(errors, []);
+const sunDir = new THREE.Vector3(...L.SUN_DIR);
+const clock = createTimeOfDay({ sunDir, season: 'winter' });
+assert.equal(clock.clockText(), '09:30');
+clock.set('day', true);
+assert.equal(clock.clockText(), '12:40');
+clock.set('morning', true);
+assert.equal(clock.clockText(), '09:30');
+assert.equal(createTimeOfDay({ sunDir, season: 'summer' }).clockText(), '15:20');
 buildWinter(ctx);
+assert(ctx.staticRoot.getObjectByName('kerb-snowbanks'), 'long kerbs collect ploughed snow');
+if (area === 'palace') {
+  const bare = ctx.staticRoot.getObjectByName('lmE-trees-broad');
+  assert(bare?.isInstancedMesh && bare.count > 0, 'the Catherine Garden has winter trees');
+  const tint = new THREE.Color();
+  bare.getColorAt(0, tint);
+  assert(tint.r > tint.g && tint.g > tint.b, 'the deciduous trees use their winter bark palette');
+  assert(ctx.dynamicRoot.getObjectByName('snowman'), 'a snowman is clear of the carriageway');
+}
 const trees = ctx.dynamicRoot.children.filter(o => o.name.startsWith('holiday-'));
 assert(trees.length > 0, 'this district includes holiday squares');
 for (const tree of trees) {

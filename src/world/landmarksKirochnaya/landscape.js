@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { winterTreeGeometry, SPECIES } from '../environment/treegeo.js';
 import * as L from '../layout.js';
 import { CAMPUS,CAMPUS_ROADS,inCampus } from './groups.js';
 import { Parts } from '../landmarksD/kit.js';
@@ -40,7 +41,7 @@ const templateOf=(draw)=>{const P=new Parts(),g=new THREE.Group();draw(P);return
 
 export function campusLandscape(K) {
   const P=K.P,M=K.mats,ctx=K.ctx;
-  const grass=ctx.mat.toon('#7c935a',{paint:0.025}), paving=ctx.mat.toon('#aaa79d',{paint:0.025}),road=ctx.mat.toon('#697174',{paint:0.015,name:'lmK-asphalt'});
+  const grass=ctx.mat.toon('#7c935a',{paint:0.025,name:'lmClinical-lawn'}), paving=ctx.mat.toon('#aaa79d',{paint:0.025}),road=ctx.mat.toon('#697174',{paint:0.015,name:'lmK-asphalt'});
   const leaf=[ctx.mat.toon('#547541'),ctx.mat.toon('#638148'),ctx.mat.toon('#496d40')],bark=ctx.mat.toon('#766652');
   const sphere=new THREE.IcosahedronGeometry(1,1),trunks=[];
   // Garden ground follows the mapped perimeter. Fine cells avoid huge triangles;
@@ -66,14 +67,19 @@ export function campusLandscape(K) {
   // Photographs show a mature garden with open circulation, not a parking lot.
   // Exact trunk locations are interpretations; collision and road clearances are real.
   const R=ctx.rng('clinical-garden-1885');
+  const branches = ctx.season === 'winter' ? winterTreeGeometry('limeA', 1) : null;
   for(let x=1120;x<1335;x+=13)for(let z=-1230;z< -1060;z+=13){
     const px=x+(R()-.5)*7,pz=z+(R()-.5)*7;
     if(!inCampus(px,pz)||L.insideBuilding(px,pz,4.8)||L.isOnRoad(px,pz,4.0)||Math.hypot(px-1321.9,pz+1178)<7)continue;
     const h=8+R()*5,r=2.7+R()*1.4;
-    P.cyl(bark,[px,0,pz],[px,h*.71,pz],.2,.1,7,true);
-    for(let j=0;j<3;j++){const a=j*Math.PI*2/3;P.geo(leaf[j],sphere,px+Math.cos(a)*r*.4,h*.73+j*.55,pz+Math.sin(a)*r*.4,0,j,0,r,r*.95,r*.87);}
+    if (branches) P.geo(bark, branches, px, 0, pz, 0, px, 0, r / SPECIES.limeA.R, h / SPECIES.limeA.H, r / SPECIES.limeA.R);
+    else {
+      P.cyl(bark,[px,0,pz],[px,h*.71,pz],.2,.1,7,true);
+      for(let j=0;j<3;j++){const a=j*Math.PI*2/3;P.geo(leaf[j],sphere,px+Math.cos(a)*r*.4,h*.73+j*.55,pz+Math.sin(a)*r*.4,0,j,0,r,r*.95,r*.87);}
+    }
     ctx.physics.addCylinder(px,pz,.27,0,h*.65);trunks.push([px,pz]);
   }
+  branches?.dispose();
   // Garden benches beside mapped access paths, never in the carriageway.
   // M7 (docs/AREAS.md section 10): with ctx.knock the 5 benches are KNOCKABLE instances with a collider each (the pattern of landmarksF/garden.js: the same bench model as iron ends + green slats, a
   // record per bench, a 2.1 x 0.64 m box 1.1 m high); without ctx.knock (tools/check.mjs, the headless probes) they are drawn merged as ever and have no collider, the structure the module had.

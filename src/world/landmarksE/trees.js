@@ -4,6 +4,7 @@
 // Sources: docs/research/gostiny-dvor-ostrovsky.md 3.6 (young lindens 5-6 m, crown 2.5-3 m on the promenade), 5.5 (garden crowns 15-22 m, #2f5a30 shade / #4f8a4a light), 8.2 (blue spruce 8-14 m, birches).
 import * as THREE from 'three';
 import { registerLOD } from '../../core/spatial.js';
+import { SPECIES, winterTreeGeometry } from '../environment/treegeo.js';
 
 const LEAF = {
   broad: ['#4a7a30', '#548634', '#427228', '#5d8c3a', '#3f6a2a'],
@@ -66,10 +67,14 @@ export function makeTrees(K) {
       let tris = 0;
       for (const kind of Object.keys(list)) {
         const arr = list[kind]; if (!arr.length) continue;
-        const g = geo[kind](), im = new THREE.InstancedMesh(g, mat[kind], arr.length);
+        const winter = ctx.season === 'winter', bare = winter && kind !== 'spruce';
+        const fam = kind === 'young' ? 'limeY' : 'limeA';
+        const g = bare ? winterTreeGeometry(fam, 1) : geo[kind]();
+        if (bare) g.scale(1 / SPECIES[fam].R, 1 / SPECIES[fam].H, 1 / SPECIES[fam].R);
+        const im = new THREE.InstancedMesh(g, mat[kind], arr.length);
         arr.forEach((t, i) => {
           e.set(0, t.ry, 0); q.setFromEuler(e); s.set(t.r, t.h, t.r); p.set(t.x, t.base, t.z); m4.compose(p, q, s); im.setMatrixAt(i, m4);
-          col.set(t.hex); im.setColorAt(i, col);
+          col.set(bare ? '#6a5c52' : winter ? '#89a7a2' : t.hex); im.setColorAt(i, col);
         });
         im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
         im.castShadow = true; im.receiveShadow = true; im.name = 'lmE-trees-' + kind; im.computeBoundingSphere();

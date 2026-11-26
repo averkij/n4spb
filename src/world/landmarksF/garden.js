@@ -3,6 +3,7 @@
 // fence in front of the north portico steps, and the two monument plazas: Kutuzov (east) and Barclay de Tolly (west) on red-grey granite pedestals inside rings of chain bollards.
 // Everything is drawn in the cathedral model frame (frame.js); OSM world coordinates are converted with Mdl().
 import * as THREE from 'three';
+import { winterTreeGeometry, SPECIES } from '../environment/treegeo.js';
 import { GREEN, AREAS, BARRIERS, FURNITURE, FOUNTAINS, ROADS } from '../data/city.js';
 import { liveFountain } from '../lib/live-fountain.js';
 import * as L from '../layout.js';
@@ -68,7 +69,12 @@ export function build(K) {
   // trees (lilacs / limes) at the two ends of the garden: they frame the colonnade without hiding the portico (photos 40 48 49)
   for (const [x, z, h, rad] of [[-48, 34, 8, 2.8], [-44, 22, 7, 2.5], [-40, 41, 8.5, 3], [-36, 30, 6.5, 2.4], [-47, 46, 7.5, 2.8], [47, 36, 8, 2.8], [43, 24, 7, 2.5], [40, 43, 8.5, 3], [37, 31, 6.5, 2.4], [46, 48, 7.5, 2.8], [-53, 12, 7, 2.5], [53, 14, 7, 2.5]]) {
     const zz = -z; if (!park || !pointIn(park, x, zz)) continue;
-    tree(P, M, x, zz, h, rad, rng); cylAt(ph, x, zz, 0.35, 0, 8);
+    if (ctx.season === 'winter') {
+      const g = winterTreeGeometry('limeA', 1);
+      P.geo(M.bark, g, x, LAWN_Y, zz, 0, x, 0, rad / SPECIES.limeA.R, h / SPECIES.limeA.H, rad / SPECIES.limeA.R);
+      g.dispose();
+    } else tree(P, M, x, zz, h, rad, rng);
+    cylAt(ph, x, zz, 0.35, 0, 8);
   }
   // rose beds: low ellipses along the lawn edges (pink and red mounds)
   const roses = [[-8, -1.2, 6.5, 2.2, 0.2], [8.5, -0.5, 6.0, 2.0, -0.25], [-30, -22, 8, 2.0, 0.55], [32, -22, 8, 2.0, -0.55], [-5, 8, 6, 1.6, 0.1], [5, 8, 6, 1.6, -0.1]];

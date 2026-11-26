@@ -46,7 +46,9 @@ const december = [
   { label: 'Зимний день', clock: 12 * 60 + 40, dir: [-0.23, 0.16, 0.96], sunColor: '#ffdfb8', sunI: 1.55, hemiGround: '#bdcbda', zenith: '#628ab4', horizon: '#dae3e8', fog: '#ccdae5', cumulus: 0.25, sat: 0.92 },
   { label: 'Зимние сумерки', clock: 16 * 60, dir: [-0.73, 0.08, 0.67], night: 0.66, zenith: '#304873', mid: '#75849d', horizon: '#d5afb0', fog: '#acaec1', hemiGround: '#9eaabc', sunI: 1.1 },
   { label: 'Зимняя ночь', clock: 22 * 60, zenith: '#0c142b', mid: '#23334f', horizon: '#45516a', fog: '#414d64', sunI: 0.55, hemiI: 1.05, stars: 0.55, moon: 0.8 },
-  { label: 'Пасмурный зимний день', clock: 24 * 60 + 10 * 60, dir: [0.5, 0.12, 0.85], hemiGround: '#c3cdd7', horizon: '#dee2e7', fog: '#c4ced8', fogD: 0.00065 },
+  { label: 'Зимнее утро · Winter morning', clock: 24 * 60 + 9 * 60 + 30, dir: [0.55, 0.06, 0.83],
+    night: 0.32, sunColor: '#f3d9c6', sunI: 0.73, hemiSky: '#bbc5d7', hemiGround: '#c3cdd7', hemiI: 1.8,
+    zenith: '#8895a9', mid: '#b0b9c6', horizon: '#dacec7', fog: '#bdc6d0', fogD: 0.00066, overcast: 0.77 },
 ];
 export const SEASONS = { summer: PRESETS, winter: PRESETS.map((p, i) => ({ ...p, ...december[i] })) };
 
@@ -68,7 +70,7 @@ export function createTimeOfDay({ sky, scene, shared, sunDir, pipeline, season =
   const A = new THREE.Color(), B = new THREE.Color(), V = new THREE.Vector3(), W = new THREE.Vector3();
   const dayDir = sunDir.clone().normalize();      // layout.SUN_DIR, as handed over by main.js
   let table = SEASONS[season] || PRESETS, variant = null;
-  let k = 0, target = 0, dirty = true;
+  let k = season === 'winter' ? table.findIndex(p => p.name === 'overcast') : 0, target = k, dirty = true;
   const count = () => table.length;               // k runs 0..count: count = the first preset again (the T cycle wraps forward)
 
   /** preset i (taken modulo the table) with the active variant merged over it */
@@ -117,7 +119,7 @@ export function createTimeOfDay({ sky, scene, shared, sunDir, pipeline, season =
   const parse = (v) => {
     const n = count();
     if (typeof v === 'number') return Math.max(0, Math.min(n, v));
-    const s = ALIASES[String(v)] || String(v), idx = table.findIndex((p) => p.name === s);
+    const s = v === 'morning' && table === SEASONS.winter ? 'overcast' : ALIASES[String(v)] || String(v), idx = table.findIndex((p) => p.name === s);
     return idx >= 0 ? idx : (Number.isFinite(Number(v)) ? Math.max(0, Math.min(n, Number(v))) : 0);
   };
   const clockOf = (i) => { const n = count(); return table[i % n].clock + (i >= n ? 1440 : 0); };   // minutes, increasing along k (the wrap adds a day)

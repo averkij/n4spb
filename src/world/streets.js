@@ -37,6 +37,7 @@ import { MB } from './streets/util.js';
 import { VB } from './streets/vb.js';
 import { buildNet, packKerbRuns, nearestWay, wayAt, nearCrossing } from './streets/net.js';
 import { roadPlan } from './lib/road-plan.js';
+import { buildSnowbanks } from './streets/snowbanks.js';
 import { buildLaneGraph } from './streets/lanegraph.js';
 import { makeStreetTextures } from './streets/tex.js';
 import { buildAsphalt, buildKerbs, buildMarkings, buildCrossings, buildManholes, buildStopLines, addArrow } from './streets/surface.js';
@@ -146,6 +147,7 @@ export async function build(ctx) {
 
   // ---------------------------------------------------------------- ground surfaces
   const stops = planStops(net); lapMs('stops');
+  if (ctx.season === 'winter') buildSnowbanks(ctx, net, stops, entr);
   const parkedSlots = planParking(net); lapMs('parking');
   let walks, pathLines;
   const surfaceBake = await bakedData(ctx, 'street-surfaces');

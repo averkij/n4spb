@@ -15,7 +15,7 @@
 // the fence openings, the service lane, the outline, the steep flanks, the crown packing.
 import * as THREE from 'three';
 import { createTreeInstanceWriter } from '../environment/tree-instances.js';
-import { SPECIES, canopyGeometry, trunkGeometry } from '../environment/treegeo.js';
+import { SPECIES, canopyGeometry, trunkGeometry, winterTreeGeometry } from '../environment/treegeo.js';
 import { canopyMaterial, coniferMaterial, trunkMaterial } from '../environment/leafmat.js';
 import * as DV from './data/vegetation.js';
 import { PATHS } from './data/paths.js';
@@ -326,7 +326,11 @@ const triCount = (g) => (g ? (g.index ? g.index.count : g.attributes.position.co
 export function buildVegetation(ctx, parent, plan, o = {}) {
   const T = THREE, rows = { ...(o.species || SPECIES), ...(plan.speciesExtra || DV.SPECIES_EXTRA) }, list = plan.trees, LOD_D = DV.LOD_D, gh = o.gh || gardenHeight;
   const col = new T.Color();
-  for (const t of list) { col.set(t.hex).multiplyScalar(t.bright); t.rgb = [col.r, col.g, col.b]; }
+  const winter = ctx.season === 'winter';
+  for (const t of list) {
+    const tint = rows[t.fam].sp === 'spruce' ? '#86a59e' : '#74665c';
+    col.set(winter ? tint : t.hex).multiplyScalar(t.bright); t.rgb = [col.r, col.g, col.b];
+  }
   const fams = [...new Set(list.map((t) => t.fam))].sort(), byFam = {}; for (const f of fams) byFam[f] = [];
   for (const t of list) byFam[t.fam].push(t);
   const matLobe = canopyMaterial(ctx), matTier = coniferMaterial(ctx), barkMat = {};
@@ -336,7 +340,10 @@ export function buildVegetation(ctx, parent, plan, o = {}) {
     const n = byFam[fam].length, F = rows[fam]; M[fam] = []; TR[fam] = [];
     if (!barkMat[F.bark]) barkMat[F.bark] = trunkMaterial(ctx, barkTexture(ctx, F.bark), 'env-bark-pb-' + F.bark);
     for (let l = 0; l < 4; l++) {
-      const im = new T.InstancedMesh(canopyGeometry(F.geo || fam, l, F), F.kind === 'tiers' ? matTier : matLobe, n);
+      const bare = winter && F.sp !== 'spruce';
+      const geometry = bare ? winterTreeGeometry(fam, l, F) : canopyGeometry(F.geo || fam, l, F);
+      const material = bare ? ctx.mat.toon('#ffffff', { name: 'dormant-branches' }) : F.kind === 'tiers' ? matTier : matLobe;
+      const im = new T.InstancedMesh(geometry, material, n);
       im.instanceMatrix.setUsage(T.DynamicDrawUsage); im.setColorAt(0, col.setRGB(1, 1, 1)); im.instanceColor.setUsage(T.DynamicDrawUsage);
       im.count = 0; im.frustumCulled = false; im.castShadow = l <= 1; im.receiveShadow = l <= 1; im.name = `tauride-tree-${fam}-${l}`; im.visible = false;
       group.add(im); M[fam].push(im); meshes.push(im);

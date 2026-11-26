@@ -44,7 +44,7 @@ globalThis.performance = globalThis.performance || { now: () => Date.now() };
 const imp = (p) => import(pathToFileURL(path.join(root, p)).href);
 /** the modules of a page that a CPU test leaves out: the baked city, the moving crowds, the metro and the car interface */
 export const SKIP = ['city', 'traffic', 'people', 'wildlife', 'metro', 'drive'];
-export async function buildWorld({ modules = null, skip = SKIP, quiet = true, log = null } = {}) {
+export async function buildWorld({ modules = null, skip = SKIP, quiet = true, log = null, season = 'summer' } = {}) {
   const THREE = await import('three');
   const { createContext } = await imp('src/core/ctx.js');
   const { createKnock } = await imp('src/core/knock.js');
@@ -54,6 +54,8 @@ export async function buildWorld({ modules = null, skip = SKIP, quiet = true, lo
   camera.position.set(0, 1.6, 30);
   const quality = { name: 'medium', pixelRatio: 1, msaa: 4, shadowMap: 2048, shadowSize: 70, petals: 0.6 };
   const ctx = createContext({ scene, camera, renderer: null, audio: null, quality, sunDir: new THREE.Vector3(...L.SUN_DIR).normalize() });
+  ctx.season = ctx.shared.season = season;
+  ctx.physics.frozenRivers = season === 'winter';
   const all = mainModules(), want = modules ? all.filter((m) => modules.includes(m)) : all.filter((m) => !skip.includes(m));
   ctx.buildList = want.slice();      // lib/claims.js: a landmark group counts as owned when its module is in the build list
   ctx.sky = { sun: new THREE.DirectionalLight(), hemi: new THREE.HemisphereLight(), uniforms: {} };

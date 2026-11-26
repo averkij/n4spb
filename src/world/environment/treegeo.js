@@ -249,18 +249,23 @@ function addTube(acc, path, seg, vRepeat, uRepeat = 2) {
 const stemPath = (x0, z0, lx, lz, h, r0, r1, flare = 0) => [0, 0.04, 0.2, 0.55, 1].map((t, i) => ({ x: x0 + lx * t * t, y: -0.15 + (h + 0.15) * t, z: z0 + lz * t * t, r: mix(r0, r1, t) * (1 + flare * Math.max(0, 1 - t / 0.07)) }));
 
 /** trunk geometry (lod 0: stems + branches into the crown, lod 1: plain taper stems). Returns null for families without a visible trunk. `F` = the species row (default: SPECIES[fam]; see canopyGeometry) */
-export function winterTreeGeometry(fam, lod) {
-  const { H, R, trunk } = SPECIES[fam], acc = new Acc(false);
+export function winterTreeGeometry(fam, lod, { H, R, trunk } = SPECIES[fam]) {
+  const acc = new Acc(false);
   const point = (x, y, z, r) => ({ x, y, z, r });
   addTube(acc, [point(0, 0, 0, trunk * 0.62), point(0, H * 0.45, 0, trunk * 0.36),
     point(R * 0.12, H, 0, 0.035)], 4, 2);
   const limbs = [12, 8, 5, 3][lod];
   for (let i = 0; i < limbs; i++) {
-    const u = i / limbs, a = i * 2.4, reach = R * (1.0 - u * 0.6), y = H * (0.26 + 0.55 * u);
+    const u = i / limbs, a = i * 2.4 + 0.36 * Math.sin(i * 1.6 + R);
+    const reach = R * (1.0 - u * 0.6) * (0.86 + 0.18 * Math.sin(i + H)), y = H * (0.26 + 0.55 * u);
     const x = Math.cos(a) * reach, z = Math.sin(a) * reach;
-    const fork = point(x * 0.52, y + H * 0.13, z * 0.52, trunk * 0.14);
-    addTube(acc, [point(0, y, 0, trunk * 0.28), fork, point(x, y + H * 0.25, z, 0.018)], 3, 1);
-    if (lod < 2) addTube(acc, [fork, point(x * 0.63 - z * 0.26, y + H * 0.33, z * 0.63 + x * 0.26, 0.012)], 3, 1);
+    const fork = point(x * 0.52, y + H * (0.095 + 0.03 * Math.sin(a)), z * 0.52, trunk * 0.14);
+    const tip = point(x, y + H * (0.22 + 0.045 * Math.cos(a)), z, 0.018);
+    addTube(acc, [point(0, y, 0, trunk * 0.28), fork, tip], 3, 1);
+    if (lod < 2) {
+      const bend = i % 2 ? -0.34 : 0.31;
+      addTube(acc, [fork, point(x * 0.73 - z * bend, y + H * 0.31, z * 0.73 + x * bend, 0.012)], 3, 1);
+    }
   }
   return acc.geometry();
 }

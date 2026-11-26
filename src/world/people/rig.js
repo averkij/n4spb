@@ -141,22 +141,34 @@ export function footGeo(kind) {
 export const FACE_W = 0.19, FACE_H = 0.2;
 export const ATLAS = { cols: 8, rows: 4, cell: 128 };
 function skullGeo() {
-  const g = new THREE.SphereGeometry(1, 10, 5), p = g.attributes.position, rx = 0.098, ry = 0.114, rz = 0.107;
+  const g = new THREE.SphereGeometry(1, 10, 6, -Math.PI / 2), p = g.attributes.position;
+  // Concentrate two meridians beside the nose and two rings at its tip and base.
+  // The nose and cheek share vertices so the outline pass sees one continuous face.
+  const angles = [-180, -132, -83, -49, -13, 0, 13, 49, 83, 132, 180];
+  const heights = [1, 0.74, 0.28, -0.08, -0.25, -0.67, -1];
   for (let i = 0; i < p.count; i++) {
-    let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    if (y < 0) { const t = -y; x *= 1 - 0.3 * t * t; z *= 1 - 0.25 * t; y *= 1 + 0.16 * t; if (z > 0) z += 0.06 * t * t; }       // narrow jaw, soft chin
-    p.setXYZ(i, x * rx, y * ry + 0.135, z * rz + 0.005);
+    const row = Math.floor(i / 11), column = i % 11, a = angles[column] * Math.PI / 180;
+    const y = heights[row], radius = Math.sqrt(1 - y * y);
+    const jaw = 1 + 0.32 * Math.min(0, y);
+    const nose = column === 5 ? [0, 0, 0.006, 0.027, 0.009, 0.002, 0][row] : 0;
+    const chin = Math.max(-y, 0) * 0.029;
+    p.setXYZ(i, Math.sin(a) * radius * 0.088 * jaw, y * 0.113 + 0.141,
+      Math.cos(a) * radius * 0.101 + nose + chin + 0.002);
+    g.attributes.uv.setX(i, 0.5 + a / TAU);
   }
   g.computeVertexNormals();
   return g;
 }
 let _skull = null;
-function capGeo(scale = 1.07, cover = 1.9, front = 0.36, seg = 10, rings = 3) {           // hair / hat cap: partial sphere with a raised front edge (fringe line)
-  const g = new THREE.SphereGeometry(1, seg, rings, 0, TAU, 0, cover), p = g.attributes.position, R = 0.108 * scale;
+function capGeo(scale = 1.07, cover = 1.9, front = 0.36, seg = 8, rings = 3) {
+  const g = new THREE.SphereGeometry(1, seg, rings, 0, TAU, 0, cover), p = g.attributes.position, R = 0.102 * scale;
   for (let i = 0; i < p.count; i++) {
-    let x = p.getX(i) * R * 0.98, y = p.getY(i) * R * 1.08, z = p.getZ(i) * R;
-    if (z > 0) { const lim = lerp(-0.02, front * 0.15 + 0.03, Math.min(1, z / R)); if (y < lim) y = lim; }
-    p.setXYZ(i, x, y + 0.148, z - 0.004);
+    const a = i % (seg + 1) * TAU / seg;
+    const at = Math.floor(i / (seg + 1)) / rings;
+    const edge = cover + 0.18 - (0.64 + front) * Math.max(0, Math.sin(a));
+    const theta = at * edge;
+    p.setXYZ(i, -Math.cos(a) * Math.sin(theta) * R * 0.92, 0.144 + Math.cos(theta) * R * 1.09,
+      Math.sin(a) * Math.sin(theta) * R - 0.003);
   }
   g.computeVertexNormals(); return g;
 }
@@ -194,14 +206,18 @@ export function headGeo(style) {
     slotted(G, SB, (g) => { g.sphere(0.135, 0.05, 0.135, [0.01, 0.245, 0.0], '#ffffff', 8, [0.12, 0, 0.12]); g.box(0.012, 0.03, 0.012, [0.0, 0.3, 0.0], '#ffffff'); });
   } else if (style === 'crochet') {
     add(capGeo(1.04, 1.85, 0.3), SC);
-    add(capGeo(1.15, 1.95, 0.1), SB);
-    slotted(G, SB, (g) => g.cyl(0.148, 0.158, 0.03, [0, 0.165, 0], '#ffffff', 10, null, false));
+    add(capGeo(1.14, 1.46, 0.02, 12), SB);
   }
-  const geo = G.build(true, true), pos = geo.attributes.position, slot = geo.attributes.aSlot, uv = geo.attributes.uv;
+  const geo = G.build(true, true), pos = geo.attributes.position, uv = geo.attributes.uv;
   for (let i = 0; i < pos.count; i++) {                                                        // planar face projection for skin vertices on the front, the blank corner elsewhere
-    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    if (slot.getX(i) === SK && z > 0.02 && y > 0.02 && y < 0.27) { const fu = clamp(0.5 + x / FACE_W, 0.01, 0.99), fv = clamp(0.5 + (y - 0.145) / FACE_H, 0.01, 0.99); uv.setXY(i, fu / ATLAS.cols, 1 - 1 / ATLAS.rows + fv / ATLAS.rows); }
-    else uv.setXY(i, 0.004 / ATLAS.cols, 1 - 1 / ATLAS.rows + 0.004 / ATLAS.rows);
+    if (i < _skull.attributes.position.count) {
+      // Wrap to the transparent side margin at the temples. Collapsing the
+      // rear vertices to one corner lets the eyes smear across profile faces.
+      const angle = (_skull.attributes.uv.getX(i) - 0.5) * TAU, y = pos.getY(i);
+      const fu = clamp(0.5 + angle / 2.15, 0.01, 0.99), fv = clamp(0.5 + (y - 0.145) / FACE_H, 0.01, 0.99);
+      uv.setXY(i, fu / ATLAS.cols, 1 - 1 / ATLAS.rows + fv / ATLAS.rows);
+    }
+    else uv.setXY(i, 0.035 / ATLAS.cols, 1 - 1 / ATLAS.rows + 0.035 / ATLAS.rows);
   }
   return geo;
 }
@@ -213,43 +229,47 @@ export function headGeo(style) {
 export const FACE = { f: 0, m: 4, glasses: 8, girl: 16, boy: 18, elderF: 20, elderM: 22 };
 const EYE_COLS = ['#5b3a29', '#3a2a26', '#2f2a30', '#6c8a6e'];
 function paintFace(g, ox, oy, o) {
-  const X = (u) => ox + u * 128, Y = (v) => oy + (1 - v) * 128;                       // face uv (0..1) -> canvas
-  const fem = o.fem, child = o.child, fam = o.fam;
-  const ey = child ? 0.43 : 0.47, ew = (child ? 0.2 : fem ? [0.2, 0.185, 0.195, 0.2][fam] : [0.175, 0.165, 0.175, 0.175][fam]) * (o.elder ? 0.92 : 1);
-  const eh = child ? 0.32 : fem ? [0.3, 0.25, 0.2, 0.3][fam] : [0.25, 0.22, 0.185, 0.25][fam];
-  const eye = o.eye;
-  for (const s of [-1, 1]) {
-    const ex = 0.5 + s * (child ? 0.225 : 0.215);
-    if (!o.glasses) {
-      g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(X(ex), Y(ey), ew * 64, eh * 64, 0, 0, TAU); g.fill();
-      const gr = g.createLinearGradient(0, Y(ey + eh), 0, Y(ey - eh)); gr.addColorStop(0, '#1c1a24'); gr.addColorStop(0.4, eye); gr.addColorStop(1, '#e8cfb8');
-      g.fillStyle = gr; g.beginPath(); g.ellipse(X(ex), Y(ey - 0.012), ew * 52, eh * 61, 0, 0, TAU); g.fill();
-      g.fillStyle = '#15131b'; g.beginPath(); g.ellipse(X(ex), Y(ey - 0.012), ew * 24, eh * 37, 0, 0, TAU); g.fill();
-      g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(X(ex - s * 0.035), Y(ey + eh * 0.45), ew * 15, eh * 16, 0, 0, TAU); g.fill();
-      g.strokeStyle = '#1d1a24'; g.lineCap = 'round'; g.lineWidth = child ? 2.2 : fem ? 3.4 : 2.6;
-      g.beginPath(); g.ellipse(X(ex), Y(ey), ew * 64, eh * 64, 0, Math.PI * 1.08, Math.PI * 1.92); g.stroke();                       // upper lash line
-      if (fam === 2 && !child) { g.lineWidth = 1.6; g.globalAlpha = 0.55; g.beginPath(); g.ellipse(X(ex), Y(ey + eh * 0.55), ew * 62, eh * 36, 0, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); g.globalAlpha = 1; }   // soft lid fold, never a slit
-      if (fem && !child) { g.lineWidth = 3; g.beginPath(); g.moveTo(X(ex + s * ew * 0.95), Y(ey + eh * 0.3)); g.lineTo(X(ex + s * (ew + 0.045)), Y(ey + eh * 0.55)); g.stroke(); }
-      // brows
-      g.strokeStyle = o.brow; g.lineWidth = child ? 2.2 : fem ? 3 : 4.4;
-      g.beginPath(); g.moveTo(X(ex - s * 0.11), Y(ey + eh + 0.09 - (fem ? 0 : 0.02))); g.quadraticCurveTo(X(ex), Y(ey + eh + 0.145), X(ex + s * 0.12), Y(ey + eh + 0.09 + (fam % 2 ? 0.02 : 0))); g.stroke();
-      if (child || o.young) { g.fillStyle = 'rgba(232,120,120,0.30)'; g.beginPath(); g.ellipse(X(ex + s * 0.02), Y(ey - 0.2), child ? 15 : 12, child ? 8 : 6, 0, 0, TAU); g.fill(); }
-      if (o.elder) { g.strokeStyle = 'rgba(120,80,70,0.4)'; g.lineWidth = 1.4; for (let k = 0; k < 2; k++) { g.beginPath(); g.moveTo(X(ex + s * (ew + 0.03)), Y(ey - 0.02 + k * 0.06)); g.lineTo(X(ex + s * (ew + 0.1)), Y(ey - 0.06 + k * 0.1)); g.stroke(); } g.beginPath(); g.moveTo(X(0.5 + s * 0.12), Y(0.36)); g.quadraticCurveTo(X(0.5 + s * 0.2), Y(0.28), X(0.5 + s * 0.17), Y(0.2)); g.stroke(); }
-    } else {
-      // sunglasses: dark rounded lenses, a bridge and temples
-      { const lx = X(ex), ly = Y(ey - 0.01), rw = (ew + 0.05) * 64, rh = (eh * 0.7 + 0.03) * 64; g.fillStyle = '#2a3150'; g.beginPath(); g.ellipse(lx, ly, rw, rh, 0, 0, TAU); g.fill();
-        g.fillStyle = '#1a1e33'; g.beginPath(); g.ellipse(lx, ly + rh * 0.3, rw * 0.9, rh * 0.62, 0, 0, TAU); g.fill();
-        g.strokeStyle = '#0d0e14'; g.lineWidth = 3.2; g.beginPath(); g.ellipse(lx, ly, rw, rh, 0, 0, TAU); g.stroke();
-        g.fillStyle = 'rgba(200,220,245,0.75)'; g.beginPath(); g.ellipse(lx - s * rw * 0.35, ly - rh * 0.4, rw * 0.38, rh * 0.16, -0.5 * s, 0, TAU); g.fill(); }
-      g.strokeStyle = '#17171d'; g.lineWidth = 3; g.beginPath(); g.moveTo(X(ex + s * (ew + 0.04)), Y(ey + 0.02)); g.lineTo(X(ex + s * (ew + 0.3)), Y(ey + 0.04)); g.stroke();
-      g.strokeStyle = o.brow; g.lineWidth = fem ? 2.6 : 4; g.globalAlpha = 0.8; g.beginPath(); g.moveTo(X(ex - s * 0.11), Y(ey + eh + 0.1)); g.quadraticCurveTo(X(ex), Y(ey + eh + 0.15), X(ex + s * 0.12), Y(ey + eh + 0.1)); g.stroke(); g.globalAlpha = 1;
-    }
+  g.save();
+  g.translate(ox, oy);
+  // Coordinates in one 128-pixel cell, top to bottom. Only features have ink.
+  const y = o.child ? 66 : 61, half = o.child ? 11 : 9.5;
+  const lid = o.child ? 4.5 : o.elder || o.fam === 2 ? 2.6 : 3.6;
+  function curve(x0, y0, cx, cy, x1, y1, colour, width) {
+    g.strokeStyle = colour; g.lineWidth = width; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.stroke();
   }
-  if (o.glasses) { g.strokeStyle = '#17171d'; g.lineWidth = 3; g.beginPath(); g.moveTo(X(0.5 - 0.215 + ew + 0.045), Y(ey + 0.02)); g.quadraticCurveTo(X(0.5), Y(ey + 0.06), X(0.5 + 0.215 - ew - 0.045), Y(ey + 0.02)); g.stroke(); }
-  g.strokeStyle = 'rgba(150,90,80,0.7)'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(X(0.5), Y(0.34)); g.lineTo(X(0.51), Y(0.3)); g.stroke();      // nose hint
-  g.strokeStyle = '#9a4b4b'; g.lineWidth = child ? 2.4 : 2.8; g.beginPath();                                                                      // mouth
-  const sm = o.smile; g.moveTo(X(0.42), Y(0.18 + sm * 0.4)); g.quadraticCurveTo(X(0.5), Y(0.13 - sm), X(0.58), Y(0.18 + sm * 0.4)); g.stroke();
-  if (o.open) { g.fillStyle = '#7a3438'; g.beginPath(); g.ellipse(X(0.5), Y(0.15), 9, 6, 0, 0, Math.PI); g.fill(); }
+  function oval(x, y, rx, ry, colour) {
+    g.fillStyle = colour; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, TAU); g.fill();
+  }
+  for (const s of [-1, 1]) {
+    const x = 64 + s * (o.child ? 22 : 21), outer = x + s * half, inner = x - s * half;
+    const blush = g.createRadialGradient(x + s * 7, y + 13, 1, x + s * 7, y + 13, 11);
+    blush.addColorStop(0, o.elder ? 'rgba(174,114,98,.10)' : 'rgba(191,114,99,.19)');
+    blush.addColorStop(1, 'rgba(191,114,99,0)');
+    oval(x + s * 7, y + 13, 13, 9, blush);
+    curve(inner - s, y - 8, x, y - (o.fem ? 14 : 12), outer + s, y - 9, o.brow, o.child ? 1.9 : o.fem ? 2.5 : 3.2);
+    if (o.glasses) {
+      oval(x, y, 14, 8, '#353b46');
+      curve(x - 8, y - 4, x - 5, y - 5, x, y - 5, '#838f9a', 1.6);
+      curve(outer, y - 2, outer + s * 6, y - 3, outer + s * 19, y - 5, '#33313a', 2.1);
+    } else {
+      g.save(); g.beginPath(); g.moveTo(inner, y + 1);
+      g.quadraticCurveTo(x, y - lid * 2.05, outer, y - 0.8);
+      g.quadraticCurveTo(x, y + lid * 1.65, inner, y + 1); g.closePath();
+      g.fillStyle = '#ede4d8'; g.fill(); g.clip();
+      oval(x, y - 0.3, lid + 0.9, lid + 1, o.eye);
+      oval(x, y, lid * 0.55, lid * 0.68, '#28232a');
+      oval(x - 1, y - 1.3, 0.9, 0.9, '#f6eee6'); g.restore();
+      curve(inner, y + 1, x, y - lid * 2.05, outer, y - 0.8, '#46342f', o.fem ? 1.9 : 1.5);
+      if (o.elder) curve(outer + s, y + 3, outer + 3 * s, y + 4, outer + 5 * s, y + 5, 'rgba(109,76,66,.46)', 1.2);
+    }
+    curve(64 + s * 3, 83, 64 + s * 5, 84, 64 + s * 6, 81, 'rgba(106,66,56,.68)', 1.65);
+  }
+  if (o.glasses) curve(55, y - 2, 64, y - 6, 73, y - 2, '#35323a', 2.4);
+  const mouth = o.child ? 95 : 96, corners = mouth - o.smile * 62;
+  curve(52, corners, 64, mouth + 1, 76, corners, '#875956', 2);
+  curve(57, mouth + 3, 64, mouth + (o.open ? 7 : 5), 71, mouth + 3, 'rgba(188,123,112,.65)', 2);
+  g.restore();
 }
 /** painted face atlas (8 x 4 cells of 128 px): transparent skin, opaque features */
 export function faceAtlas(ctx) {
@@ -279,7 +299,8 @@ export function paletteMaterial(ctx, map = null) {
         { vec3 tint = aSlot < 0.5 ? vec3(1.0) : (aSlot < 1.5 ? iA : (aSlot < 2.5 ? iB : (aSlot < 3.5 ? iC : iD))); vColor.rgb *= tint; }`);
     if (map) {
       sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\n vMapUv += iFace;\n#endif');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#ifdef USE_MAP
+      sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '').replace('#include <color_fragment>', `#include <color_fragment>
+        #ifdef USE_MAP
         vec4 sampledDiffuseColor = texture2D( map, vMapUv );
         diffuseColor.rgb = mix( diffuseColor.rgb, sampledDiffuseColor.rgb, sampledDiffuseColor.a );
       #endif`);

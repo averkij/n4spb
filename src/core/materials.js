@@ -188,6 +188,28 @@ function optsKey(opts) {
   return out;
 }
 
+// Wear ribbons already follow individual lanes (including bends). Their original U
+// spans one lane. Junctions, service ways and decks still show the base road snow.
+function winterSurface(name) {
+  if (name === 'pt-wear') return `
+    float grain = pn_noise(vPWorld * 2.6);
+    float coverNoise = pn_noise(vPWorld * 0.16);
+    float lane = vMapUv.x + (coverNoise - 0.5) * 0.09;
+    float tyre = 1.0 - smoothstep(0.026, 0.105, min(abs(lane - 0.27), abs(lane - 0.73)));
+    diffuseColor.rgb = mix(vec3(0.41,0.45,0.48), vec3(0.075,0.083,0.095), tyre);
+    diffuseColor.a = mix(0.10 + 0.38 * smoothstep(0.34,0.7,coverNoise), 0.50 + 0.20 * grain, tyre);`;
+  if (/(-asphalt$|^pt-(service|lot|brickroad)$)/i.test(name)) return `
+    float coverNoise = 0.64 * pn_noise(vPWorld * 0.18) + 0.36 * pn_noise(vPWorld * 1.9);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.58,0.63,0.67), 0.14 + 0.72 * smoothstep(0.33,0.68,coverNoise));`;
+  if (/^(env-quay-grass|lm\w*-(lawn\w*|hedge\w*|grass|flowers|shrub[AB]|boxwood))$/i.test(name)) return `
+    float crust = pn_noise(vPWorld * 0.75);
+    diffuseColor.rgb = mix(vec3(0.40,0.45,0.47), vec3(0.82,0.86,0.88), smoothstep(0.12,0.83,crust));`;
+  if (/^(pt-(slab|paver|strip|kerb|area|foot)|sq-paving|lmG-pave)|[-_]roof$/i.test(name)) return `
+    float drift = pn_noise(vPWorld * 0.24) * 0.68 + pn_noise(vPWorld * 1.5) * 0.32;
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72,0.79,0.84), smoothstep(0.27,0.62,drift) * 0.88);`;
+  return '';
+}
+
 export function createMaterials(shared) {
   const gradientMap = makeGradientMap();
   const cache = new Map();
@@ -219,17 +241,14 @@ export function createMaterials(shared) {
     patchPaint(m, opts.paint ?? 0.05, opts.grime ?? 0, !!opts.vpaint);
     m.userData.toon = { paint: opts.paint ?? 0.05, grime: opts.grime ?? 0, polygonOffset: opts.polygonOffset || 0, vpaint: !!opts.vpaint };
     Object.defineProperty(m.userData.toon, 'obc', { value: m.onBeforeCompile, enumerable: false });
-    if (shared.season === 'winter' && /^(pt-(slab|paver|strip|kerb|area|foot)|sq-paving|lmG-pave)|[-_]roof$/i.test(m.name)) {
+    const snow = shared.season === 'winter' && winterSurface(m.name);
+    if (snow) {
       const paint = m.onBeforeCompile;
       m.onBeforeCompile = (shader, renderer) => {
         paint.call(m, shader, renderer);
-        shader.fragmentShader = shader.fragmentShader.replace('#include <alphamap_fragment>', `
-          #include <alphamap_fragment>
-          float drift = pn_noise(vPWorld * 0.24) * 0.68 + pn_noise(vPWorld * 1.5) * 0.32;
-          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72,0.79,0.84), smoothstep(0.27,0.62,drift) * 0.88);
-        `);
+        shader.fragmentShader = shader.fragmentShader.replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n' + snow);
       };
-      m.customProgramCacheKey = () => 'snow-covered-paint';
+      m.customProgramCacheKey = () => 'snow:' + snow + (opts.vpaint ? ':vertex' : '');
     }
     cache.set(key, m);
     return m;

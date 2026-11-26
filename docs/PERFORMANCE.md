@@ -1,5 +1,25 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-26 — Ploughed streets and pedestrian faces (17.1.0)
+
+The Palace winter route on medium quality loaded in 30.6 s on the RTX 3090 Ti.
+In the 20 s Nevsky drive the car travelled 778 m. Frame time averaged 24.6 ms
+(40.7 FPS), with a 16.7 ms median and 33.4 ms p95. One frame reached 233.4 ms.
+The run averaged 1,399 draw calls. All 22 region attachments succeeded, the
+longest taking 24.0 ms. CDP reported 659 MiB of used heap and 1,495 MiB of
+backing storage. The 17.0.0 winter drive below covered a similar distance.
+Traffic positions and individual stalls vary between runs.
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --params "season=winter" --json --diagnostics --out shots/winter/17-1-drive
+```
+
+The standard 330-person rig test measured 613 triangles per articulated person
+against the 620-triangle budget, with 64 draw calls. The two accessory render
+paths produced matching faces, palette assignments and transforms. Checks of
+winter start time, ploughed kerbs and river travel passed in all three central
+scenes. The 21 rebuilt districts contain 2,715 verified products.
+
 ## 2026-11-26 — Central winter pilot (17.0.0)
 
 On an RTX 3090 Ti, headless Edge, medium quality, the normal Palace–Liteyny

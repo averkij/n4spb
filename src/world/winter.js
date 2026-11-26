@@ -85,6 +85,24 @@ function decoratedFir(ctx, id, x, z, h, glow) {
     anchored: 22, item, parts: [{ obj: tree }] });
 }
 
+function snowman(ctx, x, z, facing) {
+  if (ctx.L.insideBuilding(x, z, 0.65) || ctx._roadPlan?.cover(x, z, {}) > -0.65) return;
+  const body = new VB();
+  body.sph(0.53, '#d8e1e5', [0, 0.37, 0], 12, [1, 0.87, 0.95]);
+  body.sph(0.37, '#e2eaeb', [-0.035, 0.93, 0], 12);
+  body.sph(0.255, '#edf1ee', [-0.02, 1.45, 0.015], 12);
+  body.cyl(0.215, 0.245, 0.10, '#9e3d42', [-0.035, 1.24, 0], [0, 0, -0.1]);
+  body.box(0.11, 0.35, 0.045, '#90414a', [0.11, 1.07, 0.29], [-0.28, 0, -0.1]);
+  body.cyl(0.008, 0.048, 0.19, '#d58242', [-0.017, 1.43, 0.32], [Math.PI / 2, 0, 0]);
+  for (const side of [-1, 1]) body.sph(0.026, '#383839', [side * 0.082 - 0.02, 1.5, 0.249], 6);
+  for (let i = 0; i < 3; i++) body.sph(0.032, '#4c4946', [-0.04, 0.79 + i * 0.12, 0.34], 6);
+  const obj = new THREE.Mesh(body.build(), ctx.mat.toon('#ffffff', { vertexColors: true, name: 'snowman' }));
+  obj.name = 'snowman'; obj.position.set(x, 0.04, z); obj.rotation.y = facing;
+  obj.castShadow = obj.receiveShadow = true; ctx.add(obj);
+  const item = ctx.physics.addCylinder(x, z, 0.42, 0, 1.68);
+  ctx.knock?.register({ kind: 'snowman', x, z, y: 0.04, mass: 64, h: 1.68, r: 0.42, item, parts: [{ obj }] });
+}
+
 function snowfall(ctx) {
   const rng = ctx.rng('december-snow'), positions = new Float32Array(ctx.quality.level === 'low' ? 1500 : 3000);
   for (let i = 0; i < positions.length; i++) positions[i] = rng() * 30;
@@ -120,7 +138,10 @@ export function buildWinter(ctx) {
   const glow = new THREE.MeshBasicMaterial({ vertexColors: true, name: 'holiday-lights' });
   ctx.onUpdate(() => glow.color.setScalar(0.85 + 1.8 * ctx.shared.uNight.value));
   for (const [id, x, z, h] of sites) {
-    if (ctx.L.inPlay(x, z) && !ctx.L.insideBuilding(x, z, h * 0.23)) decoratedFir(ctx, id, x, z, h, glow);
+    if (ctx.L.inPlay(x, z) && !ctx.L.insideBuilding(x, z, h * 0.23)) {
+      decoratedFir(ctx, id, x, z, h, glow);
+      if (id === 'vosstaniya' || id === 'palace-square') snowman(ctx, x + h * 0.3, z + 2, id === 'vosstaniya' ? -1 : 0.8);
+    }
   }
   snowfall(ctx);
 }
