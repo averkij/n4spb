@@ -1,5 +1,43 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-26 — Central winter pilot (17.0.0)
+
+On an RTX 3090 Ti, headless Edge, medium quality, the normal Palace–Liteyny
+page loaded the same area bake for both seasons. Both runs started in the
+same Nevsky lane with the same accelerator input. The summer car finished
+stationary after 368 m. The winter car reached 798 m and finished at
+157 km/h. The different stretches drawn during the runs limit conclusions
+about the rendering cost of winter alone.
+
+| Season | Load (s) | Distance (m) | Mean / p50 / p95 frame (ms) | Mean FPS | Frames >80 ms | Mean calls | CDP heap / backing storage (MiB) |
+|---|---:|---:|---|---:|---:|---:|---|
+| Summer | 34.9 | 368 | 27.7 / 18.6 / 36.5 | 36.1 | 2 | 1,121 | 625 / 1,290 |
+| Winter | 34.8 | 798 | 28.8 / 34.8 / 36.3 | 34.7 | 1 | 1,339 | 618 / 1,286 |
+
+The winter run streamed 22 region attachments, the longest taking 33.1 ms,
+and recorded one 105.6 ms frame. The median winter frame exceeded the
+33.3 ms driving target. Reproduce each run with the following command,
+substituting `summer` for `winter` in both places for the comparison.
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --params "season=winter" --json --diagnostics --out shots/winter/drive-winter
+```
+
+The bake manifest audit checked all 2,715 products in 21 live areas.
+On a fresh browser profile Palace opened in winter with four decorated trees.
+Switching to summer removed them, the selection persisted on entering Smolny,
+and selecting winter there restored the station tree. All four page loads
+completed without reported game errors.
+The daytime Moika view shows green grass and leafy trees along the
+Mikhailovsky Garden bank alongside the ice and bare street trees.
+Winter walking and driving passed in Palace–Liteyny, Smolninskoye and
+Vladimirsky–Ligovka, including the Moika bank round trip in Palace–Liteyny.
+The city's water-level and road/marking audits passed. All 108 Palace boat
+passage checks passed. In summer, the Palace water-reachability test still
+flags a fence without a collider and the dry walk onto a pontoon. The boat
+garage test flags its expected list of scene objects. All three failures
+also occurred at the pre-winter checkpoint `f5ed4245`.
+
 ## 2026-11-26 — Beret character jump coverage (16.4.1)
 
 The beret character wears plain red briefs under the dress. Their colour is
