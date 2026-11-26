@@ -1,4 +1,4 @@
-// Third-person walker: V cycles near / far / first person, wheel zooms either chase view. Pointer-lock mouse look (drag-look fallback), WASD / arrows, Shift run, Space jump,
+// Third-person walker: V cycles near / far / first person, wheel zooms either chase view. Pointer-lock mouse look (drag-look fallback), WASD / arrows, Shift run, Ctrl crouch, Space jump,
 // F flight (take-off, then W/S fly along the view, Space/E up, Q/C down, F lands), touch joystick + drag look on phones.
 //
 // Underground support (docs/UNDERGROUND.md): the walker follows ANY surface of core/physics.js (terrain, decks, ramps, escalators, stairs, floors
@@ -28,6 +28,10 @@ const RIDE_WALK = 0.7;                      // walking inside a train car is slo
 const UNDER_EPS = 0.05;                     // m below the terrain that counts as underground
 const WADE_MIN = 0.45;                      // wading: the speed factor never drops below this (deep water: chest height and more)
 const WADE_DEEP = 1.7;                      // m of water over the feet at which the slowdown is full
+const CROUCH_HEIGHT = 1.32;
+const CROUCH_EYE_DROP = 0.38;
+const CROUCH_SPEED_FACTOR = 0.43;
+const WALK_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight']);
 
 const _P = { y: -Infinity, kind: null, item: null };   // scratch surface query
 const _cv = { x: 0, z: 0 };
@@ -45,6 +49,7 @@ export class Player {
     this.shotView=typeof location!=='undefined'&&new URLSearchParams(location.search).has('shot');
     this.eye = 1.52; this.radius = 0.3; this.height = 1.7;
     this.walk = 3.6; this.run = 8.4;
+    this.crouched = false;
     this.fly = false; this.enabled = false; this.onGround = true;
     this.lift = 0;          // s of take-off climb still to give
     this.descent = false;   // dropping straight down after F (terminal speed, flare, no steering: it lands where it was checked)
@@ -76,7 +81,15 @@ export class Player {
   _bind() {
     const d = this.dom;
     addEventListener('keydown', (e) => {
-      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+      if (e.defaultPrevented || e.target?.isContentEditable || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName)) return;
+      if (this.canCrouch && e.ctrlKey && !e.altKey && !e.metaKey) {
+        // Preserve control and movement key state. Other Ctrl chords delivered
+        // to the page must not trigger the browser or another game command.
+        if (e.code === 'ControlLeft' || e.code === 'ControlRight' || WALK_KEYS.has(e.code)) this.keys.add(e.code);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
       this.keys.add(e.code);
       if (this.inputLock > 0) return;
       if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) this.toggleFly();   // not on key auto-repeat, not Ctrl+F (browser find)
@@ -95,6 +108,9 @@ export class Player {
       else if (dragging) { this.look.dx += (e.clientX - lx) * 1.4; this.look.dy += (e.clientY - ly) * 1.4; lx = e.clientX; ly = e.clientY; }
     });
     d.addEventListener('wheel', (e) => {
+      // A real Ctrl hold belongs to walking. A touchpad pinch can also send
+      // ctrlKey on wheel events, but never has a matching Control keydown.
+      if (this.canCrouch && this.crouchHeld && e.ctrlKey) { e.preventDefault(); return; }
       if (!this.enabled || this.inputLock > 0 || this.firstPerson || e.ctrlKey || e.metaKey || !e.deltaY) return;
       e.preventDefault();
       const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 800 : 1);
@@ -124,8 +140,11 @@ export class Player {
   setView(view) {this.view=((Math.trunc(Number(view)||0)%3)+3)%3;this.cameraSnap=true;this.applyCamera(0);return this.view;}
   cycleView() {return this.setView(this.view+1);}
   get firstPerson(){return this.view===2||this.fly||!!this.ride||this.shotView;}
+  get eyeHeight() { return this.eye - (this.crouched ? CROUCH_EYE_DROP : 0); }
+  get canCrouch() { return this.enabled && this.inputLock === 0 && !this.fly && !this.ride; }
+  get crouchHeld() { return this.keys.has('ControlLeft') || this.keys.has('ControlRight'); }
   requestJump(){
-    if(!this.enabled||this.inputLock>0||this.fly||this.ride||!this.onGround||(this.jump&&this.jump.phase!=='land'))return false;
+    if(!this.enabled||this.inputLock>0||this.fly||this.ride||this.crouched||this.crouchHeld||!this.onGround||(this.jump&&this.jump.phase!=='land'))return false;
     this.jump={phase:'anticipation',time:0,clip:this.speed>this.walk*1.2?'RunningJump':'Jump',launchSpeed:this.depth>.3?3:4.2};return true;
   }
 
@@ -144,6 +163,7 @@ export class Player {
       const why = this.ride ? 'ride' : this.isUnderground() ? 'underground' : null;
       if (why) { if (this.onFly) this.onFly(why); return why; }
       this.fly = true; this.lift = TAKEOFF.time; this.descent = false; this.roof = null; this.vy = 0; this.vel.y = 0; this.supportItem = null; this.stick = false;this.jump=null;
+      this.crouched = false;
     } else {
       r = this.landingBlocked();
       if (!r) {
@@ -189,6 +209,7 @@ export class Player {
     const ph = this.physics;
     this.pos.set(x, 0, z);
     this.noclipUnder = false;
+    this.crouched = false;
     if (y !== null && opts.stand) {
       const g = ph.groundHeight(x, z, y - STEP_HEIGHT + 0.05, false);
       this.pos.y = g > -Infinity ? g : y; this.fly = false;
@@ -221,6 +242,7 @@ export class Player {
     this._clampRide(R);
     this.fly = false; this.noclipUnder = false; this.lift = 0; this.descent = false; this.roof = null; this.vy = 0; this.vel.set(0, 0, 0);
     this.jump=null;this.speed=0;this.animation='Idle';
+    this.crouched = false;
     this.supportItem = null; this.stick = false; this.onGround = true; this.smoothY = null; this.turn.yaw = this.turn.pitch = 0;
     if (R.lookRelative) this.yaw -= phi;                 // keeps the world view direction the same at the moment of boarding
     this._rideCamera(0, fr);
@@ -298,7 +320,7 @@ export class Player {
       if (k.has('KeyA') || k.has('ArrowLeft')) s -= 1;
       if (k.has('KeyD') || k.has('ArrowRight')) s += 1;
       if (k.has('KeyE') || k.has('Space')) u += 1;
-      if (k.has('KeyQ') || k.has('KeyC') || k.has('ControlLeft')) u -= 1;
+      if (k.has('KeyQ') || k.has('KeyC') || this.crouchHeld) u -= 1;
       f -= this.touchMove.y; s += this.touchMove.x;
     }
     const running = !locked && (k.has('ShiftLeft') || k.has('ShiftRight') || this.touchMove.length() > 0.95);
@@ -313,14 +335,21 @@ export class Player {
       if(jump.phase==='anticipation'&&jump.time>=timing.anticipation){jump.phase='air';jump.time=0;this.vy=jump.launchSpeed;this.onGround=false;}
       else if(jump.phase==='land'&&jump.time>=timing.recovery)this.jump=null;
     }
+    const crouch = this.canCrouch && this.crouchHeld && this.onGround && !this.jump;
+    if (crouch) this.crouched = true;
+    else if (this.crouched) {
+      const { x, y, z } = this.pos;
+      this.crouched = ph.columnBlocked(x, z, this.radius, y + CROUCH_HEIGHT, y + this.height);
+    }
     // standing on a roof: remember its height (kept while airborne, so a jump cannot carry the player over the edge)
     if (this.onGround) { const rt = ph.roofTop(this.pos.x, this.pos.z); this.roof = Math.abs(rt - this.pos.y) < 0.2 ? rt : null; }
     // wading: the water over the feet slows the walker (the camera stays at the eye height above the bed)
     const wl = ph.waterLevel ? ph.waterLevel(this.pos.x, this.pos.z) : null;
     this.depth = wl !== null ? Math.max(0, wl - this.pos.y) : 0;
     this.wade = this.depth > 0.05 ? Math.max(WADE_MIN, 1 - (1 - WADE_MIN) * Math.min(1, this.depth / WADE_DEEP)) : 1;
-    this.under = wl !== null && this.pos.y + this.eye < wl;
-    const speed = (running ? this.run : this.walk) * this.wade;
+    this.under = wl !== null && this.pos.y + this.eyeHeight < wl;
+    const speed = (this.crouched ? this.walk * CROUCH_SPEED_FACTOR : running ? this.run : this.walk) * this.wade;
+    const collisionHeight = this.crouched ? CROUCH_HEIGHT : this.height;
     let mx = fx * f + rx * s, mz = fz * f + rz * s;
     if (this.descent) mx = mz = 0;                                     // dropping from a flight: no steering, it lands where it was checked
     const ml = Math.hypot(mx, mz); if (ml > 1) { mx /= ml; mz /= ml; }
@@ -342,7 +371,7 @@ export class Player {
     for (let i = 0; i < n; i++) {
       const ox = p.x, oz = p.z;
       p.x += sx / n; p.z += sz / n;
-      ph.resolve(p, this.radius, feet, this.height);
+      ph.resolve(p, this.radius, feet, collisionHeight);
       // don't walk up anything steeper than a step; on a roof the roof is the floor: an edge (no roof), a wall, a steep slope or a drop stops the walker
       const S = ph.surfaceAt(p.x, p.z, feet, true, _P), g = S.y;
       let refuse = g - feet > STEP_HEIGHT || (this.roof !== null && !(Math.abs(ph.roofTop(p.x, p.z) - this.roof) <= STEP_HEIGHT));
@@ -373,12 +402,13 @@ export class Player {
     if(this.jump?.phase==='air'&&this.onGround){this.jump.phase='land';this.jump.time=0;}
     else if(this.jump?.phase==='anticipation'&&!this.onGround){this.jump.phase='air';this.jump.time=0;}
     else if(!this.onGround&&!this.jump&&!this.descent)this.jump={phase:'air',time:0,clip:this.speed>this.walk*1.2?'RunningJump':'Jump',launchSpeed:4.2};
-    this.animation=this.jump?.clip||(this.speed<.12?'Idle':this.speed>this.walk*1.2?'Run':'Walk');
+    this.animation=this.jump?.clip||(this.crouched ? (this.speed<.12?'CrouchIdle':'CrouchWalk') : this.speed<.12?'Idle':this.speed>this.walk*1.2?'Run':'Walk');
     this.stick = this.onGround && !!(item && item.sticky);
     if (this.onGround) { if (g > -Infinity) { this.safe.x = this.pos.x; this.safe.y = this.pos.y; this.safe.z = this.pos.z; } }
     else if (g === -Infinity && this.pos.y < this.safe.y - RESCUE_DROP) {   // falling through nothing (jumped over a rail into a void): never leave the player there
       this.pos.set(this.safe.x, this.safe.y, this.safe.z); this.vy = 0; this.vel.set(0, 0, 0); this.onGround = true; this.smoothY = null;
       this.jump=null;this.animation='Idle';this.speed=0;this.cameraSnap=true;
+      this.crouched = false;
       if (this.onRescue) this.onRescue();
     }
     if (this.onGround && this.descent) {                                // touched down
@@ -418,7 +448,7 @@ export class Player {
     const sp = Math.hypot(this.vel.x, this.vel.z);
     if (this.onGround && sp > 0.3) this.bob += dt * sp * 2.1; else this.bob *= 0.9;
     const bobY = this.fly ? 0 : Math.sin(this.bob * 2) * 0.022 * Math.min(1, sp / 3);
-    const eyeY = this.pos.y + this.eye;
+    const eyeY = this.pos.y + this.eyeHeight;
     if (this.smoothY === null || this.fly) this.smoothY = eyeY;
     else this.smoothY += (eyeY - this.smoothY) * Math.min(1, dt * 14);
     if (Math.abs(this.smoothY - eyeY) > 1.2) this.smoothY = eyeY;

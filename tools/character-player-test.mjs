@@ -5,7 +5,13 @@ import {Player} from '../src/core/player.js';
 import {JUMPS,jumpClipTime} from '../src/world/character/jump-timing.js';
 import {loadCharacterChoice,saveCharacterChoice,CHARACTER_STORAGE_KEY} from '../src/world/character/settings.js';
 
-globalThis.addEventListener=()=>{};
+const keys=new EventTarget();
+globalThis.addEventListener=keys.addEventListener.bind(keys);
+const key=(type,code,options={})=>{
+ const e=Object.assign(new Event(type,{cancelable:true}),{code,...options});
+ keys.dispatchEvent(e);
+ return e.defaultPrevented;
+};
 const listeners=new Map();
 const dom={addEventListener(type,listener){listeners.set(type,listener);},requestPointerLock(){}},bounds={x0:-100,z0:-100,x1:100,z1:100};
 const physics=new Physics(()=>0,()=>null),camera=new THREE.PerspectiveCamera(60,1,.1,500);
@@ -50,6 +56,35 @@ for(const running of [false,true]){
 }
 player.keys.clear();player.setPose(0,0);player.inputLock=1;assert.equal(player.requestJump(),false);player.inputLock=0;
 assert(player.requestJump());player.setPose(1,1);assert.equal(player.jump,null,'Respawn cancels pending jump');
+
+player.setPose(0,0);player.setView(2);
+assert(key('keydown','ControlRight',{ctrlKey:true}));
+step(.3);assert(player.crouched);assert.equal(player.animation,'CrouchIdle');
+assert(camera.position.y<1.17,'First-person camera lowers with the stance');
+assert(!player.requestJump(),'A held crouch keeps the character grounded');
+let commands=0;keys.addEventListener('keydown',()=>commands++);
+assert(key('keydown','KeyR',{ctrlKey:true}));assert.equal(commands,0,'Ctrl chords do not reach other game controls');
+assert(!player.keys.has('KeyR'));
+assert(key('keydown','KeyW',{ctrlKey:true}));assert(player.keys.has('KeyW'),'Ctrl+W still moves when the browser delivers it');
+player.keys.add('ShiftLeft');step(.8);
+assert.equal(player.animation,'CrouchWalk');assert(player.pos.z<-.8&&player.speed>1.5&&player.speed<1.6,'Crouch walking stays slower even with Shift');
+key('keyup','KeyW');player.keys.delete('ShiftLeft');key('keyup','ControlRight');step(.3);
+assert(!player.crouched);assert(camera.position.y>1.49);
+
+const lowLintel=physics.addBox(0,-3,1.5,2,0,1.38,1.55);
+player.setPose(0,0);player.keys.add('KeyW');step(1);
+assert(player.pos.z>=-1.701,'Standing avatar stops at the low ceiling');
+player.keys.add('ControlLeft');step(.7);assert(player.pos.z<-2.5,'Crouched avatar fits under the ceiling');
+player.keys.delete('ControlLeft');step(.2);
+assert(player.crouched,'Releasing Ctrl keeps the lower stance under the ceiling');
+step(1.3);assert(!player.crouched&&player.pos.z<-4.3,'Avatar stands back up once clear');
+physics.remove(lowLintel);
+player.keys.clear();player.setView(0);
+const beforeModal=commands;
+player.inputLock=1;
+assert(!key('keydown','KeyR',{ctrlKey:true}));assert.equal(commands,beforeModal+1,'Modal controls keep native shortcuts');
+key('keyup','KeyR');player.inputLock=0;
+
 player.toggleFly(true);assert(player.firstPerson,'Flight preserves its existing free camera');player.setPose(0,0);
 player.board({frame:()=>({x:0,y:0,z:0,yaw:0}),local:{x:0,y:0,z:0}});assert(player.firstPerson,'Train interior preserves first person');player.alight();assert.equal(player.view,0);
 const wet=new Physics(()=>-2,()=>0),wader=new Player(new THREE.PerspectiveCamera(),dom,wet,bounds);wader.enabled=true;wader.setPose(0,0);wader.update(1/60);assert.equal(wader.depth,2);assert(wader.requestJump());assert.equal(wader.jump.launchSpeed,3,'Water keeps its weaker bed push-off');
@@ -59,4 +94,4 @@ assert(wader.camera.position.y>=-1.701&&wader.camera.position.y<0,'The sweep sto
 const memory=new Map(),storage={getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v)};
 assert.equal(loadCharacterChoice(storage),0,'Girl is default');saveCharacterChoice(storage,1);assert.equal(memory.get(CHARACTER_STORAGE_KEY),'man-jacket');assert.equal(loadCharacterChoice(storage),1);
 memory.set(CHARACTER_STORAGE_KEY,'invalid');assert.equal(loadCharacterChoice(storage),0);assert.equal(loadCharacterChoice({getItem(){throw Error('blocked');}}),0);
-console.log('PASS: character views/camera collision, walk/run jump anticipation/flight/landing, input lock, reset, flight/train/water compatibility and settings persistence');
+console.log('PASS: character views/camera collision, walk/run jumps, Ctrl crouch movement and headroom, input lock, flight/train/water compatibility and settings persistence');

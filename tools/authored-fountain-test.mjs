@@ -77,6 +77,42 @@ for(const basin of ctx.services.fountainBasins||[]){
   assert.ok(rim.items.every(it=>it.source?.knock),basin.id+' every perimeter bay can break');
   basins++;
 }
+if(area==='admiralty'){
+  const basin=ctx.services.fountainBasins.find(f=>f.id==='w74168797');
+  assert.ok(basin,'Alexander Garden uses a physical shallow basin');
+  const x=-2317.5,z=-487.5;
+  const radius=p=>Math.hypot(p.x-basin.x,p.z-basin.z);
+  for(const hz of [30,60,144])for(const running of [false,true]){
+    const p=new Player(new THREE.PerspectiveCamera(),{addEventListener(){}},ctx.physics,L.WORLD.play);
+    p.enabled=true;p.clampXZ=L.clampToPlay;p.solidAt=L.insideBuilding;
+    // The reported camera pose, using its walking ground height.
+    p.setPose(x,z,-293.9,-1.6);
+    const step=seconds=>{for(let i=0;i<Math.round(seconds*hz);i++)p.update(1/hz);};
+    p.keys.add('KeyW');if(running)p.keys.add('ShiftLeft');
+    step(running?.4:2);
+    assert.ok(radius(p.pos)>basin.r&&p.depth===0,'The intact rim stops ground movement');
+    assert.ok(p.requestJump(),'Jump from the garden path is available');
+    assert.equal(p.jump.clip,running?'RunningJump':'Jump');
+    step(1.2);
+    assert.ok(p.onGround&&p.depth>.3&&radius(p.pos)<basin.r,'Jump reaches the wadeable fountain bed');
+    p.keys.clear();step(.6);
+    p.yaw=Math.atan2(basin.x-p.pos.x,basin.z-p.pos.z);
+    p.keys.add('KeyW');step(3);
+    assert.ok(p.depth>.3&&p.requestJump(),'Jump from the shallow bed is available');
+    step(1.4);
+    assert.ok(p.onGround&&p.depth===0&&radius(p.pos)>14,'Jump back over the rim to the path');
+  }
+  const {createHandling}=await import('../src/world/drive/handling.js');
+  const car=createHandling(ctx);
+  car.reset(x,z,Math.atan2(basin.x-x,basin.z-z));
+  ctx.drive={active:true,car};
+  const input={thr:1,brk:0,steer:0,hand:false,nitro:false};
+  for(let i=0;i<180&&car.depth<.3;i++){car.step(1/60,input);ctx.knock.update(1/60);}
+  ctx.drive=null;
+  const broken=basin.rim.records.filter(record=>record.state!=='stand');
+  assert.ok(broken.length>0&&broken.length<basin.rim.records.length,'Car knocks away only the rim bays it hits');
+  assert.ok(car.depth>.3&&radius(car)<basin.r,'Car enters the water through the broken rim');
+}
 if(area==='smolny'){
   for(const id of ['w1501496505','w1501496506']){
     const f=FOUNTAINS.find(f=>f.id===id);assert.ok(ctx.physics.waterLevel(f.x,f.z)!==null,id+' has native water');

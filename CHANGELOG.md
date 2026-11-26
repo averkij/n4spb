@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **16.4.0** (2026-11-26, minor): Add Ctrl crouching and crouch-walking, restore the original jump with a fitted skirt, and open the Alexander Garden fountain basin.
 - **16.3.0** (2026-11-25, minor): Add third-person wheel zoom and fix camera clipping, running-jump dress clipping, crowd turns and Trinity Cathedral door trim.
 - **16.2.7** (2026-11-21, patch): Refresh elevated landmark screenshots across the loading screens.
 - **16.2.6** (2026-11-21, patch): Show facts about the place pictured on area loading screens.

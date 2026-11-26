@@ -1,5 +1,69 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-26 — Jump, crouch, and Alexander Garden fountain (16.4.0)
+
+The running jump uses the original animation tracks. The beret character's
+skirt follows the thighs, with clearance at the waist seam and extra room
+around the raised knee. The dress regression checks the original track data
+and tests triangle intersections at 968 samples of jump takeoff, flight,
+landing, crouched idle, and crouch-walk. The garment updates only for the
+visible on-foot character. Both playable rigs pass the crouch pose and foot
+placement checks. The player uses a shorter collider and checks overhead
+clearance before standing up. A crouch-walk on dry ground tops out at 1.55 m/s.
+
+At Alexander Garden, the fountain basin has a 0.18 m bed and a 0.62 m water
+level. Its 48 breakable rim sections follow the drawn masonry and can support
+the player's feet. The physics regression starts at the reported approach
+`-2317.5,1.9,-487.5,-293.9,-1.6` and exercises walking and running jumps in
+and out at 30, 60, and 144 Hz. A car can dislodge the rim and enter the water.
+Both versions of the Admiralty landmarks module pass the geometry audit. Its
+triangle count goes from 461,795 to 462,131. The water-level audit passes in
+all 23 real areas, and the Admiralty water reachability smoke check passes.
+
+The packaged Admiralty page passed keyboard-driven jumps into and back out
+of the fountain. The browser measured 0.44 m of water over the player's
+feet in the basin and about 1.48 m/s while crouch-walking. It also exercised
+Ctrl with arrow keys in the tab and Ctrl+W after activating Fullscreen
+controls. The captured running-jump, crouch, and fountain views were reviewed.
+Two depth-probe views pass, including the reported fountain camera pose.
+The packaged Palace character smoke check passes traffic-car entry, driving,
+exit and re-entry, respawn during approach, and touch camera and settings
+controls.
+
+All 21 live bakes pass the revision and SHA-256 checks. The 2,715 products
+total 1,094.5 MiB gzip. Four differ from `178dffd5`. Admiralty's `nav-medium`
+and `nav-low` reflect the basin and rim. Two Sampson products carry the same
+asphalt image, with 0.00076% of its RGB pixels changed and identical alpha.
+
+The strip road and marking audits pass, as does the Admiralty marking audit.
+The Admiralty road furniture audit reports the same two fence-bay intrusions
+on `178dffd5` and on this version, at `-2864.9,543.5` and `-2862,542.2`.
+
+The before and after drives used the normal bakes, Edge on an RTX 3090 Ti
+with D3D11, 1280 × 720, Medium quality, and eight seconds of identical
+throttle input per route. Both versions had zero failed region loads.
+
+| Area | Load (s) | Mean / p50 / p95 frame (ms) | Frames >40 / >80 ms | Mean calls | Distance (m) | CDP heap / backing (MiB) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Palace | 35.87 → 35.14 | 31.5 / 33.3 / 50.0 → 31.3 / 33.3 / 50.0 | 25 / 1 → 22 / 1 | 1368 → 1367 | 270.9 → 268.0 | 508 / 1256 → 543 / 1217 |
+| Admiralty | 35.32 → 34.95 | 36.5 / 33.3 / 50.1 → 36.0 / 33.3 / 50.1 | 32 / 5 → 32 / 5 | 1339 → 1347 | 168.5 → 167.9 | 580 / 1319 → 513 / 1342 |
+
+The Admiralty drive still averages about 28 FPS and stops near the end of
+the route. Its longest frame was 316.8 ms, compared with 400.2 ms on the
+baseline. It recorded 11 long tasks, compared with 10 on the baseline.
+These short drives show similar frame timing and slightly different routes.
+The single CDP samples vary between runs.
+
+```powershell
+node tools/character-player-test.mjs
+node tools/character-crouch-pose-test.mjs
+node tools/character-dress-test.mjs
+node tools/character-city-test.mjs --normal --quick
+node tools/area.mjs admiralty tools/authored-fountain-test.mjs
+node tools/drive-bench.mjs --area palace --q medium --seconds 8 --start "498.2286,135.1625,76.0322" --json --diagnostics
+node tools/drive-bench.mjs --area admiralty --q medium --seconds 8 --start "-2493.919,-687.663,-52.605" --json --diagnostics
+```
+
 ## 2026-11-20 — Narvskaya track and cockpit (16.1.0)
 
 The Narvskaya venue samples the rendered asphalt, kerbs and graded verges

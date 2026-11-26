@@ -25,6 +25,7 @@ import { W, AB } from './frame.js';
 import { liveFountain } from '../lib/live-fountain.js';
 
 const FOUNTAIN = [-2334.8, -494.8];
+const FOUNTAIN_ID = 'w74168797', WATER_Y = 0.62;
 const BUSTS = [['gorchakov', 'А. М. Горчаков', -2352.2, -507.8], ['glinka', 'М. И. Глинка', -2340.7, -516], ['lermontov', 'М. Ю. Лермонтов', -2316.4, -508], ['gogol', 'Н. В. Гоголь', -2352, -480.7]];
 
 export function build(K, ctx, H) {
@@ -65,20 +66,8 @@ export function build(K, ctx, H) {
   }
 
   // ---------------------------------------------------------------- the fountain
-  const stone = T('#7c8c84', { name: 'lmH-fStone', paint: 0.05 }), stoneIn = T('#6a7a72', { side: 'double', name: 'lmH-fStoneIn' }), water = T('#4b86b8', { name: 'lmH-fWater', paint: 0.0 });
-  {
-    const [cx, cz] = FOUNTAIN, seg = 48, R0 = 13.0, R1 = 13.9;
-    P.cyl(stone, [cx, 0, cz], [cx, 0.9, cz], R1, R1, seg, false);
-    P.cyl(stoneIn, [cx, 0.55, cz], [cx, 0.9, cz], R0, R0, seg, false);
-    for (let i = 0; i < seg; i++) {
-      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2, p = (a, r, y) => [cx + Math.cos(a) * r, y, cz + Math.sin(a) * r];
-      P.quad(stone, p(a0, R0, 0.9), p(a1, R0, 0.9), p(a1, R1, 0.9), p(a0, R1, 0.9), [0, 1, 0]);
-      P.fan(water, [[cx, 0.62, cz], p(a0, R0, 0.62), p(a1, R0, 0.62)], [0, 1, 0]);
-    }
-    ctx.physics.addCylinder(cx, cz, R1, 0, 0.9);
-    // jets: animated (a dynamic group, never merged)
-    jets(K, ctx, cx, cz);
-  }
+  buildFountainBasin(P, ctx);
+  jets(K, ctx, ...FOUNTAIN);
   // ---------------------------------------------------------------- the four busts at the compass points
   const [fx, fz] = FOUNTAIN;
   for (const [id, name, x, z] of BUSTS) { bust(K, M, x, z, Math.atan2(fx - x, fz - z) + Math.PI, 2.6, id); K.svc.monuments.push({ id: 'bust-' + id, name, nameEn: id, x, z, h: 3.0 }); ctx.physics.addCylinder(x, z, 0.8, 0, 2.5); }
@@ -174,6 +163,53 @@ function bust(K, M, x, z, rotY, h, who) {
   P.pop();
 }
 
+/** The physical basin follows the drawn rim. Each bay supports the footing
+ * of a jump and carries its own masonry when a car breaks it away. */
+function buildFountainBasin(P, ctx) {
+  const { physics: ph, mat } = ctx, [x, z] = FOUNTAIN;
+  const segments = 48, r = 13, outer = 13.9, h = .9, bedY = .18;
+  const half = Math.PI / segments, sin = Math.sin(half), cos = Math.cos(half);
+  const w = 2 * outer * sin, d = (outer - r) * cos, centre = (outer + r) * .5 * cos;
+  const stone = mat.toon('#7c8c84', { name: 'lmH-fStone', paint: .05 });
+  const stoneIn = mat.toon('#6a7a72', { name: 'lmH-fStoneIn' });
+  const water = mat.toon('#4b86b8', { name: 'lmH-fWater', paint: 0 });
+  const point = (side, radius, y) => [side * radius * sin, y, radius * cos - centre];
+  const top = [point(-1, r, h), point(1, r, h), point(1, outer, h), point(-1, outer, h)];
+  const [innerLeft, innerRight, outerRight, outerLeft] = top;
+  const [innerFootLeft, innerFootRight, outerFootRight, outerFootLeft] = top.map(([px, , pz]) => [px, 0, pz]);
+  const template = new Parts();
+  template.quad(stone, ...top, [0, 1, 0]);
+  template.quad(stone, outerFootLeft, outerFootRight, outerRight, outerLeft, [0, 0, 1]);
+  template.quad(stoneIn, innerFootRight, innerFootLeft, innerLeft, innerRight, [0, 0, -1]);
+  template.quad(stone, innerFootLeft, outerFootLeft, outerLeft, innerLeft, [-1, 0, 0]);
+  template.quad(stone, outerFootRight, innerFootRight, innerRight, outerRight, [1, 0, 0]);
+  template.quad(stone, outerFootLeft, innerFootLeft, innerFootRight, outerFootRight, [0, -1, 0]);
+  const parts = template.build(new THREE.Group()).map(mesh => ({ geo: mesh.geometry, mat: mesh.material }));
+  const ring = [], spots = [], items = [];
+  for (let i = 0; i < segments; i++) {
+    const a = 2 * i * half, rotY = a + half, s = Math.sin(rotY), c = Math.cos(rotY);
+    const px = x + centre * s, pz = z + centre * c;
+    ring.push([x + r * Math.sin(a), z + r * Math.cos(a)]);
+    spots.push({ x: px, y: 0, z: pz, rotY });
+    const bay = ph.addWalkBox(px, pz, w, d, rotY, h, 0);
+    bay.clip = top.flatMap(([u, , v]) => [px + u * c + v * s, pz - u * s + v * c]);
+    bay.fence = true;
+    items.push(bay);
+  }
+  for (let i = 0; i < segments; i++) {
+    const [ax, az] = ring[i], [bx, bz] = ring[(i + 1) % segments];
+    P.fan(water, [[x, WATER_Y, z], [ax, WATER_Y, az], [bx, WATER_Y, bz]], [0, 1, 0]);
+    P.fan(stoneIn, [[x, bedY, z], [ax, bedY, az], [bx, bedY, bz]], [0, 1, 0]);
+  }
+  // The shallow bed lets the weaker wading jump reach the top on the way out.
+  const basin = ring.flat();
+  ph.addWalkBox(x, z, r * 2, r * 2, 0, bedY, 0).clip = basin;
+  ph.addWater({ ring: basin, level: WATER_Y });
+  const rim = knockInstances(ctx, { name: 'lmH-fountain-rim', parts, spots, items, far: 420,
+    rec: { kind: 'fence', mass: 1200, w, d, h, anchored: 14, hitK: .3, metal: false, minDv: 0 } });
+  (ctx.services.fountainBasins ||= []).push({ id: FOUNTAIN_ID, x, z, r, ring, waterY: WATER_Y, bedY, rim: { ...rim, items } });
+}
+
 /** the jets of the fountain: a 17 m central jet, 8 inner jets inclined to the centre, 40 arc jets along the rim; one shimmering group */
 function jets(K, ctx, cx, cz) {
   const parts = new Parts(), mat = ctx.mat.toon('#eef6fb', { transparent: true, opacity: 0.78, emissive: '#bcd8ea', emissiveIntensity: 0.35, name: 'lmH-jet' });
@@ -201,7 +237,7 @@ function jets(K, ctx, cx, cz) {
     const a=i*Math.PI/20,c=Math.cos(a),s=Math.sin(a);
     nozzles.push({x:c*12.3,y:.03,z:s*12.3,height:3.25,width:.04,target:[c*8.8,0,s*8.8]});
   }
-  liveFountain(ctx,{id:'w74168797',x:cx,z:cz,y:.62,r:13,nozzles,drawStreams:false,far:420});
+  liveFountain(ctx,{id:FOUNTAIN_ID,x:cx,z:cz,y:WATER_Y,r:13,nozzles,drawStreams:false,far:420});
   ctx.onUpdate((dt, t) => {
     grp.scale.y = 0.96 + 0.04 * Math.sin(t * 2.3) + 0.02 * Math.sin(t * 5.1);
     const n = ctx.shared.uNight?.value || 0, sunY = ctx.shared.uSunDir?.value?.y ?? 1;
