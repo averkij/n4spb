@@ -309,11 +309,47 @@ jobs:
       - name: Every deployed Brotli bake expands to its source product
         run: node --max-old-space-size=8192 tools/pages-bake-brotli-test.mjs --actual
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - id: upload
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
           name: github-pages-${{ github.run_attempt }}
+      # The upload already returned the immutable artifact ID. Listing artifacts by
+      # name immediately after a large upload can return an empty list.
       - id: deployment
-        uses: actions/deploy-pages@v4
+        name: Publish the uploaded Pages artifact
+        uses: actions/github-script@v8
+        env:
+          PAGES_ARTIFACT_ID: ${{ steps.upload.outputs.artifact_id }}
         with:
-          artifact_name: github-pages-${{ github.run_attempt }}
+          script: |
+            const artifactId = Number(process.env.PAGES_ARTIFACT_ID);
+            if (!Number.isSafeInteger(artifactId) || artifactId <= 0) throw new Error('Missing Pages upload ID');
+            const route = '/repos/{owner}/{repo}/pages/deployments';
+            const {data} = await github.request('POST ' + route, {
+              ...context.repo, artifact_id: artifactId, pages_build_version: context.sha,
+              oidc_token: await core.getIDToken()
+            });
+            const deployment = {...context.repo, deployment_id: data.id || context.sha};
+            const endpoint = route + '/{deployment_id}';
+            const terminal = new Set(['deployment_failed', 'deployment_content_failed', 'deployment_perms_error',
+                                      'deployment_cancelled', 'deployment_lost']);
+            const deadline = Date.now() + 10 * 60 * 1000;
+            while (Date.now() < deadline) {
+              await new Promise(resolve => setTimeout(resolve, 10000));
+              let status;
+              try {
+                ({data: {status}} = await github.request('GET ' + endpoint, deployment));
+              } catch (error) {
+                if (error.status !== 404 && !(error.status >= 500)) throw error;
+                continue;
+              }
+              core.info('Pages deployment state: ' + status);
+              if (status === 'succeed') {
+                core.setOutput('page_url', data.page_url);
+                return;
+              }
+              if (terminal.has(status)) throw new Error('Pages reported ' + status);
+            }
+            await github.request('POST ' + endpoint + '/cancel', deployment);
+            throw new Error('Pages deployment timed out');
