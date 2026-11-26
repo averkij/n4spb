@@ -8,6 +8,7 @@
 // Proportions (rig units = metres of a 1.78 m reference adult; the person's root scale does the rest): hip 0.92 above the sole, thigh 0.43, shin 0.40, ankle 0.09,
 // shoulder 0.5 above the hip joint, neck pivot 0.56, skull centre 0.135 above the neck pivot (x headK).
 import * as THREE from 'three';
+import { positionsMM, triangles } from './head-scan.js';
 import { Geo, TAU, clamp, lerp } from './kit.js';
 
 export const H = { hip: 0.92, thigh: 0.43, shin: 0.40, ankle: 0.09, sh: 0.5, shX: 0.2, upper: 0.29, fore: 0.27, neck: 0.56, head: 0.249 };
@@ -141,21 +142,9 @@ export function footGeo(kind) {
 export const FACE_W = 0.19, FACE_H = 0.2;
 export const ATLAS = { cols: 8, rows: 4, cell: 128 };
 function skullGeo() {
-  const g = new THREE.SphereGeometry(1, 10, 6, -Math.PI / 2), p = g.attributes.position;
-  // Concentrate two meridians beside the nose and two rings at its tip and base.
-  // The nose and cheek share vertices so the outline pass sees one continuous face.
-  const angles = [-180, -132, -83, -49, -13, 0, 13, 49, 83, 132, 180];
-  const heights = [1, 0.74, 0.28, -0.08, -0.25, -0.67, -1];
-  for (let i = 0; i < p.count; i++) {
-    const row = Math.floor(i / 11), column = i % 11, a = angles[column] * Math.PI / 180;
-    const y = heights[row], radius = Math.sqrt(1 - y * y);
-    const jaw = 1 + 0.32 * Math.min(0, y);
-    const nose = column === 5 ? [0, 0, 0.006, 0.027, 0.009, 0.002, 0][row] : 0;
-    const chin = Math.max(-y, 0) * 0.029;
-    p.setXYZ(i, Math.sin(a) * radius * 0.088 * jaw, y * 0.113 + 0.141,
-      Math.cos(a) * radius * 0.101 + nose + chin + 0.002);
-    g.attributes.uv.setX(i, 0.5 + a / TAU);
-  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(positionsMM.map(mm => mm / 1000), 3));
+  g.setIndex(triangles);
   g.computeVertexNormals();
   return g;
 }
@@ -213,8 +202,8 @@ export function headGeo(style) {
     if (i < _skull.attributes.position.count) {
       // Wrap to the transparent side margin at the temples. Collapsing the
       // rear vertices to one corner lets the eyes smear across profile faces.
-      const angle = (_skull.attributes.uv.getX(i) - 0.5) * TAU, y = pos.getY(i);
-      const fu = clamp(0.5 + angle / 2.15, 0.01, 0.99), fv = clamp(0.5 + (y - 0.145) / FACE_H, 0.01, 0.99);
+      const angle = Math.atan2(pos.getX(i), pos.getZ(i)), y = pos.getY(i);
+      const fu = clamp(0.5 + angle / 2.35, 0.01, 0.99), fv = clamp(0.5 + (y - 0.145) / FACE_H, 0.01, 0.99);
       uv.setXY(i, fu / ATLAS.cols, 1 - 1 / ATLAS.rows + fv / ATLAS.rows);
     }
     else uv.setXY(i, 0.035 / ATLAS.cols, 1 - 1 / ATLAS.rows + 0.035 / ATLAS.rows);
@@ -298,6 +287,18 @@ export function paletteMaterial(ctx, map = null) {
       .replace('#include <color_vertex>', `#include <color_vertex>
         { vec3 tint = aSlot < 0.5 ? vec3(1.0) : (aSlot < 1.5 ? iA : (aSlot < 2.5 ? iB : (aSlot < 3.5 ? iC : iD))); vColor.rgb *= tint; }`);
     if (map) {
+      // Morph just the skin of the head. Hair and headwear keep their fit at the crown.
+      sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        if (aSlot > 3.5) {
+          float face = floor(iFace.x * 8.0 + .5) - 8.0 * floor(iFace.y * 4.0 + .5);
+          float child = step(16.,face) * (1.-step(20.,face));
+          float elder = step(20.,face);
+          float masculine = face < 16. ? step(4.,mod(face,8.)) : step(2.,mod(face,4.));
+          float jaw = smoothstep(.0,.045,position.y) * (1.-smoothstep(.075,.17,position.y));
+          transformed.x *= 1. + jaw * (.10*masculine - .12*(1.-masculine) + .12*child + .07*elder);
+          transformed.y += jaw * (.017*child - .007*elder);
+          transformed.z += smoothstep(.055,.10,position.z) * (.009*masculine - .016*child);
+        }`);
       sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\n vMapUv += iFace;\n#endif');
       sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '').replace('#include <color_fragment>', `#include <color_fragment>
         #ifdef USE_MAP

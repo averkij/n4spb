@@ -25,3 +25,7 @@ or authored for this game.
 The models retain six source clips: Idle, Walk, Run, Jump, RunningJump and
 Sitting. Vehicle entry, extraction, driving hand/foot placement and angry NPC
 gestures are additional procedural animation authored for this project.
+
+## Crowd head geometry
+
+“Realistic Human Head” by kuuttisiitonen, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Adapted in Blender into a low-poly radial mesh with new facial styling, proportions and age variants for the instanced crowd. [Original model](https://sketchfab.com/3d-models/329a051ef9ae4e24a941f879009fe7bd).
