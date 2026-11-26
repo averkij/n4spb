@@ -1,5 +1,18 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-26 — Central winter release (17.4.7)
+
+On the RTX 3090 Ti at medium quality, the Palace start screen was ready in
+32.5 s. The car covered 800 m in the standard 20 s Nevsky drive. Mean frame
+time was 24.5 ms (41 FPS), median 16.8 ms, p95 33.4 ms and maximum 66.7 ms.
+The renderer averaged 1,402 draw calls. There were 22 region attaches and
+zero failed loads. The 330-person crowd test measured 615 triangles per
+articulated pedestrian, 84 per distant pedestrian and 64 crowd draw calls.
+
+```powershell
+node tools/drive-bench.mjs --area palace --q medium --seconds 20 --start "498.2286,135.1625,76.0322" --params "season=winter" --json --out shots/winter-review/release-drive
+```
+
 ## 2026-11-26 — Ploughed streets and pedestrian faces (17.1.0)
 
 The Palace winter route on medium quality loaded in 30.6 s on the RTX 3090 Ti.
