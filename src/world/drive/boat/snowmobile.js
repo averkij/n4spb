@@ -27,11 +27,19 @@ export function createSnowmobile(ctx) {
   v.sph(.55,accent,[0,.65,.69],10,[.84,.67,1.38],[-.14,0,0]);
   v.sph(.41,'#37414d',[0,.84,.55],10,[.94,.62,1.35],[-.2,0,0]);
   for(const sign of [-1,1]) v.box(.20,.075,.055,'#e8f5ff',[sign*.205,.90,.97],[-.39,sign*.27,0]);
-  v.rod([0,.73,.35],[0,1.08,.18],.04,steel,8);
-  v.rod([-.29,1.035,.13],[0,1.08,.18],.024,rubber,8);
-  v.rod([0,1.08,.18],[.29,1.035,.13],.024,rubber,8);
+  const barPivot = [0,1.16,.085];
+  v.rod([0,.73,.35],barPivot,.04,steel,8);
   const material = ctx.mat.toon('#ffffff',{vertexColors:true,paint:.02});
   const body = new THREE.Mesh(v.build(),material); body.castShadow = true; root.add(body);
+  const bar = new VB();
+  for (const side of [-1,1]) {
+    bar.rod([0,0,0],[side*.23,-.035,-.04],.022,steel,8);
+    bar.rod([side*.21,-.032,-.037],[side*.32,-.048,-.055],.03,rubber,8);
+  }
+  const handlebar = new THREE.Mesh(bar.build(),material);
+  handlebar.position.fromArray(barPivot);
+  handlebar.castShadow = true;
+  root.add(handlebar);
   const glass = new THREE.Mesh(new THREE.BoxGeometry(.61,.46,.022),ctx.mat.toon('#b3d6e4',{transparent:true,opacity:.45,depthWrite:false}));
   glass.position.set(0,1.18,.49); glass.rotation.x=-.43; root.add(glass);
   const ski = new VB();
@@ -41,9 +49,10 @@ export function createSnowmobile(ctx) {
   const skiGeo=ski.build(), skis=[-1,1].map(sign=>{
     const m=new THREE.Mesh(skiGeo,material);m.position.set(sign*.50,0,.83);root.add(m);return m;
   });
-  return { root, body, glass, wheels: [], flames: [], boat:true, spec:SLED,
-    poseDriver:riderSeat(root,[0,.87,-.25],[0,1.04,.13,.28],[0,.42,.04,.29]),
+  return { root, body, glass, steerWheel:handlebar, wheels: [], flames: [], boat:true, spec:SLED,
+    poseDriver:riderSeat(root,[0,.87,-.075],handlebar,[.28,-.042,-.048],[0,.42,.04,.29]),
     set(p){root.position.set(p.x,p.y,p.z);root.rotation.set(-p.pitch,p.yaw,p.roll);
-      for(const ski of skis) ski.rotation.y=p.steerAngle||0;},
+      handlebar.rotation.y=p.steerAngle||0;
+      for(const ski of skis) ski.rotation.y=handlebar.rotation.y;},
     setView(){} };
 }

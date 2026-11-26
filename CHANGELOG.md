@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.4.9** (2026-11-26, patch): Make both playable riders follow the turning snowmobile handlebars and summer boat helm.
 - **17.4.8** (2026-11-26, patch): Restore the Fontanka embankment and its road over the filled castle moat mouth.
 - **17.4.7** (2026-11-26, patch): Ship all district bakes with the final winter vegetation and ploughed snowbanks.
 - **17.4.6** (2026-11-26, patch): Shape large ploughed snowbanks with dirty flanks, uneven crowns and chipped blocks.

@@ -176,7 +176,7 @@ export function createBoatModel(ctx) {
   const night = ctx.shared ? ctx.shared.uNight : null;
   const phase = Math.random() * 6.28;
   const api = {
-    root, wheels: [], steerWheel, driver, poseDriver: riderSeat(root, [.34,.48,-.18], [.34,.92,.22,.15], [.34,.11,.32,.13]), flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, propeller: prop, spec: S, boat: true,
+    root, wheels: [], steerWheel, driver, poseDriver: riderSeat(root, [.34,.48,-.05], steerWheel, [.15,0,0], [.34,.11,.32,.13]), flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, propeller: prop, spec: S, boat: true,
     /** pose: x y z yaw pitch roll, steerAngle; kmh. The hull rocks on the water by itself (a slow heave, roll and pitch that grow a little with the speed) */
     set(p) {
       const t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000, k = 1 + Math.min(1, (p.kmh || 0) / 40) * 0.6;
@@ -185,7 +185,7 @@ export function createBoatModel(ctx) {
       root.rotation.set(-(p.pitch + pitch), p.yaw, p.roll + roll);
       motor.rotation.y = -(p.steerAngle || 0) * 0.9;
       prop.rotation.z += (p.dt || 0.016) * (p.driven ? 5 + (p.kmh || 0) * 1.1 : 0.4);        // the propeller turns with the speed (a lazy drift at rest)
-      steerWheel.rotation.z = -(p.steer || 0) * 2.0;
+      steerWheel.rotation.z = -(p.steer || 0) * Math.PI / 3;
       if (p.driven !== undefined && !!p.driven !== driven) { driven = !!p.driven; showDriver(); }
       const n = night ? night.value : 0;
       lampMat.color.setScalar(p.lights ? 0.9 + 1.6 * n : 0.45 + 0.9 * n);
