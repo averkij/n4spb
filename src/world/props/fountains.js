@@ -93,7 +93,7 @@ export function placeFountains(S,city=CITY,layout=L){
       const b=bounds(p),cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,r=Math.max(.4,Math.min(b.x1-b.x0,b.z1-b.z0)/2);
       const known=ph.waterLevel(points[0].x,points[0].z),base=S.levelAt?.(cx,cz)??0,y=known??base+(record.flush ? .035 : .09);
       if(known===null&&record.flush){
-        ph.addWater({ring:p.o,holes:p.h||[],level:y});
+        if(ctx.season!=='winter')ph.addWater({ring:p.o,holes:p.h||[],level:y});
       }else if(known===null){
         const ring=pairs(p.o),holes=(p.h||[]).map(pairs);
         P.cap(stone,ring,base+.025,true,2,holes);P.cap(water,ring,y,true,3,holes);

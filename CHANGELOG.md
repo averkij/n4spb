@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.4.3** (2026-11-26, patch): Make snow in winter fountain bowls support walkers on the actual basin shape.
 - **17.4.2** (2026-11-26, patch): Close courtyard junctions and audit clearance through mapped carriage vaults.
 - **17.4.1** (2026-11-26, patch): Fit the helm to both playable rigs and mount illuminated snowflakes on Nevsky lamps.
 - **17.4.0** (2026-11-26, minor): Join carriage vaults to both facades, open courtyards to cars, restore the Admiralty podiums, and add winter hedges, snow heaps and dormant fountains.

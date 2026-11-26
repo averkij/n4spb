@@ -129,6 +129,16 @@ export function liveFountain(ctx, opts = {}) {
       const snow = new THREE.Mesh(geo,ctx.mat.toon('#dce3e7',{name:'fountain-snow',paint:.09}));
       snow.name='snow-filled-'+id; snow.position.set(x,y+.035,z); snow.receiveShadow=true;
       ctx.addStatic(snow); registerLOD(snow,opts.far||300);
+      // Use the same triangulation for the firm surface, including dry islands
+      // and the narrow corners of the authored stone troughs.
+      const vertices = geo.getAttribute('position'), indices = geo.getIndex();
+      for (let i = 0; i < indices.count; i += 3) {
+        const corners = [0, 1, 2].map(j => {
+          const v = indices.getX(i+j);
+          return [x+vertices.getX(v), snow.position.y, z+vertices.getZ(v)];
+        });
+        ctx.physics.addWalkTriangle(corners,.12);
+      }
     }
     return {id,nozzles:opts.nozzles||[],season:'winter'};
   }

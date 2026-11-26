@@ -127,4 +127,18 @@ for(const fn of ctx._updates)fn(1/60,4);
 nightMeshes.forEach((m,i)=>assert.ok(m.material.emissiveIntensity>day[i],'existing live fountain brightens at night'));
 await mkdir('shots/fountain-refresh',{recursive:true});
 await writeFile(`shots/fountain-refresh/sites-${area}.json`,JSON.stringify(sites,null,2)+'\n');
+if (area === 'palace' || area === 'smolny') {
+  const winter = await buildWorld({ season:'winter', modules:test.modules });
+  assert.deepEqual(winter.errors, []);
+  assert.equal(winter.ctx.services.liveFountains?.records.length || 0, 0);
+  for (const f of fountains) {
+    const snow = winter.ctx.staticRoot.getObjectByName('snow-filled-'+f.id);
+    assert.ok(snow, 'snow in basin '+f.id);
+    const pos = snow.geometry.getAttribute('position'), idx = snow.geometry.getIndex();
+    const xz = [0,1,2].map(i => idx.getX(i));
+    const x = snow.position.x + xz.reduce((sum,i) => sum + pos.getX(i)/3,0);
+    const z = snow.position.z + xz.reduce((sum,i) => sum + pos.getZ(i)/3,0);
+    assert.ok(winter.ctx.physics.groundHeight(x,z,snow.position.y+.1,false) >= snow.position.y-1e-4, f.id+' supports the character on packed snow');
+  }
+}
 console.log(`PASS ${area}: ${fountains.length} authored live fountains, ${basins} repaired accessible basins`);
