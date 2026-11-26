@@ -63,7 +63,13 @@ try {
   console.log('prompt:', JSON.stringify(prompt));
   if (!prompt.shown) problems.push('the "[E] Get in the car" prompt is not shown next to the car');
   await shot('0_prompt');
-  await page.keyboard.press('KeyE'); await sleep(700);
+  // The walking approach, door and seating animation can take several seconds.
+  // Moving the camera or pressing E again during it interrupts a real entry.
+  const interact = async () => {
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(() => !window.__drive.interacting, { timeout: 20000 });
+  };
+  await interact();
   let s = await st(); console.log('after E:', JSON.stringify(s));
   if (!s.active) {
     // Known race (src/world/drive.js enter(): state.enteredAt is set BEFORE the first hud.show(), which builds the HUD in ~300 ms; the exit key handler of the SAME keydown
@@ -71,7 +77,7 @@ try {
     // (the bounce also put the walker beside the car's stale carCenter near the origin: walk back to the car first)
     const sp2 = await page.evaluate(() => { const d = window.__drive; return { x: d.parked.x, z: d.parked.z }; });
     await page.evaluate((q) => window.__setCam(q.x - 3.2, null, q.z + 2.2, -62, -6), sp2); await sleep(500);
-    await page.keyboard.press('KeyE'); await sleep(700); s = await st(); console.log('after 2nd E:', JSON.stringify(s));
+    await interact(); s = await st(); console.log('after 2nd E:', JSON.stringify(s));
     const msg = s.active ? 'the FIRST E bounced (enter() + the same keydown exit(): drive.js sets state.enteredAt before the slow first hud.show(); set it at the end of enter()); the second E worked' : 'E did not put the player into the car (also not on the second press)';
     if (s.active && args['lenient-first-e']) console.log('WARNING:', msg); else problems.push(msg);
   }
@@ -96,10 +102,17 @@ try {
   await page.keyboard.press('KeyV'); await sleep(900); await shot('5_view2');
   await page.keyboard.press('KeyV'); await sleep(900); await shot('6_cockpit');
   await page.keyboard.press('KeyV'); await sleep(600);
-  await page.keyboard.up('KeyW'); await page.keyboard.down('KeyS'); await sleep(1500); await page.keyboard.up('KeyS'); await sleep(1500); s = await st(); console.log('after brake:', JSON.stringify(s));
-  if (s.kmh > 25) problems.push(`the car did not stop (${s.kmh} km/h)`);
+  await page.keyboard.up('KeyW');
+  await page.keyboard.down('Space');
+  await page.keyboard.down('KeyS');
+  // S can engage reverse after stopping. The handbrake holds a stationary car
+  // throughout the screenshot and the real door-exit check (5 km/h limit).
+  await page.waitForFunction(() => __drive.car.speed < 4, { timeout: 15000 });
+  await page.keyboard.up('KeyS');
+  s = await st(); console.log('after brake:', JSON.stringify(s));
   await shot('7_stopped');
-  await page.keyboard.press('KeyE'); await sleep(800);
+  await interact();
+  await page.keyboard.up('Space');
   s = await st(); const pl = await page.evaluate(() => { const p = window.__ctx.playerObj; return { x: +p.pos.x.toFixed(1), z: +p.pos.z.toFixed(1), lock: p.inputLock, driving: document.body.classList.contains('driving') }; });
   console.log('after exit:', JSON.stringify(s), JSON.stringify(pl));
   if (s.active || pl.driving || pl.lock !== 0) problems.push('E did not get the player out of the car');
