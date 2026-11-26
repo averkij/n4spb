@@ -6,6 +6,7 @@
 // API (the car model's): root, wheels (none), steerWheel, driver, flames (none), set(p), setView(inside).
 import * as THREE from 'three';
 import { VB } from '../../traffic/vb.js';
+import { riderSeat } from './rider.js';
 import { SPEC_BOAT } from './handling.js';
 
 const WHITE = '#f3f4f1', CREAM = '#ece5d1', NAVY = '#1c3a73', NAVY_DK = '#142a55', RED = '#cf2b35', TEAK = '#a07a4e', CHROME = '#cfd6df', BLACK = '#17191d', GREY = '#8f98a3', SEAT = '#223a6a', SEAT_LT = '#e8e4d8', DASH = '#2a2f37';
@@ -90,18 +91,10 @@ export function hullGeometries() {
 
 export function createBoatModel(ctx) {
   const { mat } = ctx, S = SPEC_BOAT;
-  const V = new VB(0), G = new VB(0), LAMP = new VB(0), DR = new VB(0), OB = new VB(0), LEG = new VB(0), PR = new VB(0), WH = new VB(0);
+  const V = new VB(0), G = new VB(0), LAMP = new VB(0), OB = new VB(0), LEG = new VB(0), PR = new VB(0), WH = new VB(0);
   const H = hullGeometries();
   const add = (f, col) => { const g = f.geo(); V.add(g, col); g.dispose(); };
   add(H.bottom, NAVY_DK); add(H.lower, NAVY); add(H.pin, RED); add(H.side, WHITE); add(H.deck, CREAM); add(H.coam, WHITE); add(H.floor, TEAK); add(H.inner, CREAM); add(H.trans, WHITE);
-  const winter = ctx.season === 'winter';
-  if (winter) {
-    V.box(2.25, 0.47, 5.5, BLACK, [0, -0.18, 0], null);
-    V.torus(0.66, 0.09, '#cc6942', [0, 1.25, -2.04], null);
-    V.rod([-0.84, 0.25, -2.05], [0, 1.25, -2.04], 0.05, GREY, 6);
-    V.rod([0.84, 0.25, -2.05], [0, 1.25, -2.04], 0.05, GREY, 6);
-  }
-
   // ---- the console (a block with a sloped dash), the helm, the windshield frame, the seats, the rear bench, the bow rail, the cleats, the life ring
   V.box(1.34, 0.46, 0.46, WHITE, [0, 0.58, 0.68]);                                        // console body (front wall of the cockpit to z 0.45)
   V.box(1.34, 0.05, 0.40, DASH, [0, 0.83, 0.70]);                           // dash top
@@ -142,13 +135,6 @@ export function createBoatModel(ctx) {
   LAMP.box(0.07, 0.07, 0.07, '#33ff77', [-0.58, 0.96, 1.98]);
   LAMP.box(0.07, 0.07, 0.07, '#ffffff', [0.55, 1.36, -2.50]);
 
-  // ---- the helmsman (seated on the left seat; hidden in the cockpit view) and the wheel
-  const jacket = '#e0783a', skin = '#e8b894';
-  DR.box(0.40, 0.46, 0.24, jacket, [0.34, 0.66, -0.30], [-0.12, 0, 0]);
-  DR.box(0.11, 0.38, 0.11, jacket, [0.58, 0.66, 0.0], [1.25, 0, 0.12]);
-  DR.box(0.11, 0.38, 0.11, jacket, [0.12, 0.66, 0.0], [1.25, 0, -0.12]);
-  DR.box(0.34, 0.12, 0.40, '#2b3550', [0.34, 0.40, -0.14]);
-  DR.sph(0.11, skin, [0.34, 1.04, -0.30], 8); DR.sph(0.122, '#3a2a22', [0.34, 1.07, -0.34], 8, [1, 0.8, 1]);
   WH.torus(0.15, 0.016, BLACK, [0, 0, 0], [0, 0, 0], 5, 14); WH.box(0.022, 0.28, 0.02, BLACK, [0, 0, 0]); WH.box(0.28, 0.022, 0.02, BLACK, [0, 0, 0]);
 
   // ---- the outboard motor (its own pivot at the transom: it swings with the wheel)
@@ -164,7 +150,7 @@ export function createBoatModel(ctx) {
 
   const mk = (vb, opts) => new THREE.Mesh(vb.build(), mat.toon('#ffffff', { vertexColors: true, paint: 0.02, ...opts }));
   const body = mk(V, { name: 'boat-body', side: 'double' }); body.name = 'boat-body'; body.castShadow = true; body.receiveShadow = true;
-  const driver = mk(DR, { name: 'boat-driver' }); driver.name = 'boat-driver';
+  const driver = new THREE.Group(); driver.name = 'boat-driver';
   const outboard = mk(OB, { name: 'boat-motor' }); outboard.name = 'boat-motor'; outboard.castShadow = true;
   const steerWheel = new THREE.Group(); steerWheel.position.set(0.34, 0.99, 0.50); steerWheel.rotation.x = -0.52;
   steerWheel.add(mk(WH, { name: 'boat-wheel', paint: 0 }));
@@ -178,12 +164,6 @@ export function createBoatModel(ctx) {
   const prop = mk(PR, { name: 'boat-motor-prop', side: 'double' }); prop.name = 'boat-motor-prop'; prop.position.set(0, -0.88, -0.62);
   ctx.noOutline(leg); ctx.noOutline(prop);                                                    // below the waterline: no outline pass (see above)
   const motor = new THREE.Group(); motor.position.set(0, 0.58, -2.63); motor.add(outboard, leg, prop);
-  if (winter) {
-    motor.position.set(0, 1.25, -2.04);
-    outboard.visible = leg.visible = false;
-    prop.position.set(0, 0, 0);
-    prop.scale.setScalar(3.9);
-  }
   const root = new THREE.Group(); root.name = 'drive-boat'; root.rotation.order = 'YXZ';
   root.add(body, glass, lamps, driver, steerWheel, motor);
   root.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
@@ -195,13 +175,13 @@ export function createBoatModel(ctx) {
   const night = ctx.shared ? ctx.shared.uNight : null;
   const phase = Math.random() * 6.28;
   const api = {
-    root, wheels: [], steerWheel, driver, flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, propeller: prop, spec: S, boat: true,
+    root, wheels: [], steerWheel, driver, poseDriver: riderSeat(root, [.34,.48,-.18], [.34,.99,.47,.15], [.34,.11,.32,.13]), flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, propeller: prop, spec: S, boat: true,
     /** pose: x y z yaw pitch roll, steerAngle; kmh. The hull rocks on the water by itself (a slow heave, roll and pitch that grow a little with the speed) */
     set(p) {
       const t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000, k = 1 + Math.min(1, (p.kmh || 0) / 40) * 0.6;
       const heave = 0.028 * Math.sin(t * 1.7 + phase) * k, roll = 0.016 * Math.sin(t * 1.25 + phase * 1.7) * k, pitch = 0.010 * Math.sin(t * 1.05 + phase * 0.6) * k;
-      root.position.set(p.x, p.y + (winter ? 0.44 : heave), p.z);
-      root.rotation.set(-(p.pitch + (winter ? 0 : pitch)), p.yaw, p.roll + (winter ? 0 : roll));
+      root.position.set(p.x, p.y + heave, p.z);
+      root.rotation.set(-(p.pitch + pitch), p.yaw, p.roll + roll);
       motor.rotation.y = -(p.steerAngle || 0) * 0.9;
       prop.rotation.z += (p.dt || 0.016) * (p.driven ? 5 + (p.kmh || 0) * 1.1 : 0.4);        // the propeller turns with the speed (a lazy drift at rest)
       steerWheel.rotation.z = -(p.steer || 0) * 2.0;

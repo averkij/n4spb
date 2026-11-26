@@ -120,7 +120,8 @@ export function createDriveHud({ isTouch, onExit, onNitro, onHand, onBrake, onJu
       let gear = car.gear === 0 ? 'R' : (car.speed < 1 && car.throttle < 0.05 ? 'N' : String(car.gear));
       if (prof.gearD && gear !== 'R' && gear !== 'N') gear = 'D';
       if (gear !== lastGear) { lastGear = gear; el.gear.textContent = gear; el.gear.classList.add('shift'); setTimeout(() => el.gear.classList.remove('shift'), 140); }
-      const f = Math.max(0, Math.min(1, car.rpm));
+      const f = Math.min(1, kmh / 240);
+      el.rpm.style.visibility = kmh ? 'visible' : 'hidden';
       el.rpm.setAttribute('stroke-dashoffset', (((ARC.a1 - ARC.a0) * Math.PI / 180 * ARC.r) * (1 - f)).toFixed(1));
       if (hasHop) {      // the HOP / FLIP buttons dim while the tank is too low or the car is in the air
         const H = car.tuning.hop, off = car.air || car.boost < (H?.minTank ?? 0), offF = car.air || car.boost < (H?.minTankFlip ?? H?.minTank ?? 0);

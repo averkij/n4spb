@@ -110,6 +110,11 @@ export async function build(ctx) {
     centre: DBG.includes('whole') ? undefined : () => { centre[0] = camPos.x; centre[1] = camPos.z; return centre; },
     radius: Math.max(260, CULL_RADIUS(ctx) + 80),
     routes: routeProvider(st), hidden,
+    walker: () => {
+      const player = ctx.playerObj;
+      return player && !player.fly && !player.riding && !ctx.drive?.active ? player.pos : null;
+    },
+    roadHeight: (x,z,rot) => deckY?.(x,z,rot) ?? GROUND,
     pedBusy: (id) => { const pp = ctx.services.people; return !!(pp && pp.crossingBusy && pp.crossingBusy(id)); },
   });
   const pk = {}; for (const p of plan.cars) pk[p.kind] = (pk[p.kind] || 0) + 1;

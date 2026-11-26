@@ -802,6 +802,7 @@ export function createSim(st, makeRng, opts = {}) {
       spawnVehicle(l, src.type, s0, Math.min(l.speed * 0.8, last ? last.v + 1.5 : 99));
     }
     pending.length = 0; dead.length = 0;
+    const walker = opts.walker?.();
     for (let si = 0; si < act.length; si++) {
       const seg = act[si], arr = seg.veh; if (!arr.length) continue;
       for (let i = arr.length - 1; i >= 0; i--) {
@@ -819,8 +820,22 @@ export function createSim(st, makeRng, opts = {}) {
         v.acc = a;
         v.v = Math.max(0, v.v + a * DT);
         if (v.dwell > 0 || v.collisionUntil > time) v.v = 0;
+        let yielding = false;
+        if (walker && Math.abs(walker.x-v.x)<35 && Math.abs(walker.z-v.z)<35) {
+          const dx=walker.x-v.x, dz=walker.z-v.z;
+          const ahead=dx*v.sn+dz*v.cs, side=dx*v.cs-dz*v.sn;
+          if (ahead>=v.arch.rear-.32 && Math.abs(side)<=v.wid/2+.34) {
+            const y=opts.roadHeight?.(v.x,v.z,v.rot) ?? 0;
+            if (walker.y<y+2.1 && walker.y+1.65>y) {
+              const gap=Math.max(0,ahead-v.arch.front-.55);
+              const safe=Math.min(gap/DT,Math.sqrt(9*gap));
+              yielding=v.v>safe || gap<.08;
+              v.v=Math.min(v.v,safe);
+            }
+          }
+        }
         v.s += v.v * DT;
-        v.brake = a < -0.7 || (v.v < 0.25 && v.holding) || v.dwell > 0 || v.collisionUntil > time;
+        v.brake = yielding || a < -0.7 || (v.v < 0.25 && v.holding) || v.dwell > 0 || v.collisionUntil > time;
         if (v.v < 0.25 && v.holding) v.wait += DT; else if (v.v > 1) v.wait = 0;
         // a turning car that cannot find a gap for 10 s gives up and drives straight on (a shared left / straight lane must not stay blocked)
         if (v.v < 0.25 && v.holding && v.entryBlock) { v.eWait = (v.eWait || 0) + DT; if (v.eWait > 10 && v.next && v.next.turn !== 'straight') { const alt = seg.okConns.find((c) => c.turn === 'straight'); if (alt) { v.next = alt; v.eWait = 0; } } } else v.eWait = 0;

@@ -5,6 +5,7 @@
 // An entry (the car's shape, drive/cars/index.js): { id, kind: 'boat', name, nameEn, label, labelEn, toast, spec, tuning, parked {x, z, yaw}, sound, hud, exhaust [], reach, makeModel(ctx) }.
 import { GARAGE } from '../../lib/area-tables.js';
 import { DOCKS } from '../../lib/docks.js';       // (the shared table of docks: the environment needs it too)
+import { SLED, createSnowmobile } from './snowmobile.js';
 import { createBoatModel } from './model.js';
 import { SPEC_BOAT, BOAT_TUNING } from './handling.js';
 import { CONTAINER_SHIP_SPEC, CONTAINER_SHIP_TUNING, createContainerShipModel } from './container-ship.js';
@@ -57,7 +58,8 @@ export function loadBoats(ctx, { carry = null, docks: suppliedDocks = null } = {
     if (L.inPlay && !L.inPlay(d.x, d.z)) continue;                         // the dock is outside the territory of this area
     if (ph.waterLevel && ph.waterLevel(d.x, d.z) == null) continue;        // no water at the dock (a data change): no boat rather than a boat on the pavement
     const ship = d.vessel === 'container-ship';
-    const spec = { ...(ship ? CONTAINER_SHIP_SPEC : SPEC_BOAT) };
+    const sled = !ship && ctx.season === 'winter';
+    const spec = { ...(ship ? CONTAINER_SHIP_SPEC : sled ? SLED : SPEC_BOAT) };
     const boardingPoints = ship ? [
       { x: spec.W / 2 + 3, y: 5.2, z: 76 },
       { key: 'port', x: -spec.W / 2 - 3, y: 5.2, z: 76 },
@@ -65,11 +67,11 @@ export function loadBoats(ctx, { carry = null, docks: suppliedDocks = null } = {
     ] : null;
     out.push({
       id: d.id || 'boat', kind: 'boat', vessel: ship ? 'container-ship' : undefined, dock: d.dock || null, carried: !!d.carried, carriedFrom: d.carriedFrom || null, ...PRESENTATION,
-      ...(ctx.season === 'winter' && !ship ? { name: 'Судно на воздушной подушке', nameEn: 'Hovercraft', label: 'Сесть на судно', labelEn: 'Board hovercraft', toast: 'Судно на воздушной подушке · Hovercraft' } : {}),
+      ...(sled ? { name: 'Снегоход', nameEn: 'Snowmobile', label: 'Сесть на снегоход', labelEn: 'Ride snowmobile', toast: 'Снегоход · Snowmobile' } : {}),
       ...(ship ? { name: 'Контейнеровоз', nameEn: 'Container ship', label: 'Управлять контейнеровозом', labelEn: 'Take the container ship helm', toast: 'Контейнеровоз · W S тяга / реверс · A D руль · V мостик', reach: 9,
         boarding: boardingPoints[0], boardingPoints, chase: { near: 295, far: 430, height: 110, lookY: 24, lookAhead: 65 } } : {}),
-      spec, tuning: ship ? { ...CONTAINER_SHIP_TUNING, edgeMargin: 6 } : boatTuning(spec), parked: { x: d.x, z: d.z, yaw: Number.isFinite(d.yaw) ? d.yaw : 0 },
-      sound: BOAT_SOUND, hud: { boat: true, gearD: true, noBoost: true, noCondition: true, keys: HUD_KEYS }, exhaust: [], makeModel: (c) => ship ? createContainerShipModel(c) : createBoatModel(c),
+      spec, tuning: ship ? { ...CONTAINER_SHIP_TUNING, edgeMargin: 6 } : sled ? { ...boatTuning(spec), acc: 10, vmax: 37, dragLin: .08, brake: 16, handDecel: 14, grip: 5, trim: 0, pitchK: .002 } : boatTuning(spec), parked: { x: d.x, z: d.z, yaw: Number.isFinite(d.yaw) ? d.yaw : 0 },
+      sound: BOAT_SOUND, hud: { boat: true, gearD: true, noBoost: true, noCondition: true, keys: HUD_KEYS }, exhaust: [], makeModel: (c) => ship ? createContainerShipModel(c) : sled ? createSnowmobile(c) : createBoatModel(c),
     });
   }
   return out;
