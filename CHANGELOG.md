@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.4.5** (2026-11-26, patch): Keep the camera-centred summer grass under the snow in winter.
 - **17.4.4** (2026-11-26, patch): Rebuild all 21 live district scenes for the central winter review.
 - **17.4.3** (2026-11-26, patch): Make snow in winter fountain bowls support walkers on the actual basin shape.
 - **17.4.2** (2026-11-26, patch): Close courtyard junctions and audit clearance through mapped carriage vaults.

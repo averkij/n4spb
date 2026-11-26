@@ -15,6 +15,7 @@ assert.equal(seasonFor('admiralty', new URLSearchParams('season=winter')), 'summ
 assert.equal(seasonFor(area, new URLSearchParams('bake=1')), 'summer');
 const { ctx, L, THREE, errors } = await buildWorld({ season: 'winter', modules: ['environment', 'streets', 'bridges', 'landmarksC', 'landmarksE', 'landmarksGarden', 'landmarksK'] });
 assert.deepEqual(errors, []);
+assert.equal(ctx.scene.getObjectByName('env-tufts'), undefined, 'summer grass stays under the snow');
 const sunDir = new THREE.Vector3(...L.SUN_DIR);
 const clock = createTimeOfDay({ sunDir, season: 'winter' });
 assert.equal(clock.clockText(), '09:30');

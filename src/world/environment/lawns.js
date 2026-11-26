@@ -239,6 +239,7 @@ function clumpGeometry() {
 }
 
 export function buildTufts(ctx, root, field) {
+  if (ctx.season === 'winter') return; // The snow cover buries the summer grass.
   const T = ctx.THREE;
   const q = ctx.quality && (ctx.quality.level || ctx.quality.name);
   const scale = q === 'low' ? 0.5 : q === 'medium' ? 0.75 : 1;
