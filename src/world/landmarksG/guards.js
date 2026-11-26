@@ -7,6 +7,7 @@ import { buildHouse } from './house.js';
 import { onEdge, band } from './kit.js';
 import { ringFromFlat } from '../lib/massing.js';
 import { GC } from './mats.js';
+import { guardsProjection } from './projection.js';
 
 const Y = { PL: 0.9, BELT: 7.7, COL0: 7.9, COL1: 15.6, FRIEZE: 16.35, COR: 17.15, TOP: 18.45 };
 const inRing = (r, x, z) => { let ins = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const a = r[i], b = r[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) ins = !ins; } return ins; };
@@ -39,6 +40,7 @@ export function build(K, ctx) {
   band(P, edges, Y.COR, Y.TOP - 0.25, (e) => (e.kind === 'main' ? 1.15 : 0.7), { front: white, top: white, under: shade });
   band(P, edges, Y.TOP - 0.25, Y.TOP, (e) => (e.kind === 'main' ? 0.8 : 0.45), { front: white, top: white, under: shade });
   for (const e of edges) onEdge(P, e, (len) => face(K, e, len));
+  guardsProjection(ctx, edges.find(e => e.kind === 'main'));
   K.svc.houses.push({ id: 'w41289421', name: 'Штаб Гвардейского корпуса', nameEn: 'Guards Corps Headquarters', x: -1872, z: -866 });
   K.svc.monuments.push({ id: 'guards-hq', name: 'Штаб Гвардейского корпуса', nameEn: 'Guards Corps HQ', x: -1895, z: -860, h: 19 });
 }

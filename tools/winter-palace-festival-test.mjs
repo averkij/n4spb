@@ -14,6 +14,15 @@ ctx.ui = { toast(text) { stamped = text; } };
 ctx.interact = createInteract({ camera: ctx.camera, player, ui: ctx.ui, doc: null });
 buildPalaceFestival(ctx, new THREE.MeshBasicMaterial({ vertexColors: true }));
 
+assert(ctx.scene.getObjectByName('guards-winter-projection'), 'the Guards HQ receives the winter projection');
+const quills = ctx.knock.list.filter(record => record.parts.some(part =>
+  part.mesh?.name.startsWith('lmG-lamp-winter-quill')));
+assert(quills.length > 0, 'the square has decorated Montferrand lamps');
+for (const lamp of quills) {
+  assert(lamp.parts.some(part => part.mesh?.name.startsWith('lmG-lamp-body')),
+    'the illuminated bracket and its pole share a knock record');
+}
+
 const slide = ctx.dynamicRoot.getObjectByName('palace-christmas-slide');
 assert(slide, 'the slide fits the staff pavement');
 const yaw = slide.rotation.y, forwardYaw = 180 + yaw * 180 / Math.PI;

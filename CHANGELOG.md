@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.6.0** (2026-11-26, minor): Illuminate the Palace Square perimeter with golden feather brackets and a winter facade projection, and cover the Troitskaya garden walks with packed snow.
 - **17.5.0** (2026-11-26, minor): Bring winter to Admiralty, Semyonovsky and Aptekarsky with decorated squares, a rideable Palace Square Christmas slide, New Year post and refined landmarks.
 - **17.4.12** (2026-11-26, patch): Ship fresh scenes for all 21 districts with the repaired quay, boarding, steering and road fixtures.
 - **17.4.11** (2026-11-26, patch): Match the Anichkov landing deck to the water level so walkers can board from the steps and return.

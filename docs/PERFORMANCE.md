@@ -1,5 +1,17 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-26 — Palace lighting and Troitskaya winter paths (17.6.0)
+
+Normal-loading winter runs on the same three routes and settings as 17.5.0 below. Semyonovsky kept its 17.5.0 bake. In the full Palace scene the night projection and 18 decorated lamp posts were present in winter, with neither displayed in summer. All requested regions loaded. The longest stalls were 100–233 ms, so individual frames still exceed the 33.3 ms target even where the mean meets it.
+
+| Area | Load (s) | Distance (m) | Frame mean / median / p95 / max (ms) | Frames >40 / >80 ms | Mean draws | CDP heap / backing storage (MiB) |
+|---|---:|---:|---|---:|---:|---:|
+| palace | 36.0 | 267 | 27.2 / 33.2 / 50.0 / 100.0 | 25 / 2 | 1405 | 572 / 1461 |
+| admiralty | 31.6 | 169 | 26.4 / 16.8 / 33.5 / 233.4 | 9 / 3 | 1271 | 561 / 1383 |
+| aptekarsky | 24.1 | 48 | 20.6 / 16.7 / 33.4 / 233.4 | 10 / 4 | 1061 | 348 / 794 |
+
+The four affected areas went through the normal offline bake. Compared with the previous checkpoint, every product matched its SHA-256 except the Aptekarsky street textures and street surfaces. All 21 manifests passed verification.
+
 ## 2026-11-26 — Winter in three neighbouring districts (17.5.0)
 
 Eight seconds of throttle on the normal district pages in headless Edge, at Medium quality and 1280 × 720. Palace was winter on both versions. The other three routes compare the previous summer default to the new winter default. Each pair uses the same starting lane and input. Traffic, region attachment and other machine activity vary between runs.

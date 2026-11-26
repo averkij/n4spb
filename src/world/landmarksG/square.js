@@ -19,6 +19,8 @@ import { band, Parts } from './kit.js';
 import { CX, CZ, toWorld, toUV, ARC } from './frame.js';
 import { GC } from './mats.js';
 import { knockInstances } from '../lib/knock-inst.js';
+import { registerLOD } from '../../core/spatial.js';
+import { VB } from '../traffic/vb.js';
 
 // ---------------------------------------------------------------------------------------------- small helpers
 const ARC_U = ARC.u, ARC_R = ARC.R;
@@ -208,10 +210,12 @@ export function build(K, ctx) {
   }
   const gq = L.buildingById('w41289421');
   if (gq) for (const [u, v] of [[-92, -121], [-70, -121], [-46, -121], [-24, -121]]) { const [x, z] = toWorld(u, v); lamps.push({ x, z, globes: 3 }); }
-  const lampSpots = [];                                                                          // (ctx.knock only) the placements of the knockable Montferrand lamps: { x, y, z, rotY, globes, item }
+  const lampSpots = [];
   const putLamp = (x, z, globes) => {
     const item = ctx.physics.addCylinder(x, z, 0.22, 0, 6);
-    if (ctx.knock) lampSpots.push({ x, y: 0, z, rotY: -lampAngle(x, z), globes, item }); else lamp(K, GM, P, x, z, globes, lampAngle(x, z));
+    const angle = lampAngle(x, z);
+    if (ctx.knock || ctx.season === 'winter') lampSpots.push({ x, y: 0, z, rotY: -angle, globes, item });
+    if (!ctx.knock) lamp(K, GM, P, x, z, globes, angle);
   };
   for (const l of lamps) { if (L.insideBuilding(l.x, l.z, 0.5) || !offRoad(l.x, l.z, 0.25)) continue; putLamp(l.x, l.z, l.globes); }
   // ------------------------------------------------------------------ lamp posts on the Winter Palace pavement (photo 016: black fluted poles every ~30 m, 2-3 m from the facade) and the bollards of the west road edge (photos 012 018)
@@ -220,7 +224,14 @@ export function build(K, ctx) {
     if (L.insideBuilding(x, z, 0.8) || !offRoad(x, z, 0.25)) continue;
     putLamp(x, z, g);
   }
-  if (lampSpots.length) knockLamps(ctx, K, GM, lampSpots);
+  if (lampSpots.length) {
+    const bracket = ctx.season === 'winter' ? winterLampBracket(ctx) : null;
+    if (ctx.knock) knockLamps(ctx, K, GM, lampSpots, bracket);
+    else if (bracket) {
+      const { meshes } = knockInstances(ctx, { name: 'lmG-lamp', parts: [bracket], spots: lampSpots });
+      for (const mesh of meshes) registerLOD(mesh, bracket.far);
+    }
+  }
   for (let v = 94; v <= 162; v += 3.6) {
     const [x, z] = toWorld(-92.6, v);
     if (L.insideBuilding(x, z, 0.4) || !offRoad(x, z, 0.15)) continue;
@@ -260,9 +271,60 @@ function lamp(K, GM, P, x, z, globes, ang) {
 /** the direction of the two arms (a facade-independent angle from the position) */
 const lampAngle = (x, z) => ((x * 7.3 + z * 3.1) % 3.14);
 
+// Lensvet's photo shows a one-sided golden quill with scalloped vanes, ruby
+// ornaments and two curls around the shaft: https://lensvet.spb.ru/d/26909/d/dscf1345.jpg
+// The plane follows the square perimeter so its silhouette reads from the plaza.
+function winterLampBracket(ctx) {
+  const wire = new VB(), gold = '#ffce78', champagne = '#fff2ba', ruby = '#ba3936';
+  const spine = t => [0.15 + 2.52 * t * t, 2.64 + 3.64 * t, 0.015];
+  const spinePoints = Array.from({ length: 9 }, (_, i) => spine(i / 8));
+  wire.tube(spinePoints, 0.052, gold, 14, 4);
+  for (let i = 0; i < 5; i++) {
+    const t = 0.20 + 0.156 * i, a = spine(t), b = spine(t + 0.17);
+    const lift = 0.41 - 0.06 * i;
+    const tip = [b[0] + lift, b[1] - 0.095, 0.07];
+    wire.tube([a, [a[0] + 0.30, a[1] + 0.10, 0.065], tip], 0.046, champagne, 5, 4);
+    wire.tube([tip, [b[0] + 0.09, b[1] - 0.13, 0.045], b], 0.037, gold, 3, 4);
+  }
+  // The upper spray rises from the quill. Its red beads sit in gold cups
+  // at the ends of fine stems. The stars pick up the nearby slide lights.
+  const spray = [[0.18, 3.35, -0.01], [0.46, 4.58, -0.04], [1.05, 5.57, -0.055], [2.14, 6.35, -0.07]];
+  wire.tube(spray, 0.044, gold, 10, 4);
+  for (let i = 0; i < 7; i++) {
+    const t = 0.35 + i * 0.085, base = spine(t);
+    const bx = base[0] - 0.15, by = base[1] + 0.34;
+    wire.rod(base, [bx, by, -0.10], 0.032, gold, 4);
+    wire.sph(0.105, i % 3 === 1 ? champagne : ruby, [bx, by, -0.10], 6);
+  }
+  // Two hanging, four-point stars have a broad enough centre to catch the
+  // evening light at the far end of the square.
+  for (const t of [0.59, 0.85]) {
+    const [x, y] = spine(t), cy = y - 0.28;
+    wire.rod([x, y, 0.015], [x, cy + 0.19, 0.07], 0.028, gold, 4);
+    wire.sph(1, champagne, [x, cy, 0.07], 4, [0.066, 0.22, 0.056]);
+    wire.sph(1, champagne, [x, cy, 0.07], 4, [0.17, 0.058, 0.052]);
+  }
+  for (const [offset, color] of [[0, champagne], [0.19, ruby]]) {
+    const points = Array.from({ length: 25 }, (_, i) => {
+      const t = i / 24, a = t * Math.PI * 3.85;
+      return [0.19 * Math.cos(a), 1.62 + offset + 1.31 * t, 0.19 * Math.sin(a)];
+    });
+    wire.tube(points, 0.045, color, 20, 4);
+  }
+  const mat = ctx.mat.emissive('#ffffff', 1).clone();
+  mat.name = 'palace-winter-quill';
+  mat.vertexColors = true;
+  ctx.onUpdate(() => mat.color.setScalar(0.92 + 2.20 * ctx.shared.uNight.value));
+  return {
+    geo: wire.build(), mat, name: 'winter-quill', far: 320, shadow: false, receive: false, noOutline: true,
+    place: spot => new THREE.Matrix4().makeRotationY(Math.atan2(spot.x - CX, spot.z - CZ))
+      .setPosition(spot.x, spot.y, spot.z),
+  };
+}
+
 /** the knockable lamps (ctx.knock): the pole + arms and the opal globes are templates at the origin (arms along +x, turned by rotY = -angle); the pole is ONE mesh for both kinds (the 3-globe lamp
  *  keeps the 2-globe lamp's little finial, hidden inside its top globe), the globes are one mesh per kind */
-function knockLamps(ctx, K, GM, spots) {
+function knockLamps(ctx, K, GM, spots, bracket) {
   const model = (globes) => {
     const T = new Parts(); lamp(K, GM, T, 0, 0, globes, 0);
     const tmp = new THREE.Group(), meshes = T.build(tmp), pick = (mat) => meshes.find((m) => m.material === mat).geometry;
@@ -275,6 +337,7 @@ function knockLamps(ctx, K, GM, spots) {
       { geo: m2.body, mat: GM.lamp, name: 'body' },
       { geo: m2.glow, mat: GM.globe, name: 'glow2', shadow: false, noOutline: true, hide: true, when: (s) => s.globes !== 3 },
       { geo: m3.glow, mat: GM.globe, name: 'glow3', shadow: false, noOutline: true, hide: true, when: (s) => s.globes === 3 },
+      ...(bracket ? [bracket] : []),
     ],
     spots, items: spots.map((s) => s.item), far: 320, cell: 768,                                   // (18 lamps over ~330 m: two cells keep the draws at six)
     rec: { kind: 'lamp', mass: 600, h: 6.2, r: 0.22, anchored: 23, hitK: 0.7, metal: true },

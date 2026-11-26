@@ -10,6 +10,22 @@ export const C = {
   polit: '#c9cac6', politShade: '#b2b4b1', stalin: '#e0c682', stalinTrim: '#efe3bd', lidval: '#bfb193', lidvalTrim: '#d0c7ab', potStone: '#8c8a84', roofLidval: '#8f979a',
 };
 
+// The grit sheet shows between the mapped lawns. Compacted snow on the
+// walks is denser and darker than fresh lawn snow, with scattered granite chips.
+function packedPathSnow(ctx) {
+  const map = ctx.tex.draw(128, 128, (g, w, h) => {
+    const random = ctx.rng('troitskaya-packed-snow');
+    g.fillStyle = '#c4c8c8';
+    g.fillRect(0, 0, w, h);
+    const grains = ['#d1d4d3', '#b7b9b8', '#c0b9b2', '#9e8f86'];
+    for (let i = 0; i < 1000; i++) {
+      g.fillStyle = grains[i % grains.length];
+      g.fillRect(random() * w, random() * h, 0.5 + random() * 1.6, 0.5 + random() * 1.1);
+    }
+  }, { key: 'lmT-packed-grit', repeat: [1, 1] });
+  return ctx.mat.toon('#ffffff', { map, name: 'lmT-packed-grit', paint: 0.06, polygonOffset: -2 });
+}
+
 export function makeMats(ctx) {
   const T = ctx.mat.toon, A = makeArt(ctx), M = { A, C };
   const W = '#ffffff';
@@ -48,7 +64,8 @@ export function makeMats(ctx) {
     potStone: T(C.potStone, { name: 'lmT-potStone', paint: 0.06 }), roofLidval: T(C.roofLidval, { name: 'lmT-roofLidval', paint: 0.04 }), roofRed: T('#9a4a3c', { name: 'lmT-roofRed', paint: 0.04 }),
     iron: T('#26282c', { name: 'lmT-iron' }), lfence: T('#55585e', { map: A.kfence, alphaTest: 0.5, side: 'double', name: 'lmT-lfence' }), glassDark: T('#27323f', { name: 'lmT-glassDark' }),
     // ---- square
-    grit: T(C.grit, { map: A.grit, name: 'lmT-grit', paint: 0.05, polygonOffset: -2 }), lawn: T(C.lawn, { map: A.grass, name: 'lmT-lawn', paint: 0.06, polygonOffset: -3 }),
+    grit: ctx.season === 'winter' ? packedPathSnow(ctx) : T(C.grit, { map: A.grit, name: 'lmT-grit', paint: 0.05, polygonOffset: -2 }),
+    lawn: T(C.lawn, { map: A.grass, name: 'lmT-lawn', paint: 0.06, polygonOffset: -3 }),
     pavers: T('#b9b6ae', { map: A.pavers, name: 'lmT-pavers', paint: 0.04, polygonOffset: -4 }), hedge: T(C.hedge, { map: A.hedge, name: 'lmT-hedge', paint: 0.1 }),
     chapel: T(C.chapel, { map: A.granitePolished, name: 'lmT-chapel', paint: 0.03 }), chapelLight: T(C.chapelLight, { map: A.granitePolished, name: 'lmT-chapelL', paint: 0.03 }),
     bronzeGreen: T(C.bronzeGreen, { name: 'lmT-bronzeG', paint: 0.03 }), bronzeDark: T('#3a332a', { name: 'lmT-bronzeD', paint: 0.02 }),
