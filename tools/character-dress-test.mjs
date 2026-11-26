@@ -1,5 +1,6 @@
 // CPU regression for the playable beret character. Compare the original
-// skeleton tracks, then intersect the fitted fabric with the skinned body.
+// skeleton tracks, check red brief coverage, and intersect the fitted dress
+// with the skinned body.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -15,7 +16,7 @@ const bytes = fs.readFileSync(new URL('../assets/characters/woman-beret.glb', im
 const file = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 const gltf = await new GLTFLoader().parseAsync(file, '');
 const actor = createActor(gltf, {
-  mat: { toon: () => new THREE.MeshBasicMaterial() },
+  mat: { toon: (color, { vertexColors }) => new THREE.MeshBasicMaterial({ color, vertexColors }) },
   add() {},
 }, { dress: true });
 const motion = {
@@ -52,7 +53,58 @@ function surface(mesh, include) {
 }
 
 const skin = actor.visual.getObjectByName('girl_0001');
-const { skinIndex, skinWeight } = skin.geometry.attributes;
+const { position: restSkin, skinIndex, skinWeight } = skin.geometry.attributes;
+const tint = new THREE.Color();
+function renderedColor(mesh, vertex) {
+  tint.copy(mesh.material.color);
+  if (mesh.material.vertexColors) {
+    const color = mesh.geometry.attributes.color;
+    tint.r *= color.getX(vertex);
+    tint.g *= color.getY(vertex);
+    tint.b *= color.getZ(vertex);
+  }
+  return tint.getHex();
+}
+
+// Check the skinned surface's flat colour on both sides of the leg openings.
+// Bind-space rays select surfaces without depending on an animation frame.
+assert(skin.isSkinnedMesh, 'Brief coverage follows the existing character rig');
+const bodyIndex = skin.geometry.index;
+const red = 0xad2a3b, skinColor = 0xffcd83;
+for (let i = 0; i < bodyIndex.count; i += 3) {
+  const ids = [bodyIndex.getX(i), bodyIndex.getX(i + 1), bodyIndex.getX(i + 2)];
+  const color = renderedColor(skin, ids[0]);
+  assert(color === red || color === skinColor, `Unexpected colour on body triangle ${i / 3}`);
+  assert(ids.every(id => renderedColor(skin, id) === color), `Mixed colours on body triangle ${i / 3}`);
+  if (color === red) {
+    assert(ids.every(id => Math.abs(restSkin.getX(id)) < .152 && restSkin.getY(id) > .86 && restSkin.getY(id) < 1.118),
+      `Brief colour outside the hips on body triangle ${i / 3}`);
+  }
+}
+const bodyAtRest = new THREE.Mesh(skin.geometry, skin.material);
+const colorRay = new THREE.Raycaster();
+function expectColor(side, y, offsets, color, label) {
+  for (const x of offsets) {
+    colorRay.ray.origin.set(x, y, side);
+    colorRay.ray.direction.set(0, 0, -side);
+    const [match] = colorRay.intersectObject(bodyAtRest);
+    assert(match?.face, `${label} ray intersects the body at (${x}, ${y})`);
+    assert.equal(renderedColor(skin, match.face.a), color, `${label} colour at (${x}, ${y})`);
+  }
+}
+for (const side of [1, -1]) {
+  expectColor(side, 1.07, [-.08, -.04, 0, .04, .08], red, 'Covered waist');
+  expectColor(side, .99, [-.08, -.04, 0, .04, .08], red, side === 1 ? 'Covered front' : 'Covered seat');
+  expectColor(side, .86, [-.10, -.046, .046, .10], skinColor, 'Bare upper legs below the openings');
+  expectColor(side, .73, [-.09, -.046, .046, .09], skinColor, 'Bare thighs');
+  expectColor(side, .34, [-.089, -.048, .048, .089], skinColor, 'Bare calves');
+}
+expectColor(-1, .929, [-.05, -.02, .02, .05], red, 'Covered lower seat');
+const shoes = actor.visual.getObjectByName('shoes_0001');
+for (let i = 0; i < shoes.geometry.attributes.position.count; i++) {
+  assert.equal(renderedColor(shoes, i), 0xffffff, 'Shoes remain white');
+}
+
 const coveredBones = /^(upperLeg[LR]|lowerLeg[LR]|lowerBody|middleBody|chest)_Armature$/;
 function bodyVertex(id) {
   let weight = 0;
@@ -121,4 +173,4 @@ for (const { clip, start, end, phase } of sequences) {
   }
 }
 assert.equal(problems.length, 0, `Skin crossed the cloth in ${problems.length} samples. First: ${problems.slice(0, 6).join(', ')}`);
-console.log(`PASS: original jump tracks and garment clearance in ${sequences.length * (frameCount + 1)} jump and crouch poses`);
+console.log(`PASS: full red brief coverage, original jump tracks, and garment clearance in ${sequences.length * (frameCount + 1)} jump and crouch poses`);

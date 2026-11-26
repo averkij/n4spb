@@ -17,9 +17,10 @@ running-jump and sitting animation.
 Modifications: normalized scale and grounding, GLB export through Blender,
 deduplicated geometry and materials, toon materials, complete baked bone tracks,
 pose transfer, runtime animation retiming and inverse kinematics. The woman's
-red beret, fitted eyes, arm clearance and closed/thickened skirt were authored
-for this game. The man's beard was removed; shoulders, relaxed jeans, enlarged
-shoes and a brown baseball cap were adapted or authored for this game.
+red beret, fitted eyes, arm clearance, closed/thickened skirt and red briefs
+were authored for this game. The man's beard was removed. His
+shoulders, relaxed jeans, enlarged shoes and brown baseball cap were adapted
+or authored for this game.
 
 The models retain six source clips: Idle, Walk, Run, Jump, RunningJump and
 Sitting. Vehicle entry, extraction, driving hand/foot placement and angry NPC

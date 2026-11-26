@@ -1,5 +1,20 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-26 — Beret character jump coverage (16.4.1)
+
+The beret character wears plain red briefs under the dress. Their colour is
+part of the existing skinned body mesh. Splitting 32 triangles along the
+garment edge adds 64 triangles and 96 vertices. The character still has ten
+mesh primitives. The GLB grows from 470,708 to 515,464 bytes. The skeleton,
+all six animation clips, and all non-body accessors match `bf956ea2` byte
+for byte.
+
+The keyboard-driven running-jump preview and side and rear captures show
+coverage when the skirt lifts. The character regression checks the waist,
+front and seat coverage, bare legs and white shoes. It also passes all 968
+jump and crouch pose samples and verifies the original jump tracks. The
+crouch and car-door pose regressions pass with both playable rigs.
+
 ## 2026-11-26 — Jump, crouch, and Alexander Garden fountain (16.4.0)
 
 The running jump uses the original animation tracks. The beret character's
