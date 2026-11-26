@@ -77,7 +77,8 @@ export function palace(K) {
 export function forecourtFence(K) {
   const P = K.P, ph = K.ctx.physics, M = K.M;
   const iron = M.iron, gold = M.gold, pier = M.pierMat || K.mat('#8b7f78', { name: 'lmM-mp-pier', paint: 0.06 }), urnMat = K.mat('#6a6c68', { name: 'lmM-mp-urn', paint: 0.04 });
-  const runs = [[[-1350.7, -1473.9], [-1330.7, -1482.8], [-1317, -1489.2]], [[-1322, -1401.9], [-1288.2, -1417.4]]];
+  // The southern run opens onto the mapped carriage entrance to the court.
+  const runs = [[[-1350.7, -1473.9], [-1330.7, -1482.8], [-1317, -1489.2]], [[-1322, -1401.9], [-1307.2, -1408.7]], [[-1300.2, -1411.9], [-1288.2, -1417.4]]];
   // WATER IS REACHABLE (docs/AREAS.md 13.7): the forecourt fence breaks: one BAY per panel between two piers (a granite pier with its urn at the end of the bay, the iron rails, the spears, the gilded rosette, a box collider;
   // lib/fence-bays.js: a car at 24 km/h breaks it off). The geometry is the same as before, drawn once as templates at the origin.
   const bays = [];
@@ -108,7 +109,7 @@ export function forecourtFence(K) {
   // the paved forecourt (cour d'honneur): granite slabs between the palace, the two fences and the service wing (hides the generic ground, which shows tufts and mottling there)
   const court = [[-1322, -1401.9], [-1288.2, -1417.4], [-1317, -1489.2], [-1350.7, -1473.9], [-1343.9, -1456], [-1370.3, -1441.4], [-1362.9, -1428.4], [-1356.6, -1417.3], [-1353.7, -1418.9], [-1333.7, -1429.8]];
   P.cap(M.slabDark, court, 0.024, true, 1.6);
-  K.svc.fences.push({ id: 'w116396254', pts: runs[0] }, { id: 'w116396257', pts: runs[1] });
+  K.svc.fences.push({ id: 'w116396254', pts: runs[0] }, ...runs.slice(1).map(pts => ({ id: 'w116396257', pts })));
 }
 
 // ================================================================================================ Alexander III monument

@@ -40,6 +40,7 @@ log(`plan: ${plan.lines.length} line items, ${plan.bars.length} stop bars, ${pla
 
 const fails = [];
 const fail = (m) => { fails.push(m); log('  FAIL: ' + m); };
+if (graph.laneById.size !== graph.lanes.length) fail('Lane IDs collide between clipped road fragments');
 const km = (m) => (m / 1000).toFixed(2);
 const pad = (s, n) => String(s).padEnd(n);
 const lenOf = (pts) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z); return s; };

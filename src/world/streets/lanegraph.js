@@ -96,9 +96,15 @@ export function buildLaneGraph(net) {
   }
   const armOf = (nd, w, along) => nd.arms.find((a) => a.w === w && a.along === along) || null;
 
+  // Area clipping can split one mapped way into multiple disconnected pieces.
+  // Keep the original lane IDs on the first piece and qualify later pieces.
+  const fragments = new Map();
   // ---- lanes
   for (const w of net.ways) {
     if (w.pedestrianOnly) continue;
+    const fragment = fragments.get(w.id) || 0;
+    fragments.set(w.id, fragment + 1);
+    const lanePrefix = fragment ? w.id + '~' + fragment : w.id;
     const { nF, nB } = w.lanes, K = nF + nB;
     // stations along the way: start, interior nodes, end
     const st = [];
@@ -125,7 +131,7 @@ export function buildLaneGraph(net) {
             const s = sStart + (sEnd - sStart) * i / (n - 1), q = wayAt(w, s), off = (latAt(w, q, j) + latAt(w, q, j + 1)) / 2;
             pts.push([q.x - q.tz * off, q.z + q.tx * off]);
           }
-          const id = `L${w.id}:${e}:${dir > 0 ? 'f' : 'b'}${idx}`;
+          const id = `L${lanePrefix}:${e}:${dir > 0 ? 'f' : 'b'}${idx}`;
           const lane = { id, road: w.id, way: w.i, dir, idx, n: nLane, width: w.bnd[0].lw, rank: w.rank, hw: w.hw, name: w.name, pts, len: polyLen(pts),
             from: stS.node ? stS.node.id : null, to: enS.node ? enS.node.id : null, armStart: aS, armEnd: aE, speed: SPEED[w.rank] ?? 8, s0: sStart, s1: sEnd, oneway: !!w.oneway };
           lanes.push(lane); laneById.set(id, lane);

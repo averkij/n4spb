@@ -93,3 +93,5 @@ Audit before -> after (`node tools/area.mjs <area> tools/streets-markings-audit.
 palace 359 / 124 / 21 -> 6 / 95.5 -> 95.4 %; admiralty 397 / 168 / 12 -> 0 / 95.5 -> 95.4 %; vasilyevsky 335 / 112 / 12 -> 0 / 97.0 -> 96.9 %; smolny 473 / 194 / 15 -> 6 / 95.0 -> 94.9 %;
 vladimirsky 382 / 204 / 9 -> 6 / 94.1 -> 94.1 %; stop bars, arrows and zebras unchanged; the shared-edge "drawn twice" count falls (palace 718 -> 522, admiralty 449 -> 227, vladimirsky 1103 -> 865).
 Markings are part of the baked street surfaces: a re-bake is needed to see this in the baked build.
+
+Clipped fragments of the same OSM way have distinct lane IDs so each approach paints and obeys its own stop line. The markings audit checks that every lane resolves uniquely.

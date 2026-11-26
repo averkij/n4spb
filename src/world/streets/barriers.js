@@ -208,7 +208,10 @@ export function buildBarriers(ctx, net, walks, poles, root, lamps = []) {
   const panelRuns = pan.map(p => [[p.x, p.z, p.x + Math.sin(p.rotY) * rail.len * p.sz, p.z + Math.cos(p.rotY) * rail.len * p.sz]]);
   out.stats.railBoxes = FENCES_OFF ? 0 : addFenceBoxes(ctx, panelRuns, 0.12, 1.1, clearOfRoad, (box, i) => { panelItems[i] = box; });
   const placePanel = p => new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotY), new THREE.Vector3(1, 1, p.sz));
-  const panels = knockInstances(ctx, { name: 'pt-guard-rails', spots: pan, items: panelItems, far: 360,
+  // A corner fillet can consume an entire panel. The visible guardrail and its
+  // knock record must end at the same gap used by walkers and vehicles.
+  const visiblePanels = FENCES_OFF ? pan : pan.filter((_, i) => panelItems[i]);
+  const panels = knockInstances(ctx, { name: 'pt-guard-rails', spots: visiblePanels, items: panelItems.filter(Boolean), far: 360,
     parts: [
       { geo: rail.pickets, mat: mPick, name: 'pickets', shadow: false, noOutline: true, place: placePanel },
       { geo: rail.iron, mat: mVC, name: 'iron', place: placePanel },
@@ -218,7 +221,7 @@ export function buildBarriers(ctx, net, walks, poles, root, lamps = []) {
       rotY: p.rotY - Math.PI / 2, mass: 45, h: 1.1, w: rail.len * p.sz + 0.1, d: 0.3, r: 0.15, anchored: 12, hitK: 0.2, metal: true }),
   });
   out.stats.knockRails = panels.records.filter(Boolean).length;
-  out.stats.rails = pan.length;
+  out.stats.rails = visiblePanels.length;
   out.stats.fenceMs = Math.round((typeof performance !== 'undefined' ? performance : Date).now() - tFence);
   return out;
 }
