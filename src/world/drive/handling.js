@@ -112,10 +112,33 @@ export function createHandling(ctx, tuning = null) {
   /** the surface y of the water at (x, z) (a waterway, a pond, a basin) or null */
   const waterY = (x, z) => { const w = ph.waterLevel ? ph.waterLevel(x, z) : null; return w !== null && w !== undefined ? w : (L.waterLevelAt ? L.waterLevelAt(x, z) : null); };
   /** terrain the car may not enter: an escalator shaft, a building footprint, the area's closed ground. NOT water, never a river (the world rule) */
+  // Build a small spatial index once, the first time a footprint actually
+  // intersects the car. Baked and procedural cities publish identical paths.
+  let passageCells;
+  function inPassage(x,z) {
+    if (!passageCells) {
+      passageCells = new Map();
+      for (const {pts,w} of ctx.services?.city?.passages || []) for (let i=2;i<pts.length;i+=2) {
+        const ax=pts[i-2], az=pts[i-1], dx=pts[i]-ax, dz=pts[i+1]-az, r=w/2;
+        const segment={ax,az,dx,dz,r};
+        for (let j=Math.floor((Math.min(ax,ax+dx)-r)/32);j<=Math.floor((Math.max(ax,ax+dx)+r)/32);j++)
+          for (let k=Math.floor((Math.min(az,az+dz)-r)/32);k<=Math.floor((Math.max(az,az+dz)+r)/32);k++) {
+            const key=j+','+k;
+            if (!passageCells.has(key)) passageCells.set(key,[]);
+            passageCells.get(key).push(segment);
+          }
+      }
+    }
+    const nearby=passageCells.get(Math.floor(x/32)+','+Math.floor(z/32));
+    return nearby?.some(({ax,az,dx,dz,r})=>{
+      const t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz||1)));
+      return Math.hypot(x-ax-t*dx,z-az-t*dz)<=r;
+    });
+  }
   function solidBlocked(x, z) {
     if (KEEP_OUT && KEEP_OUT(x, z)) return true;
     if (ph.inHole(x, z, 0.2)) return true;
-    return L.insideBuilding(x, z);
+    return L.insideBuilding(x, z) && !inPassage(x,z);
   }
   /** the terrain at (x, z) is a CLIFF for a car on the ground: more than RISE_MAX above its wheels (the wall of a trench seen from the bed); a deck is a floor, not a cliff */
   const cliff = (x, z) => !car.air && L.heightAt(x, z) - car.y > RISE_MAX && !(deck && deck(x, z) !== null);

@@ -85,7 +85,7 @@ export function build(K) {
       const a = k / 8 * Math.PI * 2, x = Math.cos(a) * rad * 0.45, z = Math.sin(a) * rad * 0.45;
       nozzles.push({ x, z, height: hJet * 0.45, width: 0.035, target: [x * 1.15, 0, z * 1.15] });
     }
-    liveFountain(ctx, { id: b.id, x: cx, z: cz, y: 0.42, r: rad, nozzles, far: 320 });
+    liveFountain(ctx, { id: b.id, x: cx, z: cz, y: 0.42, r: rad, snowRing:b.ring, nozzles, far: 320 });
     P.cyl(M.marbleCoping, [cx, 0.42, cz], [cx, 0.62, cz], 0.35, 0.28, 10, true);
     (svc.fountains ||= []).push({ id: b.id, name: b.name, x: cx, z: cz, r: rad });
     svc.crowd.push({ x: cx, z: cz, r: rad + 4, n: 5, kind: 'fountain' });

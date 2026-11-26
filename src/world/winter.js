@@ -73,6 +73,13 @@ function decoratedFir(ctx, id, x, z, h, glow) {
   const topper = new THREE.ExtrudeGeometry(star, { depth: 0.08, bevelEnabled: false });
   for (const turn of [0, Math.PI / 2]) bulbs.add(topper, '#ffd47d', mtx([0, h * 1.03, 0], [0, turn, 0]));
   topper.dispose();
+  // Wrapped parcels at the foot of each square's tree.
+  for(let i=0;i<7;i++){
+    const a=i*2.4, x=Math.cos(a)*radius*.86,z=Math.sin(a)*radius*.86, size=.36+random()*.43;
+    branches.box(size,size*.76,size*.9,['#a84542','#567b86','#b28753'][i%3],[x,size*.38,z]);
+    branches.box(size*.15,size*.77,size*.905,'#ebce84',[x,size*.385,z]);
+    branches.box(size*1.01,size*.77,size*.13,'#ebce84',[x,size*.385,z]);
+  }
   const tree = new THREE.Group();
   tree.name = 'holiday-' + id;
   const canopy = new THREE.Mesh(branches.build(), ctx.mat.toon('#ffffff', { vertexColors: true, name: 'festive-fir' }));

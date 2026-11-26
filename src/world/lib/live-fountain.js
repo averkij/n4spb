@@ -115,6 +115,23 @@ function update(c, t) {
  * All fountains receive gentle dusk/night highlights from shared scene uniforms.
  */
 export function liveFountain(ctx, opts = {}) {
+  if (ctx.season === 'winter') {
+    const {id,x=0,z=0,y=.3,r=2,snowRing,snowHoles=[]}=opts;
+    if (!opts.flush) {
+      let geo;
+      if (snowRing) {
+        const points = ring => ring.map(([px,pz]) => new THREE.Vector2(px-x,z-pz));
+        const shape = new THREE.Shape(points(snowRing));
+        shape.holes = snowHoles.map(ring => new THREE.Path(points(ring)));
+        geo = new THREE.ShapeGeometry(shape);
+      } else geo = new THREE.CircleGeometry(r,40);
+      geo.rotateX(-Math.PI/2);
+      const snow = new THREE.Mesh(geo,ctx.mat.toon('#dce3e7',{name:'fountain-snow',paint:.09}));
+      snow.name='snow-filled-'+id; snow.position.set(x,y+.035,z); snow.receiveShadow=true;
+      ctx.addStatic(snow); registerLOD(snow,opts.far||300);
+    }
+    return {id,nozzles:opts.nozzles||[],season:'winter'};
+  }
   const c = controller(ctx), { id = `fountain-${c.stats.fountains}`, x = 0, z = 0, y = .3 } = opts;
   const r = Math.max(.1, opts.r ?? 2), height = Math.max(.05, opts.height ?? 2), width = clamp(opts.width ?? .035, .012, .16);
   const segments = Math.round(clamp(opts.segments ?? 10, 4, 16)), far = clamp(opts.far ?? 300, 50, 350);

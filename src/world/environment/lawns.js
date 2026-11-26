@@ -143,7 +143,7 @@ export function buildSurfaces(ctx, root, field, owned) {
 // A closed loft, including both exposed ends and the ground-facing underside.
 // A single-sided foliage material must see real faces from every outside view;
 // double-sided side strips cannot repair a missing cap.
-export function hedgeGeometry(runs) {
+export function hedgeGeometry(runs, winter = false) {
   const P = [], N = [], C = [], I = [];
   const prof = [[-0.34, 0.0, -1, 0.1], [-0.25, 0.68, -0.6, 0.8], [0.25, 0.68, 0.6, 0.8], [0.34, 0.0, 1, 0.1]]; // 4-point trapezoid: 6 side/top + 2 underside triangles per section, 2 per end cap
   const c0 = new THREE.Color('#34502a'), c1 = new THREE.Color('#5f8a3a');
@@ -157,7 +157,11 @@ export function hedgeGeometry(runs) {
         const w = d * end, yy = y * h * wob;
         P.push(x + nx * w, yy, z + nz * w);
         { const nl = Math.hypot(pnx, pny) || 1; N.push(nx * pnx / nl, pny / nl, nz * pnx / nl); }
-        const t = Math.min(1, y / 0.68), k = 0.66 + 0.34 * t; C.push(mix(c0.r, c1.r, t) * k * tc.r * 1.1, mix(c0.g, c1.g, t) * k * tc.g * 1.1, mix(c0.b, c1.b, t) * k * tc.b * 1.1);
+        const t = Math.min(1, y / 0.68), k = 0.66 + 0.34 * t;
+        if (winter) {
+          const snow = .65 + .20 * hash2(i, Math.round(ax), 56);
+          C.push(mix(.11,snow,t),mix(.09,snow+.03,t),mix(.085,snow+.055,t));
+        } else C.push(mix(c0.r, c1.r, t) * k * tc.r * 1.1, mix(c0.g, c1.g, t) * k * tc.g * 1.1, mix(c0.b, c1.b, t) * k * tc.b * 1.1);
       }
     };
     for (let i = 0; i <= n; i++) put(i, ax + (bx - ax) * i / n, az + (bz - az) * i / n, i === 0 || i === n ? 0.7 : 1, 0.92 + 0.16 * hash2(i, Math.round(ax), 3));
@@ -214,7 +218,7 @@ export function buildHedges(ctx, root, field, owned) {
     }
   }
   if (!runs.length) return { runs };
-  const m = new THREE.Mesh(hedgeGeometry(runs), canopyMaterial(ctx)); m.name = 'env-hedges'; m.castShadow = true; m.receiveShadow = true; ctx.noBatch(m); root.add(m);
+  const m = new THREE.Mesh(hedgeGeometry(runs,ctx.season === 'winter'), ctx.season === 'winter' ? ctx.mat.toon('#ffffff',{vertexColors:true,paint:.07,name:'winter-hedges'}) : canopyMaterial(ctx)); m.name = 'env-hedges'; m.castShadow = true; m.receiveShadow = true; ctx.noBatch(m); root.add(m);
   for (const r of runs) { const l = Math.hypot(r.bx - r.ax, r.bz - r.az); ctx.physics.addBox((r.ax + r.bx) / 2, (r.az + r.bz) / 2, l + 0.4, 0.7, Math.atan2(-(r.bz - r.az), r.bx - r.ax), 0, 1.1); }
   return { runs };
 }

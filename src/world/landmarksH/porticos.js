@@ -119,6 +119,10 @@ function pavilion(K, ctx, M, H, a, b0) {
     P.box(M.granite, x0, x1, 0, 1.0, 0, 0.14, 'kb', 1.0); K.wallQuad(M.rust, x0, x1, 1.0, SPR, 2.4, 0, 1.1);
     P.box(M.white, x0 - (x0 === -AW ? 0.2 : 0), x1 + (x1 === AW ? 0.2 : 0), SPR, SPR + 0.5, 0, 0.26, 'kb');
   }
+  for (const sign of [-1,1]) {
+    const x=sign*AW;
+    P.quad(M.wall,[x,0,-1.6],[x,TOP,-1.6],[x,TOP,0],[x,0,0],[sign,0,0]);
+  }
   const s = new T.Shape(); s.moveTo(-AW, SPR + 0.5); s.lineTo(-RIN, SPR + 0.5); s.lineTo(-RIN, SPR); s.absarc(0, SPR, RIN, Math.PI, 0, true); s.lineTo(RIN, SPR + 0.5); s.lineTo(AW, SPR + 0.5); s.lineTo(AW, TOP); s.lineTo(-AW, TOP); s.closePath();
   P.face(M.wall, s, 0, 3, 10);
   const ring = new T.Shape(); ring.moveTo(RIN, SPR); ring.lineTo(ROUT, SPR); ring.absarc(0, SPR, ROUT, 0, Math.PI, false); ring.lineTo(-RIN, SPR); ring.absarc(0, SPR, RIN, Math.PI, 0, true); ring.closePath();
@@ -143,7 +147,17 @@ function pavilion(K, ctx, M, H, a, b0) {
   // ---- the two loggias: recessed wall (z = 0) with windows, columns at z = 3.4 in front, entablature
   for (const sx of [-1, 1]) {
     const x0 = sx > 0 ? AW : -hw, x1 = sx > 0 ? hw : -AW;
-    P.box(M.granite, x0, x1, 0, 1.0, 0, 0.14, 'kb', 1.0); K.wallQuad(M.rust, x0, x1, 1.0, 4.6, 2.4, 0, 1.1); P.box(M.white, x0, x1, 4.6, 5.2, 0, 0.3, 'kb');
+    // Solid rusticated podium under the whole colonnade, including its exposed
+    // ends. The OSM wing ends behind the authored loggia on the eastern bank.
+    const back = a > 0 ? -3.0 : -.35, front = 4.18;
+    P.box(M.granite,x0,x1,0,1.0,back,front,'b');
+    P.box(M.rust,x0,x1,1.0,4.85,back,front,'bt',2.4);
+    P.box(M.white,x0-.04,x1+.04,4.85,5.2,back,front+.06,'b');
+    const [cx,cz]=W(a-(x0+x1)/2,b0+(front+back)/2);
+    ctx.physics.addWalkBox(cx,cz,x1-x0,front-back,ROT,5.2,0);
+    // Close the return where the window wall meets the surveyed side wall.
+    const outside = sx*hw;
+    P.box(M.wall, outside-.12,outside+.12,5.18,17.9,back,0,'b');
     K.wallQuad(M.wall, x0, x1, 5.2, 17.9, 3, 0);
     const n = 5, px0 = sx * (AW + 1.7), px1 = sx * (hw - 1.8);
     for (let i = 0; i < n; i++) {
@@ -154,8 +168,6 @@ function pavilion(K, ctx, M, H, a, b0) {
       ctx.physics.addCylinder(wx, wz, 0.75, 5.0, 14.2);
     }
     K.balustrade(Math.min(x0, x1) + 0.6, Math.max(x0, x1) - 0.6, 5.2, 0.9, 0.24, M.white);
-    // terrace in front of the loggia wall
-    P.quad(M.graniteLight, [x0, 5.2, 3.9], [x1, 5.2, 3.9], [x1, 5.2, 0.3], [x0, 5.2, 0.3], [0, 1, 0]);
     P.box(M.white, x0, x1, 14.2, 15.1, 0.0, 3.9, 'k');
   }
   // entablature along the whole front (loggias z 3.9, block z 1.6 + 1.5 projection), cornice 15.1 - 17.4

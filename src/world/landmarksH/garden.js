@@ -212,6 +212,10 @@ function buildFountainBasin(P, ctx) {
 
 /** the jets of the fountain: a 17 m central jet, 8 inner jets inclined to the centre, 40 arc jets along the rim; one shimmering group */
 function jets(K, ctx, cx, cz) {
+  if (ctx.season === 'winter') {
+    liveFountain(ctx,{id:FOUNTAIN_ID,x:cx,z:cz,y:WATER_Y,r:13});
+    return;
+  }
   const parts = new Parts(), mat = ctx.mat.toon('#eef6fb', { transparent: true, opacity: 0.78, emissive: '#bcd8ea', emissiveIntensity: 0.35, name: 'lmH-jet' });
   parts.cyl(mat, [cx, 0.6, cz], [cx, 12.5, cz], 0.5, 0.3, 8, false); parts.cyl(mat, [cx, 12.5, cz], [cx, 17.0, cz], 0.3, 0.06, 6, true);
   for (let i = 0; i < 8; i++) {                                                                  // inner jets: rise 6 m, bend over the centre

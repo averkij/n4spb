@@ -110,7 +110,7 @@ export function placeFountains(S,city=CITY,layout=L){
         record.basins++;stats.basins++;
       }else stats.reused++;
       const height=Math.max(1.1,Math.min(4,r*.52)),nozzles=points.map((q,i)=>({x:q.x-cx,z:q.z-cz,height:height*(i? .55+.35*(i%3)/2:1),width:r>5?.04:.025,target:[q.x-cx,0,q.z-cz]}));
-      const effect=liveFountain(ctx,{id:`mapped-${f.id}-${pi}`,x:cx,z:cz,y,r,height,nozzles});
+      const effect=liveFountain(ctx,{id:`mapped-${f.id}-${pi}`,x:cx,z:cz,y,r,height,nozzles,flush:record.flush,snowRing:pairs(p.o),snowHoles:(p.h||[]).map(pairs)});
       record.effects.push({id:effect.id,x:cx,z:cz,y,geometry:known!==null?'existing':record.flush?'flush':'basin',points:points.map(q=>[q.x,q.z]),jets:nozzles.length});
       S.occupy?.(cx,cz,r+.3,'fountain');
     }

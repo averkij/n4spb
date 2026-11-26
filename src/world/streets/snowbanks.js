@@ -18,6 +18,7 @@ export function buildSnowbanks(ctx, net, stops, entrances) {
     for (let from = 1; from + 4 < pts.length;) {
       const spans = Math.min(pts.length - 2 - from, 3 + Math.floor(rng() * 8));
       const height = 0.33 + rng() ** 2 * 0.61, width = 0.46 + 0.43 * rng();
+      const heap = spans >= 5 && rng() < .09;
       let clear = true;
       for (let j = from; j <= from + spans; j++) {
         const p = pts[j];
@@ -31,12 +32,25 @@ export function buildSnowbanks(ctx, net, stops, entrances) {
         let prev;
         for (let j = 0; j <= spans; j++) {
           const p = pts[from + j], taper = Math.min(1, j * 0.75, (spans - j) * 0.75);
-          const h = 0.025 + taper * height * (0.7 + rng() * 0.48);
-          const r = width * (0.42 + taper * (0.5 + rng() * 0.4));
+          const h = 0.025 + taper * (heap ? 1.4 + .26 * rng() : height) * (0.7 + rng() * 0.48);
+          const r = (heap ? width + .54 : width) * (0.42 + taper * (0.5 + rng() * 0.4));
           const v = (offset, y, col) => b.vert(p.x + p.ox * offset, y, p.z + p.oz * offset, 0, 0, undefined, col);
           const rim = 0.04 + 0.23 * rng();
           const row = [v(-r, 0.035, grit), v(-r * 0.55, 0.05 + h * 0.53, packed),
             v(rim, 0.14 + h, crust), v(rim + r * 0.49, 0.13 + h * 0.62, packed), v(rim + r, 0.116, crust)];
+          if (heap && taper>.5) {
+            // Rough blocks tipped by the plough, embedded along the dirty slope.
+            for (let k=0;k<6;k++) {
+              const offset=(rng()-.5)*1.65*r, half=.12+.20*rng();
+              const y=.12+h*(1-.78*Math.abs(offset)/r);
+              const x=p.x+p.ox*offset+.8*(rng()-.5)*p.oz, z=p.z+p.oz*offset-.8*(rng()-.5)*p.ox;
+              const lump=[];
+              for(let q=0;q<5;q++){const a=q*2*Math.PI/5,rad=half*(.8+.4*rng());
+                lump.push(b.vert(x+Math.cos(a)*rad,y-half*.25,z+Math.sin(a)*rad,0,0,undefined,k%3?packed:grit));}
+              const top=b.vert(x+half*.15,y+half*.76,z,0,0,undefined,crust);
+              for(let q=0;q<5;q++) b.tri(lump[(q+1)%5],lump[q],top);
+            }
+          }
           if (prev) for (let k = 1; k < row.length; k++) b.quad(prev[k-1], prev[k], row[k], row[k-1]);
           prev = row;
         }

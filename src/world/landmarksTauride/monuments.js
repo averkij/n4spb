@@ -366,6 +366,10 @@ function buildFountain(ctx, parent, f, out, add) {
   // the water: a disc just under the rim; the spout: an animated thin cone and a few droplets
   const wg = new THREE.CircleGeometry(R, 24); wg.rotateX(-Math.PI / 2);
   const wm = new THREE.Mesh(wg, ctx.mat.toon(D.water, { paint: 0.06, name: 'tauride-fountain-water' })); wm.position.set(f.x, y + rt - D.waterDrop, f.z); wm.name = 'tauride-fountain-water'; wm.receiveShadow = true; ctx.noOutline(wm); ctx.noBatch(wm); parent.add(wm); out.meshes.push(wm); out.draws++; out.triangles += 24;
+  if(ctx.season==='winter'){
+    liveFountain(ctx,{id:f.id,x:f.x,z:f.z,y:y+rt-D.waterDrop,r:R});
+    return;
+  }
   const spray = ctx.mat.toon(D.spray, { paint: 0.08, name: 'tauride-fountain-spray', emissive: '#6bcbd5', emissiveIntensity: .08 }), jet = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.03, 1, 6, 1), spray);
   const drops = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), spray, 8);
   jet.name = 'tauride-fountain-jet'; drops.name = 'tauride-fountain-drops'; ctx.noOutline(jet); ctx.noOutline(drops);

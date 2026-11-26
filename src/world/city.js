@@ -164,7 +164,7 @@ export async function build(ctx) {
   if (typeof process !== 'undefined' && process.env && process.env.CITY_DEBUG) console.log('[city] streams', Object.fromEntries(Object.entries(M.s).map(([k, v]) => [k, v.size])), 'meshes under root', root.children.length, JSON.stringify(root.children.reduce((a, o) => { a[o.name] = (a[o.name] || 0) + 1; return a; }, {})));
   if (typeof process !== 'undefined' && process.env && process.env.CITY_DEBUG) console.log('[city]', JSON.stringify({ tris: Math.round(tris), details: { ...details.report, shops: { ...details.report.shops, entrances: undefined } }, passages: pass.triangles }));
   ctx.onUpdate(() => LOD.update(ctx.player.position));
-  ctx.services.city = { buildings: info.length, triangles: Math.round(tris), entrances: details.entrances || [], walls: info.flatMap((r) => r.walls), styles, report: { ...details.report, colliders: colliderCount, gates: gates.length, dossierGates: ctx._cityDossierGates || 0, fills: prep.fills, towers: towers.towers, canopies }, buildMs: Math.round(performance.now() - t0) };
+  ctx.services.city = { passages: ctx._cityTunnels.map(({pts,w}) => ({pts,w})), buildings: info.length, triangles: Math.round(tris), entrances: details.entrances || [], walls: info.flatMap((r) => r.walls), styles, report: { ...details.report, colliders: colliderCount, gates: gates.length, dossierGates: ctx._cityDossierGates || 0, fills: prep.fills, towers: towers.towers, canopies }, buildMs: Math.round(performance.now() - t0) };
   ctx.services.city.buildPhases = buildPhases;
   if (ctx.recordBake && !ctx.bakeNavOnly) {
     const { styles, buildMs, buildPhases, ...service } = ctx.services.city;      // (no wall-clock field in a product: two bakes of one source must be byte-identical)

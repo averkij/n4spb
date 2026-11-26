@@ -98,10 +98,11 @@ function fountain1809(K) {
   P.quad(M.water, [-1.1, 0.51, 1.1], [1.1, 0.51, 1.1], [1.1, 0.51, 1.8], [-1.1, 0.51, 1.8], [0, 1, 0]);
   const point=(x,y,z)=>new THREE.Vector3(x,y,z).applyMatrix4(P.m);
   const center=point(0,0,1.45),mouth=point(0,.95,1.2);
-  const flow=liveFountain(ctx,{id:'n2306201359',x:center.x,z:center.z,y:.51,r:.45,far:180,
+  const corners=[[-1.1,1.1],[1.1,1.1],[1.1,1.8],[-1.1,1.8]].map(([x,z])=>point(x,.28,z));
+  const flow=liveFountain(ctx,{id:'n2306201359',x:center.x,z:center.z,y:.51,r:.45,far:180,snowRing:corners.map(p=>[p.x,p.z]),
     nozzles:[{x:mouth.x-center.x,y:.44,z:mouth.z-center.z,height:.055,width:.018,target:[0,0,0]}]});
   flow.nozzles[0].ripple=.22; // keep small impact rings within the narrow trough
-  const corners=[[-1.1,1.1],[1.1,1.1],[1.1,1.8],[-1.1,1.8]].map(([x,z])=>point(x,.28,z));
+
   ph.addWater({ring:corners.flatMap(p=>[p.x,p.z]),level:.51});
   for(const ids of[[0,1,2],[0,2,3]])ph.addWalkTriangle(ids.map(i=>corners[i].toArray()),.04);
   const platform=point(0,0,.85),back=point(0,0,.35);

@@ -84,8 +84,14 @@ function oculus(K, x, y, r = 0.5) {
   P.cyl(K.mats.winWhite, [x, y, 0.15], [x, y, 0.17], r, r, 12, true);
   P.cyl(M.ironSoft, [x, y, 0.17], [x, y, 0.19], r * 0.92, r * 0.92, 12, true);
 }
+function solidProjection(K, x0, x1, depth) {
+  const centre = new K.THREE.Vector3((x0+x1)/2,0,depth/2).applyMatrix4(K.P.m);
+  const axis = new K.THREE.Vector3(1,0,0).transformDirection(K.P.m);
+  K.ctx.physics.addBox(centre.x,centre.z,x1-x0,depth,Math.atan2(-axis.z,axis.x),0,TOP+1.3);
+}
 function pavilion(K, x0, x1, pediment = true) {
   const P = K.P, M = K.mats, mid = (x0 + x1) / 2, w = x1 - x0, pz = 0.8;
+  solidProjection(K,x0,x1,pz);
   P.box(K.wall(WALL), x0, x1, 0, TOP + 1.3, 0, pz, 'kb');                                   // the projecting prism
   P.box(K.rust(WALL), x0 - 0.02, x1 + 0.02, 0.9, GF, pz - 0.02, pz + 0.02, 'kbtlr');         // (rusticated skin of the ground floor)
   P.push(0, 0, pz, 0);
@@ -107,6 +113,7 @@ function pavilion(K, x0, x1, pediment = true) {
 }
 function centre(K, x0, x1) {
   const P = K.P, M = K.mats, n = 5, p = (x1 - x0) / n, pz = 0.6;
+  solidProjection(K,x0,x1,pz);
   P.box(K.wall(WALL), x0, x1, 0, TOP + 1.3, 0, pz, 'kb');
   P.push(0, 0, pz, 0);
   groundFloor(K, x0 + 0.8, x1 - 0.8, { pitch: p });

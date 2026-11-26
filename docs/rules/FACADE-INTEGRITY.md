@@ -85,3 +85,10 @@ The landmark kit hid a whole facade edge when 2 of 3 sample points were within 0
 3. Reserve your rectangle in `ctx.services.labels` (or `city/slots.js labelRegistry(ctx)` in the city) before drawing.
 4. Run both city audits and the pixel probe (`--only`) before you report. A new district: nothing to add, the audits walk the whole data.
 5. A landmark module that draws its own walls next to generic houses: use the same contact rule for its `sharedWall` (`landmarksD/kit.js ringEdges` lookups) - the crack class applies there too (not audited here).
+
+
+## Through passages and projecting masonry
+
+Generate the facade opening, reveal, inner vault and side-wall collision from the same mouth on each surveyed facade. Both ends of a bent passage must join their respective facade planes. Retain narrow strips of masonry beside a gateway. A building footprint may contain a drive-through lane. Check the clear width and trace a walker and a car from the street into the courtyard and back, including the inner mouth at (324.1, 53.5).
+
+Give deep projecting pavilions and rusticated podiums their visible side faces and matching collision envelope. Inspect them diagonally at street height. Check the Beloselsky-Belozersky frontage near (-390, -64) and the Admiralty's east Neva pavilion from (-2315.7, -819.9), including the riverfront panorama.

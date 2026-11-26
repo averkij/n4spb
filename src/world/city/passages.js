@@ -27,8 +27,8 @@ export function planPassages(ctx, net, list) {
     let best = null;
     for (const e of cell) {
       const t = (x - e.a[0]) * e.dx + (z - e.a[1]) * e.dz, off = (x - e.a[0]) * e.nx + (z - e.a[1]) * e.nz;
-      if (Math.abs(off) > tol || t < gw / 2 + 0.9 || t > e.len - gw / 2 - 0.9) continue;
-      if (!e.pieces.some((p) => p.yLow < 0.2 && t - gw / 2 > p.t0 + 0.5 && t + gw / 2 < p.t1 - 0.5)) continue;
+      if (Math.abs(off) > tol || t < gw / 2 + 0.015 || t > e.len - gw / 2 - 0.015) continue;
+      if (!e.pieces.some((p) => p.yLow < 0.2 && t - gw / 2 > p.t0 + 0.015 && t + gw / 2 < p.t1 - 0.015)) continue;
       if (!best || Math.abs(off) < best.off) best = { e, t, off: Math.abs(off) };
     }
     return best;
@@ -44,12 +44,11 @@ export function planPassages(ctx, net, list) {
     const gw = r.hw === 'footway' || r.hw === 'path' ? 2.6 : Math.max(3.0, Math.min(3.8, (r.w || 4) * 0.9));
     const n = r.pts.length / 2;
     const ends = [[r.pts[0], r.pts[1]], [r.pts[(n - 1) * 2], r.pts[(n - 1) * 2 + 1]]];
-    const made = [];
-    for (const [x, z] of ends) {
-      const hit = nearEdge(x, z, 1.8, gw);
-      made.push(hit ? addGate(hit.e, hit.t, gw, { road: r.id }) : null);
+    const mouths = ends.map(([x,z]) => nearEdge(x,z,1.8,gw));
+    if (mouths.some(Boolean)) {
+      for (const hit of mouths) if (hit) addGate(hit.e,hit.t,gw,{road:r.id});
+      tunnels.push({pts:r.pts,w:gw,id:r.id,mouths});
     }
-    if (made[0] || made[1]) tunnels.push({ pts: r.pts, w: gw, id: r.id });
   }
   // carriage gates the research photographs show (known.js: gate = [fraction along the street front, width]): a vault from the street front to the courtyard (a hole ring of the
   // same building) when one lies straight behind the gate; no courtyard behind -> no gate (a blind tunnel would be worse than a plain wall)
@@ -82,7 +81,7 @@ export function planPassages(ctx, net, list) {
     if (!hit2 || hit2.e === e) { dbg('no edge at the far end ' + Math.round(dmin)); continue; }
     const g1 = addGate(e, t, gw, { dossier: 1 }); if (!g1) { dbg('gate rejected'); continue; }
     addGate(hit2.e, hit2.t, gw, { dossier: 1 });
-    tunnels.push({ pts: [px, pz, qx, qz], w: gw, id: rec.b.id });
+    tunnels.push({ pts: [px, pz, qx, qz], w: gw, id: rec.b.id, mouths: [{ e, t },hit2] });
     dossierGates++; if (typeof process !== 'undefined' && process.env && process.env.CITY_DEBUG) console.log('[city] dossier gate', rec.b.id, rec.st.name, Math.round(px), Math.round(pz), 'to courtyard', Math.round(dmin), 'm');
   }
   ctx._cityDossierGates = dossierGates;
@@ -115,19 +114,34 @@ export function buildPassages(ctx, { M }) {
   const wallC = new THREE.Color('#6d604c'), vaultC = new THREE.Color('#7a6d58'), floorC = new THREE.Color('#554f40');
   for (const tn of tunnels) {
     const n = tn.pts.length / 2, r = tn.w / 2, cy = GATE_SPRING;
+    // The end sections lie on the actual facade planes. Interior sections are
+    // shared by adjacent spans, including where a mapped driveway bends.
+    const section = [];
+    for (let i=0; i<n; i++) {
+      const x=tn.pts[2*i], z=tn.pts[2*i+1], prev=Math.max(0,i-1), next=Math.min(n-1,i+1);
+      const dx=tn.pts[next*2]-tn.pts[prev*2], dz=tn.pts[next*2+1]-tn.pts[prev*2+1];
+      const len=Math.hypot(dx,dz)||1, mx=-dz/len, mz=dx/len;
+      const hit=i===0 ? tn.mouths?.[0] : i===n-1 ? tn.mouths?.[1] : null;
+      if (!hit) { section.push([x,z,mx,mz]); continue; }
+      const {e,t}=hit, sign=e.dx*mx+e.dz*mz>=0?1:-1;
+      section.push([e.a[0]+t*e.dx,e.a[1]+t*e.dz,sign*e.dx,sign*e.dz]);
+    }
     const cB = M.core(tn.pts[0], tn.pts[1]);
     for (let i = 0; i + 1 < n; i++) {
       const ax = tn.pts[i * 2], az = tn.pts[i * 2 + 1], bx = tn.pts[i * 2 + 2], bz = tn.pts[i * 2 + 3], dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz);
       if (L < 0.5) continue;
       const ux = dx / L, uz = dz / L, mx = -uz, mz = ux;                 // axis and lateral
-      const P = (t, lat, y) => [ax + ux * t + mx * lat, y, az + uz * t + mz * lat];
+      const P = (t, lat, y) => {
+        const [x,z,sx,sz] = section[t===0 ? i : i+1];
+        return [x+sx*lat,y,z+sz*lat];
+      };
       // side walls (facing the axis)
       cB.quad([P(0, r, 0), P(L, r, 0), P(L, r, cy), P(0, r, cy)], [-mx, 0, -mz], wallC);
       cB.quad([P(0, -r, 0), P(L, -r, 0), P(L, -r, cy), P(0, -r, cy)], [mx, 0, mz], wallC);
       // floor (paving, a hair above the ground plane)
       cB.quad([P(0, -r, 0.03), P(L, -r, 0.03), P(L, r, 0.03), P(0, r, 0.03)], [0, 1, 0], floorC);
       // vault: semicircle, 8 segments, facing down / inward
-      const K = 8;
+      const K = 10;
       for (let k = 0; k < K; k++) {
         const t0 = (k / K) * Math.PI, t1 = ((k + 1) / K) * Math.PI;
         const l0 = Math.cos(t0) * r, y0 = cy + Math.sin(t0) * r, l1 = Math.cos(t1) * r, y1 = cy + Math.sin(t1) * r;
@@ -135,7 +149,10 @@ export function buildPassages(ctx, { M }) {
         cB.quad([P(0, l0, y0), P(L, l0, y0), P(L, l1, y1), P(0, l1, y1)], [mx * nl, ny, mz * nl], vaultC);
       }
       // colliders: the side walls (the hollow building interior must not be reachable from the passage)
-      for (const side of [-1, 1]) ctx.physics.addBox(ax + ux * L / 2 + mx * (r + 0.15) * side, az + uz * L / 2 + mz * (r + 0.15) * side, L, 0.3, Math.atan2(-uz, ux), 0, 5);
+      for (const side of [-1, 1]) {
+        const a=P(0,side*(r+.15),0), b=P(L,side*(r+.15),0);
+        ctx.physics.addBox((a[0]+b[0])/2,(a[2]+b[2])/2,Math.hypot(b[0]-a[0],b[2]-a[2]),.30,Math.atan2(a[2]-b[2],b[0]-a[0]),0,5);
+      }
     }
   }
   return { triangles: tunnels.length * 140 };

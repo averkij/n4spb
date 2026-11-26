@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.4.0** (2026-11-26, minor): Join carriage vaults to both facades, open courtyards to cars, restore the Admiralty podiums, and add winter hedges, snow heaps and dormant fountains.
 - **17.3.0** (2026-11-26, minor): Ride a tracked snowmobile on the ice, show the selected driver at the helm, yield to walkers and synchronize the speed gauge.
 - **17.2.0** (2026-11-26, minor): Give pedestrians a Blender-retopologized human face, age-specific proportions and more varied winter clothing.
 - **17.1.0** (2026-11-26, minor): Add ploughed snowbanks, slushy tyre tracks and grey winter mornings in the centre, bare park trees, snowmen and new pedestrian faces

@@ -217,7 +217,7 @@ export function buildWalls(ctx, rec, streams, env) {
           continue;
         }
         // cut at carriage arches
-        const gates = (e.gates || []).filter((g) => g.s - g.w / 2 > pc.t0 + 0.9 && g.s + g.w / 2 < pc.t1 - 0.9).sort((p, q) => p.s - q.s);
+        const gates = (e.gates || []).filter((g) => g.s - g.w / 2 >= pc.t0 && g.s + g.w / 2 <= pc.t1).sort((p, q) => p.s - q.s);
         let cur = pc.t0;
         const subs = [];
         for (const g of gates) { if (g.s - g.w / 2 - cur > 0.9) subs.push([cur, g.s - g.w / 2]); else if (g.s - g.w / 2 - cur > 0.05) subs.push([cur, g.s - g.w / 2, 'thin']); cur = g.s + g.w / 2; }
