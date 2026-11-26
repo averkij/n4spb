@@ -37,6 +37,16 @@ function lampA(variant, stacked, winter) {
   V.cyl(0.46, 0.3, 0.42, IRON, [0, 1.7, 0], null, 6);
   const fl = winter ? ['#beced2', '#347055'] : FLOWERS[variant % 3];
   if (winter) {
+    if (variant === 1) {
+      // An illuminated six-armed snowflake on a short iron bracket.
+      V.rod([0,4.55,0],[.73,4.55,0],.026,IRON,5,true);
+      for(let i=0;i<6;i++){
+        const a=i*Math.PI/3, x=Math.cos(a), y=Math.sin(a);
+        G.rod([.73,4.55,0],[.73+x*.54,4.55+y*.54,0],.022,GLOBE,4,true);
+        for(const side of [-1,1]) G.rod([.73+x*.30,4.55+y*.30,0],
+          [.73+x*.43-side*y*.13,4.55+y*.43+side*x*.13,0],.018,GLOBE,4,true);
+      }
+    }
     for (let i = 0; i < 16; i++) {
       const a = i * 0.85, x = 0.29 * Math.cos(a), z = 0.29 * Math.sin(a);
       G.ball(0.09, GLOBE, [x, 2.3 + i * 0.17, z], null, 'oct');

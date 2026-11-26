@@ -135,6 +135,7 @@ export function createBoatModel(ctx) {
   LAMP.box(0.07, 0.07, 0.07, '#33ff77', [-0.58, 0.96, 1.98]);
   LAMP.box(0.07, 0.07, 0.07, '#ffffff', [0.55, 1.36, -2.50]);
 
+  V.rod([.34,.76,.47],[.34,.91,.23],.042,DASH,8);
   WH.torus(0.15, 0.016, BLACK, [0, 0, 0], [0, 0, 0], 5, 14); WH.box(0.022, 0.28, 0.02, BLACK, [0, 0, 0]); WH.box(0.28, 0.022, 0.02, BLACK, [0, 0, 0]);
 
   // ---- the outboard motor (its own pivot at the transom: it swings with the wheel)
@@ -152,7 +153,7 @@ export function createBoatModel(ctx) {
   const body = mk(V, { name: 'boat-body', side: 'double' }); body.name = 'boat-body'; body.castShadow = true; body.receiveShadow = true;
   const driver = new THREE.Group(); driver.name = 'boat-driver';
   const outboard = mk(OB, { name: 'boat-motor' }); outboard.name = 'boat-motor'; outboard.castShadow = true;
-  const steerWheel = new THREE.Group(); steerWheel.position.set(0.34, 0.99, 0.50); steerWheel.rotation.x = -0.52;
+  const steerWheel = new THREE.Group(); steerWheel.position.set(0.34, 0.91, 0.22); steerWheel.rotation.x = -0.52;
   steerWheel.add(mk(WH, { name: 'boat-wheel', paint: 0 }));
   // The windshield is a CALM pane: a flat tinted unlit plane of constant opacity. No sky reflection, no fresnel, no scrolling highlight streaks (the shared mat.glass has them and they raced across the pane as the boat moved).
   const glassMat = new THREE.MeshBasicMaterial({ color: '#7f9bb0', transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, fog: true, name: 'boat-glass' });
@@ -175,7 +176,7 @@ export function createBoatModel(ctx) {
   const night = ctx.shared ? ctx.shared.uNight : null;
   const phase = Math.random() * 6.28;
   const api = {
-    root, wheels: [], steerWheel, driver, poseDriver: riderSeat(root, [.34,.48,-.18], [.34,.99,.47,.15], [.34,.11,.32,.13]), flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, propeller: prop, spec: S, boat: true,
+    root, wheels: [], steerWheel, driver, poseDriver: riderSeat(root, [.34,.48,-.18], [.34,.92,.22,.15], [.34,.11,.32,.13]), flames: [], glow: null, headMat: lampMat, tailMat: lampMat, body, glass, outboard: motor, propeller: prop, spec: S, boat: true,
     /** pose: x y z yaw pitch roll, steerAngle; kmh. The hull rocks on the water by itself (a slow heave, roll and pitch that grow a little with the speed) */
     set(p) {
       const t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000, k = 1 + Math.min(1, (p.kmh || 0) / 40) * 0.6;
