@@ -181,6 +181,18 @@ export function makeState(ctx) {
     S.W.reserveBox(e.x + nx * 0.9, e.z + nz * 0.9, 3.0, 3.2, e.rotY, F.DOOR, 0.0);
     addDoorBox({ cx: e.x + nx * 0.9, cz: e.z + nz * 0.9, c, s, hw: 1.5, hd: 1.6 });
   }
+  const metroDoors=[...(ctx.services.metroPavilionDoors||[]),...(ctx.services.centralMetroEntrances?.doors||[])];
+  for(const e of metroDoors){
+    const c=Math.cos(e.rotY),s=Math.sin(e.rotY),width=e.w+.36;
+    const start=-1.85,end=Math.max(1.7,e.approach||1.7),depth=end-start;
+    S.W.reserveBox(e.x+s*(start+end)/2,e.z+c*(start+end)/2,width,depth,e.rotY,F.DOOR,0);
+    // Long porticoes are split so each rectangle fits the existing 8 m hash.
+    const rows=Math.ceil(depth/2.8),cols=Math.ceil(width/3.8);
+    for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){
+      const u=(j+.5)*width/cols-width/2,v=start+(i+.5)*depth/rows;
+      addDoorBox({cx:e.x+c*u+s*v,cz:e.z-s*u+c*v,c,s,hw:width/(2*cols),hd:depth/(2*rows)});
+    }
+  }
   for (const m of (lm && lm.monuments) || []) S.placed.add(m.x, m.z, 3, 'mon');
   for (const l of [...((ctx.services.landmarksE && ctx.services.landmarksE.lamps) || []), ...((ctx.services.landmarksH && ctx.services.landmarksH.lamps) || [])]) if (l && l.x != null) S.placed.add(l.x, l.z, 1.6, 'lamp');      // the lanterns + their granite bench rings of the Gostiny Dvor promenade ...
   // benches that the landmark modules draw themselves (Kazan + Voronikhin gardens: benchPoints / vorBenches, the Catherine garden + Gostiny promenade: landmarksE.benches (also merged into lm.benches), Admiralty / Isaac's:

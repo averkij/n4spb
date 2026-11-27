@@ -1,8 +1,8 @@
 // landmarksPrimorskaya/vestibule.js - the SURFACE VESTIBULE of the Primorskaya metro station, drawn on the two mapped buildings: the hall w149345779 (one storey, 3.3 m) and the two-storey block w149345769 (6.6 m) that adjoins
 // its north side. The hall is a glazed pavilion (curtain wall on the south long side, the west end and the north-west corner, a granite plinth, a thin flat roof beam, the ПРИМОРСКАЯ fascia and the blue М), the block is a
 // plastered mass with two ribbons of windows. The three mapped entrances (n3870045073, n3870045075 on the west end, n3870045077 the exit on the north-west corner) get a pair of glass doors under a small porch each.
-// NO METRO NETWORK exists in this build: the doors stay SHUT (the walls are solid colliders, lib/massing.js addPolyColliders), the entrances are published as door points (ctx.services.landmarksPrimorskaya.entrances: { x, z, rotY, bldg, kind },
-// 0.6 m outside the wall, rotY facing out; PRUNE_SERVICES clears the trees from them). Everything is closed geometry; no flags.
+// Mapped door nodes split both the glass wall and its collider. Each porch leads to a small surface lobby.
+import { addPavilionEntrance } from '../lib/metro-pavilion-entrance.js';
 import * as L from '../layout.js';
 import { ENTRANCES } from '../data/city.js';
 import { ringFromFlat, addPolyColliders } from '../lib/massing.js';
@@ -30,6 +30,7 @@ export function vestibule(K) {
     if (!rec || !rec.polys || !rec.polys[0]) continue;
     const isHall = rec.id === 'w149345779', ring = ringFromFlat(rec.polys[0].o), H = isHall ? 3.3 : 6.6, edges = edgesOf(ring);
     const ents = ENTRANCES.filter((e) => e.bldg === rec.id).map((e) => { let best = null; for (const ed of edges) { const p = projOn(ed, e.x, e.z); if (!best || p.d < best.d) best = { ed, s: p.s, d: p.d, e }; } return best; }).filter((q) => q && q.d < 2.5);
+    const doors = [];
     // the roof: a flat cap over the whole footprint
     P.tint(PAL.concreteDark).cap(M.vc, ring, H + 0.02, true, 4);
     for (const ed of edges) {
@@ -40,11 +41,17 @@ export function vestibule(K) {
         // the roof beam (a thin slab that overhangs the glazed fronts) and the plinth
         P.tint(PAL.concrete).box(M.vc, -0.1, len + 0.1, H - 0.5, H + 0.02, -0.35, glazed ? 0.45 : 0.06, 'b', 2);
         if (glazed) {
-          P.tint(PAL.graniteDark).box(M.vc, -0.05, len + 0.05, 0, 0.5, -0.35, 0.08, 'bt', 2);
-          P.quad(M.glass, [0, 0.5, 0.04], [len, 0.5, 0.04], [len, H - 0.5, 0.04], [0, H - 0.5, 0.04], [0, 0, 1]);
-          const n = Math.max(2, Math.round(len / 1.7));
-          P.tint(PAL.steel); for (let i = 0; i <= n; i++) { const x = len * i / n; P.box(M.vc, x - 0.04, x + 0.04, 0.5, H - 0.5, 0, 0.13, '', 1); }
-          P.box(M.vc, 0, len, 2.1, 2.17, 0, 0.12, 'b', 1);
+          let start = 0;
+          for (const end of [...mine.map(q=>Math.max(1.2,Math.min(len-1.2,q.s))).sort((a,b)=>a-b),len+1.12]) {
+            const stop = end-1.12;
+            if (stop>start+.02) {
+              P.tint(PAL.graniteDark).box(M.vc,start,stop,0,.5,-.35,.08,'bt',2);
+              P.quad(M.glass,[start,.5,.04],[stop,.5,.04],[stop,H-.5,.04],[start,H-.5,.04],[0,0,1]);
+              P.tint(PAL.steel).box(M.vc,start,stop,2.1,2.17,0,.12,'b',1);
+              for (let p=start; p<stop; p+=1.7) P.box(M.vc,p-.035,p+.035,.5,H-.5,0,.13,'',1);
+            }
+            start=end+1.12;
+          }
         } else {
           P.tint(PAL.cladding).box(M.vc, 0, len, 0, H - 0.5, -0.4, 0.04, 'b', 2);
           P.tint(PAL.graniteDark).box(M.vc, 0, len, 0, 0.35, -0.4, 0.08, 'b', 2);
@@ -64,10 +71,10 @@ export function vestibule(K) {
       // entrances: a pair of glass doors, a step and a porch with two posts each
       for (const q of mine) {
         const s = Math.max(1.2, Math.min(len - 1.2, q.s)), exit = q.e.kind === 'exit';
-        P.tint(PAL.steel).box(M.vc, s - 1.1, s + 1.1, 0, 2.45, 0.02, 0.18, '', 1);
-        P.quad(M.glass, [s - 1.0, 0.1, 0.19], [s - 0.03, 0.1, 0.19], [s - 0.03, 2.35, 0.19], [s - 1.0, 2.35, 0.19], [0, 0, 1]);
-        P.quad(M.glass, [s + 0.03, 0.1, 0.19], [s + 1.0, 0.1, 0.19], [s + 1.0, 2.35, 0.19], [s + 0.03, 2.35, 0.19], [0, 0, 1]);
-        P.tint(PAL.brass); for (const x of [s - 0.16, s + 0.16]) P.box(M.vc, x - 0.02, x + 0.02, 0.9, 1.25, 0.2, 0.26, '', 1);
+        const door = { id:q.e.id, x:ed.a[0]+Math.cos(ed.rot)*s, z:ed.a[1]-Math.sin(ed.rot)*s, rotY:ed.rot,
+          w:2.24, y:.12, h:2.42, style:'aluminium', stripes:true };
+        doors.push(door);
+        addPavilionEntrance(ctx,door);
         P.tint(PAL.granitePale).box(M.vc, s - 1.6, s + 1.6, 0, 0.12, 0, exit ? 1.6 : 2.2, 'b', 2);
         const dep = exit ? 1.6 : 2.2;
         P.tint(PAL.concrete).box(M.vc, s - 1.8, s + 1.8, H - 0.62, H - 0.5, 0, dep + 0.1, '', 2);
@@ -88,7 +95,7 @@ export function vestibule(K) {
       }
       P.pop();
     }
-    S.walls += addPolyColliders(ctx, rec.polys[0], 0, H + 0.6);
+    S.walls += addPolyColliders(ctx, rec.polys[0], 0, H + 0.6, .9, doors);
     S.hall = S.hall || (isHall ? rec.id : null);
   }
   // the porch posts as slim solid columns

@@ -1,3 +1,4 @@
+import { GROUPS_LIST as METRO_PAVILION_GROUPS } from '../../world/landmarksPrimorskaya/groups.js';
 // ============================================================================
 //  AREA DEFINITION - Vasilyevsky-Okrug 7 (Васильевский–Округ № 7; docs/AREAS.md section 15.v): the fifth area of the world map (maps/intro-draft.html, area 48): the Vasilyevsky island with the okrug 7 / Gavan side,
 //  the Petrograd-side bank of the Neva (z -2400 .. -1840) and the Neva Bay south of the island. 11.2 km2 of play rectangles (src/areas/registry.js REGISTRY.vasilyevsky.play, cut from the map outline by
@@ -70,6 +71,7 @@ export const MODULES = [
   'environment',  // ground, embankment granite, Neva / Malaya Neva / Smolenka water, trees, lawns, flowerbeds, far skyline
   'streets',      // roads, markings, kerbs, granite pavements, crossings, road furniture, trolleybus overhead wires
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
+  'landmarksPrimorskaya',
   'landmarksStrelka', // the Spit: the Old Stock Exchange, the two Rostral columns, Birzhevaya Square garden, the granite descent, the warehouses, the Customs house (docs/vo-m1.md)
   //
   'landmarksUniversity', // Universitetskaya embankment: the Kunstkamera, the Academy of Sciences, the Twelve Collegia, the monuments, the Rector wing, the Palace of Peter II, Novobirzhevoy Gostiny Dvor (docs/vo-m1.md)
@@ -175,6 +177,7 @@ export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, 
 // and non-building OSM ids (`osm`: paving, bridge decks, monuments) that the owner draws itself. A claim only takes effect when the owner module says so: it exports `OWNS_GROUPS = true` (every sub-group) or
 // `['station', ...]` (only those); until then `city` / `environment` / `streets` still draw the claimed objects as a blockout (see lib/claims.js).
 export const GROUPS = {};
+GROUPS.landmarksPrimorskaya = METRO_PAVILION_GROUPS.filter(g=>g.key==='primorskaya-vestibule');
 // the Academy of Arts (docs/AREAS.md 15.z): all five sub-groups lie in this territory (Admiralty-Haymarket claims only the first two)
 GROUPS.landmarksAcademy = G_ACADEMY.GROUPS_LIST;
 // ---
@@ -597,7 +600,7 @@ export const GARAGE = {
 
 // ---------------------------------------------------------------- the rest
 /** environment.js: the services whose `entrances` ([{ x, z, clearance? }]) clear the trees from the doors of the buildings they list */
-export const PRUNE_SERVICES = [
+export const PRUNE_SERVICES = ['landmarksPrimorskaya',
   'city',
   'landmarksStrelka',
   //

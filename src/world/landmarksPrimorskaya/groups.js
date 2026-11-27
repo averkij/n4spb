@@ -11,10 +11,10 @@
 const ON = ['primorskaya-vestibule', 'primorskaya-square', 'metro-museum'];
 const ALL = [
   { key: 'primorskaya-vestibule', name: 'Вестибюль станции метро «Приморская»', nameEn: 'Primorskaya metro station: the surface vestibule (hall and adjoining block)',
-    ids: ['w149345779', 'w149345769'], osm: ['n3870045073', 'n3870045075', 'n3870045077'], at: [-6520, -1800],
+    ids: ['w149345779', 'w149345769'], osm: ['n3870045073', 'n3870045075', 'n3870045077','n12736971860','n12736971861'], at: [-6520, -1800],
     note: 'the hall w149345779 and the block w149345769 are redrawn as one glazed vestibule; the three entrance nodes are claimed because the module draws their doors (no generic consumer: the field only keeps trees 7 m off them)' },
   { key: 'primorskaya-square', name: 'Площадь у станции «Приморская»', nameEn: 'The square before the vestibule: benches, bins, the М totem, lamps, planters; the Smolenka bank stairs',
-    ids: [], osm: ['n8048805552', 'n10795206854', 'n12736971860', 'n12736971861'], at: [-6538, -1806],
+    ids: [], osm: ['n8048805552', 'n10795206854'], at: [-6538, -1806],
     note: 'props/osm.js leaves a claimed bench / waste basket to the owner: the four nodes are drawn by the module as knock furniture at their OSM positions' },
   { key: 'metro-museum', name: 'Музей Петербургского метрополитена', nameEn: 'Museum of the Petersburg Metro: the signboard at its frontage',
     ids: [], osm: ['n1938706048'], at: [-6496, -1754], note: 'the POI node of the museum (inside the office complex w85426975, which stays generic); the module draws a signboard on the footway before it' },

@@ -35,7 +35,9 @@ async function buildSource(ctx) {
   K.svc = svc;
   const only = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('kam') : (typeof process !== 'undefined' && process.env && process.env.KAM) || null;
   const failed = [];
-  for (const [name, load] of PARTS) {
+  const groups=ctx.L.GROUPS?.landmarksKamennoostrovsky || [];
+  const parts=groups.some(g=>g.key==='petrogradskaya-vestibule') ? [['fashion',()=>import('./landmarksKamennoostrovsky/tolstoy.js').then(m=>m.buildHouseOfFashion)]] : PARTS;
+  for (const [name, load] of parts) {
     if (only && !only.split(',').includes(name)) continue;
     const t1 = performance.now();
     K.begin();
@@ -58,5 +60,5 @@ async function buildSource(ctx) {
 export async function build(ctx) {
   const before=new Set(ctx.physics.items), roots=new Set(ctx.staticRoot.children);
   await buildSource(ctx);
-  adaptPortedSolids(ctx,ctx.staticRoot.children.filter(r=>!roots.has(r)),ctx.physics.items.filter(it=>!before.has(it)),"landmarksKamennoostrovsky");
+  adaptPortedSolids(ctx,ctx.staticRoot.children.filter(r=>!roots.has(r)&&!r.userData.metroPavilionDoor),ctx.physics.items.filter(it=>!before.has(it)&&!it.metroPavilionDoor),"landmarksKamennoostrovsky");
 }

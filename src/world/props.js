@@ -23,6 +23,9 @@ import { placeWest } from './props/west.js';
 import { placeStands, placeTerraces } from './props/stands.js';
 import { placeAds, finishClocks } from './props/ads.js';
 import { placeFountains } from './props/fountains.js';
+import { DOORWAYS } from './data/metro.js';
+import { regionalMetroSites } from './metro/regional-sites.js';
+import { areaUnderpasses, areaUnderpassLifts } from './metro/regional-underpass-sites.js';
 
 // order matters: the OSM points are facts (they go first), then the verandas (they need the frontage), the facade-side things (doors, tubs, stands) and the sparse extras
 const PHASES = [
@@ -38,6 +41,18 @@ const PHASES = [
 
 export async function build(ctx) {
   const t0 = performance.now();
+  if (areaUnderpasses.length || areaUnderpassLifts.length) {
+    const {buildRegionalUnderpasses}=await import('./metro/regional-underpasses.js');
+    buildRegionalUnderpasses(ctx);
+  }
+  if (DOORWAYS.some(d=>ctx.L.inPlay(d.x,d.z))) {
+    const {buildCentralMetroEntrances}=await import('./metro/central-entrances.js');
+    buildCentralMetroEntrances(ctx);
+  }
+  if (regionalMetroSites.length) {
+    const {buildRegionalMetroEntrances}=await import('./metro/regional-entrances.js');
+    buildRegionalMetroEntrances(ctx);
+  }
   const S = makeState(ctx);
   registerTypes(S);
   S.stations = pavementStations(S); S.stGrid = stationGrid(S.stations);

@@ -9,6 +9,10 @@
 // pattern), the three signs of the vestibule glow at night (litFascia: the sign texture as its emissive map on the kit's uNight list, like the strip's lit signs), the module publishes the door
 // points of its claimed buildings (lib/door-points.js, from the facade's entrance nodes) and merges its monuments / photo spots into ctx.services.landmarks like the strip's modules.
 import * as THREE from 'three';
+import { ENTRANCES } from './data/city.js';
+import { addPavilionEntrance } from './lib/metro-pavilion-entrance.js';
+import { localOnEdge, frameOf } from './landmarksD/kit.js';
+import { addPolyColliders } from './lib/massing.js';
 import * as L from './layout.js';
 import { makeKit } from './landmarksD/common.js';
 import { buildHouse } from './landmarksD/house.js';
@@ -89,33 +93,33 @@ function litFascia(K,x0,x1,y0,y1,text,o={}){
 function metro(K){
   const recs=L.groupMembers('north-chernyshevskaya');if(!recs.length)return;
   const M=K.mats,P=K.P,wall=K.wall('#c4b7a2');
-  buildHouse(K,{recs,hc:9.0,wall:'#c4b7a2',roofMat:M.roofDark,railing:false,plinth:1.0,corniceScale:.55,
+  const doors=ENTRANCES.filter(d=>d.bldg==='w22999175').map(d=>({...d,w:5.1}));
+  const entryAt=e=>doors.map(d=>({...d,...localOnEdge(e,d.x,d.z)})).find(d=>Math.abs(d.d)<.55 && d.u>0 && d.u<e.len);
+  buildHouse(K,{recs,collide:false,noPlinth:e=>!!entryAt(e),hc:9.0,wall:'#c4b7a2',roofMat:M.roofDark,railing:false,plinth:1.0,corniceScale:.55,
     front:(e,{len})=>{
-      K.wallQuad(wall,0,len,0,9.45,3);
-      if(len<9)return true;
-      // West-facing public frontage toward Chernyshevskogo prospect.
-      if(e.n[0]<-.5){
-        const center=len/2,w=Math.min(len-3,18),glass=K.ctx.mat.toon('#789597',{paint:.03});
-        K.plane(glass,center-w/2,center+w/2,.4,6.9,.07);
-        for(let i=0;i<=12;i++){const x=center-w/2+i*w/12;P.box(M.graniteDark,x-.045,x+.045,.4,7,.1,.2);}
-        for(const y of [3.4,5.2,6.6])P.box(M.graniteDark,center-w/2,center+w/2,y,y+.08,.1,.2);
-        P.box(M.graniteDark,center-w/2-.55,center+w/2+.55,7.02,7.55,.02,.24);
-        for(const x of [center-w/2-.4,center+w/2+.4])P.box(M.graniteDark,x-.25,x+.25,.3,7,.02,.24);
-        const wood=K.wall('#a65f37');
-        for(let i=0;i<6;i++){
-          const x=center+(i-2.5)*1.35;
-          P.box(wood,x-.61,x+.61,.13,3.3,.22,.35);
-          K.P.push(0,0,.35);K.window({x,y:1.2,w:.86,h:1.55,sw:.06,d:.1,frame:'brown'});K.P.pop();
-          P.box(M.brass,x+.41,x+.44,.9,1.5,.21,.27);
-        }
+      const d=entryAt(e);
+      if(d){
+        const f=frameOf(e),center=d.u,a=center-d.w/2,b=center+d.w/2;
+        const glass=K.ctx.mat.toon('#789597',{paint:.03});
+        K.wallQuad(wall,0,a,0,9.45,3);K.wallQuad(wall,b,len,0,9.45,3);
+        K.wallQuad(wall,a,b,3.02,9.45,3);
+        const w=Math.min(len-1,Math.min(center,len-center)*2-.65,12);
+        K.plane(glass,center-w/2,center+w/2,3.03,6.9,.07);
+        for(let i=0;i<=8;i++){const x=center-w/2+i*w/8;P.box(M.graniteDark,x-.04,x+.04,3.0,7.0,.10,.19);}
+        for(const y of [3.03,4.9,6.82])P.box(M.graniteDark,center-w/2,center+w/2,y,y+.08,.10,.20);
+        for(const x of [a-.2,b+.2])P.box(M.graniteDark,x-.16,x+.16,.08,3.05,.02,.24);
+        addPavilionEntrance(K.ctx,{id:d.id,x:f.x+f.xa[0]*center,z:f.z+f.xa[1]*center,rotY:f.rot,
+          w:d.w,y:.12,h:2.92,leaves:6,style:'oak',lobby:true});
         litFascia(K,center-4.8,center+4.8,7.85,8.4,'ЧЕРНЫШЕВСКАЯ',{bg:'#c4b7a2',fg:'#454a45',size:.7,z:.2});
         litFascia(K,center-3,center+3,8.48,8.82,'МЕТРОПОЛИТЕН',{bg:'#c4b7a2',fg:'#454a45',size:.55,z:.2});
         litFascia(K,center-.65,center+.65,9.55,10.8,'М',{w:128,h:128,bg:'#d4d2c4',fg:'#1889bd',size:.86,z:.22});
       }else{
+        K.wallQuad(wall,0,len,0,9.45,3);
         const n=Math.floor(len/4);for(let i=0;i<n;i++)K.window({x:(i+.5)*len/n,y:3,w:1.8,h:3.8,sw:.12,frame:'brown'});
       }
       return true;
     }});
+  for(const rec of recs)for(const poly of rec.polys)addPolyColliders(K.ctx,poly,0,10,.9,doors);
 }
 
 function corridor(K){

@@ -33,8 +33,6 @@ export function buildRoom(ctx, M, g, o = {}) {
   for (const [x0, x1] of [[-W - 0.3, -1.7], [1.7, W + 0.3]]) R.col(x0, x1, -1.5, 8, 0.25, 0.65);
   R.col(-W - 0.4, W + 0.4, -1.5, 8, D, D + 0.4); R.col(-W - 0.4, -W, -1.5, 8, 0.25, D + 0.4);
   if (ex) { R.col(W, W + 0.4, -1.5, 8, 0.25, ex.z - 1.8); R.col(W, W + 0.4, -1.5, 8, ex.z + 1.8, D + 0.4); } else R.col(W, W + 0.4, -1.5, 8, 0.25, D + 0.4);
-  // door leaves folded back into the reveal
-  for (const sx of [-1, 1]) k.box(0.08, 3.2, 1.5, mat.toon('#7a4e2c'), [sx * 1.6, 1.6, 0.9], [0, 0, 0]);
   const nameBoard = k.plane(2.7, 0.84, M.board(M.blueBoard(g.name, 'Metro', null, 'room-' + g.id), 1.0), [0, 4.4, 0.25], [0, Math.PI, 0]); nameBoard.castShadow = false;
   // ---- ticket hall: cashiers on the side walls, machines on the front wall, the security frame
   const cashierMat = mat.toon('#2f2a28');

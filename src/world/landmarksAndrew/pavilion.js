@@ -6,6 +6,8 @@
 // lib/massing.js), the stair treads as walk boxes (concentric L round the corner), the stainless rails.  The pavilion owner's "podium" is the stair block + the wall base; the floor under the roof is the metro's.
 import * as THREE from 'three';
 import * as L from '../layout.js';
+import { addPavilionEntrance } from '../lib/metro-pavilion-entrance.js';
+import { ENTRANCES } from '../data/city.js';
 import { addPolyColliders } from '../lib/massing.js';
 import { ringEdges, onEdge, polyOf, frameOf, localOnEdge } from './kit.js';
 import * as G from './geo.js';
@@ -66,7 +68,9 @@ export function build(K) {
   const fp = footprintIn('w183122885', FV, FALL), ring = fp.outer;
   const edges = ringEdges(polyOf(ring));
   const wr = ring.map(([a, b]) => { const p = FV.W(a, b); return [p.x, p.z]; }), wEdges = ringEdges(polyOf(wr));                    // the same edges in world metres (colliders)
-  const door = (e) => { const out = []; for (const d of (L.DOORWAYS || []).filter((q) => q.bldg === 'w183122885')) { const m = FV.M(d.x, d.z), lo = localOnEdge(e, m.a, m.b); if (Math.abs(lo.d) < 1.3 && lo.u > 1 && lo.u < e.len - 1) out.push({ u: lo.u, w: d.w || 4.4, id: d.id, rotY: d.rotY, x: d.x, z: d.z }); } return out; };
+  const mapped = (L.DOORWAYS || []).filter(q=>q.bldg==='w183122885');
+  const entries = mapped.length ? mapped : ENTRANCES.filter(q=>q.bldg==='w183122885').map(d=>({...d,w:4.6}));
+  const door = (e) => { const out = []; for (const d of entries) { const m = FV.M(d.x, d.z), lo = localOnEdge(e, m.a, m.b); if (Math.abs(lo.d) < 1.3 && lo.u > 1 && lo.u < e.len - 1) out.push({ u: lo.u, w: d.w || 4.4, id: d.id, rotY: d.rotY, x: d.x, z: d.z }); } return out; };
   const wpos = (i, u, y, z) => { const e = wEdges[i], f = frameOf(e); return [f.x + f.xa[0] * u + e.n[0] * z, y, f.z + f.xa[1] * u + e.n[1] * z]; }, wnorm = (i) => [wEdges[i].n[0], wEdges[i].n[1]];      // world point / normal of an edge frame
   const stairFace = (e) => e.len > 20 && (e.n[1] < -0.9 || e.n[0] > 0.9);
   // overhang offsets per edge: 1.8 m on the stair faces, 0.6 m elsewhere (outward = negative)
@@ -87,6 +91,9 @@ export function build(K) {
         else for (let u = a + 2.0; u < b - 1.4; u += 3.8) P.quad(mk.frame, [u, 4.0, 0.02], [u + 0.5, 4.0, 0.02], [u + 0.5, 5.4, 0.02], [u, 5.4, 0.02], [0, 0, 1]);   // narrow window slits on the plain faces
       }
       for (const d of dr) {                                                                                      // an open door group: jamb posts, a transom of glazing, the pill, the reveal
+        const i = edges.indexOf(e), [x,,z] = wpos(i,d.u,0,0), [nx,nz] = wnorm(i);
+        addPavilionEntrance(ctx,{id:d.id,x,z,rotY:Math.atan2(nx,nz),w:4.7,h:2.55,y:H.fl,leaves:4,approach:5.4,
+          lobby:!(mapped.length && ctx.buildList?.includes('metro'))});
         const x0 = d.u - 2.4, x1 = d.u + 2.4;
         P.box(mk.base, x0, x1, 0, H.fl, -0.3, 0, 'bk', 2);
         P.quad(mk.trav, [x0, H.fl + 2.6, 0], [x1, H.fl + 2.6, 0], [x1, H.panel, 0], [x0, H.panel, 0], [0, 0, 1]);            // transom above the doors: dark glass
@@ -145,7 +152,7 @@ export function build(K) {
   P.push(FB.ox, 0, FB.oz, FB.rot);
   try { K.svc.pavilionSquareTris = fillPolyClipped(P, M.slabGrey, [[-58, 0], [-5.5, 0], [-5.5, 70], [-58, 70]], 0.04, (x, z) => cover(x, z), { margin: 0.25, maxEdge: 3, tile: 3.6 }); } finally { P.pop(); }
   // ---- colliders: wall boxes (split at the DOORWAYS), the steps (walk boxes in the world edge frames), the handrails
-  try { const rec = L.buildingById('w183122885'); if (rec) for (const pl of rec.polys) addPolyColliders(ctx, pl, 0, 8, 0.8); } catch (e) { console.warn('[landmarksAndrew] pavilion colliders:', e && e.message); }
+  try { const rec = L.buildingById('w183122885'); if (rec) for (const pl of rec.polys) addPolyColliders(ctx, pl, 0, 8, 0.8, entries); } catch (e) { console.warn('[landmarksAndrew] pavilion colliders:', e && e.message); }
   const wne = ne ? wEdges[edges.indexOf(ne)] : null, wnw = nw ? wEdges[edges.indexOf(nw)] : null;
   const walkTread = (e, x0, x1, z0, z1, top) => {                      // a walk box in a world edge frame (x along the wall, z out)
     const f = frameOf(e), lx = (x0 + x1) / 2, lz = (z0 + z1) / 2, cx = f.x + f.xa[0] * lx + e.n[0] * lz, cz = f.z + f.xa[1] * lx + e.n[1] * lz;

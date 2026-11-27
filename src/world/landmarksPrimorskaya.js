@@ -1,7 +1,6 @@
 // landmarksPrimorskaya - PRIMORSKAYA: the surface vestibule of the metro station (a glazed hall with three entrances and the two-storey block beside it), the square before it (the claimed benches and bins of the OSM data, the М totem,
 // lamps, planters), the signboard of the Museum of the Petersburg Metro, and two flights of granite stairs down the north bank of the Smolenka. AUTHORED for n4spb (docs/gdm-D2.md): the source project never drew the island
-// (docs/research/gaps-vo-2026.md G05 / G07: "Primorskaya vestibule + Smolenka bank stairs"; its metro had a dead tunnel stub). NO METRO NETWORK and no hall under the ground exist in this build: the doors stay shut, the three
-// entrances are door points (ctx.services.landmarksPrimorskaya.entrances, cleared of trees by PRUNE_SERVICES) and nothing is interactive.
+// (docs/research/gaps-vo-2026.md G05 / G07: "Primorskaya vestibule + Smolenka bank stairs"; its metro had a dead tunnel stub). Three surface door groups open onto small street-level lobbies; their OSM entrances remain in ctx.services.landmarksPrimorskaya.entrances.
 // WHERE: the vestibule stands at (-6520, -1800), on the mapped buildings w149345779 (hall) and w149345769 (block); the station NODE n249307184 and the underground platform lie 190 m east under the apartment blocks (groups.js).
 // Files: landmarksPrimorskaya/groups.js (claims, the stair rings: WATER_RINGS / KEEP_OUT / PAVED_RINGS) mats.js (materials, lit signs) vestibule.js (hall, block, doors, porches, door points, wall colliders) square.js (knock furniture, the
 // totem, the museum sign) stairs.js (the pits, steps, colliders, breakable parapets) kit.js inst.js (copies of landmarksVOStatues / landmarksSeaTerminal helpers).
@@ -32,6 +31,7 @@ export function build(ctx) {
   for (const m of meshes) { if (m.material === M.road) { m.castShadow = false; ctx.noOutline(m); } else if (m.material === M.vc2 || m.material === M.signName || m.material === M.signM) ctx.noOutline(m); }
   tris += K.P.tris;
   if (claimed.has('primorskaya-square') || claimed.has('metro-museum')) tris += square(K);
+  else if(claimed.has('primorskaya-vestibule')) tris+=square(K,true);
   ctx.addStatic(root);
   delete svc.porchPosts;
   const S = (ctx.services.landmarks ||= {});

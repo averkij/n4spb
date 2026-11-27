@@ -6,7 +6,8 @@
 // granite bench ring stays in the Parts with its own low collider (the car steps over it). Without ctx.knock the lantern is merged into the Parts as ever.
 import * as THREE from 'three';
 import { AREAS, GREEN, TREES } from '../data/city.js';
-import { toUV, toWorld, ringOf } from './frame.js';
+import { PITS } from '../data/metro.js';
+import { toUV, toWorld, ringOf, inRing } from './frame.js';
 import { Parts, band, ringEdges } from './kit.js';
 import { knockInstances } from '../lib/knock-inst.js';
 
@@ -48,7 +49,11 @@ export function build(K, ctx) {
     const lineV = (u) => 35.8 - 0.0059 * (u - 522.8);
     const uv = ringOf(area.polys[0].o).map((p) => { const q = toUV(p[0], p[1]); return [q.u, q.v - lineV(q.u)]; });
     const clipped = clipV(uv, -0.06).map(([u, v]) => toWorld(u, v + lineV(u)));
-    P.cap(M.pave, clipped, 0.12, true, 2.4);
+    // One of the four Nevsky pedestrian underpasses opens inside this OSM paving.
+    const holes = PITS.map(p => [[-2.30,0],[-2.30,4.60],[2.30,4.60],[2.30,0]].map(([side,along]) =>
+      [p.mouth[0]+p.e[1]*side+p.e[0]*along, p.mouth[1]-p.e[0]*side+p.e[1]*along]))
+      .filter(ring => ring.every(([x,z]) => inRing(clipped,x,z)));
+    P.cap(M.pave, clipped, 0.12, true, 2.4, holes);
   }
   // ---- islands: lawn + curb + clipped shrubs, one young linden per OSM tree node
   const islandMat = M.lawn, shrub = K.mat('#4c7f40', { name: 'lmE-boxwood' });
@@ -92,32 +97,38 @@ export function build(K, ctx) {
 }
 
 // ------------------------------------------------------------------------------------------------ the Perinnaya-line portico (Nevsky 35, "Перинные ряды", Rusca 1805, rebuilt 1972)
-// No OSM polygon (west-nevsky-2.md: position +-20 m, ~25 m wide, 9 m high, #f0d890 / white): a single-storey pavilion with SIX Doric columns and a triangular pediment on the Nevsky line west of
-// the Gostiny Dvor corner, across the Perinnaya mouth.  Frame: atUV(761, 24): local x = u - 761, z = north.
-import { atUV } from './frame.js';
+// The north wall of the building at Dumskaya 2 is OSM w53610231. City owns
+// its walls and roof. The colonnade and pediment project from its surveyed edge.
 import { tuscan } from './columns.js';
 export function perinnayaPortico(K, ctx) {
-  const P = K.P, M = K.G.M, white = M.white, wall = K.wall('#f0d890'), ph = ctx.physics;
-  const st = ctx.services.streets;                                                                      // streets is built before this module
-  atUV(P, 761, 24, () => {
-    const hw = 12.5, zb = -2.6, depth = 9.4;
-    for (let x0 = -hw - 0.6; x0 < hw + 0.6 - 1e-6; x0 += 1.4) {                                        // the plinth in 1.4 m pieces: none on the Dumskaya asphalt (flush road)
-      const x1 = Math.min(x0 + 1.4, hw + 0.6);
-      if (!st || [zb - 0.1, 0, 2.6].every((z) => st.net.cover(...toWorld(761 + (x0 + x1) / 2, 24 - z), {}) < -0.1)) P.box(M.plinth, x0, x1, 0, 0.45, zb - 0.1, 2.6, 'b');
-    }
-    K.wallQuad(wall, -hw, hw, 0.45, 7.2, 4, zb);
-    for (const x of [-9.8, -5.9, -2.0, 2.0, 5.9, 9.8]) { const arch = K.window; void arch; }
-    for (const x of [-8.4, -4.2, 0, 4.2, 8.4]) { P.push(0, 0, zb, 0); K.window({ x, y: 0.6, w: 2.0, h: 4.4, head: 'arch', sw: 0.2, d: 0.08, frame: 'white', surMat: white, sillMat: white, sill: false }); P.pop(); }
-    // the portico position is +-20 m: Dumskaya runs through its middle bay, so a column that would stand on that asphalt is left out
-    for (const x of [-10.5, -6.3, -2.1, 2.1, 6.3, 10.5]) { if (st && st.net.cover(...toWorld(761 + x, 24), {}) > -0.9) continue; tuscan(K, white, x, 0.0, 0.45, 7.0, 0.55, 12); const m = P.m.elements; ph.addCylinder(m[0] * x + m[8] * 0.0 + m[12], m[2] * x + m[10] * 0.0 + m[14], 0.6, 0, 7.5); }
-    P.box(white, -hw - 0.3, hw + 0.3, 7.0, 7.9, zb, 0.9, 'b'); P.box(wall, -hw, hw, 7.9, 8.5, zb, 0.7, 'b'); P.box(white, -hw - 0.5, hw + 0.5, 8.5, 9.0, zb, 1.2, 'b');
-    const sh = new THREE.Shape(); sh.moveTo(-hw - 0.5, 9.0); sh.lineTo(hw + 0.5, 9.0); sh.lineTo(0, 11.0); sh.lineTo(-hw - 0.5, 9.0); P.extrude(white, sh, zb, 1.2, 1, 4);
-    const fill = new THREE.Shape(); fill.moveTo(-hw + 0.6, 9.2); fill.lineTo(hw - 0.6, 9.2); fill.lineTo(0, 10.6); fill.lineTo(-hw + 0.6, 9.2); P.extrude(wall, fill, zb, 0.9, 1, 4);
-    P.box(M.roofDark, -hw, hw, 7.2, 7.4, -depth, zb + 0.2, 'b');                                      // the flat roof behind the pediment
-    P.box(wall, -hw, hw, 0.45, 7.2, -depth, zb, 'b');
-  });
-  const [x, z] = toWorld(761, 33);
-  ph.addBox(x, z, 25.0, 9.0, ROT_N, 0, 8);
-  K.svc.monuments.push({ id: 'perinnaya-portico', name: 'Портик Перинной линии', nameEn: 'Perinnaya line portico', x, z, h: 11 });
+  const P = K.P, M = K.G.M, white = M.white, wall = K.wall('#f0d890');
+  const a = [-1203.3,-222.6], b = [-1190.2,-214.4];
+  const x = (a[0]+b[0])/2, z = (a[1]+b[1])/2;
+  const width = Math.hypot(b[0]-a[0],b[1]-a[1]), half = width/2;
+  const yaw = Math.atan2(b[1]-a[1],a[0]-b[0]);
+  P.push(x,0,z,yaw);
+  P.box(M.plinth,-half,half,0,.27,-.02,2.68,'b');
+  P.box(wall,-half,half,.27,6.42,-.02,.34,'b');
+  for (const t of [-.88,-.67,-.22,.22,.67,.88]) {
+    const u = t*half;
+    tuscan(K,white,u,1.77,.27,5.86,.34,12);
+    const e=P.m.elements;
+    ctx.physics.addCylinder(e[0]*u+e[8]*1.77+e[12], e[2]*u+e[10]*1.77+e[14],.36,0,6.18);
+  }
+  for (const t of [-.63,0,.63]) {
+    P.push(0,0,.34,0);
+    K.window({x:t*half,y:.40,w:2.02,h:4.3,head:'arch',sw:.18,d:.10,frame:'white',surMat:white,sillMat:white,sill:false});
+    P.pop();
+  }
+  P.box(white,-half-.16,half+.16,6.10,6.48,-.06,2.29,'b');
+  P.box(wall,-half,half,6.48,6.90,-.04,2.21,'b');
+  P.box(white,-half-.27,half+.27,6.90,7.13,-.08,2.38,'b');
+  const pediment=new THREE.Shape();
+  pediment.moveTo(-half-.25,7.13);pediment.lineTo(half+.25,7.13);pediment.lineTo(0,9.23);pediment.closePath();
+  P.extrude(white,pediment,-.03,2.36,1,4);
+  const field=new THREE.Shape();
+  field.moveTo(-half+.69,7.35);field.lineTo(half-.69,7.35);field.lineTo(0,9.00);field.closePath();
+  P.extrude(wall,field,2.34,.055,1,4);
+  P.pop();
+  K.svc.monuments.push({id:'perinnaya-portico',name:'Портик Перинной линии',nameEn:'Perinnaya line portico',x,z,h:9.23});
 }
-import { ROT as ROT_N } from './frame.js';

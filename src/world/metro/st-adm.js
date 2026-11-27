@@ -212,13 +212,6 @@ export function buildAdmiralteyskaya(ctx, M, X) {
   {
     const u = [dxC / lC, dzC / lC], nOut = [dzC / lC, -dxC / lC], rotY = Math.atan2(nOut[0], nOut[1]);
     const g = new THREE.Group(); g.name = 'adm-signs'; ctx.addStatic(g); const kg = ctx.kit(g);
-    for (const d of DOORWAYS.filter((q) => q.station === 'admiralteyskaya')) {
-      const px = d.x + nOut[0] * 0.12, pz = d.z + nOut[1] * 0.12, hw = d.w / 2 + 0.06;
-      for (const sx of [-1, 1]) kg.box(0.1, 3.4, 0.14, M.stainless, [px + u[0] * hw * sx, 1.7, pz + u[1] * hw * sx], [0, rotY, 0]);
-      kg.box(d.w + 0.3, 0.16, 0.16, M.stainless, [px, 3.45, pz], [0, rotY, 0]);
-      const gl = kg.plane(d.w, 0.5, M.glassWarm, [px, 3.2, pz], [0, rotY, 0]); gl.castShadow = false;                      // transom glass
-      kg.box(d.w + 0.5, 0.06, 0.4, M.graniteLight, [px + nOut[0] * 0.2, 0.03, pz + nOut[1] * 0.2], [0, rotY, 0]);           // granite threshold
-    }
     const mid2 = [CHAMFER[0][0] + dxC * 0.5 + nOut[0] * 0.2, CHAMFER[0][1] + dzC * 0.5 + nOut[1] * 0.2];
     const nameSign = kg.plane(5.6, 0.62, M.board(M.nameBoard(name, nameEn, purple, 'adm-out-name'), 1.0), [mid2[0], 4.1, mid2[1]], [0, rotY, 0]); nameSign.castShadow = false;
     const cube = [CHAMFER[1][0] + nOut[0] * 0.4 + u[0] * 0.6, CHAMFER[1][1] + nOut[1] * 0.4 + u[1] * 0.6];

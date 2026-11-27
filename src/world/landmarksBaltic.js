@@ -2,6 +2,7 @@
 // OSM parent r2210356 has many long wings; only r3225591 is replaced here.
 // References: https://www.encspb.ru/object/2804001907?dv=1000000000&lc=en
 // Modern facade: https://zhd-peterburg.ru/wp-content/uploads/2017/08/baltijskij.jpg
+import { buildMetroPavilion } from './landmarksBaltic/metro.js';
 import * as THREE from 'three';
 import * as L from './layout.js';
 import { Parts } from './landmarksD/kit.js';
@@ -108,4 +109,6 @@ export function buildEntrance(ctx, rec) {
 export function build(ctx) {
   const rec = L.groupMembers('baltic-entrance').find(b => b.id === 'r3225591');
   if (rec) buildEntrance(ctx, rec);
+  const metro=L.groupMembers('baltic-entrance').find(b=>b.id==='r2210359');
+  if(metro)buildMetroPavilion(ctx,metro);
 }

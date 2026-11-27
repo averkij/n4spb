@@ -20,7 +20,7 @@ function spot(x, z, r = 1, rmax = 14, test = null) {
 }
 const yawTo = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);          // the rotY that turns a local +z (the front of the piece) to the target
 
-export function square(K) {
+export function square(K, entranceBinsOnly = false) {
   const { ctx, M, S } = { ctx: K.ctx, M: K.M, S: K.svc }, PAL = M.PAL;
   const T = K.THREE;
   const geos = {
@@ -33,7 +33,11 @@ export function square(K) {
   };
   const kinds = [];
   // the four OSM pieces
-  const osm = (ids, kind) => ids.map((id) => FURNITURE.find((f) => f.id === id)).filter(Boolean).map((f) => ({ x: f.x, z: f.z, yaw: kind === 'bench' ? yawTo(f.x, f.z, FRONT[0], FRONT[1]) : 0 }));
+  const osm = (ids, kind) => ids.map((id) => FURNITURE.find((f) => f.id === id)).filter(Boolean).map(f=>{
+    // The mapped bin sits in the middle of the second doorway. Keep it beside the porch post.
+    const x=f.id==='n12736971861'?f.x-.85:f.x, z=f.id==='n12736971861'?f.z-1.03:f.z;
+    return {x,z,yaw:kind==='bench'?yawTo(x,z,FRONT[0],FRONT[1]):0};
+  });
   kinds.push({ name: 'bench', geo: geos.bench, list: osm(NODES.bench, 'bench'), rec: FURNITURE_REC.bench, col: (s) => ctx.physics.addBox(s.x, s.z, 1.9, 0.6, s.rotY, 0, 0.9), far: 260 });
   kinds.push({ name: 'bin', geo: geos.bin, list: osm(NODES.bin, 'bin'), rec: FURNITURE_REC.bin, col: (s) => ctx.physics.addCylinder(s.x, s.z, 0.3, 0, 0.9), far: 220 });
   // the extra pieces on free ground round the west end of the hall: the totem on the approach footway, lamps, planters
@@ -51,7 +55,7 @@ export function square(K) {
   if (sg) kinds.push({ name: 'museum-sign', geo: geos.sign, list: [{ x: sg[0], z: sg[1], yaw: 0 }], rec: { kind: 'sign', mass: 120, h: 2.2, w: 2.2, d: 0.2, anchored: 14, hitK: 0.25, metal: true, minDv: 0 }, col: (s) => ctx.physics.addBox(s.x, s.z, 2.2, 0.2, s.rotY, 0, 2.2), far: 300 });
   let tris = 0;
   for (const k of kinds) {
-    if (!k.list.length) continue;
+    if (!k.list.length || (entranceBinsOnly && k.name !== 'bin')) continue;
     const spots = k.list.map((p) => ({ x: p.x, y: 0, z: p.z, rotY: p.yaw }));
     const items = spots.map((s) => { S.colliders++; return k.col(s); });
     const parts = k.geo.list.map((p, i) => ({ geo: p.geo, mat: p.mat, name: 'p' + i, noOutline: p.mat === M.signM || p.mat === M.signMuseumMat || undefined }));

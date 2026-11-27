@@ -6,10 +6,12 @@
 //   r1256096 + r1256097  Kamennoostrovsky 37: the House of Fashion with the Petrogradskaya metro vestibule (1963-68): a flat grey-beige stone slab, a glazed ground floor, the plain blue "М"
 //   w40260868  Kamennoostrovsky 36 / Bolshoy 73: the former Oldenburg women's institute: low salmon-pink wings with tall arched windows
 //   r4080836   Bolshoy 77: the second Rosenstein house (Belogrud 1912-14): black-grey rusticated stone, six giant columns over a two-storey base, an ochre attic with niches and six statues
+import { addPavilionEntrance } from '../lib/metro-pavilion-entrance.js';
+import { addPolyColliders } from '../lib/massing.js';
 import { buildTenement } from './tenement.js';
 import { NC } from './nouveau.js';
 import { human, cached, figureMats } from '../lib/figures.js';
-import { DOORWAYS } from '../data/metro.js';
+import { ENTRANCES } from '../data/city.js';
 
 export function build(K, N, svc) {
   const L = K.L, P = K.P, M = K.mats, S = N.mats;
@@ -84,38 +86,7 @@ export function build(K, N, svc) {
   }
 
   // ------------------------------------------------------------------------------------------ 37: House of Fashion + the Petrogradskaya metro vestibule
-  {
-    const WALL = '#a8a192', TRIM = '#d9d6cc', HC = 24.2, frameM = K.wall(TRIM), ys = sills(6.3, [3.6, 3.6, 3.6, 3.6]);
-    const win = (y) => ({ y, h: 2.3, w: 2.0, style: 'slab', mat: frameM, frame: 'white', sw: 0.12, d: 0.07 });
-    const cfg = (ids, hc, name, title) => ({
-      name, title, titleEn: title ? 'House of Fashion with the Petrogradskaya metro vestibule (1963-68)' : undefined, ids, hc, up: 0.5, wall: WALL, court: '#9f998b', trim: frameM, frame: 'white', pitch: 3.9, margin: 1.6,
-      cornice: 'none', plinth: 0.5, plinthMat: N.ashlar(NC.stoneDark), roofMat: K.mats.roofDark,
-      base: { kind: 'shop', h: 5.0, mat: N.ashlar('#8f897c'), tile: 1.8, y0: 0.5, y1: 4.3, frameMat: S.stoneDark, pier: 0.7, signEvery: 2, signLift: 0.05 },
-      floors: ys.filter((y) => y + 3 < hc).map(win),
-      bands: [{ y0: 5.0, y1: 5.3, d: 0.25, mat: S.stoneLight }, { y0: hc + 0.2, y1: hc + 0.5, d: 0.08, mat: S.stoneLight }],
-      wallTex: true,
-    });
-    const main = cfg(['r1256096'], HC, 'dommod', 'Дом мод · станция метро «Петроградская»');
-    const DW = DOORWAYS.find((d) => d.id === 'petrogradskaya-in') || null, AT = DW ? [DW.x, DW.z] : [-2227.1, -3771.0];
-    // the ticket hall of the metro (metro/st-petr.js + proom.js): its inner wall face lies 0.43 m behind this front, its 0.3 m wall slab carries its own door reveal (door 4.5 x 2.7 m over a floor at 0.05):
-    // this front only lines the 0.13 m between its plane and that slab (deeper jambs would be coplanar with the metro's reveal)
-    if (DW) main.doorways = [{ at: AT, w: DW.w, h: 2.75, clear: 4.1, depth: 0.13 }];
-    main.features = [{ at: AT, tol: 3, draw: (u, len) => {
-      // the metro vestibule: a row of five glass doors under the name of the station and the blue "М" (plain letters, no logo).  With the station built (DOORWAYS row petrogradskaya-in) the three
-      // middle leaves stand open: the wall is cut by cfg.doorways below (4.5 m wide, 2.7 m high as the door of the ticket hall in metro/st-petr.js); the frame posts and the two outer leaves stay
-      for (let i = -2; i <= 2; i++) {
-        if (!(DW && Math.abs(i) <= 1)) P.box(S.glassDark, u + i * 1.5 - 0.65, u + i * 1.5 + 0.65, 0.1, 2.5, 0.07, 0.13, 'kb');
-        P.box(S.stoneLight, u + i * 1.5 - 0.72, u + i * 1.5 - 0.65, 0, 2.6, 0.05, 0.14, 'kb');
-      }
-      P.box(S.stoneLight, u + 3.65, u + 3.72, 0, 2.6, 0.05, 0.14, 'kb');
-      P.box(S.stoneLight, u - 4.0, u + 4.0, 2.5, 2.75, 0.02, 0.9, '');
-      N.board(u, 3.5, 6.4, 0.7, ['ПЕТРОГРАДСКАЯ'], { bg: '#e4e1d8', fg: '#1d4e9b', font: K.ctx.tex.FONTS.sans, weight: 700, size: 0.7, z: 0.12, px: 768 });
-      N.board(u - 5.0, 3.6, 1.1, 1.1, ['М'], { bg: '#f2f2ee', fg: '#1795d4', font: K.ctx.tex.FONTS.sans, weight: 800, size: 0.92, z: 0.12, px: 128 });
-      svc.entrances.push({ x: N.world(u, 0.8)[0], z: N.world(u, 0.8)[1], rotY: Math.atan2(N.cur.e.n[0], N.cur.e.n[1]), kind: 'metro', name: 'Петроградская' });
-    } }];
-    buildTenement(K, N, svc, main);
-    buildTenement(K, N, svc, cfg(['r1256097'], 13.6, 'dommod2', null));
-  }
+  buildHouseOfFashion(K,N,svc);
 
   // ------------------------------------------------------------------------------------------ 36 / 73: the former women's institute
   {
@@ -157,3 +128,47 @@ export function build(K, N, svc) {
   svc.photoSpots.push({ x: -2204, z: -3722, yaw: L.yawToward(-2204, -3722, -2230, -3700), pitch: 14, name: 'Площадь Льва Толстого · дом Чубаковых' });
 }
 const ring = (x, z, r, n) => Array.from({ length: n }, (_, i) => [x + Math.sin((i / n) * Math.PI * 2) * r, z + Math.cos((i / n) * Math.PI * 2) * r]);
+
+export function buildHouseOfFashion(K,N,svc) {
+  const { L, P, mats:M }=K, S=N.mats;
+  const WALL = '#a8a192', TRIM = '#d9d6cc', HC = 24.2, frameM = K.wall(TRIM), ys = [6.3,9.9,13.5,17.1,20.7];
+  const win = (y) => ({ y, h: 2.3, w: 2.0, style: 'slab', mat: frameM, frame: 'white', sw: 0.12, d: 0.07 });
+  const cfg = (ids, hc, name, title) => ({
+    name, title, titleEn: title ? 'House of Fashion with the Petrogradskaya metro vestibule (1963-68)' : undefined, ids, hc, up: 0.5, wall: WALL, court: '#9f998b', trim: frameM, frame: 'white', pitch: 3.9, margin: 1.6,
+    cornice: 'none', plinth: 0.5, plinthMat: N.ashlar(NC.stoneDark), roofMat: K.mats.roofDark,
+    base: { kind: 'shop', h: 5.0, mat: N.ashlar('#8f897c'), tile: 1.8, y0: 0.5, y1: 4.3, frameMat: S.stoneDark, pier: 0.7, signEvery: 2, signLift: 0.05 },
+    floors: ys.filter((y) => y + 3 < hc).map(win),
+    bands: [{ y0: 5.0, y1: 5.3, d: 0.25, mat: S.stoneLight }, { y0: hc + 0.2, y1: hc + 0.5, d: 0.08, mat: S.stoneLight }],
+    wallTex: true,
+  });
+  const main = cfg(['r1256096'], HC, 'dommod', 'Дом мод · станция метро «Петроградская»');
+  const doorRows=ENTRANCES.filter(d=>d.bldg==='r1256096' && (d.layer??0)>=0 && /entrance|exit/.test(d.kind));
+  const doors=doorRows.map(d=>({...d,w:2.8}));
+  const mainRow=doors.find(d=>d.id==='n268479754');
+  main.collide=false;
+  main.doorways=doors.map(d=>({at:[d.x,d.z],w:d.w,h:2.55,clear:d.w/2+.18,depth:.13}));
+  main.features=doors.map(d=>({at:[d.x,d.z],tol:1.5,draw:u=>{
+    const [x,z]=N.world(u,.06), normal=N.cur.e.n, rotY=Math.atan2(normal[0],normal[1]);
+    addPavilionEntrance(K.ctx,{id:d.id,x,z,rotY,w:d.w,h:2.5,y:.05,leaves:2,style:'aluminium',stripes:true,
+      lobby:!(K.ctx.buildList?.includes('metro') && L.DOORWAYS?.some(row=>row.bldg==='r1256096'))});
+    if(d===mainRow){
+      N.board(u,3.58,6.4,.62,['ПЕТРОГРАДСКАЯ'],{bg:'#e4e1d8',fg:'#1d4e9b',font:K.ctx.tex.FONTS.sans,weight:700,size:.7,z:.12,px:768});
+      N.board(u+4.1,3.6,.90,.90,['М'],{bg:'#f2f2ee',fg:'#1795d4',font:K.ctx.tex.FONTS.sans,weight:800,size:.92,z:.12,px:128});
+    }
+    svc.entrances.push({x,z,rotY,kind:'metro',name:'Петроградская'});
+  }}));
+  buildTenement(K,N,svc,main);
+  const fashion=L.buildingById('r1256096');
+  for(const poly of fashion?.polys || [])addPolyColliders(K.ctx,poly,0,HC+1,.9,doors);
+  // The OSM foreground polygon is a layer-1 canopy. Keep street level clear underneath.
+  const canopy=L.buildingById('w160015873');
+  for(const poly of canopy?.polys || []){
+    const ring=[];for(let i=0;i<poly.o.length;i+=2)ring.push([poly.o[i],poly.o[i+1]]);
+    P.cap(S.stoneLight,ring,3.27,false);P.cap(M.roofSilver,ring,3.54,true);
+    for(let i=0;i<ring.length;i++){
+      const a=ring[i],b=ring[(i+1)%ring.length];
+      P.quad(S.stoneDark,[a[0],3.27,a[1]],[b[0],3.27,b[1]],[b[0],3.54,b[1]],[a[0],3.54,a[1]]);
+    }
+  }
+  buildTenement(K, N, svc, cfg(['r1256097'], 13.6, 'dommod2', null));
+}

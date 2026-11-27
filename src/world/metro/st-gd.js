@@ -149,14 +149,10 @@ export function buildGostiny(ctx, M, X) {
   // portals in the gallery wall (the two doors): frame, sliding leaves, oval sign (the openings are real, cut by landmarksE)
   const portals = [];
   {
-    const ov = tex.draw(640, 160, (g, w, h) => { g.fillStyle = '#f1ede0'; tex.roundRect(g, 2, 2, w - 4, h - 4, 70); g.fill(); g.fillStyle = '#1b2a5c'; g.font = `800 96px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('М', 76, h / 2 + 6); tex.fitText(g, 'Гостиный двор', 320, h * 0.38, 340, 52, FONT, 700); g.globalAlpha = 0.8; tex.fitText(g, 'Gostiny dvor', 320, h * 0.72, 340, 30, FONT, 500); g.globalAlpha = 1; for (const [i, c] of [['3', '#009a49'], ['2', '#0078c9']].entries()) { g.fillStyle = c[1]; tex.roundRect(g, 548 + i * 44 - 20, 48, 36, 36, 9); g.fill(); g.fillStyle = '#fff'; g.font = `700 28px ${FONT}`; g.fillText(c[0], 548 + i * 44 - 2, 68); } }, { key: 'gd-oval' });
     const g = new THREE.Group(); g.name = 'gostiny-portals'; ctx.addStatic(g);
     for (const d of DOORWAYS.filter((q) => q.station === 'gostiny')) {
       const grp = new THREE.Group(); grp.position.set(d.x, 0, d.z); grp.rotation.y = d.rotY; g.add(grp); const kk = ctx.kit(grp), hw = d.w / 2;
-      for (const sx of [-1, 1]) kk.box(0.12, 3.5, 0.2, M.stainless, [sx * (hw + 0.06), 1.75, 0.22]);
-      kk.box(d.w + 0.3, 0.2, 0.2, M.stainless, [0, 3.45, 0.22]); kk.box(d.w, 0.5, 0.06, M.glassWarm, [0, 3.18, 0.22]);
       const leaves = []; for (const [i, off, z] of [[0, -0.75, 0.26], [1, -0.25, 0.31], [2, 0.25, 0.31], [3, 0.75, 0.26]]) { const l = kk.box(hw / 2 - 0.02, 3.0, 0.05, M.glassWarm, [off * hw, 1.55, z]); l.userData.noBatch = true; leaves.push({ m: l, x0: off * hw, i }); }
-      if (d.kind === 'entrance') { const s = kk.plane(2.4, 0.6, M.board(ov, 1.0), [0, 4.0, 0.34], [0, 0, 0]); s.castShadow = false; kk.box(2.5, 0.05, 0.05, M.steelBlack, [0, 4.34, 0.3]); }
       portals.push({ d, leaves, open: 0 });
     }
     const cam = ctx.camera.position;

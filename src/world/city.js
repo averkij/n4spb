@@ -45,6 +45,8 @@ import { buildDetails } from './city/details.js';
 import { LOD } from './city/instances.js';
 import { CityMeshes } from './city/meshes.js';
 import { prepare } from './city/prep.js';
+import { regionalShellOwns } from './metro/regional-sites.js';
+import { areaUnderpasses, areaUnderpassLifts } from './metro/regional-underpass-sites.js';
 import { buildTowers } from './city/towers.js';
 import { buildCanopies } from './city/canopies.js';
 
@@ -81,7 +83,9 @@ export async function build(ctx) {
   // draw records: raised parts get their real thickness, bodies under raised parts that have none are synthesised (prep.js); owned buildings only act as occluders
   // The panorama replaces rendering only. Existing wall physics and door
   // records in an overlap must stay exactly as they were before it was added.
-  const skip=b=>isOwned(owned,b.id)&&!panorama(b);
+  const underpassRoofs=new Set(areaUnderpasses.map(s=>s.canopy).filter(Boolean));
+  for(const lift of areaUnderpassLifts)underpassRoofs.add(lift.bldg);
+  const skip=b=>regionalShellOwns(b) || underpassRoofs.has(b.id) || (isOwned(owned,b.id)&&!panorama(b));
   // Scenic neighbours cannot change a local wall's visibility runs, support
   // fill or carriage-arch choice: those runs also define physical walls.
   const localPrep=prepare(BUILDINGS.filter(b=>!b.waterfront),skip);

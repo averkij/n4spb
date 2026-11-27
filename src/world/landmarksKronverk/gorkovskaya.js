@@ -1,8 +1,9 @@
 // landmarksKronverk/gorkovskaya.js - the surface pavilion of the GORKOVSKAYA metro station (2009, "the flying saucer"; OSM w85416499: a circle of radius 23.3 m round (-1818.0, -2643.1)).
 // Dossier docs/research/kronverk.md section 5; photos refs/kronverk 53 54.  A brown granite stylobate 1.4 m high with two flights of steps (entrance: north, exit: east, at the OSM nodes), a recessed glazed
 // drum, blue V struts, the bronze-brown lens-shaped disc with a flat top and eight pairs of dark windows in its upper slope, steel rails, the plain blue "M" pylon.
-// The vestibule INSIDE the drum belongs to the metro module (metro/st-gork.js): with `metro` in the build the two door bays are open (4.4 m), the stylobate top is a ring and the walkable top an annulus
-// R 13.3 .. 22.5; without it the pavilion is closed (door glass, solid drum).  ctx.services.landmarksKronverk.metro publishes the centre, the levels, both doors, their normals and `closed`.
+// The drum has two open door chords and an annular stylobate. The district pages provide
+// two lit surface lobbies at the ends of the granite stair flights.
+import { addPavilionEntrance } from '../lib/metro-pavilion-entrance.js';
 import * as THREE from 'three';
 import { ENTRANCES } from '../data/city.js';
 import * as G from './geo.js';
@@ -36,9 +37,7 @@ export function build(K) {
   };
   const doorE = stairs(dE, 'entrance'), doorX = stairs(dX, 'exit');
   // ---------------------------------------------------------------- the glazed drum with door bays toward the entrance and the exit
-  // The metro module builds its vestibule INSIDE the drum (docs/research/petro-requests-metro.md): when it is in the build the two door bays (4.4 m, centred on the door directions) are open
-  // below the lintel (y 3.9) and the drum collider is a ring of wall pieces; without the metro module the pavilion stays closed (door glass drawn, one solid cylinder).
-  const open = !ctx.buildList || ctx.buildList.includes('metro');
+  const underground=ctx.buildList?.includes('metro') && ctx.L.DOORWAYS?.some(d=>d.bldg==='w85416499');
   const SEG = 36, TWO = Math.PI * 2, half = Math.asin(2.2 / RD), YL = YS + 2.5;
   const doorsA = [dE, dX].map((d) => ((Math.atan2(d[0], d[1]) % TWO) + TWO) % TWO).sort((a, b) => a - b), segs = [];
   for (let k = 0; k < doorsA.length; k++) {
@@ -53,17 +52,16 @@ export function build(K) {
     if (s.door) {
       const m = 5;                                                              // the bay follows the drum: five facets
       for (let j = 0; j < m; j++) { const a = s.t0 + (s.t1 - s.t0) * j / m, b = s.t0 + (s.t1 - s.t0) * (j + 1) / m, nn = [Math.sin((a + b) / 2), 0, Math.cos((a + b) / 2)];
-        if (!open) P.quad(M.glass, pd(a, RD, YS), pd(b, RD, YS), pd(b, RD, YL), pd(a, RD, YL), nn);
         P.quad(M.glassBlue, pd(a, RD, YL + 0.15), pd(b, RD, YL + 0.15), pd(b, RD, YD), pd(a, RD, YD), nn); P.quad(M.steel, pd(a, RD + 0.02, YL), pd(b, RD + 0.02, YL), pd(b, RD + 0.02, YL + 0.15), pd(a, RD + 0.02, YL + 0.15), nn); }
       for (const t of [s.t0, s.t1]) P.cyl(M.steel, pd(t, RD + 0.03, YS), pd(t, RD + 0.03, YD), 0.07, 0.07, 4, false);
       continue;
     }
     P.quad(s.i % 6 === 2 ? M.saucerD : M.glassBlue, pd(s.t0, RD, YS), pd(s.t1, RD, YS), pd(s.t1, RD, YD), pd(s.t0, RD, YD), [n[0], 0, n[1]]);
     P.cyl(M.steel, pd(s.t0, RD + 0.03, YS), pd(s.t0, RD + 0.03, YD), 0.05, 0.05, 4, false);
-    if (open) { const a = pd(s.t0, RD, 0), b = pd(s.t1, RD, 0); ph.addBox((a[0] + b[0]) / 2, (a[2] + b[2]) / 2, Math.hypot(b[0] - a[0], b[2] - a[2]) + 0.06, 0.3, Math.atan2(-(b[2] - a[2]), b[0] - a[0]), 0, YD + 4); }
+    { const a = pd(s.t0, RD, 0), b = pd(s.t1, RD, 0); ph.addBox((a[0] + b[0]) / 2, (a[2] + b[2]) / 2, Math.hypot(b[0] - a[0], b[2] - a[2]) + 0.06, 0.3, Math.atan2(-(b[2] - a[2]), b[0] - a[0]), 0, YD + 4); }
   }
   // the plinth band of the drum, left out at the open doors
-  for (const s of segs) { if (s.door && open) continue; const m = s.door ? 5 : 1; for (let j = 0; j < m; j++) { const a = s.t0 + (s.t1 - s.t0) * j / m, b = s.t0 + (s.t1 - s.t0) * (j + 1) / m; P.quad(M.saucerD, pd(a, RD + 0.06, YS), pd(b, RD + 0.06, YS), pd(b, RD + 0.06, YS + 0.35), pd(a, RD + 0.06, YS + 0.35), [Math.sin((a + b) / 2), 0, Math.cos((a + b) / 2)]); } }
+  for (const s of segs) { if (s.door) continue; const m = 1; for (let j = 0; j < m; j++) { const a = s.t0 + (s.t1 - s.t0) * j / m, b = s.t0 + (s.t1 - s.t0) * (j + 1) / m; P.quad(M.saucerD, pd(a, RD + 0.06, YS), pd(b, RD + 0.06, YS), pd(b, RD + 0.06, YS + 0.35), pd(a, RD + 0.06, YS + 0.35), [Math.sin((a + b) / 2), 0, Math.cos((a + b) / 2)]); } }
   // ---------------------------------------------------------------- the disc: soffit, rim, upper slope with the window pairs, flat top
   G.tube(P, M.saucerD, cx, cz, YD - 0.3, YD + 0.9, RD - 0.6, RR, 48, 1, 1);
   G.tube(P, M.saucer, cx, cz, YD + 0.9, YD + 1.3, RR, RR + 0.15, 48, 1, 1);
@@ -103,9 +101,13 @@ export function build(K) {
     if (!L_onRoad(ctx, px, pz)) { P.push(px, 0, pz, rot); P.box(M.steel, -0.09, 0.09, 0, 4.2, -0.09, 0.09, 'b', 1); P.box(M.white, -0.6, 0.6, 4.2, 5.4, -0.1, 0.1, '', 1); P.quad(mm, [-0.55, 4.25, 0.105], [0.55, 4.25, 0.105], [0.55, 5.35, 0.105], [-0.55, 5.35, 0.105], [0, 0, 1]); P.quad(mm, [0.55, 4.25, -0.105], [-0.55, 4.25, -0.105], [-0.55, 5.35, -0.105], [0.55, 5.35, -0.105], [0, 0, -1]); P.pop(); ph.addCylinder(px, pz, 0.15, 0, 5.4); } }
   // ---------------------------------------------------------------- colliders and services
   for (let k = 0; k < 24; k++) { const t = (k + 0.5) / 24 * 6.2832, rm = (13.3 + RS - 0.1) / 2; ph.addWalkBox(cx + Math.sin(t) * rm, cz + Math.cos(t) * rm, 2 * (RS - 0.1) * Math.tan(Math.PI / 24) + 0.05, RS - 0.1 - 13.3, t, YS, 0); }
-  if (!open) ph.addCylinder(cx, cz, RD + 0.1, 0, YD + 4);
-  svc.metro = { station: 'Горьковская', line: 2, id: 'w85416499', x: cx, z: cz, rStylobate: RS, yStylobate: YS, rDrum: RD, entrance: doorE, exit: doorX, doorW: 4.4, lintelY: YL, closed: !open };
-  svc.entrances.push({ x: doorE.x, z: doorE.z, rotY: doorE.rotY, name: 'Метро «Горьковская» (вход)', bldg: 'w85416499', closed: !open }, { x: doorX.x, z: doorX.z, rotY: doorX.rotY, name: 'Метро «Горьковская» (выход)', bldg: 'w85416499', closed: !open });
+  for (const door of [doorE,doorX]) {
+    const r = Math.sqrt(RD*RD-2.2*2.2);
+    addPavilionEntrance(ctx,{id:'gorkovskaya-'+door.key,x:cx+door.nx*r,z:cz+door.nz*r,rotY:door.rotY,
+      w:4.4,y:YS,h:2.5,leaves:4,approach:14,approachOffset:.78,lobby:!underground});
+  }
+  svc.metro = { station: 'Горьковская', line: 2, id: 'w85416499', x: cx, z: cz, rStylobate: RS, yStylobate: YS, rDrum: RD, entrance: doorE, exit: doorX, doorW: 4.4, lintelY: YL, closed: false, underground:!!underground };
+  svc.entrances.push({ x: doorE.x, z: doorE.z, rotY: doorE.rotY, name: 'Метро «Горьковская» (вход)', bldg: 'w85416499', closed: false }, { x: doorX.x, z: doorX.z, rotY: doorX.rotY, name: 'Метро «Горьковская» (выход)', bldg: 'w85416499', closed: false });
   svc.photoSpots.push({ x: doorE.foot[0] + dE[0] * 16, z: doorE.foot[1] + dE[1] * 16, yaw: 180, name: 'Метро «Горьковская»' });
   svc.crowd.push({ x: doorE.foot[0] + dE[0] * 3, z: doorE.foot[1] + dE[1] * 3, r: 7, n: 10, name: 'у метро «Горьковская»' }, { x: doorX.foot[0] + dX[0] * 3, z: doorX.foot[1] + dX[1] * 3, r: 6, n: 6, name: 'выход метро «Горьковская»' });
   void THREE;

@@ -142,7 +142,7 @@ export function addPrism(walls, roofs, poly, y0, y1, o = {}) {
 }
 
 /** Collision boxes along every footprint edge (thin oriented boxes; the player cannot enter the mass). */
-export function addPolyColliders(ctx, poly, y0, y1, thick = 0.9) {
+export function addPolyColliders(ctx, poly, y0, y1, thick = 0.9, doorways = DOORWAYS) {
   const rings = [ringFromFlat(poly.o), ...poly.h.map(ringFromFlat)];
   let count = 0;
   for (const r of rings) {
@@ -152,7 +152,7 @@ export function addPolyColliders(ctx, poly, y0, y1, thick = 0.9) {
       const ux = dx / l, uz = dz / l;
       // metro portals / doorways (data/metro.js DOORWAYS) that cut through this wall: the collider is split around the opening
       const gaps = [];
-      for (const d of DOORWAYS) {
+      for (const d of doorways) {
         const px = d.x - a[0], pz = d.z - a[1], t = px * ux + pz * uz, off = Math.abs(px * -uz + pz * ux);
         if (off < 1.6 && t > -d.w / 2 && t < l + d.w / 2) gaps.push([Math.max(0, t - d.w / 2), Math.min(l, t + d.w / 2)]);
       }

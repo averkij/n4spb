@@ -24,13 +24,17 @@ export function makeTall(Cc, P) {
   let sc = 0;
 
   /** one bay of a tall rent-house wall (frame: x along the wall, z into the building) */
-  function bay(pitch, H, st) {
+  function bay(pitch, H, st, portal = null) {
     const hp = pitch / 2, PL = 0.9;
     // ground floor: extruded panel with an arched shop window
     const gh = st.groundH, sh = new THREE.Shape(); rectPath(sh, -hp, 0, hp, gh);
-    if (st.ground !== false) sh.holes.push(archPath(new THREE.Path(), Math.min(1.5, pitch - 1.6), gh - 2.4 - Math.min(1.5, pitch - 1.6) / 2, 0, 0.7, true));
-    P.extrude(st.rust, sh, 0.28, 0, 0, 0, 0, 4);
-    if (st.ground !== false) {
+    if (!portal && st.ground !== false) sh.holes.push(archPath(new THREE.Path(), Math.min(1.5, pitch - 1.6), gh - 2.4 - Math.min(1.5, pitch - 1.6) / 2, 0, 0.7, true));
+    if (portal) {
+      if (portal[0] > -hp + .01) P.box(st.rust, -hp, portal[0], 0, gh, 0, .3);
+      if (portal[1] < hp - .01) P.box(st.rust, portal[1], hp, 0, gh, 0, .3);
+      P.box(st.rust, portal[0], portal[1], 3.35, gh, 0, .3);
+    } else P.extrude(st.rust, sh, .28, 0, 0, 0, 0, 4);
+    if (!portal && st.ground !== false) {
       const w = Math.min(1.5, pitch - 1.6), top = gh - 2.4 - w / 2 + 0.7;
       P.quad(M.pane, [w / 2, 0.7, 0.25], [-w / 2, 0.7, 0.25], [-w / 2, top, 0.25], [w / 2, top, 0.25], [0, 0, -1]);
       const arc = new THREE.Shape(); arc.moveTo(-w / 2, 0); arc.absarc(0, 0, w / 2, Math.PI, 0, true); arc.lineTo(-w / 2, 0); P.extrude(M.pane, arc, 0.02, 0, top, 0.23, 0, 4);
@@ -62,12 +66,28 @@ export function makeTall(Cc, P) {
     const poly = rec ? rec.polys[0] : null, outer = o.outer || ringOf(poly.o), holes = o.outer ? (o.holes || []) : poly.h.map(ringOf);
     const body = (x, z) => inside(outer, x, z) && !holes.some((h) => inside(h, x, z));
     const wall0 = o.coreMat || st0(styleFor).wall;
-    P.prism(wall0, inset(outer, 0.3), 0, H - 1.5, '');                       // 0.3 m behind the bay panels (never coplanar with them)
+    P.prism(wall0, inset(outer, 0.3), o.portals?.length ? 3.35 : 0, H - 1.5, '');                       // 0.3 m behind the bay panels (never coplanar with them)
     for (const h of holes) P.prism(wall0, inset(h, -0.3), 0, H - 1.5, '', 1, true);
     const run = (ring, hole) => wallRun(P, ring, (e) => {
-      const st = styleFor(e, hole); if (!st) return;
+      const st = styleFor(e, hole);
+      if (!st) {
+        if (o.portals?.length) P.box(wall0, 0, e.len, 0, 3.35, .28, .31);
+        return;
+      }
       const n = Math.max(1, Math.round(e.len / (st.pitch || 3.4))), pitch = e.len / n;
-      for (let j = 0; j < n; j++) { P.push((j + 0.5) * pitch, 0, 0, 0); bay(pitch, H, st); P.pop(); }
+      const openings = [];
+      for (const door of o.portals || []) {
+        const dx = door.x - e.a[0], dz = door.z - e.a[1], t = dx * e.tx + dz * e.tz;
+        if (Math.abs(dx * e.nx + dz * e.nz) < .4 && t >= 0 && t <= e.len)
+          openings.push([t - door.w / 2, t + door.w / 2]);
+      }
+      for (let j = 0; j < n; j++) {
+        const from = j * pitch, to = from + pitch, mid = (from + to) / 2;
+        const door = openings.find(([a, b]) => b > from && a < to);
+        P.push(mid, 0, 0, 0);
+        bay(pitch, H, st, door && [Math.max(from, door[0]) - mid, Math.min(to, door[1]) - mid]);
+        P.pop();
+      }
     }, { inside: body });
     run(outer, false); for (const h of holes) run(h, true);
     // roof: flat cap with a dark parapet cap, cells of <= 24 m

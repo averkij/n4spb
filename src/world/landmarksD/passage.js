@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { dostoevsky } from './statues.js';
 import { buildHouse } from './house.js';
+import { centralExtraDoors } from '../metro/central-locations.js';
 import { findEdge, localOnEdge } from './kit.js';
 import { cup, onion } from './parts.js';
 
@@ -35,11 +36,16 @@ export function build(K) {
     });
   }
   if (ren) {
-    const north = (e) => !!findEdge([e], -304.8, 442.7, -272.0, 454.2, 0.6);
+    const entrances = [door, ...centralExtraDoors.filter(d => d.bldg === ren.id)];
     buildHouse(K, {
-      name: 'renaissance', recs: [ren], hc: RHC, wall: '#dccfae', court: '#d2c4a2', plinth: 0.0, cornice: 'none', roofMat: K.mat('#8e969b', { name: 'lmD-roof-ren' }), roofHc: RHC + RATT, upstand: UP, railing: false,
+      name: 'renaissance', recs: [ren], doorways: entrances, hc: RHC, wall: '#dccfae', court: '#d2c4a2', plinth: 0.0, cornice: 'none', roofMat: K.mat('#8e969b', { name: 'lmD-roof-ren' }), roofHc: RHC + RATT, upstand: UP, railing: false,
       bands: [{ y0: RHC - 1.0, y1: RHC, d: 0.35, mat: M.cream }],
-      front: (e, c) => { sideFacade(K, e, c.len, RHC, RATT, '#dccfae', { ground: 5.2, door: north(e) ? localOnEdge(e, door.x, door.z).u : null, doorW: door.w || 3.4 }); return true; },
+      front: (e, c) => {
+        const opening = entrances.map(d => ({ entry:d, ...localOnEdge(e, d.x, d.z) }))
+          .find(p => Math.abs(p.d) < 1.6 && p.u > 0 && p.u < c.len);
+        sideFacade(K, e, c.len, RHC, RATT, '#dccfae', { ground: 5.2, door: opening?.u, doorW: opening?.entry.w, useExistingArch: opening?.entry === door });
+        return true;
+      },
     });
   }
   monument(K, -209, 553);
@@ -109,7 +115,7 @@ function sideFacade(K, e, len, hc, att, color, o) {
     for (let f = 0; f < nf; f++) K.window({ x, y: G + 0.6 + f * fh, w: 1.15, h: Math.min(2.2, fh * 0.58), head: o.granite && f === 1 ? 'arch' : 'flat', sw: 0.16, d: 0.08, frame: 'white', surMat: M.trim, sill: true });
     K.window({ x, y: top + 1.0, w: 1.0, h: 1.5, sw: 0.1, d: 0.06, frame: 'white', surMat: M.cream, sill: false });
   }
-  if (o.door != null) {
+  if (o.useExistingArch) {
     // the metro entrance: a stone-framed arch (the wall hole is a real opening) + a short vaulted passage behind it
     const u = o.door, w = o.doorW, hy = 3.0 + w / 2;
     K.gate(u, 0, w, hy, { open: true, sw: 0.5, d: 0.2, ringMat: K.mat('#b9b0a0') });

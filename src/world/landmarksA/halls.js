@@ -12,6 +12,7 @@ import { windowTex } from './tex.js';
 import { makeTall } from './hotel.js';
 import { addPolyColliders } from '../lib/massing.js';
 import * as L from '../layout.js';
+import { centralExtraDoors } from '../metro/central-locations.js';
 
 export const HALL = { u0: -17, u1: 13, d0: 19.4, d1: 143.2, h: 12.5 };       // outer shell lines of the big hall (inner faces are 0.5 m inside)
 export const STRIP_H = 9.5;
@@ -84,6 +85,11 @@ export function buildHalls(Cc) {
   styledWalls(P, M, KZ, 9.0, winMat, { winLit: Cc.winLit, wall: M.wing, pitch: 3.52, core: false, bayFilter: doorBay }); hipRoof(P, M.roof, KZ, 9.45, 1.5, 3.0);
 
   // ---------------------------------------------------------------- west annexes (metro vestibule 2): r2404501 (5 levels), r2404500 (3 levels)
+  const streetDoors = id => centralExtraDoors.filter(d => d.bldg === id);
+  const frameDoors = id => streetDoors(id).map(d => {
+    const [x,z] = UV(d.x,d.z);
+    return {x,z,w:d.w};
+  });
   const A1 = toUV(L.buildingById('r2404501')), A2 = toUV(L.buildingById('r2404500'));
   const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.8;
   const wingEnd = [[-64.8, 22.3], [-50.3, 30.5]];
@@ -91,9 +97,9 @@ export function buildHalls(Cc) {
   const skipShared = (a, b) => a[1] > 91 && b[1] > 91 && a[1] < 92 && b[1] < 92;
   const annexStyle = (floors, groundH) => ({ wall: M.wing, rust: M.stuccoShade, groundH, floors, shops: false, ground: true, pitch: 4.0 });
   // r2404501: 5 levels (16.5 m), r2404500: 3 levels (11.4 m): real storeys with the Thon window surrounds
-  tall.building(null, 16.5, (e) => ((near(e.a, wingEnd[0]) && near(e.b, wingEnd[1])) || (near(e.b, wingEnd[0]) && near(e.a, wingEnd[1])) || skipShared(e.a, e.b)) ? null : annexStyle([[5.6, 7.7, 'noble'], [8.7, 10.8], [11.8, 13.9], [14.6, 15.8]], 4.6), { outer: A1, roof: false, colliders: false });
+  tall.building(null, 16.5, (e) => ((near(e.a, wingEnd[0]) && near(e.b, wingEnd[1])) || (near(e.b, wingEnd[0]) && near(e.a, wingEnd[1])) || skipShared(e.a, e.b)) ? null : annexStyle([[5.6, 7.7, 'noble'], [8.7, 10.8], [11.8, 13.9], [14.6, 15.8]], 4.6), { outer: A1, roof: false, colliders: false, portals: frameDoors('r2404501') });
   hipRoof(P, M.roof, A1, 17.3, 2.8, 5.5);
-  tall.building(null, 11.4, (e) => skipShared(e.a, e.b) ? null : annexStyle([[5.6, 7.6, 'noble'], [8.4, 10.0]], 4.6), { outer: A2, roof: false, colliders: false });
+  tall.building(null, 11.4, (e) => skipShared(e.a, e.b) ? null : annexStyle([[5.6, 7.6, 'noble'], [8.4, 10.0]], 4.6), { outer: A2, roof: false, colliders: false, portals: frameDoors('r2404500') });
   hipRoof(P, M.roof, A2, 12.2, 2.0, 4.5);
 
   // ---------------------------------------------------------------- suburban ticket office w433164092 (one storey) and ticket office No 13
@@ -120,6 +126,6 @@ export function buildHalls(Cc) {
   // canopy columns
   for (const d of [148, 164]) for (let u = CANOPY.u0 + 3; u < CANOPY.u1; u += 8.4) wbox(ctx, u - 0.3, u + 0.3, d - 0.3, d + 0.3, 0, CANOPY.y);
   // annex / ticket-hall wall boxes (hollow inside, cut by data/metro.js DOORWAYS)
-  for (const id of ['r2404501', 'r2404500', 'w433164092', 'w595741909']) { const b = L.buildingById(id); for (const p of b.polys) addPolyColliders(ctx, p, 0, 20, 0.9); }
+  for (const id of ['r2404501', 'r2404500', 'w433164092', 'w595741909']) { const b = L.buildingById(id); for (const p of b.polys) addPolyColliders(ctx, p, 0, 20, 0.9, [...L.DOORWAYS, ...streetDoors(id)]); }
   return g;
 }

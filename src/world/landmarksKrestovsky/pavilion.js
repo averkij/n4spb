@@ -1,5 +1,6 @@
 // Krestovsky Ostrov: stone arcade crossing a bronze-framed dark glass cube.
 // Surveyed photograph and OSM plan: docs/research/krestovsky-2026.md.
+import { addPavilionEntrance, entrancePoint } from '../lib/metro-pavilion-entrance.js';
 import * as THREE from 'three';
 import * as CITY from '../data/city.js';
 import { polyBounds, addPolyColliders, MeshBuilder, addWalls, addCap } from '../lib/massing.js';
@@ -24,12 +25,43 @@ export function pavilion(ctx,P,M,svc) {
     ctx.physics.addWalkBox(bb.cx,bb.cz,platformW,platformD,0,.73,0);
   }
   P.push(0,0,0,rot);
-  P.box(M.glass,0,5.95,0,w,10.3,d,Infinity);
+  const portals=[];
+  const entries=CITY.ENTRANCES.filter(e=>e.bldg===b.id);
+  // Each side of the dark glass cube is independent. The public doors lie on the
+  // opposed diagonal faces; the stone arcade and its square corners stay in place.
   P.box(M.bronze,0,11.2,0,w+.25,.23,d+.25,1100);
   for(const face of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
     P.push(0,0,0,face);
-    for(let i=0;i<=8;i++)P.box(M.bronze,-w/2+i*w/8,5.97,d/2+.035,.12,10.4,.12,750);
-    for(const y of [1.1,4.25,7.6,11.1])P.box(M.bronze,0,y,d/2+.045,w,.12,.12,750);
+    const angle=rot+face, nx=Math.sin(angle), nz=Math.cos(angle);
+    const node=entries.find(q=>Math.abs((q.x-bb.cx)*nx+(q.z-bb.cz)*nz-d/2)<3.8);
+    const u=node?(node.x-bb.cx)*nz-(node.z-bb.cz)*nx:0, gap=2.40;
+    const spans=node ? [[-w/2,u-gap],[u+gap,w/2]] : [[-w/2,w/2]];
+    for(const [a,b] of spans)P.box(M.glass,(a+b)/2,2.17,d/2,b-a,2.74,.18,1000);
+    P.box(M.glass,0,7.32,d/2,w,7.55,.18,1000);
+    for(let i=0;i<=8;i++) {
+      const x=-w/2+i*w/8, low=node && Math.abs(x-u)<gap ? 3.54:.79;
+      P.box(M.bronze,x,(low+11.15)/2,d/2+.035,.12,11.15-low,.12,750);
+    }
+    for(const y of [4.25,7.6,11.1])P.box(M.bronze,0,y,d/2+.045,w,.12,.12,750);
+    for(const [a,b] of spans)P.box(M.bronze,(a+b)/2,1.1,d/2+.045,b-a,.12,.12,750);
+    if(node){
+      const door={id:node.id,x:bb.cx+nz*u+nx*d/2,z:bb.cz-nx*u+nz*d/2,rotY:angle,
+        y:.79,h:2.74,w:gap*2,leaves:4,style:'bronze'};
+      // Distance along the door normal to the outer edge of the square stylobate.
+      const edge=Math.min((bb.cx+Math.sign(nx)*platformW/2-door.x)/nx,(bb.cz+Math.sign(nz)*platformD/2-door.z)/nz);
+      door.approach=edge+4.1;
+      addPavilionEntrance(ctx,door);portals.push(door);
+      const foot=entrancePoint(door,0,edge+1.13);
+      ctx.physics.addStairs(foot.x,foot.z,5.25,3.75,angle+Math.PI,.02,.79,7);
+      for(let i=0;i<7;i++){
+        const h=(7-i)*.11,at=entrancePoint(door,0,edge-.74+(i+.5)*3.75/7);
+        const pu=(at.x-bb.cx)*nz-(at.z-bb.cz)*nx, pv=(at.x-bb.cx)*nx+(at.z-bb.cz)*nz;
+        P.box(M.granite,pu,h/2,pv,5.25,h,3.75/7,550);
+      }
+      const run=Math.max(1,edge+.23), landing=entrancePoint(door,0,run/2);
+      ctx.physics.addWalkBox(landing.x,landing.z,5.25,run,angle,.79,.63);
+      P.box(M.granite,u,.738,d/2+run/2,5.25,.105,run,550);
+    }
     P.pop();
   }
   P.pop();
@@ -69,9 +101,9 @@ export function pavilion(ctx,P,M,svc) {
     for(let i=0;i<7;i++)P.box(M.granite,bb.cx,(i+1)*.055,stepZ+1.56-i*.52,sw*.67,(i+1)*.11,.52,650);
     ctx.physics.addStairs(bb.cx,stepZ,sw*.67,3.64,Math.PI,0,.77,7);
   }
-  // Glass cube has a complete closed envelope; open exterior stone bays are intentional.
+  // The collider follows the four glass faces and leaves their actual door gaps clear.
   const c=Math.cos(rot),s=Math.sin(rot),ring=[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]].map(([u,v])=>[bb.cx+c*u+s*v,bb.cz-s*u+c*v]).flat();
-  addPolyColliders(ctx,{o:ring,h:[]},.79,11.2,.22);
+  addPolyColliders(ctx,{o:ring,h:[]},.79,11.2,.22,portals);
   svc.monuments.push({id:b.id,name:'Павильон «Крестовский остров»',x:bb.cx,z:bb.cz,h:11.3});
   svc.pavilion={id:b.id,x:bb.cx,z:bb.cz,w:bb.w,d:bb.d};
   const photo={x:bb.cx-4,z:bb.cz+48,yaw:0,name:'Аркада павильона «Крестовский остров»'};

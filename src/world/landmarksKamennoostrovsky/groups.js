@@ -10,7 +10,7 @@ export const GROUPS_LIST = [
     ids: ['w42422601', 'r1267606', 'r1267607', 'w52104048', 'w27046419'], osm: [], at: [-1906, -3065],
     note: 'Kamennoostrovsky 13/2 w42422601, 16 r1267606 (+ parts r15442351 / r15442352), 18/11 r1267607 (+ part r15979826), ul. Mira 10 = Kamennoostrovsky 20 w52104048, 15 w27046419' },
   { key: 'kam-tolstoy', name: 'Площадь Льва Толстого', nameEn: 'Lev Tolstoy Square: the Chubakov house with the domed belvedere, the Korzinin house, the Maizel house, the House of Fashion with the Petrogradskaya metro vestibule, the former Oldenburg institute, the second Rosenstein house (Bolshoy 77)',
-    ids: ['r1249813', 'w163290692', 'r1257106', 'r1256096', 'r1256097', 'w40260868', 'r4080836'], osm: [], at: [-2198, -3714],
+    ids: ['r1249813', 'w163290692', 'r1257106', 'r1256096', 'w160015873', 'r1256097', 'w40260868', 'r4080836'], osm: [], at: [-2198, -3714],
     note: 'Kamennoostrovsky 38/96 r1249813, ul. Lva Tolstogo 1-3 w163290692, Bolshoy 98 r1257106, Kamennoostrovsky 37 r1256096 + litera D r1256097, Kamennoostrovsky 36/73 w40260868, Bolshoy 77 r4080836' },
   { key: 'kam-owls', name: 'Дом с совами (дом Путиловой)', nameEn: 'House with Owls: Putilova house, Bolshoy pr. P. S. 44 (I. Pretro 1906-07, Northern Modern)',
     ids: ['r3570513'], osm: [], at: [-2827, -3003], note: 'OSM r3570513 (+ the courtyard part r17142428)' },

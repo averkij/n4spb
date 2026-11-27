@@ -1,3 +1,4 @@
+import { GROUPS_LIST as METRO_PAVILION_GROUPS } from '../../world/landmarksPrimorskaya/groups.js';
 // ============================================================================
 //  AREA DEFINITION - Morskoy (Морской; docs/AREAS.md section 15.v, the Vasilyevsky protocol): map area 47 (letter M) of the world map (maps/intro-draft.html): the west coast of Vasilyevsky Island - the Marine Facade passenger port on its
 //  land fill, Pribaltiyskaya Square with the hotel and the monuments of Peter I, the Creators of the Fleet and Admiral Nakhimov, the cruiser Kirov memorial, the Golden City quarter, the Nalichny and Shipbuilders' bridges, the mouth of the
@@ -46,6 +47,7 @@ export const MODULES = [
   'environment',  // ground, embankment granite, the Gulf of Finland, the Smolenka mouth and the Kovsh water, trees, lawns, flowerbeds, far skyline
   'streets',      // roads, markings, kerbs, granite pavements, crossings, road furniture, trolleybus overhead wires
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
+  'landmarksPrimorskaya',
   'landmarksMarineFacade', // the Marine Facade passenger port (terminals, quay galleries, liners, fences, masts, marina), the Golden City quarter-6 spire (docs/gdm-M.md)
   //
   'landmarksPribaltiyskaya', // the Pribaltiyskaya hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, the Kirov memorial, Waterville
@@ -101,6 +103,7 @@ export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, 
 // and non-building OSM ids (`osm`: paving, bridge decks, monuments) that the owner draws itself. A claim only takes effect when the owner module says so: it exports `OWNS_GROUPS = true` (every sub-group) or
 // `['station', ...]` (only those); until then `city` / `environment` / `streets` still draw the claimed objects as a blockout (see lib/claims.js).
 export const GROUPS = {};
+GROUPS.landmarksPrimorskaya = METRO_PAVILION_GROUPS.filter(g=>g.key==='primorskaya-vestibule');
 // ---
 GROUPS.landmarksDekabristov = DEK_GROUPS.filter(g => g.key === 'dek-volodin');
 GROUPS.landmarksMarineFacade = G_MARINEFACADE;      // all 8 sub-groups lie inside the territory (docs/gdm-M.md)
@@ -366,7 +369,7 @@ export const GARAGE = {
 
 // ---------------------------------------------------------------- the rest
 /** environment.js: the services whose `entrances` ([{ x, z, clearance? }]) clear the trees from the doors of the buildings they list */
-export const PRUNE_SERVICES = [
+export const PRUNE_SERVICES = ['landmarksPrimorskaya',
   'city',
   // (landmarksMarineFacade publishes an empty `entrances` list: the terminals are not enterable, so it needs no row here)
   //

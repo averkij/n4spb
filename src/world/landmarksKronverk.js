@@ -31,7 +31,7 @@ async function buildSource(ctx) {
   const M = makeMats(ctx);
   const root = new THREE.Group(); root.name = 'landmarksKronverk';
   const svc = { monuments: [], photoSpots: [], entrances: [], gates: [], crowd: [], fences: [], benches: [], lamps: [], exhibits: [], bridges: [], metro: null, triangles: 0, parts: {} };
-  const keys = new Set(GROUPS_LIST.map((g) => g.key));
+  const keys = new Set((ctx.L.GROUPS?.landmarksKronverk || GROUPS_LIST).map((g) => g.key));
   const failed = [];
   for (const [name, key, load] of PARTS) {
     if (!keys.has(key)) continue;
@@ -59,5 +59,5 @@ async function buildSource(ctx) {
 export async function build(ctx) {
   const before=new Set(ctx.physics.items), roots=new Set(ctx.staticRoot.children);
   await buildSource(ctx);
-  adaptPortedSolids(ctx,ctx.staticRoot.children.filter(r=>!roots.has(r)),ctx.physics.items.filter(it=>!before.has(it)),"landmarksKronverk");
+  adaptPortedSolids(ctx,ctx.staticRoot.children.filter(r=>!roots.has(r)&&!r.userData.metroPavilionDoor),ctx.physics.items.filter(it=>!before.has(it)&&!it.metroPavilionDoor),"landmarksKronverk");
 }

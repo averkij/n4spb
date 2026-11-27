@@ -1,6 +1,7 @@
 // The two 1955 Line 1 surface vestibules in Avtovo. OSM anchors and footprints:
 // Avtovo r6440025 (domed east apse), Kirovsky Zavod w47636754 (peripter).
 // Architecture and current facade details: docs/research/avtovo-metro.md.
+import { addPavilionEntrance } from './lib/metro-pavilion-entrance.js';
 import * as THREE from 'three';
 import { Parts, archPath } from './landmarksD/kit.js';
 import { registerLOD } from '../core/spatial.js';
@@ -51,14 +52,15 @@ function archTrim(w, y, h, t = .19) {
   archPath(hole, 0, y + t, w - 2 * t, h - t, true); s.holes.push(hole);
   return s;
 }
-function archedPanel(P, M, x, z, y, w, h, door = false) {
+function archedPanel(P, M, x, z, y, w, h, door = false, green = false) {
   P.push(x, 0, z);
-  P.face(door ? M.door : M.window, archShape(w, y, h), .06);
+  const leafTop = 2.55;
+  P.face(green ? M.green : door ? M.door : M.window, door ? archShape(w, y + leafTop, h - leafTop) : archShape(w, y, h), .06);
   P.face(M.cream, archTrim(w + .34, y - .08, h + .06, .18), .09);
   if (door) {
-    P.box(M.brass, -.032, .032, y + .08, y + h - .18, .13, .17);
-    P.box(M.brass, -w / 2 + .16, w / 2 - .16, y + h * .59, y + h * .59 + .07, .12, .16);
-    for (const s of [-1, 1]) P.cyl(M.brass, [s * .24, y + 1.1, .17], [s * .24, y + 1.1, .27], .045, .045, 6);
+    if (green) { const cap=new THREE.Shape(); archPath(cap,0,y+h,w-.16,.03); P.face(M.window,cap,.106); }
+    for (const side of [-1,-.5,0,.5,1]) P.cyl(M.brass, [0,y+h,.15], [side*w*.41,y+h+w*(side===0?.49:.22),.15], .035,.035,6);
+    P.box(M.brass, -w/2,w/2,y+h-.055,y+h+.04,.10,.18);
   } else {
     P.box(M.cream, -.05, .05, y + .08, y + h + w / 2 - .16, .11, .17);
     P.box(M.cream, -w / 2 + .12, w / 2 - .12, y + h * .58, y + h * .58 + .08, .11, .17);
@@ -119,12 +121,33 @@ function roofTrophy(P, M, x, z) {
   }
 }
 
+// Open the designated bays in both the stonework and its collider, with a real recess behind each threshold.
+function stationWall(ctx, shell, M, f, config) {
+  const { bays, width, back, front, top, y, id, style, approach } = config;
+  const faceWidth = 2.52, reveal = 3.08, inner = front-reveal;
+  function wall(left,right,z0,z1) {
+    shell.box(M.stucco,left,right,y,top,z0,z1);
+    const p=W(f,(left+right)/2,(z0+z1)/2);
+    ctx.physics.addBox(...p,right-left,z1-z0,f.rot,y,top);
+  }
+  wall(-width,width,back,inner);
+  let edge=-width;
+  for (const [i,u] of bays.entries()) {
+    wall(edge,u-faceWidth/2,inner,front);
+    shell.box(M.stucco,u-faceWidth/2,u+faceWidth/2,y+2.55,top,inner,front);
+    edge=u+faceWidth/2;
+    const [x,z]=W(f,u,front+.075);
+    addPavilionEntrance(ctx,{id:id+'-'+(i+1),x,z,rotY:f.rot,w:faceWidth,h:2.55,y,style,approach});
+  }
+  wall(edge,width,inner,front);
+}
+
 function avtovo(ctx, shell, detail, M) {
   const f = AVTOVO;
   shell.push(f.x, 0, f.z, f.rot); detail.push(f.x, 0, f.z, f.rot);
   // The OSM footprint has a straight western portico, side wings and a
   // semicircular eastern termination. A small gap remains before Stachek.
-  shell.box(M.stucco, -9.35, 9.35, 0, 8.5, -6.0, 7.45);
+  stationWall(ctx,shell,M,f,{bays:[-3.42,0,3.42],width:9.35,back:-6,front:7.45,top:8.5,y:1.12,id:'avtovo',style:'wrought',approach:11.5});
   shell.cyl(M.stucco, [0, 0, -5.25], [0, 9.2, -5.25], 8.5, 8.5, 24);
   shell.box(M.cream, -9.7, 9.7, 8.25, 8.75, -6.3, 7.55);
   shell.box(M.metal, -9.55, 9.55, 8.75, 8.86, -6.15, 7.45);
@@ -203,7 +226,6 @@ function avtovo(ctx, shell, detail, M) {
   // Keep the covered portico and the four visible exterior steps walkable.
   let p = W(f, 0, 10.65); ctx.physics.addWalkBox(p[0], p[1], 20.35, 6.7, f.rot, 1.12, 0);
   p = W(f, 0, 15.63); ctx.physics.addStairs(p[0], p[1], 20.35, 3.36, f.rot + Math.PI, 0, .88, 4);
-  p = W(f, 0, -.4); ctx.physics.addBox(p[0], p[1], 18.7, 13.9, f.rot, 0, 8.7);
   p = W(f, 0, -5.25); ctx.physics.addBox(p[0], p[1], 16.5, 16.5, f.rot, 0, 9.2);
   for (const s of [-1, 1]) { p = W(f, s * 11.6, 1.0); ctx.physics.addBox(p[0], p[1], 4.3, 15.2, f.rot, 0, 8.2); }
   for (const v of [8.55, 13.0]) for (const u of [-8.55, -5.13, -1.71, 1.71, 5.13, 8.55]) {
@@ -217,10 +239,12 @@ function kirov(ctx, shell, detail, M) {
   // The 40 x 42 m OSM quadrilateral resolves into a 44-column Doric
   // peripter: twelve on each side, with the four corners counted once.
   shell.box(M.granite, -20.15, 20.15, 0, 1.02, -21.1, 21.1);
-  shell.box(M.stucco, -15.8, 15.8, 1.02, 8.45, -16.75, 16.75);
-  for (const y of [1.02, 7.95]) shell.box(M.cream, -16.0, 16.0, y, y + .35, -16.95, 16.95);
+  stationWall(ctx,shell,M,f,{bays:[-13.3,11.5],width:15.8,back:-16.75,front:16.75,top:8.45,y:1.02,id:'kirovsky-zavod',style:'walnut',approach:9.5});
+  shell.box(M.cream, -16.0,16.0,7.95,8.30,-16.95,16.95);
+  for (const [a,b] of [[-16,-14.56],[-12.04,10.24],[12.76,16]]) shell.box(M.cream,a,b,1.02,1.37,16.65,16.95);
+  shell.box(M.cream,-16,16,1.02,1.37,-16.95,-16.6);
   // Recessed doors correspond to the two mapped entrance nodes on the NW wall.
-  for (const u of [-13.3, 11.5]) archedPanel(detail, M, u, 16.82, 1.08, 2.5, 3.45, true);
+  for (const u of [-13.3, 11.5]) archedPanel(detail, M, u, 16.82, 1.08, 2.5, 3.45, true, true);
   for (const u of [-8.5, -4.6, 4.6, 8.5]) archedPanel(detail, M, u, 16.82, 1.15, 2.3, 3.55);
   detail.face(M.shadow, archShape(3.5, 1.02, 3.8), 16.82);
   detail.face(M.cream, archTrim(3.92, .95, 3.9, .21), 16.91);
@@ -277,7 +301,6 @@ function kirov(ctx, shell, detail, M) {
   // Walkable stylobate ring under the colonnade, with a solid central hall.
   for (const v of [-18.56, 18.56]) { p = W(f, 0, v); ctx.physics.addWalkBox(p[0], p[1], 40.0, 5.0, f.rot, 1.02, 0); }
   for (const u of [-17.85, 17.85]) { p = W(f, u, 0); ctx.physics.addWalkBox(p[0], p[1], 4.6, 33.6, f.rot, 1.02, 0); }
-  p = W(f, 0, 0); ctx.physics.addBox(p[0], p[1], 31.6, 33.5, f.rot, 1.02, 8.45);
   for (let i = 0; i < 12; i++) {
     const u = -19.28 + i * (38.56 / 11);
     for (const v of [-20.18, 20.18]) { p = W(f, u, v); ctx.physics.addBox(p[0], p[1], 1.3, 1.3, f.rot, 1.02, 8.62); }

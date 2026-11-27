@@ -1,5 +1,9 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-27 — Street metro vestibules (17.10.0)
+
+The comparison with 17.9.1 uses six summer views on the historic strip, the active Palace district and Avtovo. Both versions ran in Edge on the RTX 3090 Ti at 1280 × 720, Medium quality and a 62° field of view. The street approaches added no simulation callbacks to these three scenes. The station report records visible geometry, physics queries, render time by camera and six walks through the shipped entrances. [Station measurements and reproduction commands](research/metro-entrance-scene-check.md).
+
 ## 2026-11-27 — Winter in all 21 live districts (17.9.0)
 
 The control is the complete 17.8.0 site from `f3199b1c`. The 17.9.0 release is `a50158ef`. Both used their own packaged area bakes. Palace runs in winter in both versions. The other nine comparisons use the previous summer scene and the new winter scene. Edge drove for eight seconds at full throttle, at 1280 × 720 and Medium quality on an RTX 3090 Ti. Each run starts a fresh browser, loads the production bake normally and keeps moving traffic, pedestrians, shadows and regional streaming enabled.

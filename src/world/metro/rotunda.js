@@ -68,16 +68,6 @@ function facadeTexture(ctx) {
     g.fillStyle = '#cdb877'; g.fillRect(0, Y(10.5), w, X(0.25));
   }, { key: 'metro-rotunda-facade' });
 }
-const doorTexture = (ctx) => ctx.tex.draw(256, 288, (g, w, h) => {
-  g.fillStyle = '#6a4a2a'; g.fillRect(0, 0, w, h);
-  g.fillStyle = '#8c5a32'; for (const x0 of [12, w / 2 + 6]) { g.fillRect(x0, 12, w / 2 - 18, h - 24); }
-  g.fillStyle = '#e8c860'; g.strokeStyle = '#3a2412'; g.lineWidth = 3;
-  for (const cx of [w / 4 + 3, w * 3 / 4 - 3]) { g.beginPath(); g.ellipse(cx, h * 0.32, 22, 34, 0, 0, Math.PI * 2); g.fillStyle = '#d8b050'; g.fill(); g.stroke(); g.beginPath(); g.ellipse(cx, h * 0.32, 14, 24, 0, 0, Math.PI * 2); g.fillStyle = '#3b4650'; g.fill(); }
-  g.fillStyle = '#b8bcc0'; g.fillRect(w / 2 - 10, h * 0.55, 6, 70); g.fillRect(w / 2 + 4, h * 0.55, 6, 70);
-  g.strokeStyle = '#2a1a0c'; g.lineWidth = 4; g.strokeRect(2, 2, w - 4, h - 4); g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h); g.stroke();
-}, { key: 'metro-rotunda-door' });
-
-/** blue pictogram "М" in a white rounded box + the two-line name board */
 function metroSignTexture(ctx, key, line2) {
   return ctx.tex.draw(512, 160, (g, w, h) => {
     g.fillStyle = '#1d4e9b'; ctx.tex.roundRect(g, 0, 0, w, h, 18); g.fill();
@@ -150,21 +140,14 @@ export function buildRotunda(ctx, M, o) {
   k.cyl(0.12, 0.12, 0.35, goldM, [cx, domeY + 6.2, cz], null, 10);
 
   // ---- doors (outside leaf + inside leaf), the name boards above them, bracket signs
-  const doorTex = doorTexture(ctx), doorMat = mat.toon('#ffffff', { map: doorTex });
   const signMat = mat.emissive('#ffffff', 0.9, { map: metroSignTexture(ctx, 'metro-sign-vosst', 'Площадь Восстания') }), signMat2 = mat.emissive('#ffffff', 0.9, { map: metroSignTexture(ctx, 'metro-sign-exit', 'Выход в город') });
   const bigTex = ctx.tex.draw(1024, 320, (g, w, h) => { g.fillStyle = '#1d4e9b'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; ctx.tex.roundRect(g, 24, 24, 272, 272, 40); g.fill(); g.fillStyle = '#1d4e9b'; g.font = '800 250px "Rubik","Noto Sans",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('М', 160, 172); g.fillStyle = '#fff'; g.textAlign = 'left'; ctx.tex.fitText(g, 'МЕТРО', 330, 120, 650, 150, '"Rubik","Noto Sans",sans-serif', 800); ctx.tex.fitText(g, 'Площадь Восстания', 330, 245, 650, 70, '"Rubik","Noto Sans",sans-serif', 500); }, { key: 'metro-rotunda-big' });
   const totTex = ctx.tex.draw(128, 256, (g, w, h) => { g.fillStyle = '#1d4e9b'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; ctx.tex.roundRect(g, 10, 10, w - 20, w - 20, 16); g.fill(); g.fillStyle = '#1d4e9b'; g.font = '800 96px "Rubik","Noto Sans",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('М', w / 2, w / 2 + 4); g.fillStyle = '#fff'; ctx.tex.fitText(g, 'МЕТРО', w / 2, h - 52, w - 14, 30, '"Rubik","Noto Sans",sans-serif', 700); }, { key: 'metro-rotunda-totem' });
   for (const d of doors) {
     const nx = Math.sin(d.rotY), nz = Math.cos(d.rotY);
-    // frame: left / right jambs + lintel strip (stone), brown leaves folded back inside the reveal
-    const jx = -nz, jz = nx;                                                   // along the wall
-    for (const sg of [-1, 1]) {
-      k.box(0.35, 3.5, 0.5, stoneLight, [d.x + jx * sg * (d.w / 2 + 0.15), 1.75, d.z + jz * sg * (d.w / 2 + 0.15)], [0, Math.atan2(nx, nz), 0]);
-    }
-    k.box(d.w + 1.0, 0.35, 0.5, stoneLight, [d.x + nx * 0.02, 3.65, d.z + nz * 0.02], [0, Math.atan2(nx, nz), 0]);
+    const jx = -nz, jz = nx;
     const sm = k.plane(2.7, 0.84, d.kind === 'exit' ? signMat2 : signMat, [d.x + nx * 0.34, 4.5, d.z + nz * 0.34], [0, Math.atan2(nx, nz), 0]); sm.castShadow = false;
     const bracket = k.plane(0.7, 0.7, signMat, [d.x + nx * 0.9 + jx * (d.w / 2 + 1.6), 4.4, d.z + nz * 0.9 + jz * (d.w / 2 + 1.6)], [0, Math.atan2(nx, nz), 0]); void bracket;
-    void doorMat;
     // big lit roof sign (blue M in a white box + МЕТРО + the station name) over the door, a tall lit pylon beside the entrance walk
     const bigSign = k.plane(7.2, 2.25, mat.emissive('#ffffff', 1.1, { map: bigTex }), [d.x + nx * 0.45, TOP + 2.3, d.z + nz * 0.45], [0, Math.atan2(nx, nz), 0]); bigSign.castShadow = false;
     k.box(7.4, 2.4, 0.3, mat.toon('#1d4e9b'), [d.x + nx * 0.2, TOP + 2.3, d.z + nz * 0.2], [0, Math.atan2(nx, nz), 0]);

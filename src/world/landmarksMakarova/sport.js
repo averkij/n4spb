@@ -8,6 +8,7 @@
 // roof top 3.75, sign top 4.95); SHELL_SOFFIT turns it back to the photographed 2.55 if the metro owner lowers the room.  The metro draws the opening in the floor, the stair, the escalators and the room.
 // Colliders: the plinth / glass ring (thin walls) with the door chord left open, the two pillars.  Publishes the entrance anchors, crowd discs, photo spots, svc.metro = { signs: true }.
 import * as L from '../layout.js';
+import { addPavilionEntrance } from '../lib/metro-pavilion-entrance.js';
 import { F6, F7, ringIn, colliders } from './frame.js';
 import { ringEdges, onEdge, band } from './kit.js';
 import { offsetRing, clipRing, smoothRing } from './util.js';
@@ -81,15 +82,13 @@ function pavilion(K, pv) {
       P.box(M.sportG, uChord, uChord + 0.9, 0, 1.2, v0, v1, '', 1.2);
     }
     // door leaves between the pillars: steel frames, clear glass, bar handles; a transom above 2.3 m
-    const yD0 = 0.1, yD1 = 2.3, zf = uChord;
-    P.quad(M.doorGlass, [zf, yD0, vL], [zf, yD0, vR], [zf, yD1, vR], [zf, yD1, vL], [-1, 0, 0]);
-    P.quad(M.doorGlass, [zf, yD0, vR], [zf, yD0, vL], [zf, yD1, vL], [zf, yD1, vR], [1, 0, 0]);
+    const yD1 = 2.3, zf = uChord, p = f.W(uChord,vMid);
+    addPavilionEntrance(ctx,{...p,id:pv.id,rotY:f.rot-Math.PI/2,w:vR-vL,y:.10,h:2.2,leaves:4,lobby:!(ctx.buildList?.includes('metro') && ctx.L.DOORWAYS?.some(d=>d.id===pv.id))});
     P.quad(M.glass, [zf, yD1, vL], [zf, yD1, vR], [zf, yS, vR], [zf, yS, vL], [-1, 0, 0]);
     P.quad(M.glass, [zf, yD1, vR], [zf, yD1, vL], [zf, yS, vL], [zf, yS, vR], [1, 0, 0]);
-    for (let i = 0; i <= nb; i++) { const v = vL + bw * i; P.box(M.steel, zf - 0.04, zf + 0.04, yD0, yS, v - 0.03, v + 0.03, 'b'); }
-    for (const yy of [yD0, yD1 - 0.05, yD1]) P.box(M.steel, zf - 0.045, zf + 0.045, yy, yy + 0.05, vL, vR, 'b');
+    for (let i = 0; i <= nb; i++) { const v = vL + bw * i; P.box(M.steel, zf - 0.04, zf + 0.04, yD1, yS, v - 0.03, v + 0.03, 'b'); }
+    for (const yy of [yD1]) P.box(M.steel, zf - 0.045, zf + 0.045, yy, yy + 0.05, vL, vR, 'b');
     P.box(M.steel, zf - 0.05, zf + 0.05, yS - 0.07, yS, vL, vR, 'b');
-    for (let i = 0; i < nb; i++) { const vc = vL + bw * (i + 0.5), s = i % 2 ? 1 : -1; P.box(M.steelDark, zf - 0.09, zf - 0.05, 0.95, 1.55, vc + s * 0.34 - 0.012, vc + s * 0.34 + 0.012, 'b'); }
     // the pill sign behind the glass under the soffit, 4.6 x 0.45 m (a decal 6 cm inside the glass)
     const sw = Math.min(4.6, vR - vL + 0.1);
     P.quad(M.pill, [uChord + 0.07, 2.68, vMid - sw / 2], [uChord + 0.07, 2.68, vMid + sw / 2], [uChord + 0.07, 3.13, vMid + sw / 2], [uChord + 0.07, 3.13, vMid - sw / 2], [-1, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);   // seen from the street (looking along +u) the right hand is +v

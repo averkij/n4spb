@@ -5,10 +5,11 @@
 //     a central four-leaf glazed door group 4.4 m wide with yellow safety bands, the grey sign plate «Горный институт / Gorny Institut», a copper louvre panel with the plain blue M and a dark glass band
 //     carrying ГОРНЫЙ ИНСТИТУТ in orange letters;
 //   * the LIFT pavilion No. 3 (w1346671783, 11.0 x 5.6 m): black louvres over a light granite lower half, mono-pitch copper roof 5.3 / 3.8 m, a glazed door group in each narrow end, the grey oval «Лифт № 3»,
-//     one V brace with orange nodes on the NNW long face.  Closed: exterior solid.
+//     one V brace with orange nodes on the NNW long face.  Both street doors open onto the lift landing.
 // Frames: a door frame per pavilion (origin = the centre of the footprint, local +z = out through the door, local +x across), built from the baked ring and the metro's DOORWAYS row (door anchor, rotY).
 // The metro owner draws everything INSIDE the footprint (floor y 0.05, ceiling 3.1 m above it, the well with its stair and escalator): this shell draws walls and roof only; the roof underside is above y 3.2.
 // Colliders: thin walls on the baked ring, split at the 4.4 m door opening (addPolyColliders knows DOORWAYS); publishes ctx.services.landmarksSredny.metro = { signs: true } (the metro skips its totems).
+import { addPavilionEntrance } from '../lib/metro-pavilion-entrance.js';
 import * as THREE from 'three';
 import * as L from '../layout.js';
 import { addPolyColliders } from '../lib/massing.js';
@@ -37,7 +38,7 @@ export function build(K) {
   stage('entrance', () => pavilion(K, Fin, 'entrance'));
   stage('exit', () => pavilion(K, Fout, 'exit'));
   stage('lift', () => lift(K, Flift));
-  stage('colliders', () => colliders(K));
+  stage('colliders', () => colliders(K, [Fin, Fout], Flift));
   stage('aprons', () => aprons(K, [Fin, Fout]));
   stage('service', () => service(K, Fin, Fout, Flift));
   if (errs.length) throw new Error(errs.join('\n'));
@@ -113,12 +114,9 @@ function pavilion(K, F, kind) {
     P.box(M.dark, X - dw / 2, X + dw / 2, dTop, dTop + 0.08, zf - 0.04, zf + 0.1, 'b', 1);
     P.box(M.dark, X - dw / 2 - 0.05, X - dw / 2 + 0.05, 0.05, dTop + 0.08, zf - 0.04, zf + 0.1, 'b', 1);
     P.box(M.dark, X + dw / 2 - 0.05, X + dw / 2 + 0.05, 0.05, dTop + 0.08, zf - 0.04, zf + 0.1, 'b', 1);
-    for (let i = 0; i < 4; i++) {
-      const xa = X - dw / 2 + i * dw / 4, xb2 = xa + dw / 4;
-      P.quad(M.doorGlass, [xa + 0.04, 0.06, zf + 0.02], [xb2 - 0.04, 0.06, zf + 0.02], [xb2 - 0.04, dTop, zf + 0.02], [xa + 0.04, dTop, zf + 0.02], [0, 0, 1]);
-      for (const y of [1.0, 1.5]) P.quad(M.yellow, [xa + 0.04, y, zf + 0.04], [xb2 - 0.04, y, zf + 0.04], [xb2 - 0.04, y + 0.12, zf + 0.04], [xa + 0.04, y + 0.12, zf + 0.04], [0, 0, 1]);
-      P.box(M.dark, xa - 0.025, xa + 0.025, 0.05, dTop, zf - 0.02, zf + 0.06, 'b', 1);
-    }
+    const p = portal(F);
+    addPavilionEntrance(ctx,{...p,id:'gorny-'+(kind==='entrance'?'in':'out'),y:.05,h:2.93,leaves:4,stripes:true,
+      lobby:!(F.doorRow && ctx.buildList?.includes('metro'))});
     // canopy bar + sign plate
     P.box(M.stainless, X - 1.7, X + 1.7, dTop + 0.1, dTop + 0.3, zf, zf + 0.42, 'b', 1);
     P.quad(M.signPlate, [X - 1.5, dTop + 0.13, zf + 0.43], [X + 1.5, dTop + 0.13, zf + 0.43], [X + 1.5, dTop + 0.27, zf + 0.43], [X - 1.5, dTop + 0.27, zf + 0.43], [0, 0, 1], [[0, 0.1], [1, 0.1], [1, 0.9], [0, 0.9]]);
@@ -160,13 +158,13 @@ function lift(K, F) {
     }
     for (const [zs, nz] of [[-hl, -1], [hl, 1]]) {
       // end walls: granite below, louvres above, a glazed door group (door + side light) in the middle
-      const xa = nz > 0 ? -hw : hw, xb2 = nz > 0 ? hw : -hw;
-      P.quad(M.graniteLift, [xa, 0, zs], [xb2, 0, zs], [xb2, GH, zs], [xa, GH, zs], [0, 0, nz], [[0, 0], [F.W / 1.2, 0], [F.W / 1.2, GH / 0.6], [0, GH / 0.6]]);
-      P.quad(M.louvreBlack, [xa, GH, zs], [xb2, GH, zs], [xb2, yUn(zs), zs], [xa, yUn(zs), zs], [0, 0, nz], [[0, GH / 0.96], [F.W, GH / 0.96], [F.W, yUn(zs) / 0.96], [0, yUn(zs) / 0.96]]);
-      const dx = -0.2, dz = zs + nz * 0.04;
-      P.box(M.dark, dx - 1.0, dx + 1.0, 0.05, 2.3, zs - (nz > 0 ? 0.02 : 0.08), zs + (nz > 0 ? 0.08 : 0.02), 'b', 1);
-      P.quad(M.doorGlass, [dx - 0.9, 0.1, dz], [dx + 0.9, 0.1, dz], [dx + 0.9, 2.2, dz], [dx - 0.9, 2.2, dz], [0, 0, nz]);
-      P.box(M.dark, dx - 0.03, dx + 0.03, 0.1, 2.2, zs + nz * 0.02, zs + nz * 0.07, '', 1);
+      const dx=-.2, gap=1.14, h=2.34;
+      for(const [a,b] of [[-hw,dx-gap],[dx+gap,hw]]) {
+        P.quad(M.graniteLift,[a,0,zs],[b,0,zs],[b,GH,zs],[a,GH,zs],[0,0,nz]);
+        P.quad(M.louvreBlack,[a,GH,zs],[b,GH,zs],[b,h,zs],[a,h,zs],[0,0,nz]);
+      }
+      P.quad(M.louvreBlack,[-hw,h,zs],[hw,h,zs],[hw,yUn(zs),zs],[-hw,yUn(zs),zs],[0,0,nz]);
+      addPavilionEntrance(K.ctx,{...liftPortal(F,nz),y:.06,h:h-.06,depth:2.30,style:'aluminium',stripes:true});
       if (nz > 0) P.quad(M.liftPlate, [dx - 0.65, 2.45, zs + 0.05], [dx + 0.65, 2.45, zs + 0.05], [dx + 0.65, 2.8, zs + 0.05], [dx - 0.65, 2.8, zs + 0.05], [0, 0, 1], [[0, 0], [1, 0], [1, 1], [0, 1]]);
       // a granite step / ramp
       P.box(M.graniteLift, dx - 1.3, dx + 1.3, 0, 0.06, zs + (nz > 0 ? 0 : -0.8), zs + (nz > 0 ? 0.8 : 0), 'b', 1.2);
@@ -179,11 +177,19 @@ function lift(K, F) {
 }
 
 // ------------------------------------------------------------------------------------------------ colliders: thin walls on the baked rings, split at the metro doors
-function colliders(K) {
+function portal(F) {
+  return { x:F.cx+Math.cos(F.rot)*F.doorX+Math.sin(F.rot)*F.L/2,
+    z:F.cz-Math.sin(F.rot)*F.doorX+Math.cos(F.rot)*F.L/2,rotY:F.rot,w:4.4 };
+}
+function liftPortal(F,nz) {
+  return {id:'gorny-lift-'+(nz>0?'west':'east'),x:F.cx-.2*Math.cos(F.rot)+Math.sin(F.rot)*F.L/2*nz,
+    z:F.cz+.2*Math.sin(F.rot)+Math.cos(F.rot)*F.L/2*nz,rotY:F.rot+(nz>0?0:Math.PI),w:2.28};
+}
+function colliders(K, frames, lift) {
   const ctx = K.ctx;
   for (const [id, h] of [['w1305590665', 7.4], ['w1305590664', 7.4], ['w1346671783', 5.6]]) {
     const b = L.buildingById(id); if (!b || !b.polys) continue;
-    for (const poly of b.polys) addPolyColliders(ctx, poly, 0, h, 0.5);
+    for (const poly of b.polys) addPolyColliders(ctx, poly, 0, h, 0.5,id==='w1346671783' ? [-1,1].map(n=>liftPortal(lift,n)):frames.map(portal));
   }
 }
 

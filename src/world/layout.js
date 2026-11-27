@@ -21,6 +21,7 @@ import * as CITY from './data/city.js';
 const { ORIGIN, EXTENT, PLAY, BUILDINGS, ROADS, AREAS: AREA_DATA, RIVER } = CITY;
 const PLAY_RECTS = CITY.PLAY_RECTS || [PLAY], EXTENT_RECTS = CITY.EXTENT_RECTS || [EXTENT];   // an old single-rectangle bake has no rectangle lists
 import { SHAFTS, DOORWAYS } from './data/metro.js';
+import { regionalUnderpassHoles } from './metro/regional-underpass-sites.js';
 import { WATERWAYS, waterwayAt as _waterwayAt, shoreDistance as _shoreDistance, slopeHeightAt } from './environment/waterways.js';
 import * as A from './area.js';        // the strip's tables (the page of another area remaps this URL to its own area module: docs/AREAS.md)
 import { HEIGHT_PATCHES } from './lib/area-tables.js';        // the area's terrain patches (the strip's list is empty)
@@ -307,7 +308,7 @@ export const SUN_DIR = [-0.473, 0.707, 0.526];   // day preset from the look wor
 // ---------------------------------------------------------------- ground holes (shafts of the metro that open in the street ground plane)
 /** Rectangles { x, z, w, d, rotY } in which the street ground plane (y = 0) has NO surface because a metro stair / escalator shaft opens there. The metro module
  *  fills it (data/metro is its own business); the environment module's ground mesh skips these cells. Declared in data/metro.js (SHAFTS, owned by the metro module). */
-export const GROUND_HOLES = [...SHAFTS, ...(Array.isArray(A.GROUND_HOLES) ? A.GROUND_HOLES : [])];
+export const GROUND_HOLES = [...SHAFTS, ...(Array.isArray(A.GROUND_HOLES) ? A.GROUND_HOLES : []), ...regionalUnderpassHoles];
 /** Openings through building walls (metro portals): colliders are split around them by lib/massing.js; the facade owner draws an arch / door there. Declared in data/metro.js (metro module). */
 export { DOORWAYS };
 

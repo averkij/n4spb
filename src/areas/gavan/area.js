@@ -1,3 +1,4 @@
+import { GROUPS_LIST as METRO_PAVILION_GROUPS } from '../../world/landmarksPrimorskaya/groups.js';
 // ============================================================================
 //  AREA DEFINITION - Gavan (Гавань; docs/AREAS.md section 15.v and the Gavan / Morskoy / Dekabristov round): the sixth live area of the world map (maps/intro-draft.html, area 49, letter G): the Gavan side of Vasilyevsky island - Galerny Harbour
 //  with the Shkipersky canal and its bridge, the Gavan workers' town, the Sevkabel Port, the Kirov Palace of Culture, Erarta, the Sea Terminal - with the Neva Bay and the coast of the Gulf of Finland round it. The play rectangles
@@ -52,6 +53,7 @@ export const MODULES = [
   'environment',  // ground, embankment granite, Neva Bay / Gulf / Smolenka water, trees, lawns, flowerbeds, far skyline
   'streets',      // roads, markings, kerbs, granite pavements, crossings, road furniture, trolleybus overhead wires
   'city',         // every OSM building that no landmark module claims: Petersburg facade grammar, roofs, courtyards, entrances
+  'landmarksPrimorskaya',
   'landmarksGavan', // the Kronshpits and the MChS buildings, the Shkipersky canal promenade and bridge, Galerny Harbour (steam crane, water tower, guardhouse, rotunda, yacht-club pontoons), the Gavan workers' town, the fire reserve, the church "Miluyushchaya" (before `bridges`: the Shkipersky deck service)
   //
   'landmarksPribaltiyskaya', // the Pribaltiyskaya hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, the Kirov memorial, Waterville
@@ -129,6 +131,7 @@ export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, 
 // A module claimed by two areas is fine: each area passes its own GROUPS.<module> and every ported module gates by it. The lists below are the groups of the module that lie in THIS territory and in its data (scout-gavan.md 2).
 const only = (list, keys) => list.filter((g) => keys.includes(g.key));
 export const GROUPS = {};
+GROUPS.landmarksPrimorskaya = METRO_PAVILION_GROUPS.filter(g=>g.key==='primorskaya-vestibule');
 GROUPS.landmarksGavan = G_GAVAN;      // all seven groups: the Kronshpits, the Shkipersky bridge and canal, Galerny Harbour, the workers' town, the fire reserve, the church (100 % in the territory)
 // ---
 GROUPS.landmarksPribaltiyskaya = G_PRIBALTIYSKAYA;      // all six: the hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, Waterville and the Kirov memorial (it lies 35 m beyond the rectangles, 100 % inside the 120 m data margin, like kirova-erarta of vasilyevsky)
@@ -435,7 +438,7 @@ export const GARAGE = {
 
 // ---------------------------------------------------------------- the rest
 /** environment.js: the services whose `entrances` ([{ x, z, clearance? }]) clear the trees from the doors of the buildings they list */
-export const PRUNE_SERVICES = [
+export const PRUNE_SERVICES = ['landmarksPrimorskaya',
   'city',
   'landmarksGavan',
   //

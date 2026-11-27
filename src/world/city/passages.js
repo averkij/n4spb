@@ -8,6 +8,8 @@
 import * as THREE from 'three';
 import { ROADS } from '../data/city.js';
 import { DOORWAYS } from '../data/metro.js';
+import { clipRegionalMetroWalls } from '../metro/regional-sites.js';
+import { centralExtraDoors } from '../metro/central-locations.js';
 import { ColorBuilder } from './cornice.js';
 import { GATE_SPRING } from './walls.js';
 
@@ -90,6 +92,7 @@ export function planPassages(ctx, net, list) {
     if (hit) addGate(hit.e, hit.t, d.w || 3, { metro: true, id: d.id });
   }
   cutCrossingWalls(tunnels, grid);
+  clipRegionalMetroWalls(net,centralExtraDoors.filter(d=>ctx.L.inPlay(d.x,d.z)));
   ctx._cityTunnels = tunnels;
   return gates;
 }

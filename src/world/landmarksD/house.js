@@ -76,7 +76,7 @@ export function buildHouse(K, cfg) {
           for (const e of g) { if (e.party || e.len < 0.3 || e.noBand) continue; K.railing([shiftIn(e.a, e.n, 0.12), shiftIn(e.b, e.n, 0.12)], (e.hc ?? hc) + up, 0.9); }
         }
       }
-      if (cfg.collide !== false) addPolyColliders(ctx, poly, 0, (cfg.collideH ?? Math.max(hc, ...edges.map((e) => e.hc))) + 1, 0.9);
+      if (cfg.collide !== false) addPolyColliders(ctx, poly, 0, (cfg.collideH ?? Math.max(hc, ...edges.map((e) => e.hc))) + 1, 0.9, cfg.doorways);
       out.edges.push(...edges);
     }
   }

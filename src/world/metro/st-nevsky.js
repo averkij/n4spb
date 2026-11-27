@@ -7,6 +7,7 @@
 //             104 m); (2) the canal exit in the Engelhardt house (Nevsky 30): glass doors in the arch of the turquoise house, a hall with a yellow metal ceiling and a 3-lane incline (63 m deep).
 // The Nevsky frame is slid ~12 m along the Gostiny Dvor axis (data/metro.js) so that the chamber meets the escalator bank at the west end of the Gostiny Dvor hall.
 import * as THREE from 'three';
+import { buildCentralMetroEntrances } from './central-entrances.js';
 import { FRAMES, ESC2, DOORWAYS, PITS, NV_CH, NV_PZ, UNDERPASS_Y, toWorld, toLocal } from '../data/metro.js';
 import { Space, extrudeX, extrudeZ, archRing, archHole, floorGeo, smoothPath, minRadius } from './lib.js';
 import { buildPylonHall, PYLON } from './hall-pylon.js';
@@ -222,34 +223,7 @@ export function buildNevsky(ctx, M, X) {
       cor('nevsky-pit-' + p.n, [arm, p.foot]);
     }
   }
-  // the pits: granite stairwells on the pavement (street mouth -> foot at the underpass level)
-  const pitGroup = new THREE.Group(); pitGroup.name = 'nevsky-pits'; ctx.addStatic(pitGroup); const kp = ctx.kit(pitGroup);
-  const stepsMat = mat.toon('#a8a39b'), parapet = mat.toon('#b2ada6'), coping = mat.toon('#c4bfb6'), rail = M.steelBlack;
-  const pitInfo = [];
-  for (const p of PITS) {
-    const yaw = Math.atan2(p.e[0], p.e[1]), run = 4.5 / Math.tan(Math.PI / 6), n = 30, c = Math.cos(yaw), s = Math.sin(yaw);
-    const zEnd = Math.max(run + 0.1, (p.foot[0] - p.mouth[0]) * p.e[0] + (p.foot[1] - p.mouth[1]) * p.e[1] + 0.1);       // the cross tunnel starts at the foot, 1.2 m beyond the last step: the shell (walls, floor, lid) runs up to it
-    const wp = (lx, lz) => [p.mouth[0] + lx * c + lz * s, p.mouth[1] - lx * s + lz * c];                 // local x lateral, z along the descent
-    const g = new THREE.Group(); g.position.set(p.mouth[0], 0, p.mouth[1]); g.rotation.y = yaw; pitGroup.add(g); const k3 = ctx.kit(g);
-    for (let i = 0; i < n; i++) { const z = (i + 0.5) * run / n, y = -4.5 * (i + 1) / n; k3.box(4.5, 0.17, run / n, i === 0 ? M.yellow : stepsMat, [0, y - 0.085 + 0.0, z]); }
-    // side walls: parapet 1.1 m above the pavement for the open part (4.4 m), earth walls below
-    const prof = [[0, 1.1], [4.4, 1.1], [4.4, 0.0], [zEnd, 0.0], [zEnd, -4.9], [run + 0.1, -4.9], [0, -0.3]];
-    for (const sx of [-1, 1]) { const m = new THREE.Mesh(extrudeX(prof, sx * 2.45 - 0.225, sx * 2.45 + 0.225), parapet); g.add(m); }
-    for (const sx of [-1, 1]) { k3.box(0.55, 0.1, 4.5, coping, [sx * 2.45, 1.15, 2.2]); k3.cyl(0.03, 0.03, 4.2, rail, [sx * 2.0, 1.05, 2.0], [Math.PI / 2 - 0.0, 0, 0], 6); }
-    k3.box(4.5, 0.2, zEnd + 0.1 - 4.4, M.concreteDark, [0, -0.3, (4.4 + zEnd + 0.1) / 2]);
-    k3.box(4.5, 0.1, zEnd - 0.1 - run, stepsMat, [0, -4.55, (run + zEnd - 0.1) / 2]);                                                       // the landing between the last step and the tunnel (the stairs ended in a void)                                           // the ceiling (the earth) over the lower flight
-    // the lit oval sign on two granite posts across the mouth, a bit uphill of the stairs
-    for (const sx of [-1, 1]) k3.box(0.5, 2.9, 0.5, parapet, [sx * 2.45, 1.45, -0.55]);
-    const sg = k3.plane(2.8, 0.7, ovalMat, [0, 2.45, -0.55 - 0.26], [0, Math.PI, 0]); sg.castShadow = false; const sg2 = k3.plane(2.8, 0.7, ovalMat, [0, 2.45, -0.55 + 0.26], [0, 0, 0]); sg2.castShadow = false;
-    k3.box(3.1, 0.9, 0.5, M.stainless, [0, 2.45, -0.55]);
-    // physics: the stairs and the parapets, a terrain hole over the open part
-    const [cx, cz] = wp(0, run / 2);
-    ctx.physics.addStairs(cx, cz, 3.9, run, yaw, 0, -4.5, n);
-    const [hx, hz] = wp(0, 2.3); ctx.physics.addHole(hx, hz, 4.4, 4.6, yaw);
-    for (const sx of [-1, 1]) { const [bx, bz] = wp(sx * 2.45, run / 2); ctx.physics.addBox(bx, bz, 0.5, run + 0.4, yaw, -5.2, 1.3); }
-    const [fx, fz] = wp(0, run + 1.0); ctx.physics.addWalkBox(fx, fz, 4.0, 2.0, yaw, UY + 0.05, UY - 1.0);
-    pitInfo.push({ ...p, run, yaw });
-  }
+  const pitInfo = buildCentralMetroEntrances(ctx, true).pits;
   res.pits = pitInfo;
   // seen from the street the stairwell is a window into the underground (zones.js hides every undergroundOnly node above -2 m): looking down the stairs and under the earth lid at the lower flight
   // one sees the foot of the stairs and the cross tunnel behind it. Near a mouth (the approach strip on the uphill side + the stairwell) the underpass tunnels and junction rooms are drawn
@@ -285,18 +259,6 @@ export function buildNevsky(ctx, M, X) {
     kh.box(1.4, 2.4, 1.4, M.marbleWhite, [7.6, 1.2, -3.2]); Sh.col(6.9, 8.3, -1, 2.6, -3.9, -2.5);
     X.addVestZone('nevsky-canal', room.inside, 8);
   }
-  // door portals on the house facade: stainless frame, glass leaves, the lit oval sign, a cube lamp (the arches themselves are the city module's gates)
-  {
-    const g = new THREE.Group(); g.name = 'nevsky-canal-doors'; ctx.addStatic(g); const kg = ctx.kit(g);
-    for (const d of DOORWAYS.filter((q) => q.station === 'nevsky')) {
-      const nx = Math.sin(d.rotY), nz = Math.cos(d.rotY), ux = Math.cos(d.rotY), uz = -Math.sin(d.rotY), hw = d.w / 2;
-      for (const sx of [-1, 1]) kg.box(0.1, 3.4, 0.16, M.stainless, [d.x + nx * 0.1 + ux * (hw + 0.02) * sx, 1.7, d.z + nz * 0.1 + uz * (hw + 0.02) * sx], [0, d.rotY, 0]);
-      for (const f of [-1, 1]) { const gl = kg.plane(d.w / 2 - 0.1, 3.0, M.glassWarm, [d.x + nx * 0.1 + ux * (d.w / 4) * f, 1.5, d.z + nz * 0.1 + uz * (d.w / 4) * f], [0, d.rotY, 0]); gl.castShadow = false; }
-      kg.box(d.w, 0.14, 0.16, M.stainless, [d.x + nx * 0.1, 3.1, d.z + nz * 0.1], [0, d.rotY, 0]);
-      const sgn = kg.plane(2.4, 0.6, ovalMat, [d.x + nx * 0.7, 4.0, d.z + nz * 0.7], [0, d.rotY, 0]); sgn.castShadow = false; kg.box(2.5, 0.05, 0.05, M.steelBlack, [d.x + nx * 0.55, 4.34, d.z + nz * 0.55], [0, d.rotY, 0]);
-    }
-  }
-
   // ================================================================ the station object, the ways out and the transfer routes (tests)
   const rt = X.rtOf('nevsky', X.net.nevsky, NV, vInfo, null);
   rt.platform = createPlatform(ctx, M, { id: 'nevsky', name: X.net.nevsky.name, nameEn, frame: NV, stock: '717-l2', line: '2', idx: X.net.nevsky.idx }, vInfo, X.protos, {

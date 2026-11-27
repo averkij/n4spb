@@ -1,3 +1,4 @@
+import { GROUPS_LIST as METRO_PAVILION_GROUPS } from '../../world/landmarksBaltic/groups.js';
 // Narvsky, planning-map area 73. Exact mapped land and water; no water exclusion.
 import { GROUPS_LIST as GATE } from '../../world/landmarksNarva/groups.js';
 import { GROUPS_LIST as CLUB } from '../../world/landmarksNarvsky/constructivism-groups.js';
@@ -15,6 +16,7 @@ export const MODULES = [
   'environment',
   'streets',
   'city',
+  'landmarksBaltic',
   'landmarksNarvsky',
   'coastalBridges',
   'props',
@@ -29,7 +31,7 @@ export const NAMES = { place:'Санкт-Петербург',placeEn:'Saint Pete
 export const SQUARE = { x:-4329.2,z:3510.4,name:NAMES.square,nameEn:NAMES.squareEn };
 export const OBELISK = { x:-4329.2,z:3510.4,h:31 };
 export const STATION = { x:612,z:300,facadeBearing:348,trackBearing:167,tower:{x:602.1,z:246.4} };
-export const GROUPS = { kartingNarvskaya: [STADIUM_GROUP], landmarksNarvsky:[...GATE,...CLUB,{key:'narvsky-toll-canopy',name:'Навес над съездом ЗСД',ids:['w685882720'],osm:[],at:[-3182.1,6038.7]}],coastalBridges:COASTAL_BRIDGE_GROUPS };
+export const GROUPS = { landmarksBaltic: METRO_PAVILION_GROUPS.map(g=>({...g,ids:['r2210359'],at:[-2889,2809.4]})), kartingNarvskaya: [STADIUM_GROUP], landmarksNarvsky:[...GATE,...CLUB,{key:'narvsky-toll-canopy',name:'Навес над съездом ЗСД',ids:['w685882720'],osm:[],at:[-3182.1,6038.7]}],coastalBridges:COASTAL_BRIDGE_GROUPS };
 export function makeAreas(){return [
   {name:'Нарвские триумфальные ворота · Narva Triumphal Gate',c:[-4329.2,3510.4],r:75},
   {name:'Дворец культуры имени Горького · Gorky Palace of Culture',c:[-4220.5,3556.6],r:75},
@@ -53,7 +55,7 @@ export const ZONES={peopleDensity:{west:{scale:1,platforms:1,off:true},mars:{sca
 // Follow the avenue tangent: a south-facing car used to meet the facade after
 // 19m. The 25-degree exit is verified through acceleration and full braking.
 export const GARAGE={poses:{lada:{x:-4363,z:3547,yaw:25*Math.PI/180}},spawn:{x:-4363,z:3547,yaw:25*Math.PI/180},boats:[{id:'boat-narvsky',dock:'narvsky-ekateringofka',x:-5596,z:3476,yaw:-Math.PI/2}]};
-export const PRUNE_SERVICES=['city','landmarksNarvsky'];
+export const PRUNE_SERVICES=['landmarksBaltic','city','landmarksNarvsky'];
 // The gate is an arch, so the data's elevated footprint must not reserve a
 // ground building collider or plant a tree inside the open through passage.
 export const OPEN_GROUND_BUILDING_IDS=['w73174258', ...STADIUM_IDS];

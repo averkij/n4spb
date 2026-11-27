@@ -1,9 +1,10 @@
 // Finland Station, its glass clock tower, sculptured facade, commuter platforms
 // and Evseev's Lenin monument. Sources/estimates: research/finlyandsky-station.md.
 import * as THREE from 'three';
-import { BUILDINGS, MONUMENTS, PLATFORMS, RAILS } from './data/city.js';
-import { Parts, ringEdges, onEdge } from './landmarksD/kit.js';
-import { MeshBuilder, addPrism, addPolyColliders } from './lib/massing.js';
+import { addPavilionEntrance } from './lib/metro-pavilion-entrance.js';
+import { BUILDINGS, ENTRANCES, MONUMENTS, PLATFORMS, RAILS } from './data/city.js';
+import { Parts, ringEdges, onEdge, localOnEdge } from './landmarksD/kit.js';
+import { addPolyColliders } from './lib/massing.js';
 import { sculptLenin } from './landmarksFinlyandskyStation/lenin.js';
 import { clockMesh } from './landmarksFinlyandskyStation/clock-mesh.js';
 import { square } from './landmarksFinlyandskyStation/square.js';
@@ -55,27 +56,56 @@ function relief(P, M, u, n) {
 function station(K) {
   const { ctx, shell: P, medium: D, fine: F, M, svc } = K;
   const rec = BUILDINGS.find(b => b.id === 'r2123616');
-  // Keep the complete mapped rear wing, not merely the impressive street face.
-  if (rec) for (const poly of rec.polys) {
-    const a = new MeshBuilder(), b = new MeshBuilder(); addPrism(a, b, poly, 0, 10.6, { bay: 4.2, floor: 3.8 });
-    P.geo(M.stone, a.build()); P.geo(M.roof, b.build()); addPolyColliders(ctx, poly, 0, 10.6);
+  const doors=ENTRANCES.filter(q=>q.bldg==='r2123616').map(q=>({...q,w:4.15,
+    u:(q.x-FRONT.x)*c-(q.z-FRONT.z)*s}));
+  // Draw the full back and side wings, leaving the two mapped passages in the left front.
+  function spans(lo,hi,centres,draw) {
+    let from=lo;
+    for(const u of centres.slice().sort((a,b)=>a-b)){
+      if(u+2.075<=from || u-2.075>=hi)continue;
+      if(u-2.075>from)draw(from,u-2.075);
+      from=Math.max(from,u+2.075);
+    }
+    if(hi>from)draw(from,hi);
+  }
+  if(rec)for(const poly of rec.polys) {
+    const outer=[]; for(let i=0;i<poly.o.length;i+=2)outer.push([poly.o[i],poly.o[i+1]]);
+    P.cap(M.roof,outer,10.6,true,4,poly.h.map(r=>{const out=[];for(let i=0;i<r.length;i+=2)out.push([r[i],r[i+1]]);return out;}));
+    for(const e of ringEdges(poly))onEdge(P,e,(len,frame)=>{
+      const centres=[];
+      for(const d of doors){
+        const at=localOnEdge(e,d.x,d.z);
+        if(Math.abs(at.d)>.55 || at.u<0 || at.u>len)continue;
+        centres.push(at.u);
+        addPavilionEntrance(ctx,{id:d.id,x:frame.x+frame.xa[0]*at.u,z:frame.z+frame.xa[1]*at.u,
+          rotY:frame.rot,w:d.w,h:2.70,y:.12,leaves:4,style:'bronze'});
+      }
+      spans(0,len,centres,(a,b)=>P.box(M.stone,a,b,0,2.85,-.16,0,'k'));
+      P.box(M.stone,0,len,2.85,10.6,-.16,0,'k');
+    });
+    addPolyColliders(ctx,poly,0,10.6,.9,doors);
+  }
+  function frontDetail(B,mat,a,b,lo,hi,z0,z1) {
+    const top=Math.min(hi,2.85);
+    if(lo<top)spans(a,b,doors.map(d=>d.u),(x0,x1)=>B.box(mat,x0,x1,lo,top,z0,z1));
+    if(hi>top)B.box(mat,a,b,Math.max(lo,top),hi,z0,z1);
   }
   for (const p of [P, D, F]) p.push(FRONT.x, 0, FRONT.z, FRONT.rot);
   const half = FRONT.width / 2;
   if (!rec) { P.box(M.stone, -half, half, 0, 10.6, -35, 0); ctx.physics.addBox(FRONT.x - s * 17.5, FRONT.z - c * 17.5, FRONT.width, 35, FRONT.rot, 0, 15.8); }
   P.box(M.stone, -half, half, 10.6, 15.8, -35, 0);
   P.box(M.roof, -half - .15, half + .15, 15.8, 16.08, -35.2, .2);
-  P.box(M.granite, -half, half, .04, .55, 0, .10, 'b');
+  frontDetail(P,M.granite,-half,half,.04,.55,0,.10);
   D.box(M.trim, -half - .05, half + .05, 15.35, 15.75, 0, .16);
   // Eighteen narrow, recessed, monumental glazed bays, with different entrance
   // doors beneath the middle panels. Reliefs and mullions sit off the wall.
   for (let i = 0; i < 18; i++) {
     const u = -44.4 + i * 5.22;
-    D.box(M.window, u - 1.9, u + 1.9, .55, 11.15, .12, .18);
-    D.box(M.trim, u - 2.02, u - 1.87, .5, 14.35, .09, .24);
-    D.box(M.trim, u + 1.87, u + 2.02, .5, 14.35, .09, .24);
+    frontDetail(D,M.window, u - 1.9, u + 1.9, .55, 11.15, .12, .18);
+    frontDetail(D,M.trim, u - 2.02, u - 1.87, .5, 14.35, .09, .24);
+    frontDetail(D,M.trim, u + 1.87, u + 2.02, .5, 14.35, .09, .24);
     for (const yy of [3.1, 5.7, 8.3, 10.9]) F.box(M.metal, u - 1.87, u + 1.87, yy, yy + .07, .205, .265);
-    F.box(M.metal, u - .035, u + .035, .6, 11.1, .205, .265);
+    frontDetail(F,M.metal, u - .035, u + .035, .6, 11.1, .205, .265);
     if (i >= 6 && i <= 11) {
       D.box(M.metal, u - 1.95, u + 1.95, 2.65, 3.14, .25, .9);
       for (const q of [-1, 1]) {
@@ -123,7 +153,7 @@ function station(K) {
   label(K, 'ФИНЛЯНДСКИЙ ВОКЗАЛ', -28.0, 16.65, .26, 35, .95);
   label(K, 'Finlyandskiy Railway Station', 29.5, 16.65, .26, 34, .88);
   label(K, 'ПРИГОРОДНЫЕ ПОЕЗДА', -1.5, 2.94, .98, 15.0, .32);
-  label(K, 'МЕТРО · ПЛОЩАДЬ ЛЕНИНА', 39.2, 2.92, .35, 12.0, .42);
+  label(K, 'МЕТРО · ПЛОЩАДЬ ЛЕНИНА', -37.6, 3.53, .35, 12.0, .42);
   svc.houses.push({ id: 'r2123616', name: 'Финляндский вокзал', x: FRONT.x, z: FRONT.z, h: 16.08 });
   svc.monuments.push({ id: 'w314291447', name: 'Башня Финляндского вокзала', x: tx, z: tz, h: 60 });
   svc.entrances.push(...[-5.25, 0, 5.25].map(u => ({ ...stationPoint(u, 1.5), width: 2.8, name: 'Финляндский вокзал' })));

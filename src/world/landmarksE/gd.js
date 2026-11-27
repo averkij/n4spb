@@ -12,10 +12,12 @@ import * as L from '../layout.js';
 import { ringEdges, onEdge, band, rectPath, archPath, edgeToWorld } from './kit.js';
 import { toWorld, toUV, ROT, ringOf, inRing } from './frame.js';
 import { addPolyColliders } from '../lib/massing.js';
+import { centralExtraDoors } from '../metro/central-locations.js';
 import { buildHouse } from './house.js';
 
 export const Y = { BELT0: 4.3, BELT1: 4.8, FRI0: 7.75, FRI1: 8.35, COR1: 9.2, BAL1: 10.3, DICE1: 11.0, EAVE: 9.25 };
 const PITCH = 3.9, ARCH_W = 2.75, T = 1.2, GAL = 4.6;                 // pier thickness, gallery depth (from the front plane)
+const sadovayaDoor = centralExtraDoors.find(d => d.id === 'gostiny-sadovaya');
 const NEV = { u0: 522.8, v0: 35.8, u1: 724.9, v1: 34.6 };
 const PORT = { u0: 613.8, u1: 631.4, proj: 2.0 };
 
@@ -163,7 +165,7 @@ export function build(K, ctx) {
 
   // ---- gallery back wall colliders (the offset ring) and the courtyard walls
   const back = offsetRing(ringW, -(GAL + 0.05));
-  addPolyColliders(ctx, { o: back.flat(), h: [] }, 0, 11, 0.8);
+  addPolyColliders(ctx, { o: back.flat(), h: [] }, 0, 11, 0.8, [...L.DOORWAYS,sadovayaDoor]);
   for (const h of poly.h) addPolyColliders(ctx, { o: h, h: [] }, 0, 11, 0.8);
 
   // ---- courtyard walls: one textured quad per edge (arch windows below, windows above), a cornice
@@ -199,11 +201,13 @@ function bays(K, e, l, full, piers) {
   };
   // QA: the two arcade entrances of the metro (layout.DOORWAYS gostiny-in / -out) are REAL openings in the back wall of the gallery (3.4 x 3.3 m, jambs 0.65 m deep to the ticket hall of the metro module)
   const metroAt = new Map();
-  if (full && e.kind === 'straight') {
+  if ((full || e.side === 'sadovaya') && e.kind === 'straight') {
     const m = P.m.elements, done = e.metroDone || (e.metroDone = {});
     for (let k = 0; k < n; k++) {
       const cx = k * p + p / 2, wx = m[0] * cx - m[8] * GAL + m[12], wz = m[2] * cx - m[10] * GAL + m[14], q = toUV(wx, wz);
-      for (const ue of [541.4, 548.0]) if (Math.abs(q.u - ue) < p / 2 + 0.05 && !done[ue]) { done[ue] = 1; metroAt.set(k, { ue, wx, wz }); }
+      if (e.side === 'sadovaya' && Math.hypot(wx - sadovayaDoor.x, wz - sadovayaDoor.z) < .1)
+        metroAt.set(k, {ue: 'sadovaya', wx, wz});
+      if (full) for (const ue of [541.4, 548.0]) if (Math.abs(q.u - ue) < p / 2 + 0.05 && !done[ue]) { done[ue] = 1; metroAt.set(k, { ue, wx, wz }); }
     }
   }
   gallery(K, l, [...metroAt.keys()].map((k) => ({ x: k * p + p / 2, w: 3.4, h: 3.3 })));

@@ -1,3 +1,4 @@
+import { GROUPS_LIST as METRO_PAVILION_GROUPS } from '../../world/landmarksKronverk/groups.js';
 import { CONTEXT, CONTEXT_NAMES } from './water-context.js';
 import { makeHooks } from '../north/hooks.js';
 import { GROUPS_LIST as TROITSKY } from '../../world/landmarksTroitsky/groups.js';
@@ -21,6 +22,7 @@ export const MODULES = [
   "environment",
   "streets",
   "city",
+  'landmarksKronverk',
   "landmarksTroitskaya",
   "grottoPool",
   "landmarksAurora",
@@ -62,7 +64,7 @@ export const SQUARE = { x: 589, z: 173, name: NAMES.square, nameEn: NAMES.square
 export const OBELISK = { x: 592.2, z: 164.9, h: 36 };
 export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, tower: { x: 602.1, z: 246.4 } };
 
-export const GROUPS = { landmarksTroitsky:scopeGroups(TROITSKY), landmarksTroitskaya: scopeGroups(G0.GROUPS_LIST),
+export const GROUPS = { landmarksKronverk: METRO_PAVILION_GROUPS.filter(g=>g.key==='gorkovskaya-pavilion'), landmarksTroitsky:scopeGroups(TROITSKY), landmarksTroitskaya: scopeGroups(G0.GROUPS_LIST),
   landmarksAurora: scopeGroups(G1.GROUPS_LIST),
   landmarksKamennoostrovsky: scopeGroups(G2.GROUPS_LIST),
   landmarksKarpovka: scopeGroups(G3.GROUPS_LIST),
@@ -80,7 +82,7 @@ export const PAVED_RINGS=OWNERS.map(([module,g])=>({module,rings:(g.PAVED_RINGS|
 export const WATER = {...WATER_TABLE,dataRings:CONTEXT,skipRiverNames:CONTEXT_NAMES,skipRiverKeys:['malaya-neva'],ownerRings:collect('WATER_RINGS'),bankRings:collect('BANK_RINGS'),keepOut:collect('KEEP_OUT')};
 export const ZONES = {peopleDensity:{west:{off:true,scale:1,platforms:1},mars:{off:true,zones:[],scale:1}},peopleHot:[],crowHaunts:[{x:-1900,z:-3065,r:120}],farCentres:[]};
 export const GARAGE = {"poses":{"lada":{"x":-1886,"z":-3067,"yaw":0}},"spawn":{"x":-1886,"z":-3067,"yaw":0},"boats":[{"id":"boat-aptekarsky","dock":"aptekarsky","x":-810.2391421858604,"z":-3862.272264236836,"yaw":0.09543290837944174}]};
-export const PRUNE_SERVICES = ["city","landmarksTroitskaya","landmarksAurora","landmarksKamennoostrovsky","landmarksKarpovka","landmarksBotanicalGreenhouses","landmarksBotanicalGarden","landmarksTVTower","landmarksLETI","landmarksTransfiguration"];
+export const PRUNE_SERVICES = ['landmarksKronverk',"city","landmarksTroitskaya","landmarksAurora","landmarksKamennoostrovsky","landmarksKarpovka","landmarksBotanicalGreenhouses","landmarksBotanicalGarden","landmarksTVTower","landmarksLETI","landmarksTransfiguration"];
 import { withFountainKeepouts } from '../fountain-keepout.js';
 import { FOUNTAIN_SITES } from './fountain-rings.js';
 export const HOOKS = withFountainKeepouts({deckServices:['landmarksTroitsky'],...makeHooks(MODULES)}, FOUNTAIN_SITES);
