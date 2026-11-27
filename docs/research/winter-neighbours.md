@@ -2,6 +2,14 @@
 
 The original winter pages are Palace–Liteyny, Smolninskoye and Vladimirsky–Ligovka. For the next three, start with their direct gate neighbours and rank each by distance to the nearest central page. Using the area-weighted centres of the registry's play rectangles, including the shared territory, gives Admiralty–Haymarket (2.09 km), Semyonovsky–Izmailovsky (2.88 km) and Aptekarsky–Posadsky (2.95 km). These distances describe the game map.
 
+## Second group of neighbours
+
+The next three direct neighbours of the original central pages are Finlyandsky (3.22 km), Kronverk–Vvedensky–Petrovsky (3.65 km) and Vasilyevsky–Okrug No. 7 (4.22 km). The same centroid calculation puts Sampson at 4.82 km.
+
+At Finland Station, a November installation photograph places the district tree on Lenin Square. Inside the Peter and Paul Fortress, the city’s holiday programme puts the tree and fair on Cathedral Square. The ice sculpture festival is a separate event at the Naryshkin Bastion. [Station photograph](https://www.fontanka.ru/2024/11/17/74345354/) · [Fortress holiday programme](https://www.spbcult.ru/news/anonsy/petropavlovskaya-krepost-priglashaet-na-novogodnie-programmy/)
+
+On the Spit, the lighting designer’s photographs of the Parade of Planets show spherical lanterns and inclined orbital rings. Their placement frames the Stock Exchange and the Rostral Columns. [Designer’s photo gallery](https://brkno.com/projects/strelka-vasilevskogo-ostrova)
+
 ## Palace Square
 
 The city's holiday programme places the sledding hill beside the General Staff building and describes illuminated photo installations on the square. Keep the Alexander Column, the palace frontage and the approach through the General Staff arch legible between installations. [City holiday programme](https://www.gov.spb.ru/press/governor/310107/)
