@@ -192,7 +192,8 @@ export const ZONES = {
 };
 const DEG = Math.PI / 180;
 export const GARAGE = { poses: { lada: { x: -3061.5, z: 790.7, yaw: 225 * DEG } }, spawn: { x: -3061.5, z: 790.7, yaw: 225 * DEG },
-  boats: [{ id: 'boat-kolomna', dock: 'kolomna', x: -4572.4, z: 1875.1, yaw: 1.239 }] };
+  // Alongside the north bank, with room for the hull and E boarding from the quay.
+  boats: [{ id: 'boat-kolomna', dock: 'kolomna', x: -4571.7, z: 1873.1, yaw: 1.239 }] };
 export const PRUNE_SERVICES = ['city', 'landmarksMariinsky', 'landmarksNikolsky', 'landmarksNewHolland'];
 import { withFountainKeepouts } from '../fountain-keepout.js';
 import { FOUNTAIN_SITES } from './fountain-rings.js';

@@ -9,6 +9,7 @@ import { buildDistrictSquares } from './winter-district-squares.js';
 const districts = new Set([
   'palace', 'smolny', 'vladimirsky', 'admiralty', 'semyonovsky', 'aptekarsky',
   'finlyandsky', 'kronverk', 'vasilyevsky',
+  'sampson', 'kolomna', 'moskovskaya',
 ]);
 const storageKey = 'piter.season';
 export function seasonFor(area, params) {

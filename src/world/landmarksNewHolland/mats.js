@@ -2,6 +2,7 @@
 // Colours: weathered red brick #a9503a (arch #a24c36), mortar #c9a98a, limestone plinth #cfc3a4, arch ring #c9b98a, arch granite #6f6a66, graphite sheet roof #4a4d52, Bottle roof #8a4a40, Kuznya roof #7a3a30,
 // Commandant's trim #ecdcb0, Kovsh quay granite #b9a79a, black iron #26262a, granite sett #a09d9a with pale kerb #c8c4bc, lawn #5fa23a, timber deck #8a7058, silver-grey cladding #9a9486.
 // Textures are painted here with ctx.tex.draw (<= 512 px, shared by key, world-scale uv: see the tile sizes noted per texture).
+import { snowGarden } from '../lib/winter-garden.js';
 const lcg = (seed) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
 
 export function makeMats(ctx) {
@@ -71,9 +72,9 @@ export function makeMats(ctx) {
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const off = (j % 2) * s / 2; g.fillStyle = ['#aaa69c', '#b4afa4', '#a29e94', '#bcb7ac'][(r() * 4) | 0]; g.fillRect(i * s + off + 0.8, j * s + 0.8, s - 1.6, s - 1.6); }
   });
   const kerbTex = tex(128, 128, 'kerb', (g, w, h) => { const r = lcg(137); g.fillStyle = '#c8c4bc'; g.fillRect(0, 0, w, h); speckle(g, w, h, r, 300, ['#b4afa6', '#dad6ce', '#a8a39a'], 1, 2.4); });
-  const gravelTex = tex(256, 256, 'gravel', (g, w, h) => { const r = lcg(139); g.fillStyle = '#c9c0ae'; g.fillRect(0, 0, w, h); speckle(g, w, h, r, 2200, ['#b8ae9a', '#d8cfbd', '#a89e8a', '#cfc6b2'], 1, 3); });
+  const gravelTex = ctx.season === 'winter' ? null : tex(256, 256, 'gravel', (g, w, h) => { const r = lcg(139); g.fillStyle = '#c9c0ae'; g.fillRect(0, 0, w, h); speckle(g, w, h, r, 2200, ['#b8ae9a', '#d8cfbd', '#a89e8a', '#cfc6b2'], 1, 3); });
   const concreteTex = tex(256, 256, 'plates', (g, w, h) => { const r = lcg(149); g.fillStyle = '#b5b3ae'; g.fillRect(0, 0, w, h); speckle(g, w, h, r, 400, ['#a5a39e', '#c2c0bb'], 1, 3); g.strokeStyle = 'rgba(90,88,84,0.6)'; g.lineWidth = 2; g.strokeRect(0, 0, w, h); g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke(); });
-  const lawnTex = tex(256, 256, 'lawn', (g, w, h) => {
+  const lawnTex = ctx.season === 'winter' ? null : tex(256, 256, 'lawn', (g, w, h) => {
     const r = lcg(151); g.fillStyle = '#5fa23a'; g.fillRect(0, 0, w, h);
     speckle(g, w, h, r, 1800, ['#76b648', '#4e902f', '#6aae40', '#82be52'], 1.5, 4);
     g.fillStyle = 'rgba(255,255,255,0.045)'; for (let i = 0; i < 8; i += 2) g.fillRect(0, i * 32, w, 32);   // mow stripes (tile 12 m)
@@ -156,5 +157,6 @@ export function makeMats(ctx) {
   };
   M.cutouts = new Set();
   M.decals = new Set();
+  snowGarden(ctx, M, ['lawn', 'bed'], ['gravel']);
   return M;
 }

@@ -125,7 +125,7 @@ export function build(K) {
   K.svc.lamps = lOut;
 
   // ---------------------------------------------------------------------------------------- fountains and the Tsushima obelisk
-  const fgeo = partsGeos((Q) => fountainParts(Q, M));
+  const fgeo = partsGeos((Q) => fountainParts(Q, M, ctx.season === 'winter'));
   const fm = fount.map((f) => {
     fountainBasin(ctx, { id: f.id, x: f.x, z: f.z, r: 2.55, waterY: .36, bedY: 0, rimR: 2.725, rimTop: .52 });
     return mat4(f.x, 0, f.z, 0, 1);
@@ -167,7 +167,7 @@ function lampParts(Q, M) {                                          // black cas
     Q.cyl(M.lampBlack, [s * 0.5, 4.38, 0], [s * 0.5, 4.5, 0], 0.22, 0.02, 6, false);
   }
 }
-function fountainParts(Q, M) {                                      // low granite rim r 2.9 (ring top, inner wall), water disc, 4 bronze frogs spitting, a centre jet
+function fountainParts(Q, M, winter) {                              // low granite rim, seasonal surface, four bronze frogs
   const n = 20, RO = 2.9, RI = 2.55, YT = 0.52, YW = 0.36;
   const pt = (i, r, y) => [Math.sin(i * TAU / n) * r, y, Math.cos(i * TAU / n) * r];
   for (let i = 0; i < n; i++) {
@@ -176,7 +176,7 @@ function fountainParts(Q, M) {                                      // low grani
     Q.quad(M.greyGranite, pt(i, RO, YT), pt(i + 1, RO, YT), pt(i + 1, RI, YT), pt(i, RI, YT), [0, 1, 0]);
     Q.quad(M.greyGranite, pt(i, RI, YT), pt(i + 1, RI, YT), pt(i + 1, RI, YW), pt(i, RI, YW), [-Math.sin(t), 0, -Math.cos(t)]);
   }
-  Q.cap(M.water, Array.from({ length: n }, (_, i) => [Math.sin(i * TAU / n) * RI, Math.cos(i * TAU / n) * RI]), YW, true, 4);
+  if (!winter) Q.cap(M.water, Array.from({ length: n }, (_, i) => [Math.sin(i * TAU / n) * RI, Math.cos(i * TAU / n) * RI]), YW, true, 4);
   for (let i = 0; i < 4; i++) {
     const a = i * TAU / 4 + 0.4, x = Math.sin(a) * 2.72, z = Math.cos(a) * 2.72;
     Q.box(M.frog, x - 0.17, x + 0.17, YT, YT + 0.04, z - 0.17, z + 0.17, 'b');

@@ -100,7 +100,12 @@ export const WATER = {
   keepOut:[{id:'aurora-berth',c:[-753.05,-2561.8],ax:[.4168,.9090],hl:76,hw:20}],
 };
 export const ZONES = { peopleDensity: { west: { scale: 1, platforms: 1, off: true }, mars: { scale: 1, zones: [], off: true } }, peopleHot: [[-500, -4010, 1, 30], [-320, -6030, .7, 25]], crowHaunts: [], farCentres: [{ x: -1700, z: -5700, bias: 500 }] };
-export const GARAGE = { poses: { lada: { x: -556, z: -4092, yaw: 0 } }, spawn: { x: -556, z: -4092, yaw: 0 }, boats: [{ id: 'boat-sampson', dock: 'sampson-nevka', x: -1040, z: -2860, yaw: -Math.PI / 2 }] };
+export const GARAGE = {
+  poses: { lada: { x: -556, z: -4092, yaw: 0 } }, spawn: { x: -556, z: -4092, yaw: 0 },
+  // Bolshaya Nevka, off the lower granite landing by the two Vyborgskaya
+  // Embankment pontoons. Bow follows the bank and clears both neighbouring stages.
+  boats: [{ id: 'boat-sampson', dock: 'sampson-nevka', x: -950.14, z: -4412.68, yaw: -2.77968 }],
+};
 export const PRUNE_SERVICES = ['city', 'landmarksSampson'];
 export const OPEN_GROUND_BUILDING_IDS=BUILDINGS.filter(b=>b.id==='r3272566'||b.parent==='r3272566').map(b=>b.id);
 export const HOOKS = { deckServices: ['bridges','finlyandskyAurora'] };

@@ -17,7 +17,9 @@ const BOWLS=[{x:-1771.5,z:7453.5,r:5.4,h:1.45},{x:-1758.3,z:7453.3,r:5.6,h:1.65}
 function fill(K,mat,o,y,physical=false){for(const t of triangulateRing(o)){K.P.fan(mat,t.map(([x,z])=>[x,y,z]),[0,1,0],p=>[p[0]/4,p[2]/4]);if(physical)K.ctx.physics.addWalkTriangle(t.map(([x,z])=>[x,y,z]),.12);}}
 function rim(K,o,mat,y=.43,width=.36,physical=true,y0=.15,draw=true){for(let i=0;i<o.length;i+=2){const j=(i+2)%o.length,ax=o[i],az=o[i+1],bx=o[j],bz=o[j+1],dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz);if(l<.01)continue;const cx=(ax+bx)/2,cz=(az+bz)/2,rot=Math.atan2(dx,dz);if(draw){K.P.push(cx,0,cz,rot);K.P.box(mat,-width/2,width/2,y0,y,-l/2,l/2);K.P.pop();}if(physical)K.ctx.physics.addWalkBox(cx,cz,width,l,rot,y,y0);}}
 function fountain(K,M){
- const {ctx}=K;fill(K,M.floor,FORECOURT_POOL,.16,true);fill(K,M.water,FORECOURT_POOL,.24);rim(K,FORECOURT_POOL,M.rim);
+ const {ctx}=K, winter=ctx.season==='winter';
+ const surface=winter?M.snow:M.water;
+ fill(K,M.floor,FORECOURT_POOL,.16,true);fill(K,surface,FORECOURT_POOL,.24,winter);rim(K,FORECOURT_POOL,M.rim);
  for(const b of BOWLS){
   // Hollow upper basin, a real pedestal and thin wall; never a filled cylinder
   // blocking the whole pool. The shallow upper water is native too.
@@ -28,7 +30,7 @@ function fountain(K,M){
    :[[b.r*.21,.62],[b.r*.75,b.h-.33],[b.r,b.h-.12],[b.r,b.h],[b.r-.16,b.h],[b.r-.18,b.h-.15],[b.r*.70,b.h-.27],[0,b.h-.27]];
   K.P.geo(M.rim,new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(...p)),32),b.x,0,b.z);
   const inner=circle(b.x,b.z,b.r-.25),floor=b.h-.24;
-  fill(K,M.floor,inner,floor,true);fill(K,M.water,inner,b.h-.14);ctx.physics.addWater({ring:inner,level:b.h-.14});
+  fill(K,M.floor,inner,floor,true);fill(K,surface,inner,b.h-.14,winter);ctx.physics.addWater({ring:inner,level:b.h-.14});
   // Match the visible tapered masonry support instead of treating its narrow
   // upper diameter as a freestanding post. Planar surfaces retain exact side
   // collision and a genuine top, while the surrounding basin stays open.
@@ -58,7 +60,7 @@ function fountain(K,M){
  // The registry returns its first matching surface, so upper bowl water
  // precedes the main pool underneath it.
  ctx.physics.addWater({ring:FORECOURT_POOL,level:.24});
- const animation=libraryWater(ctx,BOWLS);
+ const animation=winter?{jets:0,droplets:0,draws:0,active:false}:libraryWater(ctx,BOWLS);
  K.svc.libraryFountain={id:'chasha-znaniy',ring:FORECOURT_POOL,level:.24,bowls:BOWLS,animation};
 }
 function landscaping(K,M){
@@ -81,11 +83,12 @@ function landscaping(K,M){
    K.detail.geo(M.shrub,new THREE.IcosahedronGeometry(1,0),x,.65,z,0,0,0,1.05,.65,1.05);
   }
  }
+ K.svc.libraryForecourtLawns=gardens;
+ if(K.ctx.season==='winter')return;
  const bloom=K.ctx.mat.toon('#b64e4c',{paint:.02});
  for(const [cx,cz]of[[-1797,7424],[-1796,7484],[-1755,7500],[-1756,7405]])for(let i=0;i<36;i++){
   const a=i*2.4,r=Math.sqrt((i+.5)/36)*1.35,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(lawn(x,z)&&forecourtContains(x,z))K.detail.geo(bloom,new THREE.OctahedronGeometry(.17),x,.26,z,0,0,0,1,.6,1);
  }
- K.svc.libraryForecourtLawns=gardens;
 }
 function fixtures(K,M){
  const {ctx}=K;const spots=[[-1794,7424],[-1793,7484],[-1788,7418],[-1786,7490],[-1741,7419],[-1740,7487],[-1787,7438],[-1786,7470]].map(([x,z])=>({x,z,y:.145,rotY:x< -1779?Math.PI/2:-Math.PI/2})).filter(s=>boxClear(ctx,s.x,s.z,2.2,.8,s.rotY));
@@ -109,8 +112,8 @@ function fixtures(K,M){
  const bins=knockInstances(ctx,{name:'rnb-forecourt-bins',spots:lampSpots.slice(0,4).map(s=>({...s,x:s.x+.75})),parts:[{geo:new THREE.CylinderGeometry(.25,.2,.72,12).translate(0,.36,0),mat:M.metal},{geo:new THREE.TorusGeometry(.21,.035,5,16).rotateX(Math.PI/2).translate(0,.73,0),mat:M.rim}],items:(_,s)=>ctx.physics.addCylinder(s.x,s.z,.25,.145,.9),rec:{kind:'bin',mass:35,h:.76,r:.25,anchored:false,metal:.8},far:220});
  const urns=knockInstances(ctx,{name:'rnb-memorial-flower-urns',spots:[{x:-1807.7,z:7489.3,y:.15},{x:-1807.7,z:7493.9,y:.15},{x:-1809.8,z:7408.7,y:.15},{x:-1809.8,z:7413.3,y:.15}],parts:[
   {geo:new THREE.LatheGeometry([[.37,0],[.40,.12],[.54,.7],[.58,.8],[.5,.83]].map(p=>new THREE.Vector2(...p)),16),mat:M.rim},
-  {geo:new THREE.IcosahedronGeometry(.54,1).scale(1,.5,1).translate(0,.82,0),mat:M.shrub},
-  {geo:new THREE.IcosahedronGeometry(.13,0),mat:M.glass,place:s=>Array.from({length:16},(_,i)=>new THREE.Matrix4().makeTranslation(s.x+Math.cos(i*2.4)*(.15+i%3*.13),1.06+Math.sin(i)*.09,s.z+Math.sin(i*2.4)*(.15+i%3*.13)))},
+  {geo:new THREE.IcosahedronGeometry(.54,1).scale(1,ctx.season==='winter'?.22:.5,1).translate(0,.82,0),mat:M.snow||M.shrub},
+  {geo:new THREE.IcosahedronGeometry(.13,0),mat:M.glass,when:()=>ctx.season!=='winter',place:s=>Array.from({length:16},(_,i)=>new THREE.Matrix4().makeTranslation(s.x+Math.cos(i*2.4)*(.15+i%3*.13),1.06+Math.sin(i)*.09,s.z+Math.sin(i*2.4)*(.15+i%3*.13)))},
  ],items:(_,s)=>ctx.physics.addCylinder(s.x,s.z,.52,.15,1.1),rec:{kind:'planter',mass:110,h:1,r:.55,anchored:false,metal:0},far:220});
  K.svc.libraryFixtures={benches:benches.records,lamps:lamps.records,bins:bins.records,urns:urns.records};
  (ctx.services.landmarks||={}).benches||=[];ctx.services.landmarks.benches.push(...spots.map(s=>({...s,len:2})));
@@ -135,6 +138,10 @@ function statues(K,M){
 export function libraryForecourt(K){
  const mat=(c,p=.02)=>K.ctx.mat.toon(c,{paint:p});
  const M={rim:mat('#9c9c94'),floor:mat('#7d918b'),water:mat('#7eaaa8',0),foam:mat('#cfe5df',0),grass:mat('#71864a'),shrub:mat('#466342'),metal:mat('#3e4545'),glass:mat('#d2d6c8'),bronze:mat('#404940'),black:mat('#303332')};
+ if(K.ctx.season==='winter'){
+   M.snow=K.ctx.mat.toon('#e6ecec',{name:'rnb-basin-snow',paint:.045});
+   M.grass=M.snow;M.shrub=mat('#b7c3bd');
+ }
  K.decals.add(M.water);K.decals.add(M.foam);landscaping(K,M);fountain(K,M);fixtures(K,M);statues(K,M);
  K.svc.photoSpots.push({name:'Чаша знаний · площадь РНБ',x:-1726.1,z:7452.6,yaw:-269.8,pitch:2.1});
 }

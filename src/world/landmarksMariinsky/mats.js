@@ -2,6 +2,8 @@
 // Colours are sampled from the Commons photos with PIL (docs/research/mariinsky.md 3.4, 4): theatre wall mint #a4c4a8 (sunlit #a5beab..#b0cfb3, shade #7d9885), rustication #8fb095, trim / columns / balusters
 // cream white #ece8dc, roof sheet iron #a9aeb3, canopy #6b7a72, doors #5a3a1e; Conservatory (restored 2025) cream #e2d9b8 with ivory trim #f2eddc; monument granite: Glinka dark red-brown #7a4a44,
 // Rimsky-Korsakov pink-red #b98d86; bronze #4c5a49 with verdigris.
+import { snowGarden } from '../lib/winter-garden.js';
+
 export const C = {
   wall: '#a8c8ac', wallRust: '#93b69a', wallDark: '#86a98d', trim: '#ece8dc', trimShade: '#d6d0c2', trimWarm: '#e4dccb',
   roof: '#a9aeb3', roofDark: '#8b9096', canopy: '#6b7a72', canopyEdge: '#566359', door: '#5a3a1e', doorDark: '#3a2616', iron: '#2b2f33', glass: '#3f4a5a',
@@ -48,5 +50,6 @@ export function makeMats(ctx, K) {
   M.lettersGlinkaYears = letters(['1804—1857'], 'lmM-let-glinkaY', C.gilt, { w: 512, h: 96, size: 0.7 });
   M.lettersGlinkaSide = letters(['ЖИЗНЬ', 'ЗА', 'ЦАРЯ'], 'lmM-let-glinkaS', C.gilt, { w: 256, h: 288, size: 0.72 });
   M.lettersRK = letters(['Николаю Андреевичу', 'Римскому-Корсакову', '1844—1908'], 'lmM-let-rk', '#e8c52e', { w: 1024, h: 288, size: 0.7, font: tex.FONTS.serif });
+  snowGarden(ctx, M, ['lawn', 'soil'], ['gravel']);
   return M;
 }

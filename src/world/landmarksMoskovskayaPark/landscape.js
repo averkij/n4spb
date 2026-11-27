@@ -3,7 +3,7 @@
 // Supplement the generic trees at sparse, checked spots; no second park forest.
 import * as THREE from 'three';
 import * as CITY from '../data/city.js';
-import { canopyGeometry, trunkGeometry } from '../environment/treegeo.js';
+import { canopyGeometry, trunkGeometry, winterTreeGeometry } from '../environment/treegeo.js';
 import { safeSpot } from './kit.js';
 import { AXIS, FORMAL_LIMES } from './plan.js';
 
@@ -24,9 +24,10 @@ function tree(ctx,P,M,svc,x,z,fam,s,rot,shore=false) {
   const other=[...(ctx.services.environment?.trees||[]),...svc.trees];
   if(other.some(t=>Math.hypot(t.x-x,t.z-z)<(shore?5.5:5)))return false;
   const leaf=shore?M.willow:M.leaf;
-  const canopy=P.geometry(`park-crown-${fam}`,()=>canopyGeometry(fam,1));
-  const stem=P.geometry(`park-trunk-${fam}`,()=>trunkGeometry(fam,0));
-  P.shape(`park-crown-${fam}`,canopy,leaf,x,.03,z,s,s,s,0,rot,0,900);
+  const winter=ctx.season==='winter', key=(winter?'park-bare-':'park-crown-')+fam;
+  const canopy=P.geometry(key,()=>winter?winterTreeGeometry(fam,0):canopyGeometry(fam,1));
+  const stem=!winter&&P.geometry(`park-trunk-${fam}`,()=>trunkGeometry(fam,0));
+  P.shape(key,canopy,winter?M.bark:leaf,x,.03,z,s,s,s,0,rot,0,900);
   if(stem)P.shape(`park-trunk-${fam}`,stem,fam.startsWith('birch')?M.birch:M.bark,x,.03,z,s,s,s,0,rot,0,650);
   const h=(fam.startsWith('birch')?10:14)*s,r=(fam==='poplar'?2.4:4)*s;
   ctx.physics.addCylinder(x,z,.23*s,0,3.8);
@@ -44,8 +45,17 @@ function willow(ctx,P,M,svc,x,z,s=1,rot=0) {
     const a=j*2.1+.3,tx=Math.cos(a)*2*s,tz=Math.sin(a)*2*s;
     P.beam(M.bark,[0,0,0],[tx*.4,4.3*s,tz*.4],.20*s,550);
     P.beam(M.bark,[tx*.4,3.2*s,tz*.4],[tx*1.35,7.4*s,tz*1.35],.12*s,500);
-    P.sphere(M.willow,tx*.8,7.3*s,tz*.8,4.3*s,4.7*s,4.2*s,700);
-    P.sphere(M.willow,tx*1.7,5.7*s,tz*1.7,2.65*s,5.2*s,2.6*s,700);
+    if(ctx.season==='winter'){
+      for(const turn of [-.75,0,.75]){
+        const dx=Math.cos(a+turn), dz=Math.sin(a+turn);
+        const twig=[tx+dx*2.3*s,8.4*s,tz+dz*2.3*s];
+        P.beam(M.bark,[tx*1.35,7.4*s,tz*1.35],twig,.062*s,400);
+        P.beam(M.bark,twig,[twig[0]+dx*.55*s,5.8*s,twig[2]+dz*.55*s],.036*s,350);
+      }
+    }else{
+      P.sphere(M.willow,tx*.8,7.3*s,tz*.8,4.3*s,4.7*s,4.2*s,700);
+      P.sphere(M.willow,tx*1.7,5.7*s,tz*1.7,2.65*s,5.2*s,2.6*s,700);
+    }
   }
   P.pop();ctx.physics.addCylinder(x,z,.32*s,0,4);
   svc.trees.push({x,z,h:10*s,r:6*s,sp:'willow',tr:.32*s});return true;
@@ -111,7 +121,7 @@ export function landscape(ctx,P,M,svc) {
   // The small mapped flower bed belongs to the memorial garden, beside the
   // chapel approach. Keep its surveyed footprint, never paint over a path.
   const bed=CITY.GREEN.find(g=>g.id==='w1277855943');
-  if(bed)for(let i=0;i<18;i++) {
+  if(bed && ctx.season!=='winter')for(let i=0;i<18;i++) {
     const x=-1462.1+(i%6)*.55,z=7448.6+Math.floor(i/6)*1.0;
     if(ctx.L.inRiver?.(x,z)||!safeSpot(ctx,x,z,.35,.35))continue;
     P.sphere(M.hedge,x,.17,z,.45,.34,.45,240);

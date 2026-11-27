@@ -17,7 +17,7 @@ export function makeKit(ctx, root, svc) {
         registerLOD(mesh, far);
       }
     }
-    svc.triangles = K.body.tris + K.detail.tris;
+    svc.triangles = K.body.tris + K.detail.tris + (svc.friezeTriangles || 0);
   };
   K.label = (id, text, x, y, z, w, h, rotY = 0) => {
     const n = [Math.sin(rotY), Math.cos(rotY)];

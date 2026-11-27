@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { Parts, archPath } from './landmarksD/kit.js';
 import { registerLOD } from '../core/spatial.js';
+import { belfry } from './landmarksSampson/belfry.js';
 
 export const OWNS_GROUPS = true;
 const CATHEDRAL = [-463.1, -4010.2], TOWER = [-509.3, -4001.2], CHAPEL = [-495.6, -4034.3];
@@ -158,12 +159,10 @@ function bellTower(shell, detail, M, ctx) {
     // White corner pilasters and a blue blind arch with a narrow window.
     for (const zz of [-3.8, 3.8]) detail.box(M.white, xx - .16, xx + .16, 10.9, 22.4, z + zz - .38, z + zz + .38);
     archPanel(detail, M, xx + side * .04, z, side < 0 ? -Math.PI / 2 : Math.PI / 2, 13.3, 4.2, 5.5);
-    framedWindow(detail, M, xx + side * .16, z, side < 0 ? -Math.PI / 2 : Math.PI / 2, 16.0, 1.5, 2.7);
   }
   for (const side of [-1, 1]) {
     const zz = z + side * 4.55, rot = side < 0 ? Math.PI : 0;
     archPanel(detail, M, x, zz, rot, 13.3, 4.2, 5.5);
-    framedWindow(detail, M, x, zz + side * .12, rot, 16.0, 1.5, 2.7);
     for (const dx of [-3.2, 3.2]) detail.box(M.white, x + dx - .22, x + dx + .22, 10.9, 22.4, zz - .18, zz + .18);
   }
   // The belfry walls have true round-arched openings, so the sky and bells
@@ -184,16 +183,7 @@ function bellTower(shell, detail, M, ctx) {
     detail.pop();
   }
   shell.box(M.white, x - 4.35, x + 4.35, 30.7, 31.3, z - 4.35, z + 4.35);
-  shell.cyl(M.tent, [x, 31.3, z], [x, 37.6, z], 4.55, .48, 8);
-  for (let i = 0; i < 8; i++) {
-    const a = i * Math.PI / 4;
-    shell.cyl(M.white, [x + 4.53 * Math.cos(a), 31.4, z + 4.53 * Math.sin(a)],
-      [x + .49 * Math.cos(a), 37.6, z + .49 * Math.sin(a)], .055, .055, 5);
-  }
-  onion(shell, M, x, z, 37.3, .9, 43.2);
-  shell.cyl(M.gold, [x, 29.0, z], [x, 28.2, z], .07, .07, 5);
-  shell.cyl(M.bell, [x, 27.2, z], [x, 28.2, z], .78, .46, 8);
-  shell.cyl(M.bell, [x, 27.1, z], [x, 27.3, z], .9, .9, 8);
+  belfry(shell, detail, M, x, z);
   ctx.physics.addBox(x, z - 5.7, 8.4, 5.4, 0, 0, 10);
   ctx.physics.addBox(x, z + 5.7, 8.4, 5.4, 0, 0, 10);
 }

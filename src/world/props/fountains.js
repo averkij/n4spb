@@ -39,7 +39,7 @@ export function mappedFountains(city=CITY){
   return [...sites.values()];
 }
 
-function nozzlePoints(poly){
+function nozzlePoints(poly,nearbyPolys){
   const b=bounds(poly),points=[];
   for(let i=0;i<7;i++)for(let j=0;j<7;j++){
     const x=b.x0+(b.x1-b.x0)*(i+.5)/7,z=b.z0+(b.z1-b.z0)*(j+.5)/7;
@@ -54,7 +54,14 @@ function nozzlePoints(poly){
   }
   points.sort((a,b)=>b.d-a.d);
   const picked=[],spacing=Math.max(.7,Math.min(b.x1-b.x0,b.z1-b.z0)/4);
-  for(const p of points){if(p.d<.55&&picked.length)continue;if(picked.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>spacing))picked.push(p);if(picked.length===16)break;}
+  for(const p of points){
+    if(p.d<.55&&picked.length)continue;
+    // The coping extends .18 m outward. Adjacent surveyed basins can share
+    // or cross an edge, as at Klimov Square. Leave room for the nozzle too.
+    if(nearbyPolys.some(other=>distance(other,p.x,p.z)<.24))continue;
+    if(picked.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>spacing))picked.push(p);
+    if(picked.length===16)break;
+  }
   return picked;
 }
 
@@ -63,6 +70,7 @@ export function placeFountains(S,city=CITY,layout=L){
   const ownerModules=AREA.MODULES||layout.MODULE_KEYS||[];
   const stone=ctx.mat.toon('#8e8c85',{paint:.025}),water=ctx.mat.toon('#426e7b',{paint:.01,emissive:'#224e63',emissiveIntensity:.08});
   const allPolys=sites.filter(f=>f.polys.length),playgrounds=(city.FURNITURE||[]).filter(f=>f.kind==='playground');
+  const surveyed=allPolys.filter(f=>layout.inPlay(f.x,f.z)).flatMap(f=>f.polys.map(poly=>({poly,...bounds(poly)})));
   const stats={mapped:sites.length,animated:0,specialist:0,aliases:0,outside:0,excluded:0,basins:0,flush:0,reused:0,triangles:0};
   for(const f of sites){
     const record={id:f.id,x:f.x,z:f.z,group:layout.groupOf?.(f.id)||null,owner:null,status:null,basins:0};records.push(record);
@@ -89,8 +97,9 @@ export function placeFountains(S,city=CITY,layout=L){
     record.owner='props';record.status='animated';record.effects=[];
     for(const [pi,p]of polys.entries()){
       if(!p.o||p.o.length<6)continue;
-      const points=nozzlePoints(p);if(!points.length)continue;
       const b=bounds(p),cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,r=Math.max(.4,Math.min(b.x1-b.x0,b.z1-b.z0)/2);
+      const nearby=surveyed.filter(s=>s.poly!==p&&s.x1>=b.x0-.24&&s.x0<=b.x1+.24&&s.z1>=b.z0-.24&&s.z0<=b.z1+.24);
+      const points=nozzlePoints(p,nearby.map(s=>s.poly));if(!points.length)continue;
       const known=ph.waterLevel(points[0].x,points[0].z),base=S.levelAt?.(cx,cz)??0,y=known??base+(record.flush ? .035 : .09);
       if(known===null&&record.flush){
         if(ctx.season!=='winter')ph.addWater({ring:p.o,holes:p.h||[],level:y});

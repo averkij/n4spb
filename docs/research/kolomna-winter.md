@@ -25,3 +25,7 @@ The square installations are seasonal interpretations using the game's Petersbur
 | Repina Square | −4026, 1687 | 13 m fir, pair of walk-through arches, globes and a timber market stall |
 
 The Mariinsky garden plots, Nikolsky Garden and the New Holland lawn use fresh snow on planting and compacted snow on gravel. The two granite frog fountains retain their sculpted rims and frogs. Their winter covers have walkable surfaces.
+
+## Waterfront access
+
+The existing Kolomna mooring is at **−4571.7, 1873.1**. The boat lies parallel to the quay. Bringing its centre 2.12 m closer to the same bank puts the ordinary boarding prompt within reach of a pedestrian on dry pavement. In winter the same mooring serves the snowmobile. The integrated test walks to the edge, uses the normal interaction, accelerates away and dismounts in each season.

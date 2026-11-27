@@ -1,5 +1,32 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-27 — Winter in Sampson, Kolomna and Moskovskaya (17.8.0)
+
+Eight seconds of full throttle in Edge at 1280 × 720, Medium quality, on an RTX 3090 Ti. The control uses the source and all packaged area products of `ac936e63` (17.7.1). Palace opens in winter in both versions. The other three pairs compare the old summer default with the new winter default. Each pair uses the same road, heading and input.
+
+| Area and version | Load (s) | Distance (m) | Frame mean / median / p95 / max (ms) | Frames >40 / >80 ms | Mean draws | JS heap / backing storage (MiB, CDP) |
+|---|---:|---:|---|---:|---:|---:|
+| Palace 17.7.1 | 36.1 | 268 | 32.0 / 33.3 / 50.0 / 83.4 | 23 / 1 | 1394 | 548 / 1463 |
+| Palace 17.8.0 | 35.6 | 268 | 30.6 / 33.3 / 49.9 / 66.8 | 15 / 0 | 1395 | 542 / 1464 |
+| Sampson 17.7.1 | 22.8 | 285 | 25.5 / 16.8 / 33.4 / 199.9 | 3 / 1 | 933 | 700 / 777 |
+| Sampson 17.8.0 | 23.8 | 199 | 28.7 / 33.2 / 33.5 / 300.1 | 12 / 5 | 934 | 552 / 746 |
+| Kolomna 17.7.1 | 25.7 | 182 | 24.2 / 16.7 / 33.4 / 316.7 | 9 / 3 | 969 | 466 / 659 |
+| Kolomna 17.8.0 | 25.9 | 176 | 25.0 / 16.7 / 34.2 / 316.7 | 16 / 3 | 978 | 606 / 1027 |
+| Moskovskaya 17.7.1 | 23.6 | 136 | 33.5 / 33.3 / 50.0 / 316.6 | 17 / 3 | 1061 | 779 / 797 |
+| Moskovskaya 17.8.0 | 25.0 | 118 | 33.5 / 33.3 / 49.9 / 283.5 | 18 / 3 | 1048 | 840 / 897 |
+
+All four routes loaded and streamed with zero failures. The Palace red-car playtest passed entry, throttle, braking and exit. Moskovskaya averaged 33.5 ms on both versions, just above the 33.3 ms target. All three new winter routes had isolated 283-317 ms frames. Kolomna recorded a 315 ms browser long task; profile that stall separately from the render benchmark to identify its cause.
+
+Kolomna's final backing storage was 368 MiB higher than the quiet control at the end of the route. An earlier run of the same control ended at 969 MiB, compared with 1,027 MiB for the release. These endpoint samples vary across runs. Sampson's two eight-second drives also covered different distances.
+
+Reproduce with `node tools/drive-bench.mjs --area <area> --q medium --seconds 8 --start "<pose>" --json --diagnostics`. The poses are `498.2286,135.1625,76.0322` (Palace), `-825,-5450,-168.6` (Sampson), `-3930,2119,-86.3` (Rizhsky Prospekt in Kolomna) and `-1712,7050,1.62` (Moskovskaya).
+
+A fresh browser loaded all three normal pages in both seasons. The selector carried the saved season across area pages, with the matching snowfall, ice physics and no module errors. Tests covered nine decorated squares and forecourts, the rink's entrances and both sides of the Admiralty overlap, the Narva gate opening from both areas that use it, and boarding and leaving the seasonal craft from three real landings. The winter fountain audit found 12 reachable snow-filled bowls in Sampson, 11 in Kolomna and 30 in Moskovskaya, counting the library's shared lower basin once.
+
+All three strict marking audits passed. Kolomna and Moskovskaya passed the full road audit. On both the control and release, the Sampson road-surface audit reported the same 339 residual samples in 53 clusters against a budget of 120. The water-level suite passed for all 23 cuts, including the two parked pages.
+
+All 21 live area manifests and 2,715 shipped products passed verification. Of those products, 2,708 have identical SHA-256 hashes to 17.7.1. The seven changed products are the Kolomna and Sampson roofs, the Sampson terrain detail texture and two street products each in Moskovskaya and Okrug 65.
+
 ## 2026-11-27 — Vasileostrovets garden entrance planters (17.7.1)
 
 The six movable concrete bowls at the garden entrance now carry a shallow snow cap in winter. The seasonal test checks the colour and height of every bowl and strikes them individually. The two affected page bakes, Vasilyevsky and Gavan, have 236 products with identical hashes to 17.7.0. All 21 manifests pass.

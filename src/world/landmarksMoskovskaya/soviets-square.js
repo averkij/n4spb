@@ -56,7 +56,7 @@ export function squareForecourt(K){
     const colors=['#b9b0a5','#b7aea3','#bab1a6','#b8afa4'];
     for(let j=0;j<4;j++)for(let i=0;i<4;i++){g.fillStyle=colors[(i*3+j*5)%4];g.fillRect(i*64+.7,j*64+.7,62.6,62.6);}
   },{key:'moscow-square-formal-granite-slabs',repeat:[1,1]});
-  const paving=ctx.mat.toon('#ffffff',{map:texture,paint:.006}),border=ctx.mat.toon('#847a72',{paint:.01}),grass=ctx.mat.toon('#728b4b',{paint:.018});
+  const paving=ctx.mat.toon('#ffffff',{map:texture,paint:.006}),border=ctx.mat.toon('#847a72',{paint:.01}),grass=ctx.mat.toon(ctx.season==='winter'?'#e1e6e8':'#728b4b',{paint:.018});
   let floor=MOSCOW_SQUARE_PAVING,inlay=[];
   for(const cut of inlayCuts()){const divided=squarePartition(floor,cut);floor=divided.outside;inlay.push(...divided.inside);}
   const stats={triangles:0,roadClipped:0,pavingPieces:floor.length,inlayPieces:inlay.length,lawnPieces:MOSCOW_SQUARE_LAWNS.length,basins:MOSCOW_SQUARE_POOL_POLYS.length,ring:MOSCOW_SQUARE_FIELD_RING,y:Y};

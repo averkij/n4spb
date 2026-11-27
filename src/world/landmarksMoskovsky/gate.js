@@ -1,5 +1,40 @@
 import * as THREE from 'three';
 import { roadClear } from './common.js';
+import { registerLOD } from '../../core/spatial.js';
+import { GENIUS_MM, GENIUS_TRI } from './genius-mesh.js';
+
+function frieze(K, mat, x, z, rot) {
+  const world = new THREE.Matrix4().makeRotationY(rot).setPosition(x,0,z);
+  const poses = [[],[]];
+  function face(u,v,angle,count,spacing) {
+    const frame = world.clone().multiply(new THREE.Matrix4().makeRotationY(angle).setPosition(u,17.39,v));
+    K.detail.push(u,17.39,v,angle);
+    for(let i=0;i<count;i++){
+      const dx=(i-(count-1)/2)*spacing;
+      poses[i%2].push(frame.clone().multiply(new THREE.Matrix4().makeTranslation(dx,0,0)).scale(new THREE.Vector3(1.30,1.30,1.30)));
+      K.detail.box(mat,dx-.47,dx+.47,-.12,0,.02,.39);
+    }
+    K.detail.pop();
+  }
+  for(const side of [-1,1]){
+    face(0,side*4.06,side<0?Math.PI:0,12,3.10);
+    face(side*18.14,0,side*Math.PI/2,3,2.82);
+  }
+  // Two shared positive-scale batches. Mirroring the left-hand model in
+  // geometry preserves winding, shadows and normal transforms in Three.
+  for(let flip=0;flip<2;flip++){
+    const positions=Float32Array.from(GENIUS_MM,(n,i)=>n*.001*(flip&&i%3===0?-1:1));
+    const tris=GENIUS_TRI.slice();
+    if(flip)for(let i=0;i<tris.length;i+=3)[tris[i+1],tris[i+2]]=[tris[i+2],tris[i+1]];
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setIndex(tris);geo.computeVertexNormals();
+    const mesh=new THREE.InstancedMesh(geo,mat,poses[flip].length);
+    mesh.name='moskovsky-gate-genii';poses[flip].forEach((m,i)=>mesh.setMatrixAt(i,m));
+    mesh.computeBoundingBox();mesh.computeBoundingSphere();mesh.castShadow=true;mesh.receiveShadow=true;
+    K.root.add(mesh);mesh.updateMatrixWorld(true);registerLOD(mesh,235);
+  }
+  K.svc.friezeTriangles=GENIUS_TRI.length/3*30;
+}
 
 // A fluted cross-section produces the shaft's own shadows. Separate dark rods
 // on a cylinder caused intermittent coplanar flecks in the close-up diagnostic.
@@ -34,21 +69,7 @@ export function gate(K, rec) {
   // slabs also retain roof landing after removing the false ground footprint.
   for(const [w,d,y0,y1] of [[36.27,8.16,16.15,17.3],[36.27,8.1,17.3,20.4],[36.84,8.53,20.4,20.92],[36,7.76,20.92,21.68]])
     ctx.physics.addWalkBox(x,z,w,d,rot,y1,y0);
-  for(const side of [-1,1]){
-    D.push(0,0,side*4.10,side<0?Math.PI:0);
-    // Thirty high relief figures in total. Shields and paired wings are separate
-    // shallow solids; no banners, flags, or flag-shaped trophy geometry.
-    for(let i=0;i<15;i++){
-      const u=(i-7)*2.33;
-      D.col(M.bronze,u,.15,17.4,19.1,.28,.36,7);
-      D.geo(M.bronze,new THREE.SphereGeometry(.25,8,5),u,19.4,.25);
-      D.cyl(M.bronze,[u-.26,18.85,.22],[u-.65,18.3,.42],.12,.095,6);
-      D.cyl(M.bronze,[u+.26,18.85,.22],[u+.65,18.3,.42],.12,.095,6);
-      D.geo(M.bronze,new THREE.SphereGeometry(.48,8,5),u,18.15,.46,0,0,0,1,1.05,.32);
-      for(const s of [-1,1])for(let k=0;k<3;k++)D.cyl(M.bronze,[u+s*.18,19.08,.18],[u+s*(.72+k*.12),19.62-k*.28,.18],.14,.05,5);
-    }
-    D.pop();
-  }
+  frieze(K,ctx.mat.toon('#607767',{paint:.022}),x,z,rot);
   // Low military trophies: helmet, cuirass, crossed barrels and shield clusters.
   for(const u of [-15,-10,10,15])for(const v of [-2.75,2.75]){
     B.geo(M.bronze,new THREE.SphereGeometry(.6,10,6),u,22.15,v,0,0,0,1,.7,1);

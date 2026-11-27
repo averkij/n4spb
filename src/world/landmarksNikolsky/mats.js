@@ -1,6 +1,7 @@
 // landmarksNikolsky/mats.js - materials of the St Nicholas Naval Cathedral group.  Colours: docs/research/nikolsky.md section 10 (sky blue walls #79c1e0 with white order #efeee8, gold leaf domes,
 // patinated copper roofs #5f9a78, black iron #26282c, oak door #b9873f, gravel #a3786b, red granite obelisk #8a4a3a).  Alpha cut-outs (railings, fence panels) are listed in M.cutouts (no outline pass).
 import { makeArt } from './art.js';
+import { snowGarden } from '../lib/winter-garden.js';
 
 export const C = {
   blue: '#7ec5e3', blueShade: '#68aacb', blueDeep: '#5a9bc0', white: '#efeee8', whiteShade: '#d6d5cd', copper: '#5f9a78', copperDark: '#4a7f62', graniteBase: '#5a5048',
@@ -40,5 +41,6 @@ export function makeMats(ctx) {
   M.cutouts = new Set([M.rail, M.bars, M.lattice]);
   M.decals = new Set([M.win36, M.win24, M.win35, M.win12, M.winBarred, M.dark, M.door, M.clock]);
   M.flows = new Set([M.water]);
+  snowGarden(ctx, M, ['lawn', 'hedge'], ['gravel']);
   return M;
 }

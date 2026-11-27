@@ -12,6 +12,9 @@ const required = {
   finlyandsky: ['finland-lenin-square', 'simbirsky-garden'],
   kronverk: ['fortress-cathedral-square', 'baltic-house-forecourt', 'petrovskaya-square'],
   vasilyevsky: ['birzhevaya', 'vasileostrovskaya', 'andreevsky-market'],
+  sampson: ['klimov-square', 'lesnaya-metro', 'sampson-garden'],
+  kolomna: ['stachek-square', 'kulibina-square', 'repina-square'],
+  moskovskaya: ['moscow-square-fair', 'victory-park-entrance', 'national-library-square'],
 };
 const area = process.env.AREA;
 assert(required[area], 'select a winter expansion district with tools/area.mjs');
@@ -44,5 +47,15 @@ if (area === 'kronverk') assert.equal(objects.filter(obj =>
 if (area === 'vasilyevsky') {
   assert.equal(objects.filter(obj => obj.kind === 'festival-planet').length, 8, 'planets on the Spit');
   assert.equal(objects.filter(obj => obj.kind === 'festival-star').length, 20, 'lights along the orbits');
+}
+if (area === 'sampson') assert.equal(objects.filter(obj =>
+  obj.parts.some(p => p.mesh?.name.startsWith('klimov-cloud'))).length, 3, 'illuminated clouds at Klimov Square');
+if (area === 'kolomna') {
+  assert(ctx.scene.getObjectByName('new-holland-rink-ice'), 'ice missing from New Holland');
+  assert(objects.some(obj => obj.parts.some(p => p.mesh?.name.startsWith('holland-rink-garlands'))), 'unlit rink');
+}
+if (area === 'moskovskaya') {
+  assert.equal(objects.filter(obj => obj.kind === 'troika-horse').length, 3, 'all three horses on Moscow Square');
+  assert.equal(objects.filter(obj => obj.kind === 'troika-sleigh').length, 1, 'missing sleigh');
 }
 console.log(area, 'PASS', required[area].join(', '));

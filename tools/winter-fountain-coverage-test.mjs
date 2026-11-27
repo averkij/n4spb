@@ -5,6 +5,7 @@ import { buildWorld } from './lib/headless-world.mjs';
 import { mainModules } from './modules-list.mjs';
 import { placeFountains, SPECIALIST_FOUNTAINS } from '../src/world/props/fountains.js';
 import { buildNet } from '../src/world/streets/net.js';
+import { FORECOURT_SOURCE_FOUNTAINS } from '../src/world/landmarksMoskovskaya/library-forecourt-plan.js';
 
 const modules = mainModules().filter(name => Object.values(SPECIALIST_FOUNTAINS).includes(name));
 const { ctx, L, THREE, errors } = await buildWorld({ modules, season: 'winter' });
@@ -22,7 +23,39 @@ ctx.staticRoot.traverse(obj => {
   snow.set(id, obj);
 });
 let checked = 0, flush = 0;
+const librarySites = new Set();
+if (modules.includes('landmarksMoskovskaya')) {
+  const fountain = ctx.services.landmarksMoskovskaya.libraryFountain;
+  assert.equal(fountain.bowls.length, 6, 'Chasha Znaniy has six upper bowls');
+  assert.equal(fountain.animation.jets, 0, 'Chasha Znaniy has no winter jets');
+  ctx.staticRoot.updateMatrixWorld(true);
+  const meshes = [];
+  ctx.staticRoot.traverseVisible(obj => { if (obj.isMesh) meshes.push(obj); });
+  const ray = new THREE.Raycaster();
+  ray.layers.enableAll();
+  function checkLibrarySnow(x, z, y, label) {
+    ray.set(new THREE.Vector3(x, y + 1.7, z), new THREE.Vector3(0, -1, 0));
+    const hit = ray.intersectObjects(meshes, false)[0];
+    assert.equal(hit?.object.material?.name, 'rnb-basin-snow', label + ' has visible snow');
+    assert(Math.abs(hit.point.y - y) < .002, label + ' snow is at its drawn level');
+    assert(Math.abs(ctx.physics.groundHeight(x, z, y + .03, false) - y) < 1e-4,
+      label + ' snow supports the player');
+    assert(!ctx.physics.columnBlocked(x, z, .1, y + .03, y + 1.68), label + ' has standing room');
+  }
+  // The two original surveyed pool centres lie in opposite halves of today's common basin.
+  for (const id of FORECOURT_SOURCE_FOUNTAINS) {
+    const site = records.find(record => record.id === id);
+    assert.equal(site?.owner, 'landmarksMoskovskaya', id + ' uses the library forecourt model');
+    checkLibrarySnow(site.x, site.z, fountain.level, id);
+    librarySites.add(id);
+  }
+  for (const bowl of fountain.bowls) {
+    checkLibrarySnow(bowl.x, bowl.z, bowl.h - .14, 'upper bowl at ' + [bowl.x, bowl.z]);
+  }
+  checked += 1 + fountain.bowls.length;
+}
 for (const site of records) {
+  if (librarySites.has(site.id)) continue;
   const ids = site.status === 'specialist' ? [site.id] : (site.effects ?? []).map(f => f.id);
   for (const id of ids) {
     const mesh = snow.get(id);

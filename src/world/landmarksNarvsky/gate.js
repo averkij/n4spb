@@ -2,7 +2,7 @@
 // Dimensions and sculpture: https://gmgs.ru/post/17574
 // Photographic reference: https://gmgs.ru/narva_gate
 import * as THREE from 'three';
-import * as L from '../layout.js';
+import { narvaVictoryGeometry } from '../landmarksNarva-victory.js';
 import { Parts } from '../landmarksD/kit.js';
 import { horse, cached } from '../lib/figures.js';
 import { registerLOD } from '../../core/spatial.js';
@@ -145,14 +145,9 @@ export function buildGate(ctx, rec) {
   // Six horses and the winged Victory stand on the attic. Horse geometry is
   // shared and submitted in the distant silhouette collector.
   const H = horseFigure(), hm = { main: bronze, dark: bronze, accent: bronze };
-  for (let i = 0; i < 6; i++) H.place(sculpture, hm, (i - 2.5) * 1.8, 23.7, .2, 0, 1.8);
-  sculpture.box(bronze, -1.15, 1.15, 24.2, 25.9, -2.95, -1.4);
-  sculpture.col(bronze, 0, -2.2, 26, 29.8, .52, .32, 10);
-  sculpture.geo(bronze, new THREE.SphereGeometry(.38, 8, 6), 0, 30.15, -2.2);
-  for (const side of [-1, 1]) {
-    sculpture.cyl(bronze,[side*1.25,24.6,-2.2],[side*1.42,24.6,-2.2],.72,.72,14);
-    sculpture.cyl(bronze, [side*.35,29.2,-2.2], [side*1.2,31.1,-2.35], .19, .08, 6);
-    for (let j = 0; j < 4; j++) sculpture.cyl(bronze, [side*.25,28.7-j*.22,-2.48], [side*(1.45+j*.13),30-j*.34,-2.5], .17, .045, 5);
+  for (let i = 0; i < 6; i++) {
+    const rank = i-2.5;
+    H.place(sculpture, hm, rank*1.92, 23.7, .90-Math.abs(rank)*.34, rank*.18, 1.8);
   }
   // Eight genii of Glory above the attic's four outer bays on each face.
   // Distinct raised arms and wing fans retain their silhouette in the skyline.
@@ -166,7 +161,12 @@ export function buildGate(ctx, rec) {
     }
   }
   for (const p of [body, detail, sculpture]) p.pop();
-  let triangles = 0;
+  // Wings, chiton, palm and laurels are one Blender mesh above the open passage.
+  const victory = new THREE.Mesh(narvaVictoryGeometry(), bronze), at = point(0, -2.2);
+  victory.name = 'narva-winged-victory'; victory.position.set(at.x,23.7,at.z); victory.rotation.y = rot;
+  victory.castShadow = victory.receiveShadow = true;
+  root.add(victory); victory.updateMatrixWorld(true); registerLOD(victory, 850);
+  let triangles = victory.geometry.index.count/3;
   for (const [part, far] of [[body, 2600], [detail, 500], [sculpture, 2600]]) {
     triangles += part.tris;
     for (const mesh of part.build(root, { name: 'narva-gate' })) {

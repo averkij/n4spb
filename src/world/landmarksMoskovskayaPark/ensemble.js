@@ -54,7 +54,7 @@ export function fountain(ctx,P,M,svc) {
  // OSM ring measures approximately 25 m; a hollow basin, no disk of granite
  // over the park surface. Water lies above its base and below the coping.
  P.cyl(M.granite,0,.13,0,12.4,.20,1100);
- P.cyl(M.water,0,.29,0,11.9,.035,900);
+ if(ctx.season!=='winter')P.cyl(M.water,0,.29,0,11.9,.035,900);
  P.torus(M.granite,0,.40,0,12.2,.22,Math.PI/2,0,1100);
  P.torus(M.bronze,0,1.28,0,3.6,.27,Math.PI/2,0,650);
  const nozzles=[];

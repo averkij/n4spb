@@ -90,7 +90,9 @@ export const WATER = {
   slopeReaches: [{ id: 'victory-park-natural-banks', key: 'moat', test: (x, z) => z > 6500 && z < 7600 && x > -1800, run: 2, kerb: .1, lip: .04, rail: () => null }],
 };
 export const ZONES = { peopleDensity: { west: { scale: 1, platforms: 1, off: true }, mars: { scale: 1, zones: [], off: true } }, peopleHot: [[-1683, 7074, 1.1, 40], [-1740, 7890, .7, 40]], crowHaunts: [{ x: -1350, z: 7150, r: 170 }], farCentres: [{ x: -1800, z: 6100, bias: 700 }] };
-export const GARAGE = { poses: { lada: { x: -1698, z: 7096, yaw: 0 } }, spawn: { x: -1698, z: 7096, yaw: 0 }, boats: [{ id: 'boat-victory-admiralty', dock: 'victory-admiralty-pond', x: -1180, z: 7333, yaw: 0 }] };
+// The north bank is a sloping natural launch. Keep the whole hull wet and
+// the cockpit within interaction range of a walker on the bank.
+export const GARAGE = { poses: { lada: { x: -1698, z: 7096, yaw: 0 } }, spawn: { x: -1698, z: 7096, yaw: 0 }, boats: [{ id: 'boat-victory-admiralty', dock: 'victory-admiralty-pond', x: -1181.5, z: 7324, yaw: 0 }] };
 export const PRUNE_SERVICES = ['city', 'landmarksMoskovsky', 'landmarksMoskovskaya', 'landmarksMoskovskayaPark'];
 const STRUGATSKY_GARDENS = GREEN.filter(g => ['w29171389', 'w29171421', 'w29382034', 'w31264819'].includes(g.id));
 const ringHas = (x, z, p) => { let on = false; for (let i = 0, j = p.length - 2; i < p.length; j = i, i += 2) if ((p[i + 1] > z) !== (p[j + 1] > z) && x < (p[j] - p[i]) * (z - p[i + 1]) / (p[j + 1] - p[i + 1]) + p[i]) on = !on; return on; };

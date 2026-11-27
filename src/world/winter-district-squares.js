@@ -8,6 +8,9 @@ import { knockInstances } from './lib/knock-inst.js';
 import { FINLYANDSKY_SQUARES, buildFinlyandskyCrystals } from './winter-finlyandsky.js';
 import { KRONVERK_SQUARES } from './winter-kronverk.js';
 import { VASILYEVSKY_SQUARES, buildVasilyevskyPlanets } from './winter-vasilyevsky.js';
+import { MOSKOVSKAYA_SQUARES, buildMoskovskayaFestival } from './winter-moskovskaya.js';
+import { KOLOMNA_SQUARES, buildKolomnaFestival } from './winter-kolomna.js';
+import { SAMPSON_SQUARES, buildSampsonFestival } from './winter-sampson.js';
 
 // World coordinates keep installations in the same places on overlapping pages.
 // x, z, fir height; arch/orb placements are independent of the fir footprint.
@@ -21,6 +24,7 @@ const squares = [
   { id: 'troitskaya', tree: [-1443, -2297, 12], arches: [[-1443, -2305, 0.18]], orbs: [[-1435, -2297], [-1451, -2297]], snow: [-1437, -2291] },
   { id: 'tolstoy-square', tree: [-2194, -3699, 8], orbs: [[-2188, -3693], [-2188, -3705]] },
   ...FINLYANDSKY_SQUARES, ...KRONVERK_SQUARES, ...VASILYEVSKY_SQUARES,
+  ...SAMPSON_SQUARES, ...KOLOMNA_SQUARES, ...MOSKOVSKAYA_SQUARES,
 ];
 
 const gold = '#ffd483', ice = '#c6edf7', red = '#d64d47';
@@ -145,4 +149,7 @@ export function buildDistrictSquares(ctx, glow, decoratedFir, snowman) {
   placeMarketHuts(ctx, glow, huts);
   buildFinlyandskyCrystals(ctx, glow);
   buildVasilyevskyPlanets(ctx, glow);
+  buildMoskovskayaFestival(ctx, glow);
+  buildKolomnaFestival(ctx, glow);
+  buildSampsonFestival(ctx, glow);
 }

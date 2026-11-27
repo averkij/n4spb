@@ -8,7 +8,7 @@ import { GREEN, ROADS, FURNITURE, TREES, BUILDINGS } from '../data/city.js';
 import { knockInstances } from '../lib/knock-inst.js';
 import { ringEdges } from '../landmarksD/kit.js';
 import { registerLOD } from '../../core/spatial.js';
-import { canopyGeometry, trunkGeometry } from '../environment/treegeo.js';
+import { canopyGeometry, trunkGeometry, winterTreeGeometry } from '../environment/treegeo.js';
 import { roadClear, boxClear } from './common.js';
 
 const GARDEN_IDS=['w29171389','w29171421','w29382034','w31264819'];
@@ -31,7 +31,8 @@ function gardens(K){
   const trees=[];for(let i=0;i<TREES.length;i+=2)if(nearSquare(TREES[i],TREES[i+1]))trees.push([TREES[i],TREES[i+1]]);
   const inLawn=(x,z,r=0)=>gardens.some(g=>g.polys.some(p=>[[0,0],[r,0],[-r,0],[0,r],[0,-r]].every(([dx,dz])=>inRing(p.o,x+dx,z+dz)&&!p.h.some(h=>inRing(h,x+dx,z+dz)))));
   const pathGap=(x,z)=>segments.reduce((d,e)=>Math.min(d,segmentDistance(x,z,...e)),Infinity);
-  const grass=ctx.mat.toon('#718b46',{paint:.065});
+  const winter=ctx.season==='winter';
+  const grass=ctx.mat.toon(winter?'#e1e6e8':'#718b46',{paint:.065});
   // The source's broad square polygon paints paving across all four parks.
   // Restore their lawns above that surface, clipped around every mapped path
   // and sitting pad. Small cells keep the irregular real edges inexpensive.
@@ -60,6 +61,10 @@ function gardens(K){
     }
   }
   for(const fam of ['limeA','mapleA']){const spots=plantedTrees.filter(t=>t.family===fam);
+    if(winter){
+      staticInstances(K,'mz-strugatsky-bare-'+fam,winterTreeGeometry(fam,0),ctx.mat.toon('#776b64',{paint:.035}),spots,650);
+      continue;
+    }
     staticInstances(K,'mz-strugatsky-trees-'+fam,canopyGeometry(fam,1),ctx.mat.toon('#688645',{vertexColors:true,paint:.035}),spots,800);
     staticInstances(K,'mz-strugatsky-trunks-'+fam,trunkGeometry(fam,0),ctx.mat.toon('#716550',{vertexColors:true,paint:.035}),spots,600);
   }
@@ -73,8 +78,8 @@ function gardens(K){
   }
   // Restrained seasonal borders outside the mapped sitting pads; leave their
   // radial path entrances free. Planting choice/density are visual estimates.
-  for(const [cx,cz] of CENTRES)for(let i=0;i<80;i++){const a=i*Math.PI/40,r=10.5,x=cx+Math.sin(a)*r,z=cz+Math.cos(a)*r;if(clear(x,z,.3))flowers.push({x,z,y:.17,sx:.23,sy:.16,sz:.23});}
-  staticInstances(K,'mz-strugatsky-clipped-hedges',new THREE.IcosahedronGeometry(1,1),ctx.mat.toon('#43663c',{paint:.045}),shrubs);
+  if(!winter)for(const [cx,cz] of CENTRES)for(let i=0;i<80;i++){const a=i*Math.PI/40,r=10.5,x=cx+Math.sin(a)*r,z=cz+Math.cos(a)*r;if(clear(x,z,.3))flowers.push({x,z,y:.17,sx:.23,sy:.16,sz:.23});}
+  staticInstances(K,'mz-strugatsky-clipped-hedges',new THREE.IcosahedronGeometry(1,1),ctx.mat.toon(winter?'#b6c5c2':'#43663c',{paint:.045}),shrubs);
   staticInstances(K,'mz-strugatsky-seasonal-border',new THREE.IcosahedronGeometry(.4,1),ctx.mat.toon('#bb889b',{paint:.035}),flowers.map(v=>({...v,y:.22,sy:.12})),220);
   // Lawn-side edging follows existing paths, without redrawing their surface.
   const edging=[];
