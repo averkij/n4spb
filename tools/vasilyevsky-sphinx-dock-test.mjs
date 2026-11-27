@@ -1,0 +1,45 @@
+// Board with E from the dry lower tread at the Sphinx pier in either season.
+// node tools/area.mjs vasilyevsky tools/vasilyevsky-sphinx-dock-test.mjs [--winter]
+import assert from 'node:assert/strict';
+import { buildWorld } from './lib/headless-world.mjs';
+import { W } from '../src/world/landmarksAcademy/frame.js';
+import { Player } from '../src/core/player.js';
+import { createInteract } from '../src/core/ui.js';
+import { build as buildDrive } from '../src/world/drive.js';
+
+assert.equal(process.env.AREA, 'vasilyevsky');
+const winter = process.argv.includes('--winter');
+const { ctx, L, errors } = await buildWorld({ season: winter ? 'winter' : 'summer' });
+assert.deepEqual(errors, []);
+document.body.classList = { toggle() {}, add() {}, remove() {}, contains: () => false };
+ctx.audio = { context: null, muted: true, play() {} };
+ctx.ui = { toast() {}, modalOpen: false };
+const input = { addEventListener() {}, requestPointerLock() {} };
+const player = new Player(ctx.camera, input, ctx.physics, L.WORLD.play);
+player.enabled = true;
+player.clampXZ = L.clampToPlay;
+player.solidAt = L.insideBuilding;
+ctx.playerObj = player;
+ctx.interact = createInteract({ camera: ctx.camera, player, ui: ctx.ui, doc: null });
+await buildDrive(ctx);
+const drive = ctx.drive, boat = drive.boats.find(b => b.id === 'boat-vasilyevsky');
+assert(boat, 'boat at the pier');
+const top = W(-10.2, 103.6), edge = W(-10.2, 111.05);
+const yaw = Math.atan2(top.x - edge.x, top.z - edge.z) * 180 / Math.PI;
+player.setPose(top.x, top.z, yaw, 0, .1, { stand: true });
+player.keys.add('KeyW');
+for (let i = 0; i < 240 && Math.hypot(player.pos.x - edge.x, player.pos.z - edge.z) > .075; i++) player.update(1 / 60);
+player.keys.clear();
+assert(Math.hypot(player.pos.x - edge.x, player.pos.z - edge.z) < .075, 'walker reached the lower flight from the embankment');
+const p = boat.parked, level = ctx.physics.waterLevel(p.x, p.z);
+assert(player.pos.y > level && player.pos.y - level < .6, 'standing on a dry lower tread above the water');
+ctx.camera.lookAt(p.x, p.y + .8, p.z);
+player.inputLock = 0;
+assert.equal(ctx.interact.update()?.labelEn, winter ? 'Ride snowmobile' : 'Get in the motor boat');
+assert(ctx.interact.use() && drive.active && drive.vehicle === boat);
+const start = { x: boat.car.x, z: boat.car.z };
+drive.sim(2.4, { thr: .78 });
+assert(Math.hypot(boat.car.x - start.x, boat.car.z - start.z) > 5, 'craft clears the stair landing');
+assert.equal(ctx.physics.waterLevel(boat.car.x, boat.car.z), level);
+assert(drive.exit(true) && !drive.active);
+console.log('PASS dry Sphinx pier approach, E boarding, departure and dismount in ' + (winter ? 'winter' : 'summer'));
