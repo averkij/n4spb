@@ -1,5 +1,68 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-27 — Winter in all 21 live districts (17.9.0)
+
+The control is the complete 17.8.0 site from `f3199b1c`. The 17.9.0 release is `a50158ef`. Both used their own packaged area bakes. Palace runs in winter in both versions. The other nine comparisons use the previous summer scene and the new winter scene. Edge drove for eight seconds at full throttle, at 1280 × 720 and Medium quality on an RTX 3090 Ti. Each run starts a fresh browser, loads the production bake normally and keeps moving traffic, pedestrians, shadows and regional streaming enabled.
+
+| Area and version | Load (s) | Distance (m) | Frame mean / median / p95 / max (ms) | Frames >40 / >80 ms | Mean draws | JS heap / backing storage (MiB, CDP) |
+|---|---:|---:|---|---|---:|---|
+| Palace control | 36.7 | 268 | 32.7 / 33.3 / 50.0 / 83.5 | 24 / 1 | 1396 | 530 / 1466 |
+| Palace 17.9.0 | 40.6 | 269 | 37.9 / 33.4 / 50.1 / 66.8 | 54 / 0 | 1392 | 524 / 1464 |
+| Gavan control | 22.5 | 98 | 27.8 / 16.7 / 50.1 / 266.7 | 26 / 6 | 953 | 315 / 438 |
+| Gavan 17.9.0 | 25.2 | 103 | 32.0 / 33.3 / 50.0 / 300.0 | 21 / 4 | 830 | 422 / 659 |
+| Morskoy control | 16.8 | 283 | 22.2 / 16.7 / 33.4 / 183.3 | 1 / 1 | 916 | 314 / 430 |
+| Morskoy 17.9.0 | 20.1 | 283 | 23.5 / 16.7 / 33.4 / 300.1 | 11 / 2 | 833 | 234 / 364 |
+| Dekabristov control | 20.9 | 93 | 21.4 / 16.7 / 33.4 / 233.4 | 12 / 4 | 1022 | 364 / 568 |
+| Dekabristov 17.9.0 | 25.0 | 137 | 34.9 / 33.3 / 50.1 / 350.2 | 25 / 5 | 938 | 401 / 579 |
+| Morskie Vorota control | 13.7 | 60 | 17.6 / 16.7 / 16.8 / 250.0 | 3 / 2 | 665 | 245 / 439 |
+| Morskie Vorota 17.9.0 | 15.5 | 173 | 18.0 / 16.7 / 16.8 / 249.9 | 4 / 3 | 673 | 250 / 457 |
+| Narvsky control | 18.9 | 162 | 20.3 / 16.7 / 33.4 / 266.8 | 11 / 4 | 848 | 395 / 476 |
+| Narvsky 17.9.0 | 18.2 | 162 | 21.5 / 16.7 / 33.4 / 266.7 | 12 / 4 | 799 | 450 / 616 |
+| Avtovo control | 18.5 | 286 | 22.4 / 16.7 / 33.4 / 150.0 | 10 / 1 | 941 | 448 / 542 |
+| Avtovo 17.9.0 | 17.8 | 284 | 18.4 / 16.7 / 33.3 / 166.7 | 3 / 1 | 909 | 413 / 518 |
+| Okrug 65 control | 19.7 | 219 | 29.2 / 33.3 / 50.0 / 150.0 | 15 / 4 | 764 | 499 / 621 |
+| Okrug 65 17.9.0 | 19.3 | 198 | 28.3 / 33.2 / 50.1 / 199.9 | 27 / 2 | 759 | 491 / 565 |
+| Komendantsky control | 18.8 | 145 | 26.8 / 16.8 / 33.5 / 233.3 | 11 / 3 | 832 | 642 / 603 |
+| Komendantsky 17.9.0 | 18.2 | 149 | 29.6 / 33.3 / 50.0 / 250.0 | 15 / 4 | 782 | 701 / 776 |
+| Islands control | 24.0 | 286 | 20.3 / 16.7 / 33.4 / 149.9 | 7 / 1 | 960 | 414 / 610 |
+| Islands 17.9.0 | 24.9 | 284 | 18.6 / 16.7 / 33.3 / 166.7 | 1 / 1 | 887 | 385 / 656 |
+
+All twenty runs loaded the expected bake revision, streamed with zero failures and entered the car at the specified road start. The ten release means range from 18.0 to 37.9 ms. Palace and Dekabristov exceeded the 33.3 ms target. Gavan, Morskoy, Dekabristov, Morskie Vorota, Narvsky and Komendantsky each had a winter frame of at least 249 ms. The Palace endpoints match visually and in distance. Morskoy, Avtovo and Islands also completed approximately 284 m on both builds.
+
+Moving traffic changed some of the drives. In Dekabristov the control crashed after 93 m and winter reached 137 m. The Dvinskaya Street drives covered 60 and 173 m. On Bolshoy Prospect both cars stopped among traffic after about 100 m. In a separate headless winter test with the same car and the static colliders, eight seconds of throttle permitted 261 m in Palace and 282 m on each of the nine other routes. The full-render results above include traffic.
+
+The Palace and Dekabristov pairs were repeated from the same poses on frozen copies of both builds. Gavan switched to Gavanskaya Street at `-6086.529,528.006,14.9453`, where both cars drove 280–281 m. All six runs loaded the expected revisions and streamed with zero failures.
+
+| Repeat or alternate road | Load (s) | Distance (m) | Frame mean / median / p95 / max (ms) | Frames >40 / >80 ms | Mean draws | JS heap / backing storage (MiB, CDP) |
+|---|---:|---:|---|---:|---:|---:|
+| Palace control | 44.2 | 270 | 48.9 / 50.0 / 83.3 / 116.7 | 114 / 11 | 1387 | 531 / 1464 |
+| Palace 17.9.0 | 54.6 | 269 | 46.6 / 49.9 / 66.8 / 100.1 | 102 / 8 | 1384 | 522 / 1491 |
+| Dekabristov control | 26.0 | 92 | 40.0 / 33.3 / 66.7 / 300.0 | 52 / 9 | 1015 | 342 / 498 |
+| Dekabristov 17.9.0 | 26.7 | 136 | 31.5 / 33.3 / 50.0 / 333.3 | 16 / 5 | 933 | 387 / 579 |
+| Gavan control | 31.2 | 280 | 33.7 / 33.3 / 50.0 / 266.7 | 37 / 3 | 895 | 304 / 438 |
+| Gavan 17.9.0 | 29.3 | 281 | 38.9 / 33.4 / 50.1 / 250.1 | 66 / 3 | 894 | 394 / 666 |
+
+Palace ranged from 32.7 to 48.9 ms in 17.8.0 and 37.9 to 46.6 ms in 17.9.0. The cars covered 268–270 m with 1,384–1,396 mean draws. The release was slower in the first pair and faster in the repeat. Dekabristov also reversed order, averaging 21.4–40.0 ms in summer and 31.5–34.9 ms in winter. In both pairs the summer car ran only 92–93 m and winter reached 136–137 m. In Gavan both street pairs had a higher winter mean, by 4.2 ms on Bolshoy Prospect and 5.2 ms on Gavanskaya Street.
+
+Separate Chrome DevTools CPU profiles sampled both revisions while driving on Odoevskogo Street and Gavanskaya Street. These profiles ran after the timed pairs and each collected about ten seconds including profiler overhead. On Odoevskogo the renderer sampled 3.71 s in summer and 3.90 s in winter. The first use of a Three.js WebGL program blocked in `getProgramInfoLog` for 158 ms total in summer and 397 ms in winter. Winter recorded three continuous samples of 113–130 ms there. Car-damage deformation and buffer updates took 115 ms and 250 ms respectively. The timed winter drives both recorded a 333–350 ms frame. The sampled program numbers and the remaining portion of the timed stalls are unresolved.
+
+On Gavanskaya, CPU time in the traffic takeover module rose from 0.79 s to 1.28 s. Traffic registration and vehicle-state synchronization accounted for most of that module’s samples. Total simulation updates rose from 2.60 s to 3.08 s and renderer CPU time fell from 3.94 s to 3.52 s. The fixed endpoint of the timed pair showed 1.75 million triangles in summer and 2.34 million in winter, with 895 and 894 mean draw calls during motion. Profiling measured CPU time. The GPU cost of the additional endpoint geometry remains unmeasured.
+
+Reproduce from each revision with `node tools/drive-bench.mjs --area <id> --q medium --seconds 8 --start "<x,z,yaw-degrees>" --params season=<season> --json --diagnostics`. The road starts below are world metres and heading in degrees.
+
+| Area ID | Road | x, z, yaw |
+|---|---|---|
+| `palace` | Nevsky Prospect | `498.2286,135.1625,76.0322` |
+| `gavan` | Bolshoy Prospect V.O. | `-5965.379,497.786,119.9782` |
+| `morskoy` | Nakhimova Street | `-7383.99,-813.598,-64.8127` |
+| `dekabristov` | Odoevskogo Street | `-6418.418,-1707.734,73.8632` |
+| `morskie-vorota` | Dvinskaya Street | `-6410.622,2880.596,154.1465` |
+| `narvsky` | Staro-Petergofsky Prospect | `-4297.483,3458.390,-36.6361` |
+| `avtovo` | Stachek Prospect | `-5063.6,7260.4,8.4` |
+| `okrug65` | Optikov Street | `-6736.306,-7339.841,-104.5966` |
+| `komendantsky` | Komendantsky Prospect | `-5309.128,-8714.221,30.7211` |
+| `islands` | Ryukhina Street | `-5163.95,-4261.441,4.894` |
+
 ## 2026-11-27 — Winter in Sampson, Kolomna and Moskovskaya (17.8.0)
 
 Eight seconds of full throttle in Edge at 1280 × 720, Medium quality, on an RTX 3090 Ti. The control uses the source and all packaged area products of `ac936e63` (17.7.1). Palace opens in winter in both versions. The other three pairs compare the old summer default with the new winter default. Each pair uses the same road, heading and input.
