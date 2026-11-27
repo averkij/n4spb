@@ -26,7 +26,7 @@ export const MODULES = [
   'wildlife',
   'drive',
 ];
-export const LABELS = { kartingNarvskaya: 'Картодром «Пит-Стоп Нарвская»', landmarksNarvsky:'Нарвские ворота и Дворец культуры имени Горького', coastalBridges:'Мосты Нарвского района', drive:'Машина и катера' };
+export const LABELS = { landmarksBaltic: 'Вестибюль станции «Балтийская»', kartingNarvskaya: 'Картодром «Пит-Стоп Нарвская»', landmarksNarvsky:'Нарвские ворота и Дворец культуры имени Горького', coastalBridges:'Мосты Нарвского района', drive:'Машина и катера' };
 export const NAMES = { place:'Санкт-Петербург',placeEn:'Saint Petersburg',square:'площадь Стачек',squareEn:'Stachek Square',station:'Нарвская',stationEn:'Narvskaya',streets:{nevsky:'проспект Стачек',fontanka:'набережная реки Екатерингофки',moika:'Бумажная улица',griboedov:'Промышленная улица'} };
 export const SQUARE = { x:-4329.2,z:3510.4,name:NAMES.square,nameEn:NAMES.squareEn };
 export const OBELISK = { x:-4329.2,z:3510.4,h:31 };

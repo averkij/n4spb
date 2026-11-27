@@ -41,6 +41,7 @@ export const MODULES = [
   "drive"
 ];
 export const LABELS = {
+  landmarksKamennoostrovsky: 'Дом мод и вестибюль станции «Петроградская»',
   landmarksTroitskaya: 'Соборная мечеть',
   landmarksFortress: 'Петропавловская крепость',
   landmarksKronverk: 'Кронверк и Артиллерийский музей',

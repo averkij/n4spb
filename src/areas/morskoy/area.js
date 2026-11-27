@@ -63,6 +63,7 @@ export const MODULES = [
 ];
 /** Loading-screen words that differ from the strip's (main.js LABELS is the fallback for the rest). */
 export const LABELS = {
+  landmarksPrimorskaya: 'Вестибюль станции «Приморская»',
   landmarksDekabristov: 'Сквер Александра Володина',
   landmarksMarineFacade: 'Морской фасад, Golden City',
   // ---

@@ -43,6 +43,7 @@ export const MODULES = [
   "drive"
 ];
 export const LABELS = {
+  landmarksKronverk: 'Вестибюль станции «Горьковская»',
   landmarksTroitskaya: 'Троицкая площадь и сквер',
   grottoPool: 'Пруд у грота в Александровском парке',
   landmarksAurora: 'Крейсер «Аврора»',

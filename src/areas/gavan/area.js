@@ -79,6 +79,7 @@ export const MODULES = [
 ];
 /** Loading-screen words that differ from the strip's (main.js LABELS is the fallback for the rest). */
 export const LABELS = {
+  landmarksPrimorskaya: 'Вестибюль станции «Приморская»',
   landmarksGavan: 'Гавань: Кроншпицы, Шкиперский проток и мост, Гаванский городок, церковь «Милующая»',
   // ---
   landmarksPribaltiyskaya: 'Прибалтийская, памятник Петру I, крейсер «Киров»',
