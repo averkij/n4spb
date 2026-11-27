@@ -424,7 +424,9 @@ const DEG = Math.PI / 180;
  *   poses  { coupe, truck, lada, roadster: { x, z, yaw (radians; 0 faces +Z, 99 deg = east; tools/area-garage-check.mjs measures the nearest point of the footprint to the driven lane) } }  a car without a pose is not built
  *   spawn  { x, z, yaw }  the default place of the first car (drive.js SPAWN)
  */
+import { KRONSPITZ_DOCK } from '../west-moorings.js';
 export const GARAGE = {
+  boats: [KRONSPITZ_DOCK],
   poses: {
     lada: { x: -6012, z: 506, yaw: 120 * DEG },
   },

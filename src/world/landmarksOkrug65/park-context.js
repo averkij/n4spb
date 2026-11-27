@@ -11,7 +11,7 @@ export { inPark, inBeach, treeReject, tuftReject, pavedRings } from './park-hook
  * replaced by a giant rectangular sand plane or an off-map collision wall. */
 export function drawBeach(ctx) {
   const sand = flatSurface(ctx, BEACHES.flatMap(b => b.polys), {
-    name: 'okrug65-mapped-sand-beach', color: '#c4b38f', y: 0.013,
+    name: 'okrug65-mapped-sand-beach', color: ctx.season === 'winter' ? '#d2d7d6' : '#c4b38f', y: 0.013,
     cuts: [...BEACH_GROUND_HOLES.map(o => Array.from({ length: o.length / 2 }, (_, i) => [o[i * 2], o[i * 2 + 1]])), ...WATERFRONT_OWNER_WATER_RINGS.map(w => w.ring)],
   });
   return sand + buildWaterfront(ctx);

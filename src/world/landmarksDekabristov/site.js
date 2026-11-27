@@ -24,8 +24,11 @@ export function buildSite(K, S) {
   // ---- the floor: a splat decal (leaf litter, goutweed, moss, mown lawn) over the whole polygon
   if (S.floor !== false) {
     const rx = S.ring.map((q) => q[0]), rz = S.ring.map((q) => q[1]);
-    const mask = makeMask([Math.floor(Math.min(...rx) / 3) * 3 - 6, Math.floor(Math.min(...rz) / 3) * 3 - 6, Math.ceil(Math.max(...rx) / 3) * 3 + 6, Math.ceil(Math.max(...rz) / 3) * 3 + 6], { zoneAt: S.zoneAt || (() => 'C'), lawnAt: S.lawnAt });
-    const mat = makeFloorMaterial(ctx, mask, makeFloorTextures(ctx), S.key);
+    let mat=M.lawn;
+    if (ctx.season !== 'winter') {
+      const mask = makeMask([Math.floor(Math.min(...rx) / 3) * 3 - 6, Math.floor(Math.min(...rz) / 3) * 3 - 6, Math.ceil(Math.max(...rx) / 3) * 3 + 6, Math.ceil(Math.max(...rz) / 3) * 3 + 6], { zoneAt: S.zoneAt || (() => 'C'), lawnAt: S.lawnAt });
+      mat = makeFloorMaterial(ctx, mask, makeFloorTextures(ctx), S.key);
+    }
     fillPolyFine(P, mat, S.ring, 0.022, { maxEdge: 22, tile: 6 });
   }
   // ---- the alleys: streets draws no way that groups.js claims, the module lays its own ribbons (asphalt / paving / gravel by the surface tag)

@@ -12,6 +12,7 @@
 //  Slots of this area: landmarksMarineFacade (BERTH_RINGS, PAVED_RINGS, the KEEP_OUT boxes of the two liners), landmarksPribaltiyskaya (PAVED_RINGS: the hotel platform and plaza, the Kirov platform), bridgesMo
 //  (the stair pits of the Shipbuilders' and the 3rd / 4th Smolensky bridges: bridges/pits.js; a new file bridges/groups-mo.js with its own `mine` filter, bridges/groups-vo.js keeps the Nalichny pits).
 // ============================================================================
+import { VOLODIN_PAVING } from '../../world/landmarksDekabristov/groups.js';
 import * as BRIDGES from '../../world/bridges/groups-vo.js';      // the stair pits of the Nalichny Bridge (bridges/pits.js): the bridge lies in the overlap with Vasilyevsky, which draws the same pits
 // ---
 import * as MARINEFACADE from '../../world/landmarksMarineFacade/groups.js';      // the berth apron, the helipad, forecourts and Mayak plazas (PAVED_RINGS), the two liners (KEEP_OUT)
@@ -23,6 +24,7 @@ const BRIDGES_MO = MO_RINGS(['korablestroiteley-', 'smol3-', 'smol4-'], { cuttin
 // ---
 
 const SOURCES = [
+  { module: 'landmarksDekabristov', ns: { PAVED_RINGS: [VOLODIN_PAVING] } },
   { module: 'bridges', ns: BRIDGES },      // the four corner stairs of the Nalichny Bridge (water rings, keep-outs, paved ground)
   // ---
   { module: 'landmarksMarineFacade', ns: MARINEFACADE },

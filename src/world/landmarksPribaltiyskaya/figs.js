@@ -63,18 +63,6 @@ export const creatorsWave = () => cached('lmprib-wave', () => {
   }
   return S.finish({});
 });
-export const creatorsShip = () => cached('lmprib-ship', () => {
-  const S = new Sculpt({ detail: 1 });
-  S.tube('main', [[0, 0, -0.3], [0, 0.0, 0.0], [0, 0.04, 0.28]], [[0.03, 0.03], [0.05, 0.045], [0.02, 0.03]], { seg: 6, per: 3 });
-  for (const z of [-0.14, 0.02, 0.17]) { S.tube('main', [[0, 0.03, z], [0, 0.34, z]], [[0.006, 0.006]], { seg: 4, per: 2 }); S.blob('main', [0, 0.2, z + 0.02], [0.1, 0.12, 0.012], { w: 6, h: 4 }); }
-  return S.finish({});
-});
-export const creatorsCup = () => cached('lmprib-cup', () => {
-  const S = new Sculpt({ detail: 1 });
-  S.tube('main', [[0, 0, 0], [0, 0.07, 0], [0, 0.13, 0], [0, 0.2, 0]], [[0.02, 0.02], [0.012, 0.012], [0.05, 0.05], [0.06, 0.06]], { seg: 10, per: 3 });
-  return S.finish({});
-});
-
 // ------------------------------------------------------------------------------------------------ Admiral Nakhimov
 export const nakhimovFig = () => cached('lmprib-nakhimov', () => extend(human({
   detail: 1.0, body: { muscle: 0.25, bulk: 1.05, shoulders: 1.06 },

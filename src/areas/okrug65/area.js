@@ -70,7 +70,9 @@ export const WATER = { farCenter: [-8100, -5300], farRadius: 6500, farSources: [
   isolatedLevels: { moat: { water: -1.2, bed: -2.4 } },
   riverKeys: Object.fromEntries(RIVER.map(r => [r.name, r.key || 'neva'])) };
 export const ZONES = { peopleDensity: { west: { scale: 1, platforms: 1, off: true }, mars: { scale: 1, zones: [], off: true } }, peopleHot: [[-8370, -5465, 1, 40]], crowHaunts: [], farCentres: [{ x: -7000, z: -6500, bias: 500 }] };
-export const GARAGE = { poses: { lada: { x: -7991, z: -5488, yaw: -.25 } }, spawn: { x: -7991, z: -5488, yaw: -.25 }, boats: [{ id: 'boat-okrug65', dock: 'park300-beach', x: -8500, z: -5100, yaw: Math.PI / 2 }] };
+// Parallel to the broad sand ramp on the Park 300 shore (r2186246-151).
+export const GARAGE = { poses: { lada: { x: -7991, z: -5488, yaw: -.25 } }, spawn: { x: -7991, z: -5488, yaw: -.25 },
+  boats: [{ id: 'boat-okrug65', dock: 'park300-beach', x: -8348.66, z: -5307.83, yaw: .8961 }] };
 export const PRUNE_SERVICES = ['city', 'landmarksLakhta', 'landmarksThreeFlags', 'landmarksOkrug65'];
 export const HOOKS = { deckServices: ['waterfrontOkrug65', 'coastalBridges'], waterBodies: () => FOUNTAIN_WATER_BODIES, groundHoles: () => BEACH_GROUND_HOLES, treeReject: () => treeReject, tuftReject: () => tuftReject };
 export const PAVED_RINGS = [{ module: 'landmarksOkrug65', rings: [...PARK_PAVED, ...WATERFRONT_PAVED_RINGS] }];

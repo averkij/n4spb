@@ -250,9 +250,10 @@ export function buildCourse(ctx, root) {
   ribbon(floor, paving, offsets(paving, false), () => -1.45, () => 1.45, .022, () => 0);
   const lawn = new MeshBuilder();
   addCap(lawn, { o: COURSE_LAWN.flat(), h: [] }, () => .012);
-  mesh(root, lawn, ctx.mat.toon('#64794d'), 'narvskaya-lawn');
+  const winter = ctx.season === 'winter';
+  mesh(root, lawn, ctx.mat.toon(winter ? '#dce4e5' : '#64794d'), 'narvskaya-lawn');
   mesh(root, pavingPad(), ctx.mat.toon('#625f65'), 'pit-paddock');
-  mesh(root, grass, ctx.mat.toon('#63784c'), 'circuit-graded-verges');
+  mesh(root, grass, ctx.mat.toon(winter ? '#cbd7db' : '#63784c'), 'circuit-graded-verges');
   mesh(root, floor, ctx.mat.toon('#ada192'), 'kirovets-walking-approach');
   mesh(root, white, ctx.mat.toon('#e8e5d8'), 'narvskaya-whites');
   mesh(root, red, ctx.mat.toon('#c4443c'), 'narvskaya-red-kerbs');

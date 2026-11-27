@@ -6,21 +6,19 @@ import { VB, mtx } from './traffic/vb.js';
 import { buildPalaceFestival } from './winter-palace-square.js';
 import { buildDistrictSquares } from './winter-district-squares.js';
 
-const districts = new Set([
-  'palace', 'smolny', 'vladimirsky', 'admiralty', 'semyonovsky', 'aptekarsky',
-  'finlyandsky', 'kronverk', 'vasilyevsky',
-  'sampson', 'kolomna', 'moskovskaya',
-]);
+function hasSeasons(area) {
+  return area && !area.parked && area.status !== 'planned';
+}
 const storageKey = 'piter.season';
 export function seasonFor(area, params) {
-  if (!districts.has(area) || params.has('bake')) return 'summer';
+  if (!hasSeasons(area) || params.has('bake')) return 'summer';
   let saved;
   try { saved = localStorage.getItem(storageKey); } catch { /* private browsing */ }
   return (params.get('season') || saved) === 'summer' ? 'summer' : 'winter';
 }
 
 export function installSeasonControl(anchor, area, season) {
-  if (!anchor || !districts.has(area)) return;
+  if (!anchor || !hasSeasons(area)) return;
   const select = document.createElement('select');
   select.id = 'season';
   select.className = 'chip';

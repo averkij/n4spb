@@ -7,6 +7,7 @@
 // 6 degrees; far trees outside the view cone (half the horizontal field of view + 18 degrees) are left out, like environment/trees.js.  A trunk collider for every tree.
 // plantForest(K, list): list = [{ x, z, fam, s (crown scale), sy, yaw, rgb: [r, g, b], tr (collider radius) }].
 import * as THREE from 'three';
+import { winterForest } from '../west-forest-winter.js';
 import { createTreeInstanceWriter } from '../environment/tree-instances.js';
 import { SPECIES, canopyGeometry, trunkGeometry, envelopeOf, farBlobGeometry, stemGeometry } from './treegeo.js';
 import { canopyMaterial, coniferMaterial, trunkMaterial } from './leafmat.js';
@@ -42,6 +43,7 @@ const FOLD = { limeB: 'limeA', birchB: 'birchA', spruceB: 'spruceA' };
 
 export function plantForest(K, list, name = 'lmsmol-forest') {
   const ctx = K.ctx, ph = ctx.physics, T = THREE;
+  const winter = winterForest(ctx, SPECIES);
   const group = new T.Group(); group.name = name;
   const matLobe = canopyMaterial(ctx), matTier = coniferMaterial(ctx), bark = {};
   for (const t of list) if (FOLD[t.fam]) t.fam = FOLD[t.fam];
@@ -55,9 +57,10 @@ export function plantForest(K, list, name = 'lmsmol-forest') {
   };
   for (const [fam, items] of Object.entries(fams)) {
     const F = SPECIES[fam], n = items.length, mat = F.kind === 'tiers' ? matTier : matLobe;
-    C0[fam] = mk(canopyGeometry(fam, 0), mat, n, `${name}-${fam}-0`, { cast: true });
-    C1[fam] = mk(canopyGeometry(fam, 1), mat, n, `${name}-${fam}-1`, { cast: true });
-    const tg = trunkGeometry(fam, 0);
+    const bare = winter?.bare(fam);
+    C0[fam] = mk(bare ? winter.near(fam,0) : canopyGeometry(fam, 0), bare ? winter.material : mat, n, `${name}-${fam}-0`, { cast: true });
+    C1[fam] = mk(bare ? winter.near(fam,1) : canopyGeometry(fam, 1), bare ? winter.material : mat, n, `${name}-${fam}-1`, { cast: true });
+    const tg = bare ? null : trunkGeometry(fam, 0);
     if (tg) { const bm = bark[F.bark] || (bark[F.bark] = barkMat(ctx, F.bark)); const tm = mk(tg, bm, n, `${name}-trunk-${fam}-0`, { cast: true, color: false }); tm.instanceMatrix = C0[fam].instanceMatrix; T0[fam] = tm; }
   }
   const far2 = mk(farBlobGeometry(2), matLobe, total, `${name}-far2`), far3 = mk(farBlobGeometry(3), matLobe, total, `${name}-far3`);
@@ -82,10 +85,13 @@ export function plantForest(K, list, name = 'lmsmol-forest') {
   }
   // Near crowns, far ellipsoids and stems each have one immutable transform per
   // tree. Keep their opaque instance slots until LOD/cone membership changes.
-  const nearWriter = createTreeInstanceWriter(list);
+  const nearWriter = createTreeInstanceWriter(list, winter ? t => ({rgb:winter.tint(t)}) : null);
   const farWriter = createTreeInstanceWriter(list, t => {
     const e = env[t.fam], sy = t.sy ?? t.s;
-    return { sx: t.s * e.r[0], sy: sy * e.r[1], sz: t.s * e.r[2], y: e.c[1] * sy };
+    if (winter?.bare(t.fam)) {
+      const F=SPECIES[t.fam];return { sx:t.s*F.R, sy:sy*F.H, sz:t.s*F.R, rgb:winter.tint(t) };
+    }
+    return { sx: t.s * e.r[0], sy: sy * e.r[1], sz: t.s * e.r[2], y: e.c[1] * sy, rgb:winter ? winter.tint(t) : t.rgb };
   });
   const stemWriter = createTreeInstanceWriter(list, t => {
     const sm = STEM[t.fam] || [0, 0], F = SPECIES[t.fam], sx = F.trunk * sm[1] * t.s;
@@ -94,13 +100,17 @@ export function plantForest(K, list, name = 'lmsmol-forest') {
   const nearBuckets = {};
   for (const f in fams) nearBuckets[f] = [nearWriter.bucket(C0[f]), nearWriter.bucket(C1[f])];
   const farBuckets = [farWriter.bucket(far2), farWriter.bucket(far3)], stemBucket = stemWriter.bucket(stem);
+  const bareBuckets = winter && [2,3].map(lod => {
+    const mesh=mk(winter.far(lod),winter.material,total,name+'-bare-far'+lod);
+    ctx.noOutline(mesh);return farWriter.bucket(mesh);
+  });
   function move(i, l) {
     if (state[i] === l) return;
     state[i] = l;
     const fam = list[i].fam;
     nearWriter.assign(l >= 0 && l <= 1 ? nearBuckets[fam][l] : -1, i);
-    farWriter.assign(l >= 2 ? farBuckets[l - 2] : -1, i);
-    stemWriter.assign(l === 1 && STEM[fam]?.[0] > 0 ? stemBucket : -1, i);
+    farWriter.assign(l >= 2 ? (winter?.bare(fam) ? bareBuckets : farBuckets)[l - 2] : -1, i);
+    stemWriter.assign(l === 1 && !winter?.bare(fam) && STEM[fam]?.[0] > 0 ? stemBucket : -1, i);
   }
   function assign(cx, cz) {
     for (let i = 0; i < list.length; i++) {

@@ -155,7 +155,7 @@ export const ZONES = {
 export const GARAGE = {
   poses: { lada: { x: -5090, z: 7295, yaw: 0 } },
   spawn: { x: -5090, z: 7295, yaw: 0 },
-  boats: [{ id: 'boat-avtovo', dock: 'avtovo-harbour', x: -6772, z: 7492, yaw: -0.6 }],
+  boats: [{ id: 'boat-avtovo', dock: 'avtovo-harbour', x: -6772.39, z: 7495.98, yaw: 2.9343 }],
 };
 export const PRUNE_SERVICES = ['city', 'landmarksAvtovoMetro', 'landmarksAvtovoSites'];
 const inSights = (x, z) => [

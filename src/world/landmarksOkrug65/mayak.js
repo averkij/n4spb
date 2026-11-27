@@ -7,6 +7,8 @@ import { SITES } from './sites.js';
 import { ringFromFlat } from '../lib/massing.js';
 import { knockInstances } from '../lib/knock-inst.js';
 import { liveFountain } from '../lib/live-fountain.js';
+import { sculptureGeometry } from '../lib/sculpture-geometry.js';
+import { detail } from './lighthouse-collar-mesh.js';
 
 const X = -8415.3, Z = -5470.7, ROT = -0.252;
 function buckets(P) {
@@ -33,11 +35,7 @@ function lighthouse(K) {
       C.cyl(M.darkGranite, [0, y, 0], [0, y + 0.025, 0], r + 0.008, r + 0.008, 16, false);
     }
     C.cyl(M.darkGranite, [0, top + 0.02, 0], [0, top + 0.58, 0], r1 * 0.89, r1 * 0.89, 16);
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI / 4;
-      C.cyl(M.granite, [Math.cos(a) * r1 * 0.86, top, Math.sin(a) * r1 * 0.86], [Math.cos(a) * r1 * 1.1, top + 0.61, Math.sin(a) * r1 * 1.1], 0.105, 0.105, 5);
-    }
-    C.cyl(M.granite, [0, top + 0.52, 0], [0, top + 0.72, 0], r1 * 1.22, r1 * 1.3, 16);
+    C.geo(M.granite, sculptureGeometry(detail.collar), 0,top,0, 0,0,0, r1,1,r1);
   }
   C.cyl(M.granite, [0, 21.08, 0], [0, 21.28, 0], 1.2, 1.2, 20);
   C.cyl(M.granite, [0, 21.28, 0], [0, 21.55, 0], 1.2, 0.88, 20);
@@ -92,7 +90,9 @@ export function buildMayak(K) {
     nozzles.push({x:a[0],y:.113,z:a[1],height:1.5+(j%3)*.22,width:.035,target:[b[0],0,b[1]]});
     P.cyl(M.steel, [x, 0.08, z], [x, 0.22, z], 0.1, 0.08, 6);
   }
-  liveFountain(ctx,{id:'r5255799',x:X,z:Z,y:.077,r:43,nozzles,far:400});
+  const basin = fountain.polys[0];
+  liveFountain(ctx,{id:'r5255799',x:X,z:Z,y:.077,r:43,nozzles,far:400,
+    snowRing:ringFromFlat(basin.o),snowHoles:basin.h.map(ringFromFlat)});
   P.pop(); lighthouse(K); benches(K);
   service.photoSpots.push({ name: 'Маяк и фонтан Парка 300-летия', x: X + 15, z: Z + 35, yaw: 23, pitch: 12 });
   service.parts.mayak = { triangles: P.tris - start, waterOpen: true };

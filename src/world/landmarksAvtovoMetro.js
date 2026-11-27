@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { Parts, archPath } from './landmarksD/kit.js';
 import { registerLOD } from '../core/spatial.js';
+import { modelParts as trophyModel } from './landmarksAvtovo-trophy.js';
 
 export const OWNS_GROUPS = true;
 
@@ -112,11 +113,9 @@ function dome(P, M, x, z, base, radius, rise) {
 function roofTrophy(P, M, x, z) {
   // Silhouette of the green bronze shield-and-laurel corner sculpture.
   P.box(M.green, x - .75, x + .75, 10.9, 11.18, z - .57, z + .57);
-  P.cyl(M.green, [x, 11.1, z], [x, 12.35, z], .36, .21, 8);
-  P.cyl(M.green, [x, 12.32, z], [x, 12.48, z], .55, .55, 8);
-  for (const s of [-1, 1]) {
-    P.cyl(M.green, [x + s * .12, 11.35, z], [x + s * .85, 12.35, z], .18, .07, 6);
-    P.cyl(M.green, [x + s * .57, 11.8, z], [x + s * 1.06, 12.0, z], .1, .025, 5);
+  for(const [name,geo] of trophyModel()){
+    P.geo(name==='edge'?M.patina:M.green,geo,x,11.03,z,0,0,0,1.15,1.13,1);
+    geo.dispose();
   }
 }
 
@@ -300,7 +299,7 @@ export function build(ctx) {
     roof: ctx.mat.toon('#a7a69c', { paint: .02 }),
     metal: ctx.mat.toon('#a7b2b6', { paint: .015 }),
     seam: ctx.mat.toon('#697b81', { paint: .01 }),
-    green: ctx.mat.toon('#3e6047', { paint: .02 }),
+    green: ctx.mat.toon('#3e6047', { paint: .02 }), patina:ctx.mat.toon('#67806e',{paint:.02}),
     door: ctx.mat.toon('#28393b', { paint: .01 }),
     window: ctx.mat.toon('#34464a', { paint: .01 }),
     brass: ctx.mat.toon('#a17d45', { paint: .01 }),

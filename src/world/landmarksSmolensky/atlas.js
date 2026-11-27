@@ -5,6 +5,7 @@
 //             and pale granite.  Faces of a stone cell: FACE = left 78 % (front / back of a slab), STRIP = right 16 % (sides, top);
 //  * a cell never carries readable text, a face or a portrait (user rules: calm place, no invented names).
 // atlas.cells[name] = { u0, v0, du, dv } in texture coordinates (v up: the picture's top row is v = u0 + dv); sizes in px chosen at ~213-270 px per metre (a panel is 1.2 m wide in 256 px).
+import { paintPlotSnow } from '../west-forest-winter.js';
 const TAU = Math.PI * 2;
 const SZ = 2048, PAD = 8;
 export const FACE = [0.0, 0.0, 0.78, 1.0], STRIP = [0.82, 0.05, 0.16, 0.9];
@@ -203,17 +204,17 @@ export function makeAtlas(ctx) {
     g.fillStyle = '#ffd890'; g.beginPath(); g.ellipse(32, 56, 7, 12, 0, 0, TAU); g.fill();
   });
   // flat bed fills (a horizontal card lying on the grave: soil with leaf litter, white marble chips, trimmed lawn, herringbone pavers)
-  def('cSoil', 256, 256, 'alpha', (g, w, h, r) => {
+  def('cSoil', 256, 256, 'alpha', ctx.season === 'winter' ? paintPlotSnow : (g, w, h, r) => {
     g.fillStyle = '#4d3223'; g.fillRect(0, 0, w, h);
     for (let i = 0; i < 160; i++) { g.fillStyle = ['#644432', '#3a2518', '#936f5e', '#7a5a3a', '#c8782a', '#a89040'][(r() * 6) | 0]; g.globalAlpha = 0.5 + r() * 0.5; g.beginPath(); g.ellipse(r() * w, r() * h, 3 + r() * 9, 2 + r() * 5, r() * 3, 0, TAU); g.fill(); }
     g.globalAlpha = 1; for (let i = 0; i < 12; i++) { g.fillStyle = '#6c8b54'; g.beginPath(); g.ellipse(r() * w, r() * h, 5, 3, r() * 3, 0, TAU); g.fill(); }
   });
-  def('cGravel', 256, 256, 'alpha', (g, w, h, r) => {
+  def('cGravel', 256, 256, 'alpha', ctx.season === 'winter' ? paintPlotSnow : (g, w, h, r) => {
     g.fillStyle = '#d8d6d0'; g.fillRect(0, 0, w, h);
     for (let i = 0; i < 700; i++) { const v = 190 + r() * 60 | 0; g.fillStyle = `rgb(${v},${v - 2},${v - 8})`; g.beginPath(); g.ellipse(r() * w, r() * h, 2 + r() * 4, 1.5 + r() * 3, r() * 3, 0, TAU); g.fill(); }
     for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(80,70,60,0.35)'; g.beginPath(); g.arc(r() * w, r() * h, 2 + r() * 3, 0, TAU); g.fill(); }
   });
-  def('cGrass', 256, 256, 'alpha', (g, w, h, r) => {
+  def('cGrass', 256, 256, 'alpha', ctx.season === 'winter' ? paintPlotSnow : (g, w, h, r) => {
     g.fillStyle = '#5f8f2a'; g.fillRect(0, 0, w, h);
     for (let i = 0; i < 900; i++) { g.strokeStyle = ['#7aa24a', '#4f7a2e', '#86ac45', '#6f9a36'][(r() * 4) | 0]; g.lineWidth = 1.5; const x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - 0.5) * 6, y - 5 - r() * 8); g.stroke(); }
     for (let i = 0; i < 14; i++) { g.fillStyle = r() < 0.5 ? '#f2e8a0' : '#f4f2ee'; ball(g, r() * w, r() * h, 2.2); }

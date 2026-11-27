@@ -66,7 +66,7 @@ export function makeMats(ctx) {
     cap: T('#7b5148', { name: 'lmYS-cap', paint: 0.04 }),
     lime: T('#e6e2d8', { name: 'lmYS-lime', paint: 0.03 }),
     gravel: T('#ffffff', { map: gravelTex, name: 'lmYS-gravel', paint: 0.05, polygonOffset: -1 }),
-    hedge: T('#ffffff', { map: hedgeTex, name: 'lmYS-hedge', paint: 0.06 }),
+    hedge: ctx.season === 'winter' ? T('#c1cbc9',{name:'lmYS-hedge-snow',paint:.06}) : T('#ffffff', { map: hedgeTex, name: 'lmYS-hedge', paint: 0.06 }),
     lionDark: T('#2a2724', { name: 'lmYS-lionDark' }),
   };
 }

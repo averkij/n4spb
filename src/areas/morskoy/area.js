@@ -22,6 +22,7 @@
 //    // PORT-ZONES: bridgesMo   -> the BRIDGE_ZONES / BRIDGE_SHADES rows of the bridges that bridgesMo adds (one slot in each table)
 //  and the rings of a module (water pits, keep-outs, paved ground) go to src/areas/morskoy/rings.js (its own protocol, PORT-IMPORT / PORT-SOURCE).
 // ============================================================================
+import { GROUPS_LIST as DEK_GROUPS } from '../../world/landmarksDekabristov/groups.js';
 import { GROUPS_VO } from '../../world/bridges/groups-vo.js';
 import { GROUPS_LIST as G_VOSTATUES } from '../../world/landmarksVOStatues/groups.js';
 import { WATER_RINGS as RINGS_WATER, KEEP_OUT as RINGS_KEEP_OUT, PAVED_RINGS as RINGS_PAVED } from './rings.js';
@@ -49,6 +50,7 @@ export const MODULES = [
   //
   'landmarksPribaltiyskaya', // the Pribaltiyskaya hotel, Peter I, the Creators of the Fleet, the Nakhimov statue, the Kirov memorial, Waterville
   //
+  'landmarksDekabristov', // the shared Volodin park and its fountain across the mouth of the Smolenka
   'landmarksVOStatues', // the monument to all polar explorers (the one piece of the module that stands in this territory, docs/vo-m3.md)
   'bridges',      // the bridges of the area: the Nalichny Bridge and the Novo-Andreevsky footbridge (docs/vo-br.md); the Shipbuilders' and Smolensky bridges of the Smolenka mouth and the WHSD with its crossings (bridgesMo: bridges/groups-mo.js)
   'props',        // benches, bins, kiosks, bus shelters, tourist stalls, billboards, flower baskets
@@ -59,6 +61,7 @@ export const MODULES = [
 ];
 /** Loading-screen words that differ from the strip's (main.js LABELS is the fallback for the rest). */
 export const LABELS = {
+  landmarksDekabristov: 'Сквер Александра Володина',
   landmarksMarineFacade: 'Морской фасад, Golden City',
   // ---
   landmarksPribaltiyskaya: 'Прибалтийская, памятник Петру I, крейсер «Киров»',
@@ -99,6 +102,7 @@ export const STATION = { x: 612, z: 300, facadeBearing: 348, trackBearing: 167, 
 // `['station', ...]` (only those); until then `city` / `environment` / `streets` still draw the claimed objects as a blockout (see lib/claims.js).
 export const GROUPS = {};
 // ---
+GROUPS.landmarksDekabristov = DEK_GROUPS.filter(g => g.key === 'dek-volodin');
 GROUPS.landmarksMarineFacade = G_MARINEFACADE;      // all 8 sub-groups lie inside the territory (docs/gdm-M.md)
 // ---
 GROUPS.landmarksPribaltiyskaya = G_PRIBALTIYSKAYA;      // all six: the hotel, Peter I, the Creators of the Fleet, the Kirov memorial, the Nakhimov statue, Waterville (all 100 % inside the territory)
@@ -351,7 +355,9 @@ const DEG = Math.PI / 180;
  *   poses  { coupe, truck, lada, roadster: { x, z, yaw (radians; 0 faces +Z, 99 deg = east; tools/area-garage-check.mjs measures the nearest point of the footprint from the driven lane) } }  a car without a pose is not built
  *   spawn  { x, z, yaw }  the default place of the first car (drive.js SPAWN)
  */
+import { SMOLENKA_DOCKS } from '../west-moorings.js';
 export const GARAGE = {
+  boats: SMOLENKA_DOCKS,
   poses: {
     lada: { x: -7467, z: -764, yaw: 99 * DEG },
   },

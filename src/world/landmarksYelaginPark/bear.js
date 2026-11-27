@@ -49,7 +49,8 @@ export function build(K) {
     const mx = x + Math.cos(am) * (ri + ro) / 2, mz = z + Math.sin(am) * (ri + ro) / 2;
     if (ctx.L.roadsNear(mx, mz, 0.45).length) continue;
     const q = (r, a) => [x + Math.cos(a) * r, 0.04, z + Math.sin(a) * r];
-    P.quad(M.soil, q(ri, a0), q(ro, a0), q(ro, a1), q(ri, a1), [0, 1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    P.quad(M.snow || M.soil, q(ri, a0), q(ro, a0), q(ro, a1), q(ri, a1), [0, 1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    if (M.snow) continue;
     for (let j = 0; j < 2; j++) {
       const r = ri + 0.25 + (ro - ri - 0.5) * (0.2 + 0.5 * j) + (hash(7, i, j) - 0.5) * 0.12, aa = a0 + (a1 - a0) * (0.25 + 0.25 * j), px = x + Math.cos(aa) * r, pz = z + Math.sin(aa) * r;
       const k = 0.17 + hash(7, i, 10 + j) * 0.08;

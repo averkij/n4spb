@@ -1,3 +1,4 @@
+import { snowGarden } from '../lib/winter-garden.js';
 // landmarksPribaltiyskaya/mats.js - materials of the module (ctx.mat.toon / glass only; every name starts with 'lmprib-').  Colours: docs/research/pribaltiyskaya.md sections 4.2 [C7], 4.4, 5, 6, 8, 9.
 // M.cutouts = alpha cut-outs (no outline pass), M.decals = sheets that lie 2-6 cm in front of a surface (polygonOffset), M.glassy = transparent sheets (no outline, no shadow).
 import { makeArt, COL } from './art.js';
@@ -43,6 +44,7 @@ export function makeMats(ctx) {
   same('steel', 'mastGrey'); same('kcap', 'niche'); same('turret', 'turretLit', 'shell'); same('turretDark', 'shellBand'); same('glassDark', 'pavGlass', 'glassBronze');
   same('frame', 'chain', 'fenceBlack'); same('bronzeMask', 'patina', 'bronzeDark');
   M.cutouts = new Set([M.letters, M.frieze, M.nakh]);
+  snowGarden(ctx, M, ['turf'], []);
   M.decals = new Set([M.plate, M.plaza, M.asphalt, M.turf, M.plaque, M.frieze, M.nakh]);
   M.glassy = new Set();
   return M;

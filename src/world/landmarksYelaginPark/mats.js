@@ -98,5 +98,6 @@ export function makeMats(ctx) {
   M.graniteDark = M.granitePink; M.limestoneCap = M.limestone; M.membrane = M.steel; M.concrete = M.steel; M.panel = M.white; M.steelDark = M.dark; M.rubberGreenFloor = M.rubberGreen;
   M.benchWood = M.glulam; M.louvreEdge = M.louvre; M.salviaLeaf = M.hostaA; M.salviaDark = M.salviaTex; M.bloomPink = M.salvia;
   // ---- the figure kit materials (marble, bronze) come from figureMats(ctx) in the parts that use them
+  if (ctx.season === 'winter') M.snow = flat('garden-snow','#dce4e8');
   return M;
 }

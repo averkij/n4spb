@@ -38,10 +38,10 @@ export async function build(K) {
       P.quad(M.graniteGrey, pt(a1, Rin, 0.04), pt(a0, Rin, 0.04), pt(a0, Rin, 0.4), pt(a1, Rin, 0.4), [-Math.cos(am), 0, -Math.sin(am)], [[i + 1, 0], [i, 0], [i, 0.4], [i + 1, 0.4]]);
     }
     P.fan(M.graniteDark, ring(Rin, N).map(([x, z]) => [x - cx, 0.04, z - cz]), [0, 1, 0], (q) => [q[0] / 3, q[2] / 3]);                    // the basin floor
-    P.fan(M.water, ring(Rj, N).map(([x, z]) => [x - cx, 0.3, z - cz]), [0, 1, 0], (q) => [q[0] / 3, q[2] / 3]);                         // the water film
+    if (ctx.season !== 'winter') P.fan(M.water, ring(Rj, N).map(([x, z]) => [x - cx, 0.3, z - cz]), [0, 1, 0], (q) => [q[0] / 3, q[2] / 3]);                         // the water film
     // the floor lights: 24 emissive discs on two rings (colours alternate)
     const L = [M.lightBlue, M.lightRed, M.lightGreen, M.lightWhite];
-    for (let i = 0; i < 24; i++) { const r = i % 2 ? R * 0.74 : R * 0.9, a = i * 2 * Math.PI / 24; G.tube(P, L[i % 4], Math.cos(a) * r, Math.sin(a) * r, 0.04, 0.09, 0.2, 0.16, 8, 1, 1, { capTop: L[i % 4] }); }
+    if (ctx.season !== 'winter') for (let i = 0; i < 24; i++) { const r = i % 2 ? R * 0.74 : R * 0.9, a = i * 2 * Math.PI / 24; G.tube(P, L[i % 4], Math.cos(a) * r, Math.sin(a) * r, 0.04, 0.09, 0.2, 0.16, 8, 1, 1, { capTop: L[i % 4] }); }
     // Live central plume, inner jets and low outer ring; basin geometry stays static.
     const nozzles = [], jet = (x, z, height) => nozzles.push({ x, z, height, width: 0.04, target: [x + 0.12, 0, z] });
     jet(0, 0, 4.5); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; jet(Math.cos(a) * R * 0.45, Math.sin(a) * R * 0.45, 2.0 + (i % 2) * 0.4); }

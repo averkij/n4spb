@@ -113,31 +113,19 @@ export function thighGeo(kind) {
   return G;
 }
 export function shinGeo(kind) {
-  const G = new Geo(), w = kind === 'wide' ? 1.17 : kind === 'jeans' ? 0.92 : 1, len = H.shin - 0.02;
+  const boot = kind === 'boot' || kind === 'wideBoot';
+  const G = new Geo(), w = kind === 'wide' || kind === 'wideBoot' ? 1.17 : kind === 'jeans' ? 0.92 : 1;
+  const len = H.shin - (boot ? .128 : .02);
   if (kind === 'bare') { slotted(G, SK, (g) => g.sphere(0.06, 0.06, 0.06, [0, 0, 0], '#ffffff', 4, null, 2)); limb(G, len, 0.06, 0.04, SK, '#ffffff', 6); }
   else { slotted(G, SA, (g) => g.sphere(0.066 * w, 0.066 * w, 0.066 * w, [0, 0, 0], '#ffffff', 4, null, 2)); limb(G, len, 0.064 * w, kind === 'wide' ? 0.058 : 0.048 * w, SA, '#ffffff', 6); }
-  return G;
-}
-/** origin at the ankle; sole bottom 0.09 below it; toe +Z */
-export function footGeo(kind) {
-  const G = new Geo();
-  if (kind === 'boot') {
-    slotted(G, SB, g => { g.cyl(0.06, 0.056, 0.15, [0, 0.05, 0], '#ffffff', 6); g.box(0.11, 0.09, 0.245, [0, -0.03, 0.055], '#ffffff'); });
-    slotted(G, SC, g => g.box(0.115, 0.024, 0.255, [0, -0.078, 0.056], '#ffffff'));
-  } else if (kind === 'sneaker') {
-    slotted(G, SB, (g) => g.box(0.096, 0.06, 0.26, [0, -0.04, 0.07], '#ffffff'));
-    slotted(G, SC, (g) => g.box(0.102, 0.03, 0.29, [0, -0.075, 0.075], '#ffffff'));
-  } else if (kind === 'flat') {
-    slotted(G, SB, (g) => g.box(0.092, 0.04, 0.24, [0, -0.062, 0.06], '#ffffff'));
-    slotted(G, SC, (g) => g.box(0.094, 0.016, 0.255, [0, -0.082, 0.065], '#ffffff'));
-  } else {
-    slotted(G, SK, (g) => g.box(0.085, 0.035, 0.235, [0, -0.062, 0.06], '#ffffff'));
-    slotted(G, SB, (g) => { g.box(0.092, 0.014, 0.03, [0, -0.045, 0.03], '#ffffff'); g.box(0.092, 0.014, 0.03, [0, -0.048, 0.13], '#ffffff'); });
-    slotted(G, SC, (g) => g.box(0.09, 0.016, 0.26, [0, -0.082, 0.065], '#ffffff'));
+  if (boot) {
+    // The shaft follows the lower leg; only the vamp rolls with the foot.
+    // The trouser terminates inside the cuff, including throughout the swing.
+    addLoft(G, [{y:-H.shin+.008,rx:.040,rz:.046,cz:-.003},
+      {y:-H.shin+.143,rx:.058*w,rz:.061*w,cz:-.003}], SB, '#eadfd8', 6);
   }
   return G;
 }
-
 // ------------------------------------------------------------------ head, faces and hair
 export const FACE_W = 0.19, FACE_H = 0.2;
 export const ATLAS = { cols: 8, rows: 4, cell: 128 };

@@ -86,7 +86,9 @@ const collect=(key)=>OWNERS.flatMap(([owner,g])=>(g[key]||[]).map(w=>({...w,owne
 export const PAVED_RINGS=OWNERS.map(([module,g])=>({module,rings:(g.PAVED_RINGS||[]).map(w=>w.ring||w)}));
 export const WATER = {...WATER_TABLE,dataRings:CONTEXT,skipRiverNames:CONTEXT_NAMES,skipRiverKeys:['malaya-neva'],ownerRings:collect('WATER_RINGS'),bankRings:collect('BANK_RINGS'),keepOut:collect('KEEP_OUT'),naturalShoreRegion:yelaginShoreRegion,slopeReaches:YELAGIN_SLOPES};
 export const ZONES = {peopleDensity:{west:{off:true,scale:1,platforms:1},mars:{off:true,zones:[],scale:1}},peopleHot:[],crowHaunts:[{x:-5140,z:-4250,r:120}],farCentres:[]};
-export const GARAGE = {"poses":{"lada":{"x":-5132,"z":-4250,"yaw":0}},"spawn":{"x":-5132,"z":-4250,"yaw":0},"boats":[{"id":"boat-islands","dock":"islands","x":-5188.672320133853,"z":-4742.703816836817,"yaw":-1.4615027411394266}]};
+// Alongside the lower granite landing on the north bank of Yelagin Island.
+export const GARAGE = {poses:{lada:{x:-5132,z:-4250,yaw:0}},spawn:{x:-5132,z:-4250,yaw:0},
+  boats:[{id:'boat-islands',dock:'islands',x:-5416.34,z:-4769.12,yaw:-1.7914}]};
 export const PRUNE_SERVICES = ["city","landmarksKrestovsky","landmarksYelaginPalace","landmarksYelaginKitchen","landmarksYelaginServices","landmarksYelaginRossi","landmarksYelaginSpits","landmarksYelaginPark","landmarksKamennyPalace","landmarksKamennyChurch","landmarksKamennyTheatre","landmarksKamennyDachasEast","landmarksKamennyDachasWest"];
 import { withFountainKeepouts } from '../fountain-keepout.js';
 import { FOUNTAIN_SITES } from './fountain-rings.js';

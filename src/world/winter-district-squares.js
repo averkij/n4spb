@@ -11,6 +11,9 @@ import { VASILYEVSKY_SQUARES, buildVasilyevskyPlanets } from './winter-vasilyevs
 import { MOSKOVSKAYA_SQUARES, buildMoskovskayaFestival } from './winter-moskovskaya.js';
 import { KOLOMNA_SQUARES, buildKolomnaFestival } from './winter-kolomna.js';
 import { SAMPSON_SQUARES, buildSampsonFestival } from './winter-sampson.js';
+import { NORTHWEST_SQUARES, buildNorthwestFestival } from './winter-northwest.js';
+import { WEST_SQUARES, buildWestFestival } from './winter-west.js';
+import { SOUTHWEST_SQUARES, buildSouthwestFestival } from './winter-southwest.js';
 
 // World coordinates keep installations in the same places on overlapping pages.
 // x, z, fir height; arch/orb placements are independent of the fir footprint.
@@ -25,6 +28,9 @@ const squares = [
   { id: 'tolstoy-square', tree: [-2194, -3699, 8], orbs: [[-2188, -3693], [-2188, -3705]] },
   ...FINLYANDSKY_SQUARES, ...KRONVERK_SQUARES, ...VASILYEVSKY_SQUARES,
   ...SAMPSON_SQUARES, ...KOLOMNA_SQUARES, ...MOSKOVSKAYA_SQUARES,
+  ...NORTHWEST_SQUARES,
+  ...WEST_SQUARES,
+  ...SOUTHWEST_SQUARES,
 ];
 
 const gold = '#ffd483', ice = '#c6edf7', red = '#d64d47';
@@ -152,4 +158,7 @@ export function buildDistrictSquares(ctx, glow, decoratedFir, snowman) {
   buildMoskovskayaFestival(ctx, glow);
   buildKolomnaFestival(ctx, glow);
   buildSampsonFestival(ctx, glow);
+  buildNorthwestFestival(ctx, glow);
+  buildWestFestival(ctx, glow);
+  buildSouthwestFestival(ctx, glow);
 }

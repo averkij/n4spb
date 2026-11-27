@@ -1,3 +1,4 @@
+import { snowGarden } from '../lib/winter-garden.js';
 // landmarksSevkabel/mats.js - materials of the module (ctx.mat.toon / glass only; every name starts with 'lmsevka-').  Colours: docs/research/sevkabel.md sections 4-8.
 // M.cutouts = alpha cut-outs (no outline pass), M.decals = sheets that lie 2-6 cm in front of a surface (polygonOffset), M.glassy = transparent sheets (no outline, no shadow).
 import { makeArt, COL } from './art.js';
@@ -59,6 +60,7 @@ export function makeMats(ctx) {
   alias('roofMem', 'darkRoof'); alias('zinc', 'darkRoof'); alias('steel', 'steelGrey'); alias('steelFrame', 'steelGrey'); alias('bolt', 'black'); alias('insulator', 'black'); alias('ironBlack', 'black'); alias('portHole', 'black');
   alias('brickCap', 'brickDark'); alias('brickChimney', 'brickDark'); alias('trimCream', 'whiteStone'); alias('whiteBox', 'plaster'); alias('copperRoof', 'rustRoof'); alias('lampDisc', 'lampWarm'); alias('zincGrey', 'zincLight'); alias('granite', 'plinthGrey');
   M.cutouts = new Set([M.fence]);
+  snowGarden(ctx, M, ['lawn'], ['gravel']);
   M.decals = new Set([M.lawn, M.slabPath, M.gravel, M.pavers]);
   M.glassy = new Set([M.pyramidGlass]);
   return M;

@@ -79,15 +79,6 @@ export function makeArt(ctx) {
   }, key);
   A.lantEast = lantWin('lantEast', C.roofWhite, '#f6f6f2');
   A.lantWest = lantWin('lantWest', C.lantRed, '#f0eee6');
-  /** the oval window in its cartouche (quad 1.3 x 1.0 m): a recessed panel, a white oval frame, dark glass, a keystone */
-  const oval = (key, bg) => D(128, 100, (g, w, h) => {
-    g.fillStyle = bg; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(4, 4, w - 8, h - 8);
-    g.fillStyle = C.white; g.beginPath(); g.ellipse(w / 2, h * 0.52, w * 0.36, h * 0.36, 0, 0, TAU); g.fill();
-    g.fillStyle = '#3c4950'; g.beginPath(); g.ellipse(w / 2, h * 0.52, w * 0.29, h * 0.28, 0, 0, TAU); g.fill();
-    g.strokeStyle = C.white; g.lineWidth = 2; g.beginPath(); g.moveTo(w / 2, h * 0.24); g.lineTo(w / 2, h * 0.8); g.moveTo(w * 0.22, h * 0.52); g.lineTo(w * 0.78, h * 0.52); g.stroke();
-    g.fillStyle = C.white; g.fillRect(w / 2 - 7, 3, 14, h * 0.18);
-  }, key);
-  A.ovalEast = oval('ovalEast', C.roofWhite); A.ovalWest = oval('ovalWest', '#b8654e');
   /** the bronze plaque (0.5 x 0.7 m): the real wording of the west pavilion, four rivets */
   A.plaqueKron = D(256, 360, (g, w, h) => {
     g.fillStyle = '#2e2b26'; g.fillRect(0, 0, w, h); g.strokeStyle = '#8a7a52'; g.lineWidth = 4; g.strokeRect(8, 8, w - 16, h - 16);

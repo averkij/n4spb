@@ -6,6 +6,7 @@ import { Parts } from '../landmarksD/kit.js';
 import { MeshBuilder, addCap, ringFromFlat, signedArea } from '../lib/massing.js';
 import { registerLOD } from '../../core/spatial.js';
 import { makeLabels } from '../streets/labels.js';
+import { modelParts as doorModel } from './door-model.js';
 
 export const GORKY_ID = 'w42342130';
 export const OWNS_GROUPS = ['narvsky-gorky'];
@@ -119,6 +120,10 @@ export function buildConstructivism(ctx, svc = {}, suppliedRecord = null) {
     // Parts.extrude uses an XY profile, so build the vertical prism directly.
     const points=[[u-.47,v-.05],[u+.47,v-.05],[u+.47,v+.45],[u,v+.7],[u-.47,v+.45]];
     for(let i=0;i<5;i++){const a=points[i],b=points[(i+1)%5];body.quad(M.stucco,[a[0],4.4,a[1]],[b[0],4.4,b[1]],[b[0],21.85,b[1]],[a[0],21.85,a[1]],[b[1]-a[1],0,a[0]-b[0]]);}
+    for(const du of [-.28,0,.28]){
+      const depth=.71-Math.abs(du)*.53;
+      medium.box(M.wood,u+du-.056,u+du+.056,6.42,21.58,v+depth-.065,v+depth+.065);
+    }
   }
   // Paired stair towers: one extra floor, tall vertical glazing and projecting caps.
   // Each tower fans away from the curved centre. Use its own surveyed front
@@ -153,16 +158,18 @@ export function buildConstructivism(ctx, svc = {}, suppliedRecord = null) {
     body.push((a[0]+b[0])/2,0,(a[1]+b[1])/2,rot);body.box(M.stone,-len/2,len/2,3.6,4.35,-.2,2.2);body.pop();
   }
   for(const u of [-12,-7.2,-2.4,2.4,7.2,12])body.box(M.stone,u-.4,u+.4,3.1,3.7,frontV(u),frontV(u)+1.6);
+  const leaves=doorModel(), woodwork={oak:M.wood,moulding:ctx.mat.toon('#b48a4c',{paint:.02}),glass:M.glass,recess:M.shade,brass:ctx.mat.toon('#ba9859',{paint:.02})};
   for(const u of DOORS){
     const v=frontV(u),p=gorkyPoint(u,v);
     // Open wooden door leaves sit along the reveals, leaving a 2.5 m passage.
     for(const side of[-1,1]){
-      medium.box(M.wood,u+side*1.24-.055,u+side*1.24+.055,.08,3.05,v-.85,v+.05);
+      for(const [name,geo] of leaves)fine.geo(woodwork[name],geo,u+side*1.24,.08,v-.40,0,-side*Math.PI/2);
       fine.box(M.stone,u+side*1.44-.12,u+side*1.44+.12,0,3.45,v-.12,v+.13);
     }
     medium.box(M.wood,u-1.25,u+1.25,3.15,3.4,v-.1,v+.1);
     entrances.push({id:GORKY_ID,name:'ДК имени Горького · вход в фойе',x:p.x,z:p.z,rotY:GORKY_FRAME.rot,w:DOOR_WIDTH,open:true});
   }
+  for(const [,geo] of leaves)geo.dispose();
   // Accessible street-level foyer behind the entrance. No artificial pavement step.
   const floor=new MeshBuilder(),front=arc.map(([u,v])=>{const p=gorkyPoint(u,v);return[p.x,p.z];});
   const backLeft=gorkyPoint(arc[arc.length-1][0],-9),backRight=gorkyPoint(arc[0][0],-9);

@@ -1,3 +1,4 @@
+import { snowGarden } from '../lib/winter-garden.js';
 // landmarksGavan/mats.js - materials of the module (ctx.mat.toon only; every name starts with 'lmgavan-').  Colours: docs/research/gavan.md sections 4-10.
 // M.cutouts = alpha cut-outs (no outline pass), M.decals = sheets that lie 1-6 cm in front of a surface (polygonOffset), M.glassy = transparent sheets (no outline, no shadow).
 import { makeArt, COL } from './art.js';
@@ -15,7 +16,7 @@ export function makeMats(ctx) {
     plinth: flat('plinth', C.plinth, { paint: 0.05 }), roofWhite: flat('roofWhite', C.roofWhite, { paint: 0.02 }), verdi: flat('verdi', C.verdi, { paint: 0.03, emissive: '#0b1c16', emissiveIntensity: 0.2 }), lantRed: flat('lantRed', C.lantRed, { paint: 0.04 }),
     glassDark: flat('glassDark', '#2d373b', { paint: 0 }), iron: flat('iron', C.iron, { paint: 0.01 }), ironRail: flat('ironRail', C.rail, { paint: 0.01 }), steel: sheet('steelGalv', A.steelGalv, { paint: 0.02 }), rust: sheet('rustGirder', A.rustGirder, { paint: 0.03 }),
     winEast: sheet('winEast', A.winEast, { paint: 0 }), winEastBlind: sheet('winEastBlind', A.winEastBlind, { paint: 0 }), winWest: sheet('winWest', A.winWest, { paint: 0 }), doorEast: sheet('doorEast', A.doorEast, { paint: 0 }),
-    lantEast: sheet('lantEast', A.lantEast, { paint: 0 }), lantWest: sheet('lantWest', A.lantWest, { paint: 0 }), ovalEast: sheet('ovalEast', A.ovalEast, { paint: 0 }), ovalWest: sheet('ovalWest', A.ovalWest, { paint: 0 }),
+    lantEast: sheet('lantEast', A.lantEast, { paint: 0 }), lantWest: sheet('lantWest', A.lantWest, { paint: 0 }),
     plaqueKron: T(W, { map: A.plaqueKron, name: 'lmgavan-plaqueKron', paint: 0, polygonOffset: -2 }),
     ashlar: sheet('ashlar', A.ashlar, { paint: 0.04 }), granite: sheet('granite', A.granite, { paint: 0.04 }), graniteFlat: flat('graniteFlat', C.graniteBase, { paint: 0.05 }), coping: flat('coping', C.coping, { paint: 0.04 }),
     // ---- canal: fence, ground
@@ -58,6 +59,7 @@ export function makeMats(ctx) {
   M.stoop = M.gardPlinth = M.stepsStone = M.plinth = M.coping;
   M.timber = M.bracket;
   M.cutouts = new Set([M.fenceBars, M.fenceFan, M.fenceWhite, M.towerNet]);
+  snowGarden(ctx, M, ['lawn','lawnDry'], ['gravel']);
   M.decals = new Set([M.judoSign, M.plaqueDril, M.plaqueKron, M.setts, M.lawn, M.lawnDry, M.gravel, M.pavedGranite]);
   M.glassy = new Set([]);
   return M;

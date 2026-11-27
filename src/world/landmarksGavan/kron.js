@@ -14,6 +14,7 @@ import { frustum, onion, ball, revolve } from './geo.js';
 import { squareToOct, loft, gableRoof, hipRoof, blob } from './prims.js';
 import { coverFn, fillPolyClipped } from './surfaces.js';
 import { addPolyColliders } from '../lib/massing.js';
+import { westDetailBatch } from '../west-detail-batch.js';
 
 export const PAV = { east: { u: 27.0, v: -14.4 }, west: { u: -30.1, v: -13.4 } };
 const H = 3.9;                                                          // half the plan
@@ -41,7 +42,7 @@ export function build(Q) {
 // ------------------------------------------------------------------------------------------------ one pavilion (the Parts frame is at its centre on the ground, axes as K)
 function pavilion(Q, east) {
   const P = Q.P, M = Q.M;
-  const wall = east ? M.peachE : M.peachW, win = east ? M.winEast : M.winWest, lant = east ? M.lantEast : M.lantWest, oval = east ? M.ovalEast : M.ovalWest;
+  const wall = east ? M.peachE : M.peachW, win = east ? M.winEast : M.winWest, lant = east ? M.lantEast : M.lantWest;
   const roofM = east ? M.roofWhite : M.verdi, lantWall = east ? M.roofWhite : M.lantRed, rise = east ? 3.0 : 2.3, oct = east ? 2.05 : 1.8;
   // plinth and walls
   P.box(M.plinth, -H - 0.1, H + 0.1, 0, 0.6, -H - 0.1, H + 0.1, 'b', 2);
@@ -82,17 +83,20 @@ function pavilion(Q, east) {
   const rings = [], N = 9, wOf = (t) => 0.8 * (1 - Math.pow(1 - t, 2.2)) + 0.2 * t;
   for (let i = 0; i <= N; i++) { const t = i / N; rings.push(squareToOct(4.3, oct, wOf(t), 5.9 + rise * t)); }
   loft(P, roofM, rings, { uvs: 3, up: 0.7 });
-  // oval dormers: a cartouche panel on each slope at 30 % of the rise
-  { const t = 0.3, ra = squareToOct(4.3, oct, wOf(t - 0.04), 5.9 + rise * (t - 0.04)), rb = squareToOct(4.3, oct, wOf(t + 0.04), 5.9 + rise * (t + 0.04)), rc = squareToOct(4.3, oct, wOf(t), 5.9 + rise * t);
+  // Four upright, metal-clad dormers with deep oval glazing on the bell roof.
+  { const t = 0.3, rc = squareToOct(4.3, oct, wOf(t), 5.9 + rise * t);
+    const dormers = westDetailBatch(Q, east ? 'kronspitz-east-dormers' : 'kronspitz-west-dormers', 255);
     for (let s = 0; s < 4; s++) {
       const [nx, nz, rot] = SIDE[s];
       const out = (r) => (r[2 * s][0] * nx + r[2 * s][2] * nz + r[2 * s + 1][0] * nx + r[2 * s + 1][2] * nz) / 2;
-      const dr = out(ra) - out(rb), dy = rise * 0.08, nn = Math.hypot(dr, dy), upY = dy / nn, upZ = -dr / nn, cy = rc[2 * s][1], oz = out(rc);
+      const cy = rc[2 * s][1], oz = out(rc);
       P.push(0, 0, 0, rot);
-      const q = (x, k) => [x, cy + k * upY + 0.05 * (dr / nn), oz + k * upZ + 0.05 * (dy / nn)];
-      P.quad(oval, q(-0.65, -0.5), q(0.65, -0.5), q(0.65, 0.5), q(-0.65, 0.5), [0, dr / nn, dy / nn], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+      dormers.add('dormer',roofM,0,cy,oz+.16);
+      dormers.add('dormerGlass',M.glassDark,0,cy,oz+.16);
+      dormers.add('dormerTrim',east ? M.white : M.iron,0,cy,oz+.16);
       P.pop();
     }
+    dormers.finish();
   }
   // lantern: foot cornice, octagonal body with eight arched windows, top cornice, concave cap
   const yL0 = 5.9 + rise, yL1 = yL0 + (east ? 2.9 : 1.9), Rc = (f) => f / Math.cos(Math.PI / 8), a0 = Math.PI / 8;

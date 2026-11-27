@@ -1,3 +1,4 @@
+import { snowGarden } from '../lib/winter-garden.js';
 // landmarksDekabristov/mats.js - materials of the module (ctx.mat.toon only; every name starts with 'lmdek-').  The stone / iron / flower colours are those of landmarksSmolensky/mats.js (the same family of cemeteries), the
 // water film is the one of the Andrew boulevard fountains, the lamp glass of the Light-and-Music fountain is emissive.
 // M.cutouts = alpha cut-outs (no outline pass), M.decals = sheets that lie 2-6 cm in front of a surface (polygonOffset: paving, plates), M.glassy = transparent sheets.
@@ -32,6 +33,7 @@ export function makeMats(ctx) {
     lightGreen: T('#58c46a', { name: 'lmdek-lightGreen', paint: 0, emissive: '#58c46a', emissiveIntensity: 0.55 }), lightWhite: T('#f2f0e6', { name: 'lmdek-lightWhite', paint: 0, emissive: '#f2f0e6', emissiveIntensity: 0.55 }),
   });
   M.cutouts = new Set([M.bars, M.rail]);
+  snowGarden(ctx, M, ['lawn','lawnDark','soil'], ['gravel']);
   M.decals = new Set([M.pavers, M.asphalt, M.gravel, M.lawn, M.lawnDark, M.soil]);
   M.glassy = new Set([M.water]);
   M.plates = new Set();          // plateMat() results are added by the parts (decals)

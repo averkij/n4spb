@@ -36,8 +36,9 @@ export const GROUPS_LIST = [
 
 // ground that the module paves itself (claims.js extraClaimRings: no trunks, hedges or tufts of the engine there), built from the part files' own coordinates
 const disc = (x, z, r, n = 20) => Array.from({ length: n }, (_, i) => [Math.round((x + Math.cos(i * 2 * Math.PI / n) * r) * 10) / 10, Math.round((z + Math.sin(i * 2 * Math.PI / n) * r) * 10) / 10]);
+export const VOLODIN_PAVING = disc(-7994.7, -2078.9, 13.5);
 export const PAVED_RINGS = [
-  disc(-7994.7, -2078.9, 13.5),               // the plaza round the Light-and-Music fountain (volodin.js)
+  VOLODIN_PAVING,               // the plaza round the Light-and-Music fountain (volodin.js)
   disc(-5788.5, -1709.5, 11.0),               // the apron of the siege obelisk (siege.js)
   disc(-6368.5, -2409.9, 5.0, 16),            // the paving inside the fence of the Decembrists' obelisk (garden.js)
 ];

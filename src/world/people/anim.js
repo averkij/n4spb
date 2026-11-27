@@ -29,7 +29,12 @@ const sinf = (t, f, ph = 0) => Math.sin(TAU * (f * t + ph));
 const SIN_K = 0.985, SIN_D = Math.asin(SIN_K);
 const tri = (w) => Math.asin(SIN_K * Math.sin(w)) / SIN_D;                                 // smoothed triangle wave: constant angular velocity in stance and swing
 /** height the ankle joint must keep above the floor for foot pitch f (toes up positive): heel / toe contact */
-const need = (f) => H.ankle * Math.cos(f) + (f > 0 ? 0.07 * Math.sin(f) : -0.2 * Math.sin(f));
+function need(f) {
+  const c = Math.cos(f), s = Math.sin(f);
+  if (f >= 0) return H.ankle * c + .068 * s;
+  // As the heel rises the contact moves from the ball over the bevel to the toe.
+  return Math.max(H.ankle * c - .119 * s, .087 * c - .178 * s, .081 * c - .20 * s);
+}
 /** vertical extent hip joint -> ankle joint of a leg with thigh angle th and knee flexion k (rig units) */
 const ext = (th, k, legK) => (H.thigh * Math.cos(th) + H.shin * Math.cos(th - k)) * legK;
 function footPitch(w) {

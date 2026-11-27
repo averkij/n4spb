@@ -24,6 +24,11 @@ export function makeMats(ctx) {
   });
   // aliases: the same material under the names the parts use (one material per look)
   Object.assign(M, { steps: M.flags, trellis: M.lattice, winAttic: M.winSq, soffit: M.shade, roofEdge: M.dark, iron: M.dark, sphere: M.shade, lion: M.whiteFlat, marble: M.whiteFlat, soil: M.dark, wood: M.dark });
+  if (ctx.season === 'winter') {
+    M.winterTimber = flat('vase-protective-timber','#a79174');
+    M.winterBatten = flat('vase-box-battens','#816e57');
+    M.packedSnow = flat('east-stair-snow','#e6e8ea');
+  }
   M.cutouts = new Set([M.lattice, M.lunette, M.plinthText]);
   M.decals = new Set([M.lunette, M.plinthText]);
   M.glassy = new Set();

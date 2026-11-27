@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { Parts } from './landmarksPortChurch/kit.js';
 import { materials } from './landmarksPortChurch/art.js';
 import { SITE } from './landmarksPortChurch/site.js';
+import { modelParts as bellModel } from './landmarksPortChurch/bell-model.js';
 import { ringFromFlat, signedArea, addPolyColliders } from './lib/massing.js';
 import { arch, archedPane, iconPanel, cross, onion, tent, openArch } from './landmarksPortChurch/shapes.js';
 
@@ -177,11 +178,14 @@ function belfry(K) {
     for (const u of [-side / 2 + 0.12, side / 2 - 0.12]) P.box(M.lightBrick, u - 0.12, u + 0.12, y, y + h, 0.02, 0.19, 'bk');
     P.pop();
   }
-  P.far = 500;
+  P.far = 290;
+  const casting=bellModel(), bronze={metal:M.goldDark,band:M.gold,beam:M.dark,clapper:M.dark};
   for (const [z, r] of [[0, 0.65], [-1.6, 0.37], [1.6, 0.44]]) {
-    P.cyl(M.dark, [x, 21.7, z], [x, 23, z], r, r * 0.5, 14);
-    P.cyl(M.goldDark, [x, 21.63, z], [x, 21.74, z], r * 1.12, r * 1.12, 14);
+    const scale=r/.60;
+    for(const [name,geo] of casting)P.geo(bronze[name],geo,x,23.58-scale*1.05,z,0,0,0,scale,scale,scale);
   }
+  P.box(M.dark,x-.12,x+.12,23.57,23.74,-3.1,3.1);
+  for(const [,geo] of casting)geo.dispose();
   P.far = Infinity;
   tent(P, M, x, 0, 26, 36.1, 3.55);
   onion(P, M, x, 0, 37, 0.67, 1.65, M.gold);

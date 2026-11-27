@@ -5,7 +5,8 @@
 import * as THREE from 'three';
 import { lion, cached } from '../lib/figures.js';
 import { PA, W, F, P as PL, EAST_STAIR } from './frame.js';
-import { revolve } from './geo.js';
+import { sculptureGeometry } from '../lib/sculpture-geometry.js';
+import { detail } from './vase-mesh.js';
 import { geosOf, put, mirrorSet } from './objs.js';
 import * as L from '../layout.js';
 
@@ -31,18 +32,20 @@ function lions(K) {
 
 // ------------------------------------------------------------------------------------------------ vases and planters
 function vaseGeo(M) {
-  return geosOf((P) => {
-    const prof = [[0, 0], [0.34, 0], [0.34, 0.1], [0.27, 0.14], [0.27, 0.2], [0.15, 0.26], [0.12, 0.34], [0.12, 0.44], [0.17, 0.5], [0.29, 0.6], [0.39, 0.75], [0.45, 0.92], [0.44, 1.08], [0.37, 1.24],
-      [0.29, 1.33], [0.29, 1.4], [0.37, 1.45], [0.37, 1.52], [0.24, 1.56], [0.14, 1.62], [0.1, 1.7], [0.05, 1.82], [0, 1.9]];
-    revolve(P, M.marble, prof, 24, { crease: 50 });
-    // gadroons: a ring of 12 low ribs on the belly; the band of relief figures is a ring of small blobs
-    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; P.cyl(M.marble, [Math.sin(a) * 0.4, 0.62, Math.cos(a) * 0.4], [Math.sin(a) * 0.47, 0.98, Math.cos(a) * 0.47], 0.035, 0.05, 5, false); }
-    // two handles with bearded masks
-    for (const s of [-1, 1]) {
-      const pts = [[s * 0.4, 1.22], [s * 0.56, 1.3], [s * 0.6, 1.14], [s * 0.5, 0.98]];
-      for (let i = 0; i + 1 < pts.length; i++) P.cyl(M.marble, [pts[i][0], pts[i][1], 0], [pts[i + 1][0], pts[i + 1][1], 0], 0.045, 0.045, 6, false);
-      const g = new THREE.SphereGeometry(0.1, 8, 6); P.geo(M.marble, g, s * 0.5, 0.98, 0, 0, 0, 0, 1, 1.25, 0.8); g.dispose();
+  return geosOf(P => {
+    if (!M.winterTimber) {
+      P.geo(M.marble, sculptureGeometry(detail.urn));
+      return;
     }
+    // At the end of autumn the museum puts each marble vase in a timber box.
+    for (let i=0; i<7; i++) {
+      const x=-.64+i*.184;
+      P.box(M.winterTimber, x, x+.18, 0, 1.77, -.57,.57);
+    }
+    for (const z of [-.59,.59]) for (const y of [.14,1.49]) {
+      P.box(M.winterBatten,-.67,.67,y,y+.085,z-.025,z+.025);
+    }
+    P.box(M.packedSnow,-.67,.67,1.77,1.81,-.61,.61);
   });
 }
 function planterGeo(M) {
@@ -53,6 +56,10 @@ function planterGeo(M) {
     for (const [x, nx] of [[w / 2, 1], [-w / 2, -1]]) P.quad(M.trellis, [x, 0.08, -d / 2], [x, 0.08, d / 2], [x, h, d / 2], [x, h, -d / 2], [nx, 0, 0], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     P.box(M.whiteFlat, -w / 2 - 0.05, w / 2 + 0.05, h, h + 0.06, -d / 2 - 0.05, d / 2 + 0.05, 'b', 1);                   // rim
     P.box(M.soil, -w / 2, w / 2, 0.08, h + 0.02, -d / 2, d / 2, 'b', 1);                                                  // soil + foliage cushion
+    if (M.packedSnow) {
+      P.box(M.packedSnow,-.78,.78,h+.02,h+.07,-.23,.23);
+      return;
+    }
     for (let i = 0; i < 14; i++) { const g = new THREE.SphereGeometry(0.09, 5, 4); P.geo(i % 3 ? M.flower : M.whiteFlat, g, -0.7 + (i % 7) * 0.23, h + 0.1 + (i % 2) * 0.05, -0.12 + Math.floor(i / 7) * 0.24); g.dispose(); }
   });
 }

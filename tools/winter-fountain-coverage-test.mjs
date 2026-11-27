@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
 import { mainModules } from './modules-list.mjs';
-import { placeFountains, SPECIALIST_FOUNTAINS } from '../src/world/props/fountains.js';
+import { placeFountains, mappedFountains, SPECIALIST_FOUNTAINS } from '../src/world/props/fountains.js';
 import { buildNet } from '../src/world/streets/net.js';
 import { FORECOURT_SOURCE_FOUNTAINS } from '../src/world/landmarksMoskovskaya/library-forecourt-plan.js';
 
@@ -81,5 +81,8 @@ for (const site of records) {
     checked++;
   }
 }
-assert(checked+flush>0, 'district has winter fountain coverage');
+const mapped = mappedFountains().filter(f => L.inPlay(f.x, f.z));
+assert.deepEqual(records.filter(r=>r.status !== 'outside').map(r=>r.id).sort(), mapped.map(f=>f.id).sort());
+if (mapped.length) assert(checked+flush>0, 'district has winter fountain coverage');
+else assert.equal(snow.size, 0, 'no fountain snow outside mapped sites');
 console.log(process.env.AREA, 'PASS', checked, 'reachable snow-filled bowls,', flush, 'dry flush fountains');

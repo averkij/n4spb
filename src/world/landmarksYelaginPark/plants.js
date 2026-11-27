@@ -22,6 +22,7 @@ const domeGeo = () => _dome || (_dome = new THREE.SphereGeometry(1, 12, 6, 0, Ma
 
 /** a hosta clump centred on (x, z): n leaves of length 0.5 * scale radiating at random angles, tilted up 14-32 degrees */
 export function hosta(P, M, x, z, scale = 1, seed = 1, n = 8, mats = null) {
+  if (M.snow) return;
   const A = mats?.a || M.hostaA, B = mats?.b || M.hostaB;
   for (let i = 0; i < n; i++) {
     const a = (i / n + (hash(seed, i, 1) - 0.5) * 0.18) * Math.PI * 2, len = (0.27 + hash(seed, i, 2) * 0.14) * scale, tilt = 0.25 + hash(seed, i, 3) * 0.3;
@@ -34,6 +35,11 @@ export function hosta(P, M, x, z, scale = 1, seed = 1, n = 8, mats = null) {
 /** an oval bed of red salvia: centre (cx, cz), half axes rx (along the turned x) and rz, turned by rot about y, height 0.3 m */
 export function salviaBed(P, M, cx, cz, rx, rz, rot = 0, seed = 5) {
   P.push(cx, 0, cz, rot);
+  if (M.snow) {
+    P.geo(M.snow, domeGeo(), 0, 0, 0, 0, 0, 0, rx, .12, rz);
+    P.pop();
+    return 0;
+  }
   P.geo(M.soil, domeGeo(), 0, -0.06, 0, 0, 0, 0, rx + 0.05, 0.2, rz + 0.05);              // a thin soil lip round the bed
   P.geo(M.salviaDark, domeGeo(), 0, 0.0, 0, 0, 0, 0, rx, 0.22, rz);
   const count = Math.round(Math.PI * rx * rz * 9);

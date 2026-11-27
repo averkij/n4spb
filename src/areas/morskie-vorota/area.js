@@ -47,7 +47,7 @@ export const ZONES = { peopleDensity: { west: { scale: 1, platforms: 1, off: tru
 // the broad harbour. The stern E prompt is 5 m from dry pavement at
 // −7094.65,2061.45, reached from HERO along the island's service-road frontage.
 // The 500 m departure corridor and broad turns clear docks and the WHSD.
-export const GARAGE = { poses: { lada: { x: -7589, z: 2926, yaw: Math.PI } }, spawn: { x: -7589, z: 2926, yaw: Math.PI }, boats: [{ id: 'boat-sea-gates', dock: 'sea-gates', x: -7610, z: 2980, yaw: 2.6 }, { id: 'container-ship', vessel: 'container-ship', dock: 'sea-gates-anchorage', x: -6888.02511, z: 2030.026979, yaw: 1.7217231388856107 }] };
+export const GARAGE = { poses: { lada: { x: -7589, z: 2926, yaw: Math.PI } }, spawn: { x: -7589, z: 2926, yaw: Math.PI }, boats: [{ id: 'boat-sea-gates', dock: 'sea-gates', x: -7585.26, z: 2959.70, yaw: 3.7781 }, { id: 'container-ship', vessel: 'container-ship', dock: 'sea-gates-anchorage', x: -6888.02511, z: 2030.026979, yaw: 1.7217231388856107 }] };
 export const PRUNE_SERVICES = ['city', 'landmarksSeaGates'];
 // The harbour garage frontage is too narrow for the metre-raster mask to
 // contain the widest grass clumps. Keep its actual mapped service lane clear.

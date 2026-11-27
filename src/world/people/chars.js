@@ -1,3 +1,4 @@
+import { footwearGeometry, footwearMaterial } from './footwear.js';
 // people/chars.js - the crowd of the characters half: createCrowd(ctx) -> { add, finalize, render, hide, endFrame, setNight, ... } (interface: contract.js).
 // Every VISIBLE person owns one instance in each of its part meshes (torso, head, 2 upper arms, 2 fore arms, 2 thighs, 2 shins, 2 feet) plus small instanced sets for the things it
 // carries or rides (items.js).  render() computes the pose (anim.js: pure function of state / spec / t, plus a little per-person smoothing of the speed, gesture weights and
@@ -12,7 +13,7 @@
 // original renderer; ?pbat=items (or 1) explicitly enables accessory batches for performance comparisons.
 import * as THREE from 'three';
 import { Geo, clamp, lerp, smooth, TAU, lampMat } from './kit.js';
-import { H, torsoGeo, upperArmGeo, foreArmGeo, thighGeo, shinGeo, footGeo, headGeo, faceAtlas, paletteMaterial, ATLAS } from './rig.js';
+import { H, torsoGeo, upperArmGeo, foreArmGeo, thighGeo, shinGeo, headGeo, faceAtlas, paletteMaterial, ATLAS } from './rig.js';
 import { newPose, posePerson, writeFigure, HIDE, VEH } from './anim.js';
 import { KINDS } from './items.js';
 import { MODE, GESTURE as G } from './contract.js';
@@ -43,8 +44,8 @@ export function createCrowd(ctx) {
       const coats = ['#773846', '#30465b', '#5d6657', '#a37b55', '#455059', '#81667d'];
       const seed = Math.floor(spec.seed), pick = seed % coats.length;
       Object.assign(L, { torso: pick % 2 ? 'parka' : 'overcoat', upper: 'bulk', fore: 'bulk',
-        head: ['crochet', 'beret', 'cap', 'crochet', L.head][Math.floor(seed / 7) % 5], thigh: L.thigh === 'wide' ? 'wide' : 'std', shin: L.shin === 'wide' ? 'wide' : 'std', foot: 'boot',
-        A: seed % 4 === 0 ? L.A : coats[pick], B: L.C, pants: L.pants, shoeB: '#493f3b', shoeC: '#312f32' });
+        head: ['crochet', 'beret', 'cap', 'crochet', L.head][Math.floor(seed / 7) % 5], thigh: L.thigh === 'wide' ? 'wide' : 'std', shin: L.shin === 'wide' ? 'wideBoot' : 'boot', foot: 'boot',
+        A: seed % 4 === 0 ? L.A : coats[pick], B: L.C, pants: L.pants, shoeB: ['#51423c', '#655044', '#39434b', '#514d42'][seed % 4], shoeC: '#373538' });
     }
     const age = spec.age, h = spec.h;
     p.strideW = h * (age === 'elder' ? 0.72 : age === 'child' ? 0.72 : age === 'teen' ? 0.78 : 0.8) * (spec.pram ? 0.92 : 1) * (L.carry && L.carry.suitcase ? 0.94 : 1);
@@ -60,10 +61,10 @@ export function createCrowd(ctx) {
     p.ref = {
       torso: partRef('t|' + L.torso, [A, B, C, skin]), head: partRef('h|' + L.head, [W, hat, hair, skin], L.faceG),
       uaL: partRef('ua|' + L.upper, [A, A, A, skin]), uaR: null, faL: partRef('fa|' + L.fore, [A, A, A, skin]), faR: null,
-      thL: partRef('th|' + L.thigh, [P, P, P, skin]), thR: null, shL: partRef('sh|' + L.shin, [P, P, P, skin]), shR: null, ftL: partRef('ft|' + L.foot, [sb, sb, sc2, skin]), ftR: null,
+      thL: partRef('th|' + L.thigh, [P, P, P, skin]), thR: null, shL: partRef('sh|' + L.shin, [P, sb, sc2, skin]), shR: null, ftL: partRef('ft|' + L.foot, [W, sb, sc2, skin]), ftR: null,
     };
     p.ref.uaR = partRef('ua|' + L.upper, [A, A, A, skin]); p.ref.faR = partRef('fa|' + L.fore, [A, A, A, skin]); p.ref.thR = partRef('th|' + L.thigh, [P, P, P, skin]);
-    p.ref.shR = partRef('sh|' + L.shin, [P, P, P, skin]); p.ref.ftR = partRef('ft|' + L.foot, [sb, sb, sc2, skin]);
+    p.ref.shR = partRef('sh|' + L.shin, [P, sb, sc2, skin]); p.ref.ftR = partRef('ft|' + L.foot, [col('#000000'), sb, sc2, skin]);
     p.faceN = L.faceN; p.faceG = L.faceG; p.glasses = spec.glasses;
     // items
     p.it = {};
@@ -93,7 +94,7 @@ export function createCrowd(ctx) {
   const partGeo = (key) => {
     const [k, v] = key.split('|');
     if (k === 't') return torsoGeo(v).build(false, true); if (k === 'ua') return upperArmGeo(v).build(false, true); if (k === 'fa') return foreArmGeo(v).build(false, true);
-    if (k === 'th') return thighGeo(v).build(false, true); if (k === 'sh') return shinGeo(v).build(false, true); if (k === 'ft') return footGeo(v).build(false, true);
+    if (k === 'th') return thighGeo(v).build(false, true); if (k === 'sh') return shinGeo(v).build(false, true); if (k === 'ft') return footwearGeometry(v);
     return headGeo(v);
   };
   const triOf = (g) => (g.index ? g.index.count : g.attributes.position.count) / 3;
@@ -106,7 +107,8 @@ export function createCrowd(ctx) {
       e.attrs = [];
       for (const [j, n] of ['iA', 'iB', 'iC', 'iD'].entries()) { const attr = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); attr.setUsage(THREE.DynamicDrawUsage); geo.setAttribute(n, attr); e.attrs.push(attr); }
       if (head) { const attr = new THREE.InstancedBufferAttribute(new Float32Array(cap * 2), 2); attr.setUsage(THREE.DynamicDrawUsage); geo.setAttribute('iFace', attr); e.faceAttr = attr; }
-      const mesh = new THREE.InstancedMesh(geo, head ? matHead : matBody, cap); mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = true; mesh.receiveShadow = true; mesh.name = 'ppl-' + e.key;
+      const material = e.key.startsWith('ft|') ? footwearMaterial(ctx) : head ? matHead : matBody;
+      const mesh = new THREE.InstancedMesh(geo, material, cap); mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = true; mesh.receiveShadow = true; mesh.name = 'ppl-' + e.key;
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); for (let i = 0; i < cap; i++) mesh.instanceMatrix.array.set(HIDE, i * 16);
       initSlots(e, cap); e.dirty = false; e.tris = triOf(geo);
       mesh.userData.alwaysVisible = true; ctx.add(mesh); e.mesh = mesh; meshes.push(mesh); trisAll += e.tris * e.n;

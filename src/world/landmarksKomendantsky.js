@@ -3,6 +3,8 @@
 // static and bounded, with no per-frame work.
 import * as THREE from 'three';
 import { Parts } from './landmarksOkrug65/kit.js';
+import { sculptureGeometry } from './lib/sculpture-geometry.js';
+import { detail } from './landmarksKomendantsky/propeller-mesh.js';
 import { MONUMENTS, WATER } from './data/city.js';
 
 const FIRST_PILOTS = 'n6039581494', MATSIEVICH = 'n7035735851';
@@ -50,8 +52,10 @@ function biplane(P, M, x, z, yaw, lift, number) {
   P.beam(M.fuselage, [[0,lift-.2,2.65],[0,lift+.08,.35]], .22, .26, [1,0,0], 1, 2.9);
   P.beam(M.fuselage, [[0,lift+.08,.35],[0,lift+.35,-2.47]], .62, .6, [1,0,0], 1, .68);
   P.cyl(M.nose, [0,lift+.35,-2.43], [0,lift+.4,-2.76], .33, .25, 10);
-  P.cyl(M.dark, [0,lift+.4,-2.76], [0,lift+.4,-2.87], .16, .16, 8);
-  P.beam(M.dark, [[-.06,lift-.45,-2.88],[.08,lift+1.24,-2.88]], .13, .08);
+  P.ranged(350, () => {
+    P.geo(M.dark, sculptureGeometry(detail.blades), 0,lift+.4,-2.82, 0,0,number ? 0 : -.36);
+    P.geo(M.frame, sculptureGeometry(detail.hub), 0,lift+.4,-2.82);
+  });
   for (const cz of [-.68, .22]) {
     P.box(M.dark, -.27, .27, lift+.36, lift+.39, cz-.28, cz+.24);
     P.beam(M.frame, [[-.32,lift+.38,cz-.3],[0,lift+.61,cz-.4],

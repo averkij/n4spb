@@ -148,7 +148,7 @@ export function buildWaterfront(ctx) {
   // outside this ring. Fountain water and its dry island are owned by Mayak.
   const basin = SITES.find(s => s.id === 'r5255799').polys;
   let triangles = flatSurface(ctx, PARK.polys.map(p => ({ o: p.o, h: [...p.h, ...basin.map(b => b.o)] })),
-    { name: 'okrug65-park300-maintained-lawns', color: '#6e944a' });
+    { name: 'okrug65-park300-maintained-lawns', color: ctx.season === 'winter' ? '#d9e2e7' : '#6e944a' });
   triangles += flatSurface(ctx, [{ o: MAINLAND_PAVING_RING.flat(), h: [] }], {
     name: 'okrug65-western-mainland-promenade', color: '#aaa89d', y: 0.075,
     cuts: [...PROMENADE_RINGS, ...WATERFRONT_OWNER_WATER_RINGS.map(w => w.ring)],
@@ -158,7 +158,7 @@ export function buildWaterfront(ctx) {
     cuts: WATERFRONT_OWNER_WATER_RINGS.map(w => w.ring),
   });
   const rails = [], paths = [], islands = [], deckTriangles = [];
-  const sand = ctx.mat.toon('#c4b38f', { paint: 0.02 });
+  const sand = ctx.mat.toon(ctx.season === 'winter' ? '#d2d7d6' : '#c4b38f', { paint: 0.02 });
   // The old unfinished apron had a city-centre pink granite quay. The new
   // local harbour shore has a low neutral stone face and an open edge, with
   // no barrier collider. Exact adjacent sand ramps provide walking access.

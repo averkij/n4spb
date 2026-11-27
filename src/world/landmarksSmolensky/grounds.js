@@ -24,8 +24,11 @@ export async function build(K) {
   fillPolyFine(P, M.asphalt, apron, 0.05, { maxEdge: 6, tile: 3 });
   // ---- the forest floor: a dark leaf-litter decal over the whole polygon, pulled back 7 m from the river edges (the water owner's natural slope runs there, the ground is not flat)
   const rx = pl.ring.map((q) => q[0]), rz = pl.ring.map((q) => q[1]);
-  const mask = makeMask(pl, [Math.floor(Math.min(...rx) / 3) * 3 - 6, Math.floor(Math.min(...rz) / 3) * 3 - 6, Math.ceil(Math.max(...rx) / 3) * 3 + 6, Math.ceil(Math.max(...rz) / 3) * 3 + 6]);
-  M.floorSplat = makeFloorMaterial(ctx, mask, makeFloorTextures(ctx));
+  if (ctx.season === 'winter') M.floorSplat = M.soil;
+  else {
+    const mask = makeMask(pl, [Math.floor(Math.min(...rx) / 3) * 3 - 6, Math.floor(Math.min(...rz) / 3) * 3 - 6, Math.ceil(Math.max(...rx) / 3) * 3 + 6, Math.ceil(Math.max(...rz) / 3) * 3 + 6]);
+    M.floorSplat = makeFloorMaterial(ctx, mask, makeFloorTextures(ctx));
+  }
   P.push(0, 0, 0, 0);
   fillPolyFine(P, M.floorSplat, insetRiver(pl.ring, 7), 0.022, { maxEdge: 22, tile: 6 });
   P.pop();

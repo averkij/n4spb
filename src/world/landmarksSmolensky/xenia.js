@@ -13,6 +13,7 @@ import * as S from './stucco.js';
 import { fillPolyFine } from './surfaces.js';
 import { roadPts, ringOf } from './data.js';
 import { addPolyColliders } from '../lib/massing.js';
+import { westDetailBatch } from '../west-detail-batch.js';
 
 const HX0 = 3.9, HX1 = 13.7, HZ0 = 0, HZ1 = 9.8, CX = 8.8, CZ = 4.9, WD = HX1 - HX0;     // hall rectangle and its centre
 const Y = { plinth: 0.5, socle: 2.6, cornice0: 5.95, eave: 7.4, cube0: 8.0, cube1: 9.8, tent1: 13.3, drum1: 14.0, onion1: 16.1 };
@@ -104,8 +105,10 @@ export function build(K) {
   G.tube(P, M.xBrown, CX, CZ, Y.tent1 - 0.05, Y.tent1 + 0.08, 0.98, 0.98, 8, 1, 1, { capTop: M.xBrown });
   G.frustum(P, M.xDrum, CX, CZ, Y.tent1 + 0.08, Y.drum1, 8, 0.95, 0.85, -Math.PI / 8, 1, 1, { capTop: M.xDrum });
   G.tube(P, M.xBrown, CX, CZ, Y.drum1 - 0.12, Y.drum1, 1.05, 1.05, 8, 1, 1, { capTop: M.xBrown });
-  G.onion(P, M.xGold, CX, Y.drum1, CZ, 0.943, 0.99, 20, 14);
-  S.crossOn(P, M.xGold, CX, Y.onion1 - 0.1, CZ, 1.6);
+  const crown=westDetailBatch(K,'xenia-gilded-cupola',325);
+  crown.add('xeniaGold',M.xGold,CX,Y.drum1,CZ);
+  crown.add('xeniaCross',M.xGold,CX,Y.drum1,CZ);
+  crown.finish();
   // ---- faces: window groups on all four, the kokoshnik gables above the cornice on the two ends
   for (const f of [faceNNW, faceSSE, faceWSW]) f(P, () => windowGroup(P, M, WD / 2));          // (the ENE end wall carries the burial plaque instead: catalogue 3.1, photos sd372 sd373 sd380)
   const kok = (f) => f(P, () => {                                                                               // Christ on the ENE end, Xenia on the WSW end above the annex roof ([?] critic log: reverse of the first draft)

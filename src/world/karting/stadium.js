@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { registerLOD } from '../../core/spatial.js';
+import { winterTreeGeometry } from '../environment/treegeo.js';
 import { MeshBuilder, addPrism, addCap, addPolyColliders } from '../lib/massing.js';
 import { mesh, paintStrip, siteFence } from './course.js';
 import { SHELTER_ID, STADIUM_GROUP } from './site.js';
@@ -112,7 +114,7 @@ export function buildStadium(ctx, root) {
     for (const x of [-3.66, 3.66]) block(gx + x*CROSS[0], 1.22, gz + x*CROSS[1], .11, 2.44, .11, pitchYaw, plaster);
     block(gx, 2.44, gz, 7.42, .11, .11, pitchYaw, plaster);
   }
-  mesh(root, turf, ctx.mat.toon('#4f744d'), 'kirovets-football-field');
+  mesh(root, turf, ctx.mat.toon(ctx.season === 'winter' ? '#d5dfe1' : '#4f744d'), 'kirovets-football-field');
   mesh(root, running, ctx.mat.toon('#805250'), 'kirovets-running-oval');
   mesh(root, lines, ctx.mat.toon('#dddacb'), 'kirovets-sport-marking');
 
@@ -164,23 +166,35 @@ function addTrees(ctx, root) {
     [-4632,3687],[-4650,3693],[-4669,3693],[-4683,3684],
   ].filter(([x, z]) => !ctx.L.insideBuilding(x, z, 3.5) && (!net || net.cover(x, z, { skipSet }) < -2.25));
   const rng = ctx.rng('narvskaya-track-trees'), matrix = new THREE.Matrix4(), q = new THREE.Quaternion();
-  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.095,.17,1,7), ctx.mat.toon('#676051'), places.length);
-  const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), ctx.mat.toon('#5e7752'), places.length * 3);
+  const winter = ctx.season === 'winter';
+  const tree = winter ? winterTreeGeometry('limeA', 1, { H:6, R:2.2, trunk:.29 })
+    : new THREE.CylinderGeometry(.095,.17,1,7);
+  const trunks = new THREE.InstancedMesh(tree, ctx.mat.toon('#676051'), places.length);
+  trunks.name = winter ? 'karting-bare-trees' : 'karting-tree-trunks';
+  const crowns = winter ? null : new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), ctx.mat.toon('#5e7752'), places.length * 3);
   const p = new THREE.Vector3(), scale = new THREE.Vector3();
   const tint = new THREE.Color();
   places.forEach(([x,z],i) => {
     const h = rng.range(4.2,7.1), y = ctx.L.heightAt(x,z);
-    trunks.setMatrixAt(i,matrix.compose(p.set(x,y+h*.3,z),q,scale.set(1,h*.6,1)));
+    if(winter){p.set(x,y,z);scale.setScalar(h/6);}
+    else {p.set(x,y+h*.3,z);scale.set(1,h*.6,1);}
+    trunks.setMatrixAt(i,matrix.compose(p,q,scale));
     ctx.physics.addCylinder(x,z,.18,y,y+h*.56);
     for (let k = 0; k < 3; k++) {
       const w = rng.range(1.25,2.65);
       p.set(x+rng.range(-.85,.85), y+h*(.68+k*.115), z+rng.range(-.85,.85));
-      crowns.setMatrixAt(i*3+k,matrix.compose(p,q,scale.set(w,w*.86,w)));
+      // Consume the same seeded samples so subsequent tree heights and solids match.
       const s = rng.range(.74,1);
-      crowns.setColorAt(i*3+k,tint.setRGB(s,s,s));
+      if(crowns){
+        crowns.setMatrixAt(i*3+k,matrix.compose(p,q,scale.set(w,w*.86,w)));
+        crowns.setColorAt(i*3+k,tint.setRGB(s,s,s));
+      }
     }
   });
-  trunks.castShadow = crowns.castShadow = true;
-  trunks.receiveShadow = crowns.receiveShadow = true;
-  root.add(trunks,crowns);
+  trunks.castShadow = trunks.receiveShadow = true;
+  root.add(trunks);
+  if(crowns){
+    crowns.name = 'karting-leafy-crowns'; crowns.castShadow = crowns.receiveShadow = true;
+    root.add(crowns);
+  }else registerLOD(trunks,280);
 }

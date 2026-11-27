@@ -11,10 +11,12 @@ import { arrivalUrl } from '../src/core/handoff.js';
 import { REGISTRY, GATES } from '../src/areas/registry.js';
 
 const area = process.env.AREA;
-assert.equal(seasonFor(area, new URLSearchParams()), 'winter');
-assert.equal(seasonFor(area, new URLSearchParams('season=summer')), 'summer');
-assert.equal(seasonFor('gavan', new URLSearchParams('season=winter')), 'summer');
-assert.equal(seasonFor(area, new URLSearchParams('bake=1')), 'summer');
+assert.equal(seasonFor(REGISTRY[area], new URLSearchParams()), 'winter');
+assert.equal(seasonFor(REGISTRY[area], new URLSearchParams('season=summer')), 'summer');
+for (const district of Object.values(REGISTRY)) {
+  assert.equal(seasonFor(district, new URLSearchParams('season=winter')), district.parked || district.status==='planned' ? 'summer' : 'winter', district.id);
+}
+assert.equal(seasonFor(REGISTRY[area], new URLSearchParams('bake=1')), 'summer');
 for (const gate of GATES.filter(g => g.from === area && !g.dev)) {
   for (const season of ['summer','winter']) {
     const url = new URL(arrivalUrl({page: REGISTRY[gate.to].page, pose: {x:0,z:0,yaw:0,pitch:0}, search:'?season='+season}), 'http://localhost');

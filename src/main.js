@@ -119,7 +119,7 @@ if (params.has('ndfar')) pipeline.ndFar = Number(params.get('ndfar')) || 1e9;   
 const audio = createAudio();
 const ctx = createContext({ scene, camera, renderer, audio, quality, sunDir });
 ctx.area = A;      // the area module of this page: ctx.area.ID, BAKE_DIR, MODULES ... (a test hook: __ctx.area.ID)
-ctx.season = seasonFor(A.ID, params);
+ctx.season = seasonFor(REGISTRY[A.ID], params);
 ctx.shared.season = ctx.season;
 if (ctx.season === 'winter') ctx.physics.frozenRivers = true;
 ctx.sky = sky;
@@ -609,7 +609,7 @@ async function main() {
     });
   }
   const q = $('quality');
-  installSeasonControl(q, A.ID, ctx.season);
+  installSeasonControl(q, REGISTRY[A.ID], ctx.season);
   if (q) { q.value = qName; q.addEventListener('change', () => { try { localStorage.setItem('piter.q', q.value); } catch (e) {} location.reload(); }); }
   const mute = $('mute'); if (mute) mute.addEventListener('click', () => { audio.muted = !audio.muted; mute.setAttribute('aria-pressed', String(audio.muted)); });
   if (params.has('stats')) $('stats').hidden = false;
