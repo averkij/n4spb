@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.9.1** (2026-11-27, patch): Restore the walkable paved approach at the Second Yelagin Bridge on the island bank
 - **17.9.0** (2026-11-27, minor): Winter across every playable district, nine landmark studies, new illuminated squares and activities, shore-accessible craft and sculpted NPC footwear
 - **17.8.0** (2026-11-27, minor): Winter opens in Sampson, Kolomna and Moskovskaya with nine decorated squares, the New Holland rink, seasonal docks and Blender detailing on three landmarks.
 - **17.7.1** (2026-11-27, patch): Cover the six Vasileostrovets garden entrance planters with snow in winter

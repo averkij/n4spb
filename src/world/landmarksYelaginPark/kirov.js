@@ -7,11 +7,53 @@ import { bust, cached, figureMats } from '../lib/figures.js';
 import { makeLabels } from '../streets/labels.js';
 import { KIROV } from './frame.js';
 import { hosta, salviaBed } from './plants.js';
+import { AREAS } from '../data/city.js';
+import { ringFromFlat } from '../lib/massing.js';
+
+// The entrance court meets the bridge above the sloping river bank. Its OSM
+// boundary includes the complete abutment edge and the path back to the bust.
+function entranceCourt({ctx,P,M,THREE}) {
+  const court=AREAS.find(a=>a.id==='w107155263');
+  if (!court) return;
+  const top=.10;
+  const paving=ctx.mat.toon('#ffffff',{map:ctx.tex.cache.get('pt-paver') || M.limestone.map,
+    paint:.05,name:'yelagin-bridgehead-pavers'});
+  P.far=800;
+  for (const poly of court.polys) {
+    const outer=ringFromFlat(poly.o), holes=(poly.h || []).map(ringFromFlat);
+    const rings=[outer,...holes], vertices=rings.flat();
+    P.cap(paving,outer,top,true,1.6,holes);
+    const contours=rings.map(r=>r.map(([x,z])=>new THREE.Vector2(x,z)));
+    for(const tri of THREE.ShapeUtils.triangulateShape(contours[0],contours.slice(1))) {
+      ctx.physics.addWalkTriangle(tri.map(i=>[vertices[i][0],top,vertices[i][1]]),.15);
+    }
+    for(const ring of rings) {
+      const area=ring.reduce((sum,[x,z],i)=>{
+        const next=ring[(i+1)%ring.length];return sum+x*next[1]-z*next[0];
+      },0);
+      const normalSign=(area>0 ? 1 : -1)*(ring===outer ? 1 : -1);
+      for (let i=0;i<ring.length;i++) {
+        const [ax,az]=ring[i], [bx,bz]=ring[(i+1)%ring.length];
+        const dx=bx-ax,dz=bz-az,len=Math.hypot(dx,dz);
+        if (!len) continue;
+        const pieces=Math.ceil(len/2), normal=[normalSign*dz/len,0,-normalSign*dx/len];
+        for(let j=0;j<pieces;j++) {
+          const a=j/pieces,b=(j+1)/pieces;
+          const x0=ax+dx*a,z0=az+dz*a,x1=ax+dx*b,z1=az+dz*b;
+          const y0=Math.min(0,ctx.L.heightAt(x0,z0))-.05,y1=Math.min(0,ctx.L.heightAt(x1,z1))-.05;
+          P.quad(M.graniteDark,[x0,y0,z0],[x1,y1,z1],[x1,top,z1],[x0,top,z0],normal,
+            [[a*len,y0],[b*len,y1],[b*len,top],[a*len,top]]);
+        }
+      }
+    }
+  }
+}
 
 const bustFig = () => cached('ypark-kirov-bust', () => bust({ detail: 0.8, style: 'uniform', turn: -0.18, pitch: 0.02, roll: 0.0, face: { age: 0.42, hair: 'short', brow: 0.85, jaw: 1.0, nose: 1.1, seed: 93, mouth: 'stern' } }));
 
 export function build(K) {
   const { ctx, P, M, svc } = K, { x, z, look } = KIROV;
+  entranceCourt(K);
   const FM = figureMats(ctx), rot = Math.atan2(look[0] - x, look[1] - z);
   P.far = 380;
   P.push(x, 0, z, rot);

@@ -21,13 +21,15 @@ import { BRIDGE_GROUP_KEYS } from './lib/area-tables.js';
 async function buildSource(ctx) {
   const M=makeMats(ctx);addVoMats(ctx,M);
   const root=new THREE.Group();root.name='bridgesPetro';
+  const fixedDecks=new THREE.Group();fixedDecks.name='fixed-bridge-decks';
   const rails=makeRailBatch(ctx),list=[],stats={tris:0,colliders:0},zones=bridgeZones();
   const waterY=()=>-3.4;
   const flush=(P,id)=>{stats.tris+=P.tris;const meshes=P.build(root,{name:'brg-'+id,waterY:-3.4,sub:m=>ctx.noOutline(m)});P.b.clear();solidPiers(ctx,meshes);return meshes;};
   const env=()=>({ctx,M,rails,Parts,flush,zones,waterY:-3.4});
   const add=(id,name,fn)=>{
     if(!BRIDGE_GROUP_KEYS.has(id))return;
-    const P=new Parts(),B=fn({...env(),P});B.colliders();flush(P,id);
+    const P=new Parts(),B=fn({...env(),P});B.colliders();
+    for(const m of flush(P,id)) if(m.material===B.deckMaterial) fixedDecks.add(m);
     stats.colliders+=B.info?.colliders||0;
     list.push({id,name,nameEn:name,x:B.x,z:B.z,at:B.at,B});
   };
@@ -56,10 +58,14 @@ async function buildSource(ctx) {
   const pub=list.flatMap(it=>[{id:it.id,name:it.name,x:it.x,z:it.z,crossing:it.B.crossing},...(it.B.anchors||[]).map(a=>({id:it.id,name:it.name,x:a.x,z:a.z,part:true}))]);
   ctx.services.bridges={...old,deckY,list:[...(old?.list||[]),...pub],masts:[...(old?.masts||[]),...list.flatMap(it=>it.B.masts||[])],spans:[...(old?.spans||[]),...list.flatMap(it=>it.B.span?[it.B.span]:[])]};
   ctx.services.bridgesPetro={list,stats};
+  return fixedDecks;
 }
 
 export async function build(ctx) {
   const before=new Set(ctx.physics.items), roots=new Set(ctx.staticRoot.children);
-  await buildSource(ctx);
+  const fixedDecks=await buildSource(ctx);
   adaptPortedSolids(ctx,ctx.staticRoot.children.filter(r=>!roots.has(r)),ctx.physics.items.filter(it=>!before.has(it)),"bridgesPetro");
+  // A bollard's hitbox overlaps the planks. The planks belong to the permanent
+  // span and must never be extracted as pieces of a movable post.
+  if(fixedDecks.children.length)ctx.addStatic(fixedDecks);
 }

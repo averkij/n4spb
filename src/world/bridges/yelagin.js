@@ -54,6 +54,7 @@ export function buildYelagin(env) {
   const steel = M.steel, black = M.ironBlack;
   const world = (u, v) => toWorld(sp, u, v);
   const B = { id: sp.id, x: f.cx, z: f.cz, yDeck, info: { rails: 0, colliders: 0, pier: PIERS.length - 2 }, masts: [] };
+  B.deckMaterial = deckMat;
   B.at = sp.at; B.bounds = frameBounds(sp, -HL - 4, HL + 4, -HW - 4, HW + 4, 2);
   B.deckAt = (x, z) => { const q = toUV(sp, x, z); return Math.abs(q.v) <= HW + 0.05 && Math.abs(q.u) <= HL + 0.3 ? yDeck(q.u) : null; };
   const yb = waterY - 0.2;

@@ -6,7 +6,7 @@
 const ALL = [
   { key: 'ypark-hercules', name: 'Геракл Фарнезский (мыс 4-го Южного пруда)', nameEn: 'Farnese Hercules on its cape: white marble copy on a pink granite plinth', ids: [], osm: ['n1157615795'], at: [-5544.9, -5113.7],
     note: 'OSM statue node n1157615795; the figure of the kit with the club, the lion skin and the three apples, the plinth 1.45 m, the white slab; solid collider, walkable round it' },
-  { key: 'ypark-kirov', name: 'Памятник С. М. Кирову у 2-го Елагина моста', nameEn: 'Kirov bust on a pink granite stele at the park gate of the 2nd Yelagin bridge, with its hostas and the red salvia bed', ids: [], osm: ['n4353822789'], at: [-5213.7, -4908.7],
+  { key: 'ypark-kirov', name: 'Памятник С. М. Кирову у 2-го Елагина моста', nameEn: 'Kirov bust and paved entrance court of the 2nd Yelagin bridge', ids: [], osm: ['n4353822789','w107155263'], at: [-5213.7, -4908.7],
     note: 'OSM bust node n4353822789 (the sculptor is unknown; Tomsky\'s bust is the Kamenny-side one); bronze bust from the figure kit' },
   { key: 'ypark-theatre', name: 'Летний театр эстрады', nameEn: 'Estradny Theatre: two glulam wave canopies with terraced seating and curved arches, the round arena floor, the stage with its roof', ids: ['w717885285', 'w717885286', 'w717885287'], osm: [], at: [-5235.1, -5340.5],
     note: 'the two building=roof outlines and the building=yes stage polygon of the bandstand; the polygon w717885288 is the lattice FENCE (stays generic and is not claimed)' },
