@@ -1,5 +1,30 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-27 — Winter in Finlyandsky, Kronverk and Vasilyevsky (17.7.0)
+
+Eight seconds of full throttle in Edge at Medium, 1280 × 720 on the RTX 3090 Ti. Palace starts in winter on both versions. The other three routes compare the previous summer default with the new winter default. The control uses the source and products of `cb7c2f2d`. Each pair starts in the same position, with the same input.
+
+| Area and version | Load (s) | Distance (m) | Frame mean / median / p95 / max (ms) | Frames >40 / >80 ms | Mean draws | JS heap / backing storage (MiB, CDP) |
+|---|---:|---:|---|---:|---:|---:|
+| Palace 17.6.0 | 34.0 | 269 | 27.3 / 33.3 / 49.9 / 66.7 | 15 / 0 | 1394 | 549 / 1463 |
+| Palace 17.7.0 | 34.9 | 268 | 30.7 / 33.3 / 50.0 / 66.7 | 15 / 0 | 1400 | 536 / 1464 |
+| Finlyandsky 17.6.0 | 21.2 | 285 | 24.8 / 16.8 / 33.4 / 200.0 | 5 / 1 | 814 | 638 / 619 |
+| Finlyandsky 17.7.0 | 22.3 | 284 | 19.1 / 16.7 / 33.4 / 183.4 | 1 / 1 | 794 | 608 / 700 |
+| Kronverk 17.6.0 | 29.0 | 93 | 28.3 / 33.2 / 50.0 / 250.1 | 23 / 3 | 1084 | 510 / 786 |
+| Kronverk 17.7.0 | 32.9 | 97 | 30.5 / 33.3 / 50.0 / 283.3 | 16 / 4 | 1076 | 496 / 1019 |
+| Vasilyevsky 17.6.0 | 38.2 | 137 | 37.7 / 33.3 / 66.7 / 283.3 | 31 / 7 | 1133 | unavailable |
+| Vasilyevsky 17.7.0 | 36.2 | 183 | 35.9 / 33.3 / 66.7 / 250.0 | 44 / 9 | 1168 | 481 / 684 |
+
+The old Vasilyevsky draw diagnostics threw while inspecting movable fixtures whose material was still a landmark atlas handle. Its control used the same drive without the optional diagnostics (`performance.memory` at the end reported 1,543 MiB). Version 17.7.0 resolves the handle before creating the instance mesh, preserving the cell, colours, atlas tile and knock record.
+
+Reproduce with `node tools/drive-bench.mjs --area <area> --q medium --seconds 8 --start "<pose>" --json --diagnostics`. The poses are `498.2286,135.1625,76.0322` (Palace), `630.37626685,-2452.19726876,-77.19325117` (Finlyandsky), `-2268.888,-2758.424,-153.99` (Kronverk) and `-2540,-1300,99` (Vasilyevsky).
+
+All three strict street-marking audits pass. Finlyandsky passes the full road audit. On both releases, Kronverk has 127 residual surface samples in 33 clusters against a budget of 120. Vasilyevsky has the same 53 on-road furniture cases, including 29 obstructions. The controls reproduce their coordinates and classifications. The water-level suite covers 23 cuts, including the two parked pages.
+
+All four drives completed with zero failed streamed regions and zero module errors. The Vasilyevsky drive exceeded the 33.3 ms average target on both versions. Its two runs reached different distances, and the release encountered nine frames over 80 ms. On Kronverk the release used 233 MiB more backing storage than the control. The normal bake verified 2,715 products across all 21 live pages, including 2,698 with the same SHA-256 as the previous version.
+
+The Performance-tier browser check loaded all three normal pages in both seasons. It used the on-screen selector and carried the saved choice to the next page without a season parameter. The selector, snowfall, ice physics and diagnostics agreed on all six loads. The full winter placement checks cover eight decorated squares and forecourts, three crystal structures on Kalinin Square and the eight planets and twenty ground lights on the Spit. The water tests cover 59 snow-filled bowls, the dry flush fountain on Kronverk and boarding at the Sphinx pier from its actual lower stair.
+
 ## 2026-11-26 — Palace lighting and Troitskaya winter paths (17.6.0)
 
 Normal-loading winter runs on the same three routes and settings as 17.5.0 below. Semyonovsky kept its 17.5.0 bake. In the full Palace scene the night projection and 18 decorated lamp posts were present in winter, with neither displayed in summer. All requested regions loaded. The longest stalls were 100–233 ms, so individual frames still exceed the 33.3 ms target even where the mean meets it.
