@@ -2,6 +2,7 @@
 // fig_14 q_01 q_02 g_07 wh_03 wh_06 cu_11 aer_01).  Textures are light tiles tinted by the material colour, except the facade BAY textures (one bay per tile, painted in real colours, drawn on a flat
 // wall quad with uv = (bay index, 0..1)): the Exchange wall bay (arched niche with the fan of voussoirs over a window + the square mezzanine window), the fan window of the gables, the warehouse and
 // Customs house bays.  All keys start with lmSt-.
+import { snowGarden } from '../lib/winter-garden.js';
 export const C = {
   white: '#f1eee6', whiteShade: '#dcd8cc', wall: '#c6cbbd', wallDark: '#b3b9aa', roof: '#9aa6ab', roofRed: '#b23a3c', roofGrey: '#9ba0a3',
   podium: '#8f8c88', stairs: '#9a9690', granite: '#9a9792', granitePink: '#a58b84', bollard: '#b08f86', sphere: '#8a8683', setts: '#6f7377', pavers: '#98695d',
@@ -174,6 +175,7 @@ export function makeMats(ctx) {
     anchor: T(C.anchor, { name: 'lmSt-anchor', paint: 0.08 }), bronze: T(C.bronze, { name: 'lmSt-bronze', paint: 0.05 }),
   });
   M.tex = { ashlar, setts, pebbles, seam };
+  snowGarden(ctx, M, ['lawn', 'begonia', 'begoniaPink', 'hedge'], ['gravel', 'pavers']);
   M.decals = new Set();
   M.T = T;
   return M;

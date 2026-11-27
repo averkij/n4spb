@@ -7,6 +7,7 @@ import { registerLOD } from '../../core/spatial.js';
 import { splitBays, knockBays, unitBox } from '../lib/fence-bays.js';
 import { COMPOUND_RING, WALL_IDS, FRONT_FENCE_IDS, COURT_WAYS, LAWNS, TREES, inCompound } from './compound-plan.js';
 import { roofPieces } from './roofs.js';
+import { winterTreeGeometry, SPECIES } from '../environment/treegeo.js';
 
 const shape=(w,h,y=0)=>{const s=new THREE.Shape();archPath(s,0,y,w,h);return s;};
 const rim=(w,h,y,t)=>{const s=shape(w,h,y),p=new THREE.Path();archPath(p,0,y+t,w-2*t,h-t,true);s.holes.push(p);return s;};
@@ -24,7 +25,7 @@ export function compoundMats(ctx,M){
       g.fillStyle='rgba(226,177,135,.08)';g.fillRect(x*bw+(y%2?bw/2:0)+1,y*bh+1,bw-2,1);
     }
   },{key:'finlyandsky-kresty-bond',repeat:[1,1]});
-  return {...M,brick:ctx.mat.toon('#ffffff',{map:tex,paint:.012}),roofShade:ctx.mat.toon('#775b51',{paint:.02}),court:ctx.mat.toon('#777978',{paint:.012,polygonOffset:.5}),lawn:ctx.mat.toon('#617c47',{paint:.022}),gravel:ctx.mat.toon('#92918a',{paint:.02}),spruce:ctx.mat.toon('#3e6256',{paint:.025}),leaf:ctx.mat.toon('#50713d',{paint:.025}),bark:ctx.mat.toon('#5b5146',{paint:.02})};
+  return {...M,brick:ctx.mat.toon('#ffffff',{map:tex,paint:.012}),roofShade:ctx.mat.toon('#775b51',{paint:.02}),court:ctx.mat.toon('#777978',{name:'finlyandsky-court-asphalt',paint:.012,polygonOffset:.5}),lawn:ctx.mat.toon('#617c47',{name:'lmKresty-lawn',paint:.022}),gravel:ctx.mat.toon('#92918a',{paint:.02}),spruce:ctx.mat.toon(ctx.season==='winter'?'#84a398':'#3e6256',{paint:.025}),leaf:ctx.mat.toon('#50713d',{paint:.025}),bark:ctx.mat.toon('#5b5146',{paint:.02})};
 }
 
 export function compoundGround(ctx,root,M,records,svc){
@@ -45,11 +46,14 @@ export function compoundGround(ctx,root,M,records,svc){
     D.quad(M.court,[x+nx,.039,z+nz],[xx+nx,.039,zz+nz],[xx-nx,.039,zz-nz],[x-nx,.039,z-nz],[0,1,0]);
   }
   let trees=0;
+  const bare = ctx.season === 'winter' ? winterTreeGeometry('limeA', 1) : null;
   for(const [x,z,h,kind]of TREES){
     if(!inCompound(x,z)||records.some(r=>r.polys.some(p=>pointInside(x,z,p.o))))continue;
-    P.col(M.bark,x,z,.03,h*.8,.23,.13,6);
+    if(kind==='spruce'||!bare)P.col(M.bark,x,z,.03,h*.8,.23,.13,6);
     if(kind==='spruce'){
       for(let i=0;i<7;i++){const y=1.2+i*h*.105,r=(h*.235)*(1-i*.105);P.col(M.spruce,x,z,y,y+h*.34,r,.025,9);}
+    }else if(bare){
+      P.geo(M.bark,bare,x,.03,z,0,hash(x,z)*6,0,h/SPECIES.limeA.H);
     }else{
       const g=new THREE.IcosahedronGeometry(1,1);
       for(const[dx,dz,dy,s]of[[0,0,.68,1],[-1.6,.6,.62,.8],[1.5,-.5,.64,.82],[.4,1.2,.84,.73]])P.geo(M.leaf,g,x+dx,h*dy,z+dz,0,hash(x+dx,z)*6,0,h*.24*s,h*.25*s,h*.23*s);
@@ -57,6 +61,7 @@ export function compoundGround(ctx,root,M,records,svc){
     }
     ctx.physics.addCylinder(x,z,.23,0,h*.78);trees++;
   }
+  bare?.dispose();
   for(const[p,far]of[[P,1350],[D,650]])for(const m of p.build(root,{name:'finlyandsky-kresty-grounds'})){
     // Preserve foliage provenance through batching and claims audits: a tree
     // overhanging a roof must never count as that building's structural shell.

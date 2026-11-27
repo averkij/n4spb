@@ -128,7 +128,8 @@ function fountain(K, f) {
       nozzles.push({ x: s * 1.78, y: 2.8, z: c * 1.78, height: 0.18, width: 0.028, target: [s * 3.4, 0, c * 3.4] });
     }
     const w = GF.W(a, b);
-    liveFountain(ctx, { id: f.id, x: w.x, z: w.z, y: 0.3, r: 3.96, nozzles });
+    const snowRing = ringp.map(([dx, dz]) => { const p = GF.W(a + dx, b + dz); return [p.x, p.z]; });
+    liveFountain(ctx, { id: f.id, x: w.x, z: w.z, y: 0.3, r: 3.96, snowRing, nozzles });
     fountainBasin(ctx, { id: f.id, x: w.x, z: w.z, r: 3.95, waterY: .3, bedY: .04,
       rimR: 4.2, rimTop: .47, segments: 36, pedestal: { r: 1.1, y1: 5.6 } });
   } finally { P.pop(); }

@@ -591,6 +591,8 @@ export const GARAGE = {
     lada: { x: -2540, z: -1300, yaw: 99 * DEG },
   },
   spawn: { x: -2540, z: -1300, yaw: 99 * DEG },
+  // Parallel to the Sphinx pier, off the western half of the lower flight.
+  boats: [{ id: 'boat-vasilyevsky', dock: 'sphinx-pier', x: -3384.93, z: -496.86, yaw: 2.0979 }],
 };
 
 // ---------------------------------------------------------------- the rest

@@ -22,6 +22,7 @@ export const MODULES = [
   "streets",
   "city",
   "landmarksTroitskaya",
+  "grottoPool",
   "landmarksAurora",
   "landmarksKamennoostrovsky",
   "landmarksKarpovka",
@@ -41,6 +42,7 @@ export const MODULES = [
 ];
 export const LABELS = {
   landmarksTroitskaya: 'Троицкая площадь и сквер',
+  grottoPool: 'Пруд у грота в Александровском парке',
   landmarksAurora: 'Крейсер «Аврора»',
   landmarksKamennoostrovsky: 'Каменноостровский проспект и дом Лидваля',
   landmarksKarpovka: 'Набережные Карповки',

@@ -2,6 +2,7 @@
 // landmarksAndrew/trees.js - instanced garden trees for the places this module owns (Arts Square garden): the species / canopy geometry of the environment module (copied: treegeo.js, leafmat.js, util.js) with
 // per-family InstancedMeshes (canopy + trunk), per-instance colour, trunk colliders.  plantTrees(K, list): list = [{ x, z, fam, s, yaw, y }].
 import * as THREE from 'three';
+import { landmarkTreeSeason } from '../lib/landmark-tree-season.js';
 import { prepareTreeLods } from '../lib/tree-bounds.js';
 import { SPECIES, canopyGeometry, trunkGeometry } from './treegeo.js';
 import { canopyMaterial, trunkMaterial } from './leafmat.js';
@@ -16,19 +17,20 @@ export function plantTrees(K, list, name = 'lmAnd-trees') {
   const sets = [];
   for (const [fam, items] of Object.entries(byFam)) {
     const F = SPECIES[fam], n = items.length;
+    const crown = landmarkTreeSeason(ctx, fam, F, LEAF[fam] || LEAF.limeA, matLobe, canopyGeometry);
     const mats = items.map((t) => { qt.setFromAxisAngle(up, t.yaw || 0); return new THREE.Matrix4().compose(new THREE.Vector3(t.x, t.y ?? 0.05, t.z), qt.clone(), new THREE.Vector3(t.s, t.s, t.s)); });
-    const cols = items.map((t, i) => new THREE.Color((LEAF[fam] || LEAF.limeA)[i % 3]).multiplyScalar(0.94 + rng() * 0.12));
+    const cols = items.map((t, i) => new THREE.Color(crown.palette[i % crown.palette.length]).multiplyScalar(0.94 + rng() * 0.12));
     const bk = F.bark;
     const bm = barkMats[bk] || (barkMats[bk] = trunkMaterial(ctx, ctx.tex.draw(128, 256, (g, w, h) => {
       const r = ctx.rng('bark-lmAnd-' + bk); g.fillStyle = bk === 'ash' ? '#8a857c' : bk === 'oak' ? '#6c5e4e' : bk === 'maple' ? '#7a6e62' : '#5e5044'; g.fillRect(0, 0, w, h);
       for (let i = 0; i < 36; i++) { const x = r() * w; g.strokeStyle = `rgba(32,26,20,${0.35 + r() * 0.35})`; g.lineWidth = 2 + r() * 3; g.beginPath(); g.moveTo(x, 0); for (let y = 0; y <= h; y += 32) g.lineTo(x + (r() - 0.5) * 8, y); g.stroke(); }
     }, { key: 'lmAnd-bark-' + bk, repeat: [1, 1] }), 'lmAnd-bark-' + bk));
     const lods = [0, 1, 2, 3].map((lod) => {
-      const im = new THREE.InstancedMesh(canopyGeometry(fam, lod), matLobe, n); im.setColorAt(0, col.setRGB(1, 1, 1));
+      const im = new THREE.InstancedMesh(crown.geometry(lod), crown.material, n); im.setColorAt(0, col.setRGB(1, 1, 1));
       im.castShadow = true; im.receiveShadow = true; im.name = `${name}-${fam}-${lod}`; im.count = lod === 3 ? n : 0;
       im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); if (im.instanceColor) im.instanceColor.setUsage(THREE.DynamicDrawUsage); im.userData.dynamic = true;        // repacked by distance: never baked into the static outline proxies (core/ndproxy.js skips dynamic instanced meshes)
       ctx.noBatch(im); group.add(im);
-      const tg = trunkGeometry(fam, lod); let tm = null;
+      const tg = crown.bare ? null : trunkGeometry(fam, lod); let tm = null;
       if (tg) { tm = new THREE.InstancedMesh(tg, bm, n); tm.castShadow = true; tm.receiveShadow = true; tm.name = `${name}-trunk-${fam}-${lod}`; tm.count = lod === 3 ? n : 0; tm.instanceMatrix.setUsage(THREE.DynamicDrawUsage); tm.userData.dynamic = true; ctx.noBatch(tm); group.add(tm); }
       return { im, tm };
     });

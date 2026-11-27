@@ -11,7 +11,7 @@ export const OWNS_GROUPS=true;
 const inRing=(x,z,p)=>{let q=false;for(let i=0,j=p.length-1;i<p.length;j=i++)if((p[i][1]>z)!==(p[j][1]>z)&&x<(p[j][0]-p[i][0])*(z-p[i][1])/(p[j][1]-p[i][1])+p[i][0])q=!q;return q;};
 export function build(ctx){
   const P=new Parts(),root=new THREE.Group();root.name='finlyandsky-banks';
-  const stone=ctx.mat.toon('#a49b90',{paint:.035}),asphalt=ctx.mat.toon('#686d70'),grass=ctx.mat.toon('#608b44'),coping=ctx.mat.toon('#b6ac9d'),dirt=ctx.mat.toon('#a88f76',{paint:.06});
+  const stone=ctx.mat.toon('#a49b90',{paint:.035}),asphalt=ctx.mat.toon('#686d70',{name:'finlyandsky-bank-asphalt'}),grass=ctx.mat.toon('#608b44',{name:'lmFin-grass'}),coping=ctx.mat.toon('#b6ac9d'),dirt=ctx.mat.toon(ctx.season==='winter'?'#b9b6ac':'#a88f76',{paint:.06});
   // Same repeating granite material as the Lenin descent: no extra atlas or
   // per-apron texture is needed for the continuous upper approach.
   const mats={wall:stone,retaining:stone,walk:asphalt,upper:asphalt,grass,apron:makeMats(ctx,'finlyandsky-lenin-bank').floor};

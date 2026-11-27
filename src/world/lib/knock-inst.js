@@ -29,7 +29,30 @@ function spotMatrix(spot, out = new THREE.Matrix4()) {
   return out.compose(_p.set(spot.x, spot.y ?? 0, spot.z), _q.setFromAxisAngle(UP, spot.rotY || 0), _s.set(s, s, s));
 }
 
+// Landmark Parts collectors store colours and atlas tile IDs in vertex RGB.
+// Fence bays and detached furniture bypass the collectors' final material
+// merge. Resolve those same handles once per part, before splitting by cell.
+function resolveMaterial(part) {
+  const handle = part.mat;
+  if (!handle?.isHandle && !handle?.isTileHandle) return part;
+  const geo = part.geo.clone();
+  const count = geo.getAttribute('position').count;
+  // An atlas selector uses the fractional bits of blue. Keep its encoded
+  // value exact. Flat colours can also carry the sculptor's vertex tint.
+  const tint = handle.isTileHandle ? null : geo.getAttribute('color');
+  const [r, g, b] = handle.tileCol;
+  const rgb = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    rgb[i * 3] = r * (tint ? tint.getX(i) : 1);
+    rgb[i * 3 + 1] = g * (tint ? tint.getY(i) : 1);
+    rgb[i * 3 + 2] = b * (tint ? tint.getZ(i) : 1);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
+  return { ...part, geo, mat: handle.tileBase, color: handle.isTileHandle ? undefined : part.color };
+}
+
 export function knockInstances(ctx, { name = 'knock', parts, spots, items = null, rec = {}, far = Infinity, cell = 384, extraParts = null }) {
+  if (parts.some(p => p.mat?.isHandle || p.mat?.isTileHandle)) parts = parts.map(resolveMaterial);
   const records = new Array(spots.length).fill(null), meshes = [];
   const knock = ctx.knock || null;
   /** the matrices of part `pi` for placement `i`: [] when it has none */

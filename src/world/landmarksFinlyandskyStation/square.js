@@ -26,11 +26,11 @@ function pavingTexture(ctx,key,colour){
 
 export function square(K,point){
   const {ctx,svc}=K,P=new Parts(),mat={
-    rose:ctx.mat.toon('#ffffff',{map:pavingTexture(ctx,'finlyandsky-square-rose','#b49a91'),paint:.008}),
-    grey:ctx.mat.toon('#ffffff',{map:pavingTexture(ctx,'finlyandsky-square-grey','#b5b4a9'),paint:.008}),
+    rose:ctx.mat.toon('#ffffff',{name:'sq-paving-finland-rose',map:pavingTexture(ctx,'finlyandsky-square-rose','#b49a91'),paint:.008}),
+    grey:ctx.mat.toon('#ffffff',{name:'sq-paving-finland-grey',map:pavingTexture(ctx,'finlyandsky-square-grey','#b5b4a9'),paint:.008}),
     border:ctx.mat.toon('#858a84',{paint:.012}),
-    lawn:ctx.mat.toon('#5c7c42',{paint:.018}),
-    flowers:ctx.mat.toon('#8b3f4a',{paint:.025}),
+    lawn:ctx.mat.toon('#5c7c42',{name:'lmFin-lawn',paint:.018}),
+    flowers:ctx.mat.toon('#8b3f4a',{name:'lmFin-flowers',paint:.025}),
   };
   const toWorld=ring=>ring.map(([u,v])=>{const p=point(u,v);return[p.x,p.z];});
   const toLocal=(x,z)=>{const a=point(0,0),b=point(1,0),c=point(0,1);return[(x-a.x)*(b.x-a.x)+(z-a.z)*(b.z-a.z),(x-a.x)*(c.x-a.x)+(z-a.z)*(c.z-a.z)];};

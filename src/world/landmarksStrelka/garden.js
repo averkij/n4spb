@@ -7,6 +7,7 @@
 // Everything of the garden is laid out in the ensemble frame around SC = the centre of the semicircle (frame.js); angles are measured from the axis (+z) toward +x (north).
 import * as THREE from 'three';
 import * as L from '../layout.js';
+import { winterTreeGeometry } from '../environment/treegeo.js';
 import { ROADS, AREAS, GREEN, FURNITURE, POIS } from '../data/city.js';
 import { ROT, W, Wa, M as toModel, SC, DEG } from './frame.js';
 import { ribbon, pairs, fillPolyFine, coverFn, inRing } from './surfaces.js';
@@ -69,20 +70,28 @@ export function garden(K) {
   for (let a = 14; a <= 80; a += 5.4) trees.push({ a: -a * DEG, kind: 'box' });                 // south arc: a continuous clipped row
   for (let a = 44; a <= 80; a += 7.2) trees.push({ a: a * DEG, kind: 'ball' });                 // north arc: fewer, ball crowns
   const rng = ctx.rng(20261007);
-  const crownBox = new THREE.BoxGeometry(6.0, 5.4, 5.4, 3, 3, 3), crownBall = new THREE.IcosahedronGeometry(3.4, 1);
-  for (const [g, round] of [[crownBox, 0.3], [crownBall, 1]]) {
-    const pa = g.attributes.position;
-    for (let i = 0; i < pa.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(pa, i), n = v.clone().normalize().multiplyScalar(3.5), h = Math.sin(v.x * 2.1 + v.y * 1.3) * Math.cos(v.z * 1.7 + v.y) * 0.22; v.lerp(n, round * 0.35 + (round < 1 ? 0.22 : 0)).multiplyScalar(1 + h * 0.3); pa.setXYZ(i, v.x, v.y * (round < 1 ? 1 : 0.92), v.z); }
-    g.computeVertexNormals();
-  }
-  const trunk = new THREE.CylinderGeometry(0.2, 0.3, 3.6, 7); trunk.translate(0, 1.8, 0);
-  crownBox.translate(0, 6.0, 0); crownBall.translate(0, 6.3, 0);
   const tm = (t) => { const p = pol(SC, R_TREE, t.a), w = W(p[0], p[1]); return { w, m: mat4(w.x, 0, w.z, ROT + t.a, 0.94 + rng() * 0.12) }; };
   const placed = trees.map((t) => ({ ...t, ...tm(t) })).filter((t) => !ring.length || inRing(ring, t.w.x, t.w.z));
-  for (const kind of ['box', 'ball']) {
-    const list = placed.filter((t) => t.kind === kind); if (!list.length) continue;
-    const r = addInstanced(ctx, K.root, 'lmSt-limes-' + kind, { list: [{ mat: M.lime, geo: kind === 'box' ? crownBox : crownBall }, { mat: M.bark, geo: trunk }] }, list.map((t) => t.m));
-    K.extraTris += r.tris;
+  if (ctx.season === 'winter') {
+    // Pollarded limes follow the same arc as in summer. The crown and trunk
+    // share one leafless mesh, so the Exchange stays visible between its limbs.
+    const geo = winterTreeGeometry('limeA', 1, { H: 8.6, R: 2.9, trunk: 0.46 });
+    const { tris } = addInstanced(ctx, K.root, 'lmSt-winter-limes', { list: [{ mat: M.bark, geo }] }, placed.map(t => t.m));
+    K.extraTris += tris;
+  } else {
+    const crownBox = new THREE.BoxGeometry(6.0, 5.4, 5.4, 3, 3, 3), crownBall = new THREE.IcosahedronGeometry(3.4, 1);
+    for (const [g, round] of [[crownBox, 0.3], [crownBall, 1]]) {
+      const pa = g.attributes.position;
+      for (let i = 0; i < pa.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(pa, i), n = v.clone().normalize().multiplyScalar(3.5), h = Math.sin(v.x * 2.1 + v.y * 1.3) * Math.cos(v.z * 1.7 + v.y) * 0.22; v.lerp(n, round * 0.35 + (round < 1 ? 0.22 : 0)).multiplyScalar(1 + h * 0.3); pa.setXYZ(i, v.x, v.y * (round < 1 ? 1 : 0.92), v.z); }
+      g.computeVertexNormals();
+    }
+    const trunk = new THREE.CylinderGeometry(0.2, 0.3, 3.6, 7); trunk.translate(0, 1.8, 0);
+    crownBox.translate(0, 6.0, 0); crownBall.translate(0, 6.3, 0);
+    for (const kind of ['box', 'ball']) {
+      const list = placed.filter((t) => t.kind === kind); if (!list.length) continue;
+      const r = addInstanced(ctx, K.root, 'lmSt-limes-' + kind, { list: [{ mat: M.lime, geo: kind === 'box' ? crownBox : crownBall }, { mat: M.bark, geo: trunk }] }, list.map((t) => t.m));
+      K.extraTris += r.tris;
+    }
   }
   for (const t of placed) ph.addCylinder(t.w.x, t.w.z, 0.32, 0, 4);
   P.push(W(0, 0).x, 0, W(0, 0).z, ROT);

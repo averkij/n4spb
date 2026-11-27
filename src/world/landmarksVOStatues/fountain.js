@@ -46,13 +46,6 @@ export const PIECES = [{
   solid: [{ w: 7.4, d: 2.7, h: 0.6, oz: -1.7 }, { w: 1.5, d: 3.1, h: 2.4, ox: 4.6, oz: -1.7 }],
   build(P, M, K) {
     const N = 20;
-    if (K.ctx && K.ctx.physics && K.ctx.physics.addWater) {                          // the basin: the annulus sector R1 + 0.3 .. R0 - 0.3 round (CX, CZ + 8), the water film 0.22 m over the pavement
-      const cs = Math.cos(K.yaw || 0), sn = Math.sin(K.yaw || 0), ring = [];
-      const at = (r, a) => { const ox = CX + Math.sin(a) * r, oz = CZ + 8 + Math.cos(a) * r; return [K.x + ox * cs + oz * sn, K.z - ox * sn + oz * cs]; };
-      for (let i = 0; i <= 8; i++) ring.push(...at(R0 - 0.3, -A + i / 8 * 2 * A));
-      for (let i = 8; i >= 0; i--) ring.push(...at(R1 + 0.3, -A + i / 8 * 2 * A));
-      K.ctx.physics.addWater({ ring, level: 0.22 });
-    }
     P.push(0, 0, 8, 0);                                                           // the local origin is the middle of the composition
     // the granite rim of the basin (inner and outer edge) and the water film
     const arc = (r, a) => [CX + Math.sin(a) * r, CZ + Math.cos(a) * r];
@@ -65,12 +58,14 @@ export const PIECES = [{
     P.cap(M.water, ring, 0.22, true, 4);
     // Six low plumes follow the surveyed curved basin in the placed piece frame.
     const cs = Math.cos(K.yaw || 0), sn = Math.sin(K.yaw || 0), nozzles = [];
+    const basin = ring.map(([x, z]) => [K.x + x * cs + (z + 8) * sn, K.z - x * sn + (z + 8) * cs]);
+    K.ctx.physics.addWater({ ring: basin.flat(), level: 0.22 });
     for (let i = 0; i < 6; i++) {
       const a = -A * 0.8 + i / 5 * A * 1.6, [x, z0] = arc((R0 + R1) / 2, a), z = z0 + 8;
       const wx = x * cs + z * sn, wz = -x * sn + z * cs;
       nozzles.push({ x: wx, z: wz, height: 0.5 + 0.3 * (i % 3), width: 0.02, target: [wx + 0.08 * cs, 0, wz - 0.08 * sn] });
     }
-    liveFountain(K.ctx, { id: 'n12201012355', x: K.x, z: K.z, y: 0.22, r: 4, nozzles });
+    liveFountain(K.ctx, { id: 'n12201012355', x: K.x, z: K.z, y: 0.22, r: 4, snowRing: basin, nozzles });
     // the deck on its granite wall
     P.tint('#a8a7a2'); P.box(M.vc, DECK.x0, DECK.x1, 0, DECK.h - 0.06, DECK.z0, DECK.z1, 'b');
     P.tint('#8a5a40'); P.box(M.vc, DECK.x0 - 0.05, DECK.x1 + 0.05, DECK.h - 0.06, DECK.h, DECK.z0 - 0.05, DECK.z1 + 0.05, 'b');

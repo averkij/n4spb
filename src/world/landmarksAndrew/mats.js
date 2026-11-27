@@ -1,6 +1,7 @@
 // landmarksAndrew/mats.js - materials of the module (ctx.mat.toon / glass only; every name starts with 'lmAnd-').  Colours: docs/research/andrew.md sections 3.6, 4.4, 8.4 (cathedral rose / peach / white / silver,
 // market butter yellow + red roof, Annunciation yellow + green domes, Pel brick + green copper).  Part 2 (market / pavilion / Pel / konka materials) is made by makeMats2 in mats2.js and merged here.
 // M.cutouts = alpha cut-outs (fence panels: no outline pass), M.decals = sheets that lie a few cm in front of a surface (polygonOffset), M.glassy = transparent sheets (no outline, no shadow).
+import { snowGarden } from '../lib/winter-garden.js';
 import { makeArt, COL } from './art.js';
 import { makeMats2 } from './mats2.js';
 
@@ -44,6 +45,7 @@ export function makeMats(ctx) {
   });
   Object.assign(M, makeMats2(ctx, M, { flat, sheet, decal, cut }));
   M.cutouts = new Set([M.fenceCath, M.fenceAnn, M.railBlv, M.railX, M.railKonka, M.railScroll, ...(M.cutouts2 || [])]);
+  snowGarden(ctx, M, ['lawn', 'soil', 'hedge'], ['gravel', 'gravelRed', 'playground']);
   M.decals = new Set([M.drain, M.win36, M.win24, M.win12, M.win23, M.winGrille, M.dark, M.niche, M.doorBrown, M.doorVarnish, M.doorGlassAl, M.slabGrey, M.herring, M.alley, M.sett, M.gravel, M.gravelRed, M.lawn, M.playground, ...(M.decals2 || [])]);
   M.glassy = new Set([M.water, ...(M.glassy2 || [])]);
   return M;

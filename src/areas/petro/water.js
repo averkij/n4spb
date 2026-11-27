@@ -16,7 +16,9 @@ const riverIds=new Set(RIVER.map(r=>r.id));
 const contextIds=new Set(ISLANDS2_WATER.map(p=>p.rel||p.id.split('.')[0]).concat(['r1266760','r1312629']));
 const pieces=p=>p.h?.length?triangulateRing(p.o,p.h).map(t=>t.flat()):[p.o];
 const riverRings=Object.fromEntries(RIVER.filter(r=>r.id&&r.polys.some(p=>p.h?.length)).map(r=>[r.id,r.polys.flatMap(pieces)]));
-const ponds=WATER.filter(w=>w.kind!=='fountain'&&!riverIds.has(w.id)&&!contextIds.has(w.id)).flatMap(w=>w.polys.flatMap((p,i)=>{
+// The shallow Alexander Park grotto basin has its own bed and seasonal surface
+// on both playable pages. A generic park-pond channel cuts a second well here.
+const ponds=WATER.filter(w=>w.id!=='w609619503'&&w.kind!=='fountain'&&!riverIds.has(w.id)&&!contextIds.has(w.id)).flatMap(w=>w.polys.flatMap((p,i)=>{
  const key=w.kind!=='pond'||(p.o[0]<-4400&&p.o[1]<-4800)?'neva':'park-pond';
  return pieces(p).map((ring,j)=>({id:w.id+'-pond-'+i+'-'+j,key,ring}));
 }));

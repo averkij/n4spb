@@ -2,6 +2,7 @@
 // WALL TEXTURES are painted for ONE BAY: u = bays along the wall, v = 0..1 over the whole face height (one quad per footprint edge).  M.bay(key, wM, hM, painter, px) builds such a material:
 // the painter works in METRES (x 0..wM to the right, y 0..hM up from the ground) through the helper `D`.  M.fac(o) is the stucco-house bay of the fortress module (floors with windows, socle, cornice).
 // Free geometry (turrets, gates, pedestals) uses the tiling materials (uv in metres): brickT (2 x 2 m), granite tiles, roof seams.
+import { snowGarden } from '../lib/winter-garden.js';
 const lcg = (seed) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
 
 export const C = {
@@ -109,6 +110,7 @@ export function makeMats(ctx) {
     zinc: flat(C.zinc, 'zinc', { paint: 0.02 }), zoo: flat(C.zoo, 'zoo'), zooD: flat(C.zooD, 'zooD'), benchGreen: flat('#3f6a4a', 'benchGreen'), water: T('#3f6a86', { name: 'lmKr-water', emissive: '#0c2030', emissiveIntensity: 0.25, transparent: true, opacity: 0.9 }),
     signRed: flat('#a5362c', 'signRed'), majolica: null,
   });
+  snowGarden(ctx, M, ['lawn', 'lawnSlope'], ['grit']);
   M.cutouts = new Set(); M.decals = new Set();
   M.col = (hex) => { const k = hex.toLowerCase(); let m = byHex.get(k); if (!m) { m = T(hex, { name: 'lmKr-c-' + k.slice(1), paint: 0.04 }); byHex.set(k, m); } return m; };
 

@@ -1,5 +1,6 @@
 // landmarksSmolensky/mats.js - materials of the module (ctx.mat.toon / glass only; every name starts with 'lmsmol-').  Colours: docs/research/smolensky.md sections 4-8 (art.js COL).
 // M.cutouts = alpha cut-outs (no outline pass), M.decals = sheets that lie 2-6 cm in front of a surface (polygonOffset: windows, plaques), M.glassy = transparent sheets.
+import { snowGarden } from '../lib/winter-garden.js';
 import { makeArt, COL } from './art.js';
 
 export const C = { ...COL };
@@ -55,6 +56,7 @@ export function makeMats(ctx) {
     capGrey: flat('capGrey', '#5c5f63', { paint: 0.03 }), bronze: flat('bronze', '#5a4a38', { paint: 0.03 }), bronzeShawl: flat('bronzeShawl', '#56553c', { paint: 0.03 }), bronzeFace: flat('bronzeFace', '#9a8a62', { paint: 0.03 }),
   });
   M.cutouts = new Set([M.bars, M.barsK, M.leaf, M.grille, M.plotFence]);
+  snowGarden(ctx, M, ['soil'], ['gravel']);
   M.decals = new Set([M.latt, M.lattGate, M.lattRe, M.paneDrum, M.paneLantern, M.winGate, M.bell, M.door, M.doorRe, M.doorWest, M.glory, M.rosette, M.churchHours, M.churchPlate, M.amber, M.xHours, M.xBurial, M.medallion, M.kokoshnik, M.trPlaque, M.trMosaic, M.arina, M.hours, M.monGate, M.pavers, M.asphalt, M.gravel]);
   M.glassy = new Set([]);
   return M;

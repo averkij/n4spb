@@ -69,7 +69,7 @@ export function makeMats(ctx) {
     roeSign: T(W, { map: A.roeSign, name: 'lmKir-roeSign', paint: 0, alphaTest: 0.5, polygonOffset: -2 }), roePlaque: sheet('roePlaque', A.roePlaque, { paint: 0, polygonOffset: -2, alphaTest: 0.5 }),
     // ---- decals (polygonOffset): one kind
     plaza: dec('plaza', C.plaza), gateAsphalt: dec('gateAsphalt', C.gateAsphalt), dirt: dec('dirt', '#8a5a48'), rubble: dec('rubble', '#cfc6b8'),
-    rubber: dec('rubber', C.rubberCol || '#9a5a4a'), court: dec('court', '#8f9a8c'), lawnTop: dec('lawnTop', C.lawn), flower: dec('flower', '#c9455f'), flowerGreen: dec('flowerGreen', '#3f6b3a'), sobPaver: dec('paverRed', C.sobPaver),
+    rubber: dec('rubber', C.rubberCol || '#9a5a4a'), court: dec('court', '#8f9a8c'), lawnTop: dec('lawnTop', ctx.season === 'winter' ? '#dce3e7' : C.lawn), flower: dec('flower', '#c9455f'), flowerGreen: dec('flowerGreen', '#3f6b3a'), sobPaver: dec('paverRed', C.sobPaver),
     sobStripe: dec('sobStripe', C.sobStripe), courtLine: dec('courtLine', '#f2f0ea'), gateNiche: dec('gateNiche', '#968a78'),
     // ---- lit pieces (MeshBasic): lamps, light bars, the roof letters, the foyer
     eLampWhite: lit('#f2f0e6', 1.0), eLightBar: lit('#fffbe8', 1.0), eSoffit: lit('#dfe6ea', 0.95), eLetters: lit('#d83c3a', 0.95), lampOpal: lit('#f0efe6', 0.95),

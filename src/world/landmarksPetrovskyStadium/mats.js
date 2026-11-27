@@ -10,6 +10,7 @@ const rngOf = (seed) => { let s = seed; return () => (s = (s * 16807) % 21474836
 
 export function makeMats(ctx) {
   const T = ctx.mat.toon, tex = ctx.tex;
+  const winter = ctx.season === 'winter';
   const D = (w, h, fn, key, o = {}) => tex.draw(w, h, fn, { key: 'lmPS-' + key, repeat: [1, 1], ...o });
   const speck = (g, w, h, seed, n, cols, s = 2) => { const r = rngOf(seed); for (let i = 0; i < n; i++) { g.fillStyle = cols[(r() * cols.length) | 0]; g.fillRect(r() * w, r() * h, 1 + r() * s, 1 + r() * s); } };
   const glass = (g, x, y, w, h) => { g.fillStyle = '#26303a'; g.fillRect(x, y, w, h); const gr = g.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, 'rgba(160,190,215,0.45)'); gr.addColorStop(0.6, 'rgba(60,90,125,0.05)'); gr.addColorStop(1, 'rgba(16,22,30,0.3)'); g.fillStyle = gr; g.fillRect(x, y, w, h); };
@@ -88,8 +89,10 @@ export function makeMats(ctx) {
   // ---- the pitch (one quad, 105 x 68 m): mown stripes and the markings of a football pitch
   const pitchTex = D(1024, 656, (g, w, h) => {
     const sx = w / 104.9, sy = h / 68;                                                       // px per metre
-    for (let i = 0; i < 14; i++) { g.fillStyle = i % 2 ? '#5aa844' : '#4f9a3a'; g.fillRect(i * w / 14, 0, w / 14 + 1, h); }
-    speck(g, w, h, 777, 900, ['rgba(40,90,30,0.2)', 'rgba(130,200,100,0.18)'], 3);
+    const stripes = winter ? ['#b8c3c4', '#c5ced0'] : ['#4f9a3a', '#5aa844'];
+    for (let i = 0; i < 14; i++) { g.fillStyle = stripes[i % 2]; g.fillRect(i * w / 14, 0, w / 14 + 1, h); }
+    const flecks = winter ? ['#afbbbd', '#d8e1e3'] : ['rgba(40,90,30,0.2)', 'rgba(130,200,100,0.18)'];
+    speck(g, w, h, 777, 900, flecks, 3);
     g.strokeStyle = '#eeede2'; g.lineWidth = 3; g.fillStyle = '#eeede2';
     const R = (x0, y0, x1, y1) => g.strokeRect(x0 * sx, y0 * sy, (x1 - x0) * sx, (y1 - y0) * sy);
     g.strokeRect(2, 2, w - 4, h - 4);
@@ -104,9 +107,13 @@ export function makeMats(ctx) {
       const a = Math.acos(5.5 / 9.15);
       g.beginPath(); g.arc((x0 + sg * 11) * sx, 34 * sy, 9.15 * sy, side ? Math.PI - a : -a, side ? Math.PI + a : a); g.stroke();
     }
-  }, 'pitch', { repeat: null });
+  }, winter ? 'snow-pitch' : 'pitch', { repeat: null });
 
-  const turfTex = D(128, 128, (g, w, h) => { g.fillStyle = '#58a141'; g.fillRect(0, 0, w, h); speck(g, w, h, 41, 260, ['rgba(40,90,30,0.2)', 'rgba(130,200,100,0.2)'], 3); }, 'turf');
+  const turfTex = D(128, 128, (g, w, h) => {
+    g.fillStyle = winter ? '#d4dddf' : '#58a141';
+    g.fillRect(0, 0, w, h);
+    speck(g, w, h, 41, 260, winter ? ['#c4cdd0', '#e2e9e9'] : ['rgba(40,90,30,0.2)', 'rgba(130,200,100,0.2)'], 3);
+  }, winter ? 'snow-turf' : 'turf');
   const trackTex = D(128, 128, (g, w, h) => { g.fillStyle = '#b0493a'; g.fillRect(0, 0, w, h); speck(g, w, h, 5603, 380, ['rgba(120,40,30,0.3)', 'rgba(215,120,100,0.25)', 'rgba(90,30,24,0.2)'], 2); }, 'track');
   const apronTex = D(256, 256, (g, w, h) => {
     g.fillStyle = '#b4b1a9'; g.fillRect(0, 0, w, h);

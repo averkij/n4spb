@@ -13,6 +13,7 @@ import { shellWalls, shellCornice, shellPlinth, insetRoof, hipRect, chimney, she
 import { lathe } from './prims.js';
 import { plate } from './plaques.js';
 import { KK, KK_LEN, KK_W0, KK_W1, KK_TOWER } from './frame.js';
+import { armillaryGeometry } from './armillary-model.js';
 
 const ID = 'r3296328', EAVE = 14.2, KH = 14.2, AEAVE = 15.5, PAV = 0.3, PAVW = 18.1, TAU = Math.PI * 2;
 
@@ -136,7 +137,15 @@ function tower(K, cx, cz) {
   lathe(P, M.white, cx, cz, [[5.15, 27.6], [5.4, 27.75], [5.4, 28.25], [5.95, 28.5], [5.95, 28.9], [5.3, 28.9]], 32);
   lathe(P, M.kkRoof, cx, cz, [[5.95, 28.9], [2.6, 28.97]], 32);
   lathe(P, M.white, cx, cz, [[5.72, 28.9], [5.72, 29.12], [5.36, 29.12]], 32); lathe(P, M.white, cx, cz, [[5.36, 29.9], [5.76, 29.9], [5.76, 30.08], [5.32, 30.08], [5.32, 29.9]], 32);
-  drum(P, M.balus, cx, cz, 5.54, 29.12, 29.9, 32, 96);
+  // Turned white-stone balusters. The openings reveal the set-back walls of
+  // the observatory from street level and from across the Neva.
+  const vase = new THREE.LatheGeometry([[0.12, 0], [0.12, 0.08], [0.08, 0.19],
+    [0.15, 0.34], [0.14, 0.43], [0.07, 0.60], [0.11, 0.70], [0.12, 0.78]]
+    .map(([x, y]) => new THREE.Vector2(x, y)), 8);
+  for (let k = 0; k < 8; k++) for (let j = -3; j <= 3; j++) {
+    const a = k * TAU / 8 + j * 0.083;
+    P.geo(M.white, vase, cx + 5.54 * Math.sin(a), 29.12, cz + 5.54 * Math.cos(a));
+  }
   for (let k = 0; k < 8; k++) { const a = Math.PI / 8 + (k * TAU) / 8; P.push(cx + Math.sin(a) * 5.34, 0, cz + Math.cos(a) * 5.34, a); P.box(M.kk, -0.62, 0.62, 29.12, 29.9, 0, 0.4, 'tb'); P.box(M.white, -0.7, -0.62, 29.12, 29.9, 0, 0.42, 'tb'); P.box(M.white, 0.62, 0.7, 29.12, 29.9, 0, 0.42, 'tb'); P.pop(); }
   // tier 3: the octagon with arched windows, scroll buttresses on the corners, entablature, attic
   prism(P, M.kkT3, cx, cz, [[2.65, 28.9], [2.65, 36.3]], 8, R0, one);
@@ -154,25 +163,43 @@ function tower(K, cx, cz) {
   prism(P, M.dome, cx, cz, [[2.78, 36.44], [2.8, 36.7], [2.7, 37.3], [2.45, 37.95], [2.08, 38.5], [1.62, 38.95], [1.3, 39.2], [1.28, 39.32]], 8, R0);
   for (let k = 0; k < 8; k++) {
     const a = (k * TAU) / 8; P.push(cx + Math.sin(a) * 2.5, 0, cz + Math.cos(a) * 2.5, a);
-    P.cyl(M.dome, [0, 37.55, 0], [0, 37.55, 0.36], 0.46, 0.44, 12, true); P.cyl(M.white, [0, 37.55, 0.3], [0, 37.55, 0.39], 0.25, 0.25, 12, true); P.cyl(M.glass, [0, 37.55, 0.36], [0, 37.55, 0.42], 0.19, 0.19, 10, true);
+    // Oval copper dormer, projecting peaked hood, cross sash.
+    P.cyl(M.dome, [0, 37.55, -0.1], [0, 37.55, 0.36], 0.46, 0.42, 16, true);
+    const rim = new THREE.TorusGeometry(0.32, 0.080, 5, 16);
+    P.geo(M.dome, rim, 0, 37.55, 0.36, 0, 0, 0, 1, 1.22, 1);
+    rim.dispose();
+    P.cyl(M.glass, [0, 37.55, 0.355], [0, 37.55, 0.378], 0.26, 0.26, 16, true);
+    P.box(M.white, -0.015, 0.015, 37.29, 37.81, 0.378, 0.402);
+    P.box(M.white, -0.235, 0.235, 37.543, 37.567, 0.378, 0.401);
+    for (const side of [-1, 1]) {
+      const x = side * 0.48;
+      P.quad(M.dome, [x, 37.84, 0], [0, 38.06, -0.06], [0, 38.03, 0.48], [x, 37.81, 0.46], [side, 1, 0]);
+      P.cyl(M.dome, [0, 38.03, 0.48], [x, 37.81, 0.46], 0.032, 0.032, 5, true);
+    }
     P.pop();
   }
   prism(P, M.white, cx, cz, [[1.3, 39.3], [1.36, 39.36], [1.36, 39.5], [1.12, 39.5]], 8, R0);
-  prism(P, M.balus, cx, cz, [[1.24, 39.5], [1.24, 40.0]], 8, R0, () => [[0, 0], [3, 0], [3, 1], [0, 1]]);
+  for (let k = 0; k < 8; k++) {
+    const a = k * TAU / 8;
+    P.push(cx + 1.24 * Math.sin(a), 39.5, cz + 1.24 * Math.cos(a), a);
+    for (const x of [-0.32, 0, 0.32]) P.geo(M.white, vase, x, 0, 0, 0, 0, 0, 0.68, 0.64, 0.68);
+    P.pop();
+  }
+  vase.dispose();
   prism(P, M.white, cx, cz, [[1.18, 40.0], [1.3, 40.0], [1.3, 40.1], [1.18, 40.1]], 8, R0);
   prism(P, M.kkLant, cx, cz, [[0.9, 39.3], [0.9, 41.5]], 8, R0, one);
   prism(P, M.white, cx, cz, [[0.9, 41.28], [1.16, 41.4], [1.16, 41.56], [0.95, 41.56]], 8, R0);
   prism(P, M.dome, cx, cz, [[1.16, 41.56], [0.78, 41.8], [0.42, 42.02], [0.3, 42.15], [0.0, 42.17]], 8, R0);
-  // the scrolled stand and the armillary sphere: six gilded rings and a small globe
-  for (let k = 0; k < 4; k++) { const a = Math.PI / 4 + (k * TAU) / 4, s = Math.sin(a), c = Math.cos(a); P.cyl(M.dome, [cx + s * 0.3, 42.12, cz + c * 0.3], [cx + s * 0.42, 42.5, cz + c * 0.42], 0.06, 0.055, 6, false); P.cyl(M.dome, [cx + s * 0.42, 42.5, cz + c * 0.42], [cx + s * 0.1, 42.92, cz + c * 0.1], 0.055, 0.05, 6, false); }
-  const cy = 43.6, R = 0.72, ring = (rr, tube) => new THREE.TorusGeometry(rr, tube, 6, 28);
-  P.geo(M.dome, new THREE.SphereGeometry(0.13, 8, 6), cx, 42.95, cz); P.cyl(M.gold, [cx, 42.9, cz], [cx, cy + R + 0.12, cz], 0.02, 0.02, 5, false);
-  const g1 = ring(R, 0.04), g2 = ring(R * 0.92, 0.035), g3 = ring(R * Math.cos(0.41), 0.03);
-  P.geo(M.gold, g1, cx, cy, cz, Math.PI / 2, 0, 0);                                            // horizon ring
-  P.geo(M.gold, g1, cx, cy, cz, 0, 0, 0); P.geo(M.gold, g1, cx, cy, cz, 0, Math.PI / 2, 0);     // two meridians
-  P.geo(M.gold, g2, cx, cy, cz, Math.PI / 2 - 0.41, 0, 0.0);                                    // equator, tilted
-  P.geo(M.gold, g2, cx, cy, cz, Math.PI / 2 + 0.41, 0, 0.2);                                    // ecliptic
-  P.geo(M.gold, g3, cx, cy + R * Math.sin(0.41), cz, Math.PI / 2, 0, 0); P.geo(M.gold, g3, cx, cy - R * Math.sin(0.41), cz, Math.PI / 2, 0, 0);   // tropics
-  P.geo(M.gold, new THREE.SphereGeometry(0.15, 10, 8), cx, cy, cz);
-  for (const g of [g1, g2, g3]) g.dispose();
+  // Hollow, curling feet below the titanium armillary. The instrument
+  // exported from Blender is the 1.50 m 1993 sphere, including its zodiac.
+  const foot = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(
+    [[0.19, 0, 0], [0.38, 0.08, 0], [0.44, 0.24, 0], [0.28, 0.38, 0], [0.12, 0.68, 0], [0.09, 0.89, 0]]
+      .map(p => new THREE.Vector3(...p))), 12, 0.052, 6, false);
+  for (let k = 0; k < 4; k++) P.geo(M.dome, foot, cx, 41.90, cz, 0, Math.PI * (0.25 + k / 2));
+  foot.dispose();
+  for (const [part, material] of [['gold', M.gold], ['silver', M.whiteShade], ['iron', M.iron]]) {
+    const geo = armillaryGeometry(part);
+    P.geo(material, geo, cx, 43.6, cz);
+    geo.dispose();
+  }
 }

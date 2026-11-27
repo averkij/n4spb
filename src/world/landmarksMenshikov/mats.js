@@ -1,5 +1,6 @@
 // landmarksMenshikov/mats.js - materials of the module (ctx.mat.toon / glass only; every name starts with 'lmmensh-').  Colours: docs/research/menshikov.md sections 2.3, 3.3, 4.3-4.8, 5.2.
 // M.cutouts = alpha cut-outs (no outline pass), M.decals = sheets that lie 2-6 cm in front of a surface (polygonOffset), M.glassy = transparent sheets (no outline, no shadow).
+import { snowGarden } from '../lib/winter-garden.js';
 import { makeArt, COL } from './art.js';
 
 export const C = { ...COL };
@@ -65,6 +66,7 @@ export function makeMats(ctx) {
     deck: flat('deck', '#8a7358', { paint: 0.05 }), steelRail: flat('steelRail', '#7c8084', { paint: 0.02 }),
   });
   M.cutouts = new Set([M.fencePalace, M.fenceGarden, M.gateLeaf, M.laurel, M.garland, M.rings]);
+  snowGarden(ctx, M, ['hedge', 'lawn', 'lawnG', 'bed'], ['gravel']);
   M.decals = new Set([M.brick, M.lawn, M.lawnG, M.paving, M.gravel, M.bed, M.bedEdge, M.setts, M.trophy, M.trophyBand]);
   M.glassy = new Set([]);
   return M;

@@ -6,7 +6,10 @@ import { VB, mtx } from './traffic/vb.js';
 import { buildPalaceFestival } from './winter-palace-square.js';
 import { buildDistrictSquares } from './winter-district-squares.js';
 
-const districts = new Set(['palace', 'smolny', 'vladimirsky', 'admiralty', 'semyonovsky', 'aptekarsky']);
+const districts = new Set([
+  'palace', 'smolny', 'vladimirsky', 'admiralty', 'semyonovsky', 'aptekarsky',
+  'finlyandsky', 'kronverk', 'vasilyevsky',
+]);
 const storageKey = 'piter.season';
 export function seasonFor(area, params) {
   if (!districts.has(area) || params.has('bake')) return 'summer';

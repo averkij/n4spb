@@ -5,6 +5,7 @@ import { BUILDINGS, MONUMENTS, PLATFORMS, RAILS } from './data/city.js';
 import { Parts, ringEdges, onEdge } from './landmarksD/kit.js';
 import { MeshBuilder, addPrism, addPolyColliders } from './lib/massing.js';
 import { sculptLenin } from './landmarksFinlyandskyStation/lenin.js';
+import { clockMesh } from './landmarksFinlyandskyStation/clock-mesh.js';
 import { square } from './landmarksFinlyandskyStation/square.js';
 import { registerLOD } from '../core/spatial.js';
 import { makeLabels } from './streets/labels.js';
@@ -97,16 +98,22 @@ function station(K) {
   for (const yy of [19.2, 28.6]) P.box(M.metal, -4.2, 4.2, yy, yy + .42, -4.2, 4.2);
   for (let face = 0; face < 4; face++) {
     const a = face * Math.PI / 2;
-    D.push(0, 0, 0, a); F.push(0, 0, 0, a);
+    D.push(0, 0, 0, a);
     for (let u = -3.55; u <= 3.6; u += .88) D.box(M.metal, u - .045, u + .045, 16.8, 28.6, 3.81, 3.9);
-    D.cyl(M.clock, [0, 24.05, 3.94], [0, 24.05, 4.04], 2.74, 2.74, 40);
-    for (let i = 0; i < 12; i++) {
-      const angle = i * Math.PI / 6;
-      F.cyl(M.silver, [Math.sin(angle) * 2.17, 24.05 + Math.cos(angle) * 2.17, 4.075], [Math.sin(angle) * 2.54, 24.05 + Math.cos(angle) * 2.54, 4.075], .045, .045, 4);
-    }
-    F.cyl(M.silver, [0, 24.05, 4.1], [-1.1, 24.92, 4.1], .075, .04, 5);
-    F.cyl(M.silver, [0, 24.05, 4.12], [1.78, 23.14, 4.12], .055, .025, 5);
-    D.pop(); F.pop();
+    D.pop();
+  }
+  // The manufacturer installed one 5.5 m dial on the square-facing side.
+  // Place its LED hands and batons in the same distance band as the dial.
+  const luminous = ctx.mat.toon('#f1f1e9', { emissive: '#e6ebed', emissiveIntensity: .62, name: 'station-clock-light' });
+  const clockMaterials = { rim: M.metal, dial: M.clock, hands: luminous, indices: luminous };
+  for (const [part, [positions, indices]] of Object.entries(clockMesh)) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.scale(.001, .001, .001);
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    D.geo(clockMaterials[part], geometry, 0, 24.05, 3.93);
+    geometry.dispose();
   }
   P.col(M.silver, 0, 0, 29.02, 59.0, .22, .035, 8);
   // The station has a needle spire, not the five-pointed finial of Vosstaniya's

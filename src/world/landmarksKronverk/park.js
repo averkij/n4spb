@@ -8,13 +8,14 @@
 // Benches and lamps of the park are NOT drawn here: `props` draws the OSM benches, `streets` the OSM lamps (no doubles).
 import * as THREE from 'three';
 import * as L from '../layout.js';
-import { BRIDGES, MONUMENTS, WATER } from '../data/city.js';
+import { BRIDGES, MONUMENTS } from '../data/city.js';
 import { addPolyColliders } from '../lib/massing.js';
 import * as G from './geo.js';
 import { byId, pairs, dist, centroid, rotOf, rotOut, inRing } from './frame.js';
 import { walls, house } from './house.js';
 import { human, cached, extend, figureMats } from '../lib/figures.js';
 import { liveFountain } from '../lib/live-fountain.js';
+import { build as buildGrottoPool } from '../grottoPool.js';
 
 const SIT = (extra = {}) => ({ pelvis: [0, 0.5, -0.06], pelvisRot: [0.05, 0, 0], legs: { L: { foot: [0.12, 0, 0.36], yaw: 0.2, pole: [0, 0.2, 1] }, R: { foot: [-0.13, 0, 0.34], yaw: -0.25, pole: [0, 0.2, 1] } }, ...extra });
 const STAND = (extra = {}) => ({ pelvis: [0, 0.95, 0], legs: { L: { foot: [0.12, 0, 0.05], pole: [0, 0, 1] }, R: { foot: [-0.12, 0, -0.04], pole: [0, 0, 1] } }, ...extra });
@@ -137,13 +138,14 @@ function steregushchy(K) {
   // the thin water film and low drainage lip leave its approach walkable.
   P.cyl(br,[.5,yc+2.9,-.1],[.5,yc+2.9,.02],.065,.06,8,false);
   const waterY=T2+.03, localPool=[[-1.2,2.2],[1.2,2.2],[1.2,3.04],[-1.2,3.04]];
-  P.cap(M.water,localPool,waterY,true,2);
+  if (ctx.season !== 'winter') P.cap(M.water,localPool,waterY,true,2);
   for(const x of[-1.25,1.2])P.box(M.granitePinkFlat,x,x+.05,T2,T2+.055,2.15,3.08,'');
   const worldPoint=(x,y,z)=>new THREE.Vector3(x,y,z).applyMatrix4(P.m);
   const source=worldPoint(.5,yc+2.9,.025),landing=worldPoint(.5,waterY,2.65),centre=worldPoint(0,waterY,2.62);
-  const waterRing=localPool.flatMap(([x,z])=>{const p=worldPoint(x,waterY,z);return[p.x,p.z];});
-  ph.addWater({ring:waterRing,level:waterY});
-  const animation=liveFountain(ctx,{id:'steregushchy-seacock',x:centre.x,z:centre.z,y:waterY,r:1.3,far:300,nozzles:[
+  const snowRing=localPool.map(([x,z])=>{const p=worldPoint(x,waterY,z);return[p.x,p.z];});
+  const waterRing=snowRing.flat();
+  if (ctx.season !== 'winter') ph.addWater({ring:waterRing,level:waterY});
+  const animation=liveFountain(ctx,{id:'steregushchy-seacock',x:centre.x,z:centre.z,y:waterY,r:1.3,far:300,snowRing,nozzles:[
     {x:source.x-centre.x,y:source.y-waterY,z:source.z-centre.z,height:.08,width:.045,target:[landing.x-centre.x,0,landing.z-centre.z]},
   ]});
   // This is a narrow receiving trough; its rings must stay in the water.
@@ -169,25 +171,19 @@ function steregushchy(K) {
 
 // ================================================================== the grotto and its pool
 function grotto(K) {
-  const { P, M, ctx, svc } = K, ph = ctx.physics;
+  const { P, M, ctx, svc } = K;
   const rec = byId('w189064849'); if (!rec) return;
   const poly = rec.polys[0], ring = pairs(poly.o), c = centroid(ring), Hg = 3.4;
   walls(K, poly, Hg, () => ({ mat: M.rubble, bay: 2, plain: false }), { plain: M.rubble });
   P.cap(M.slab, ring, Hg, true, 2, []);
   // a rubble parapet and the dark arch of the grotto toward the pool
-  const pond = WATER.find((w) => w.id === 'w609619503'), pc = pond ? centroid(pairs(pond.polys[0].o)) : [c[0] + 10, c[1] - 6];
+  const pc = buildGrottoPool(ctx) || [c[0] + 10, c[1] - 6];
   const dl = dist(c, pc), d = [(pc[0] - c[0]) / dl, (pc[1] - c[1]) / dl];
   P.push(c[0] + d[0] * 5.0, 0, c[1] + d[1] * 5.0, rotOut(d[0], d[1]));
   P.box(M.rubble, -2.6, 2.6, 0, 3.0, -1.2, 0.6, 'b', 2);
   const sh = new THREE.Shape(); sh.moveTo(-1.1, 0); sh.lineTo(-1.1, 1.3); sh.absarc(0, 1.3, 1.1, Math.PI, 0, true); sh.lineTo(1.1, 0); sh.lineTo(-1.1, 0); P.face(M.dark, sh, 0.62, 1, 10);
   P.pop();
   addPolyColliders(ctx, poly, 0, Hg + 1.2, 0.6);
-  // the round pool: boulder kerb, water
-  const R = 2.7;
-  for (let i = 0; i < 16; i++) { const q = i / 16 * 6.283, s = 0.85 + (i * 7 % 5) * 0.07; P.push(pc[0] + Math.cos(q) * (R + 0.35), 0, pc[1] + Math.sin(q) * (R + 0.35), q * 1.7); G.frustum(P, i % 2 ? M.rock : M.rockD, 0, 0, 0, 0.42 * s, 5, 0.55 * s, 0.38 * s, 0, 1, 1, { capTop: M.rock }); P.pop(); }
-  P.cyl(M.water, [pc[0], 0.11, pc[1]], [pc[0], 0.12, pc[1]], R + 0.1, R + 0.1, 20, true); P.cyl(M.rockD, [pc[0], 0, pc[1]], [pc[0], 0.1, pc[1]], R + 0.15, R + 0.15, 20, true);
-  G.frustum(P, M.rock, pc[0], pc[1], 0.1, 0.5, 6, 0.6, 0.3, 0.4, 1, 1, { capTop: M.rockD });
-  ph.addCylinder(pc[0], pc[1], R + 0.5, 0, 0.5);
   svc.monuments.push({ id: 'grotto', name: 'Грот в Александровском парке', x: c[0], z: c[1], h: Hg });
 }
 

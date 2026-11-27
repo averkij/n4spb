@@ -1,5 +1,6 @@
 // landmarksAcademy/mats.js - materials of the module (ctx.mat.toon / glass only; every name starts with 'lmacade-').  Colours: docs/research/academy.md sections 3.7, 4.4, 5, 6 (art.js COL).
 // M.cutouts = alpha cut-outs (no outline pass), M.decals = sheets that lie 2-6 cm in front of a surface (polygonOffset), M.glassy = transparent sheets (no outline, no shadow).
+import { snowGarden } from '../lib/winter-garden.js';
 import { makeArt, COL } from './art.js';
 import { makeArt2 } from './art2.js';
 
@@ -62,6 +63,7 @@ export function makeMats(ctx) {
 
   });
   M.cutouts = new Set([M.balus, M.railing, M.fence, M.inscrPed, M.hotelLetL, M.hotelLetR, M.treziniPed, M.klodtPed, M.khetPed]);
+  snowGarden(ctx, M, ['lawn', 'hedge'], ['gravel']);
   M.decals = new Set([M.hiero, M.inscrPed, M.lawn, M.gravel, M.hotelLetL, M.hotelLetR, M.treziniPed, M.klodtPed, M.khetPed, M.apron, M.cobble, M.diamond]);
   M.glassy = new Set();
   return M;

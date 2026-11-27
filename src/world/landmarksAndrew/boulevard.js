@@ -49,7 +49,7 @@ function lampCrook(Q, M) {
 function railPost(Q, M) { Q.cyl(M.lampBlack, [0, 0, 0], [0, 0.8, 0], 0.045, 0.04, 6, true); Q.geo(M.lampBlack, new THREE.SphereGeometry(0.065, 6, 4), 0, 0.86, 0); }
 
 /** an octagonal granite fountain in local (q, s): stepped basin 5.6 m across flats, two-bowl stem to 3.0 m, water */
-function fountain(P, M, cx, cz) {
+function fountain(P, M, cx, cz, tierSurface) {
   const a0 = Math.PI / 8, ro = (ap) => ap / Math.cos(a0);
   G.frustum(P, M.graniteBasin, cx, cz, 0, 0.2, 8, ro(3.25), ro(3.25), a0, 6, 0.2, { capTop: M.graniteBasin });
   G.frustum(P, M.graniteBasin, cx, cz, 0.2, 0.42, 8, ro(3.0), ro(3.0), a0, 6, 0.2, { capTop: M.graniteBasin });
@@ -65,7 +65,7 @@ function fountain(P, M, cx, cz) {
   const prof = [[0.62, 0.3], [0.62, 0.55], [0.48, 0.72], [0.36, 0.98], [0.3, 1.22], [0.34, 1.34], [0.6, 1.42], [0.95, 1.55], [1.02, 1.68], [0.96, 1.73], [0.9, 1.68], [0.5, 1.58], [0.26, 1.62],
     [0.2, 1.82], [0.22, 2.05], [0.3, 2.25], [0.36, 2.38], [0.55, 2.45], [0.58, 2.56], [0.54, 2.6], [0.5, 2.56], [0.3, 2.5], [0.16, 2.54], [0.12, 2.76], [0.07, 2.92], [0, 3.0]];
   G.revolve(P, M.graniteBasin, prof, 14, { cx, cz, uRep: 2, vTile: 1.5, crease: 50 });
-  for (const [r, y] of [[0.88, 1.66], [0.5, 2.54]]) P.fan(M.water, Array.from({ length: 12 }, (_, i) => [cx + Math.cos(i * Math.PI / 6) * r, y, cz + Math.sin(i * Math.PI / 6) * r]), [0, 1, 0]);
+  for (const [r, y] of [[0.88, 1.66], [0.5, 2.54]]) P.fan(tierSurface, Array.from({ length: 12 }, (_, i) => [cx + Math.cos(i * Math.PI / 6) * r, y, cz + Math.sin(i * Math.PI / 6) * r]), [0, 1, 0]);
 }
 
 export function build(K) {
@@ -103,9 +103,8 @@ export function build(K) {
       P.box(M.kerb, 2.48, 2.55, 0.0, 0.05, s0 + 0.2, s1 - 0.2, 'b', 1); P.box(M.kerb, 2.85, 2.92, 0.0, 0.05, s0 + 0.2, s1 - 0.2, 'b', 1);
     }
     // ---------------------------------------------------------------------- fountains, bench blocks, colliders
-    for (const [s, q] of FOUNTAINS) {
-      fountain(P, M, q, s);
-    }
+    const tierSurface = ctx.season === 'winter' ? ctx.mat.toon('#dce3e7', { name: 'fountain-snow', paint: .09 }) : M.water;
+    for (const [s, q] of FOUNTAINS) fountain(P, M, q, s, tierSurface);
   } finally { P.pop(); }
   // n4spb (docs/AREAS.md 13.7, docs/vo-m3.md): a fountain basin is water to wade in, not a solid 3.1 m disc.  The granite rim (octagon, apothem 2.35 .. 2.8, 0.65 m) is a row of 8 breakable GHOST bays (the rim stays drawn, as the wing
   // walls of the Blagoveshchensky Bridge do), the basin is physics water (0.55 m, floor 0.3), the two-bowl stem in the middle (r up to 1.02 m, 3.0 m) is a solid monument; the two granite bench blocks are knock records.
@@ -118,10 +117,10 @@ export function build(K) {
       nozzles.push({ x: x * 0.5, y: 1.99, z: z * 0.5, height: 0.1, width: 0.025, target: [x * 0.75, 1.11, z * 0.75] });
       nozzles.push({ x: x * 0.88, y: 1.11, z: z * 0.88, height: 0.12, width: 0.025, target: [x * 1.8, 0, z * 1.8] });
     }
-    liveFountain(ctx, { id: s < 200 ? 'w214409235' : 'w214409237', x: c.x, z: c.z, y: 0.55, r: 2.35, nozzles });
     const rimR = ro(2.575), vs = Array.from({ length: 8 }, (_, i) => { const t = a0 + i * Math.PI / 4; return bw(s + Math.cos(t) * rimR, q + Math.sin(t) * rimR); });
     for (let i = 0; i < 8; i++) { const A = vs[i], B = vs[(i + 1) % 8]; rimBays.push({ x0: A.x, z0: A.z, x1: B.x, z1: B.z, y: 0, ghost: true }); }
     const inner = Array.from({ length: 8 }, (_, i) => { const t = a0 + i * Math.PI / 4, R = ro(2.35) * 0.97, p = bw(s + Math.cos(t) * R, q + Math.sin(t) * R); return [p.x, p.z]; });
+    liveFountain(ctx, { id: s < 200 ? 'w214409235' : 'w214409237', x: c.x, z: c.z, y: 0.55, r: 2.35, snowRing: inner, nozzles });
     if (ph.addWater) ph.addWater({ ring: inner.flat(), level: 0.55 });
     for (const [dq, ds, rot] of [[4.4, -3.6, 0.5], [-4.2, 3.9, -2.6]]) { const b = bw(s + ds, q + dq); blockSp.push({ x: b.x, y: 0, z: b.z, rotY: FB.rot + rot }); blockIt.push(ph.addBox(b.x, b.z, 2.0, 0.56, FB.rot + rot, 0, 0.5)); }
   }

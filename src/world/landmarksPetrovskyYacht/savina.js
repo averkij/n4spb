@@ -107,7 +107,8 @@ export function build(K) {
     }
     const waterWorld = (lx,lz) => ({ x: SAV.x + lx*Math.cos(SAV.rot)+lz*Math.sin(SAV.rot), z: SAV.z-lx*Math.sin(SAV.rot)+lz*Math.cos(SAV.rot) });
     const fw = waterWorld(fx, fz);
-    liveFountain(ctx, { id: 'savina-courtyard-fountain', x: fw.x, z: fw.z, y: 0.82, r: 0.9,
+    const snowRing = ring.map(([x, z]) => { const p = waterWorld(x, z); return [p.x, p.z]; });
+    liveFountain(ctx, { id: 'savina-courtyard-fountain', x: fw.x, z: fw.z, y: 0.82, r: 0.9, snowRing,
       nozzles: [{ height: 0.84, width: 0.025, target: [0.2, 0, 0] }], far: 220 });
     fountainBasin(ctx, { id: 'savina-courtyard-fountain', x: fw.x, z: fw.z, r: .9,
       waterY: .82, bedY: .72, rimR: .975, rimBottom: .72, rimTop: .85,

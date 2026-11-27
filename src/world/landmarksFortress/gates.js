@@ -9,6 +9,8 @@
 // Gate frame: origin = the passage axis on the face, local +z = out of the wall, +x = to the right seen from outside.
 import * as THREE from 'three';
 import * as G from './geo.js';
+import { registerLOD } from '../../core/spatial.js';
+import { petrovskyEagleGeometry } from './petrovsky-eagle.js';
 import { GATES, WALL, RAV, axisToRing } from './frame.js';
 import { human, cached, figureMats } from '../lib/figures.js';
 
@@ -69,7 +71,7 @@ export function build(K) {
       // entablature
       P.box(st, -hw - 0.1, hw + 0.1, H - 0.7, H - 0.25, zf, zf + 0.45, 'bk', 1); P.box(st, -hw - 0.35, hw + 0.35, H - 0.25, H + 0.15, zf - 2.4, zf + 0.8, 'b', 1);
       // the lead double-headed eagle with three gilded crowns over the arch
-      eagle(P, M, 0, 8.25, zf + 0.34, 1.0);
+      placeEagle(K, g, 8.25, zf + 0.34);
       // attic: the panel block, the wooden relief, the curved pediment, volutes on the shoulders
       const ya = H + 0.15, ha = 4.4, aw = 4.6;
       P.box(st, -aw, aw, ya, ya + ha, zf - 1.5, zf, 'b', 2);
@@ -243,21 +245,15 @@ export function build(K) {
   if (errs.length) throw new Error(errs.join('\n'));
 }
 
-/** the lead double-headed eagle (black, three gilded crowns, sceptre and orb): centre (x, y), on the plane z, scale s (wing span 2.9 s) */
-function eagle(P, M, x, y, z, s = 1) {
-  const sph = new THREE.SphereGeometry(1, 10, 8), E = (mat, ex, ey, ez, rx, ry, rz, rot = 0) => P.geo(mat, sph, x + ex * s, y + ey * s, z + ez * s, 0, 0, rot, rx * s, ry * s, rz * s);
-  E(M.lead, 0, 0, 0.1, 0.42, 0.62, 0.24);                                                                         // body
-  E(M.goldFlat, 0, 0.02, 0.33, 0.2, 0.26, 0.05);                                                                   // the shield on the breast
-  for (const sd of [-1, 1]) {
-    E(M.lead, sd * 0.2, 0.72, 0.12, 0.12, 0.3, 0.12, -sd * 0.35); E(M.lead, sd * 0.36, 1.0, 0.14, 0.16, 0.15, 0.14);                 // neck, head
-    P.geo(M.goldFlat, new THREE.ConeGeometry(0.06 * s, 0.24 * s, 4), x + sd * 0.56 * s, y + 0.99 * s, z + 0.16 * s, 0, 0, -sd * Math.PI / 2);   // beak
-    P.col(M.goldFlat, x + sd * 0.36 * s, z + 0.14 * s, y + 1.14 * s, y + 1.3 * s, 0.1 * s, 0.14 * s, 6, true);                         // crown
-    for (let k = 0; k < 5; k++) { const a = 0.25 + k * 0.3, len = (1.5 - k * 0.14) * s, cx = x + sd * (0.35 * s + Math.cos(a) * len / 2), cy = y + 0.2 * s + Math.sin(a) * len / 2 * 0.9; P.geo(M.lead, sph, cx, cy, z + 0.08 * s, 0, 0, sd * a, len / 2, 0.11 * s, 0.06 * s); }   // wing feathers
-    E(M.lead, sd * 0.3, -0.72, 0.1, 0.09, 0.3, 0.09, sd * 0.4);                                                    // legs
-    P.col(M.goldFlat, x + sd * 0.52 * s, z + 0.2 * s, y - 1.25 * s, y - 0.45 * s, 0.035 * s, 0.035 * s, 5, false);  // sceptre / orb staff
-  }
-  E(M.goldFlat, 0.52, -0.42, 0.2, 0.1, 0.1, 0.1);
-  P.col(M.goldFlat, x, z + 0.14 * s, y + 1.32 * s, y + 1.56 * s, 0.14 * s, 0.2 * s, 6, true);                      // the big middle crown
-  for (let k = 0; k < 3; k++) E(M.lead, (k - 1) * 0.16, -0.78 - Math.abs(k - 1) * 0.02, 0.1, 0.09, 0.3, 0.06);     // tail
-  sph.dispose();
+function placeEagle(K, gate, y, depth) {
+  const material = K.ctx.mat.toon('#ffffff', { vertexColors: true, name: 'petrovsky-lead-relief' });
+  const eagle = new THREE.Mesh(petrovskyEagleGeometry(), material);
+  eagle.name = 'petrovsky-gate-eagle';
+  eagle.position.set(gate.outer[0] - gate.d[0] * depth, y, gate.outer[1] - gate.d[1] * depth);
+  eagle.rotation.y = Math.atan2(-gate.d[0], -gate.d[1]);
+  eagle.receiveShadow = true;
+  K.root.add(eagle);
+  eagle.updateMatrixWorld();
+  registerLOD(eagle, 175);
+  K.extraTris += eagle.geometry.index.count / 3;
 }

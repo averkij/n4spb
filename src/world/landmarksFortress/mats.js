@@ -3,6 +3,7 @@
 // cathedral yellow #e6c263 with cream trim #f0e6c4, gilding #e8b93a, hall roof #c9cfd2, vault dome maroon #6a3f3a, cobbles #8d8a86, sand #d9c591, lawn #6a9c3e, iron green #5d7a66.
 // WALL TEXTURES are painted for one bay: u = metres along the wall / bay width, v = 0..1 over the whole face height (the face is one quad per edge).
 // M.fac(opts) paints a house facade bay (floors with windows, socle, bands, cornice) and caches the material by its key.  Canvas top = v 1.
+import { snowGarden } from '../lib/winter-garden.js';
 const lcg = (seed) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
 
 export const C = {
@@ -134,6 +135,7 @@ export function makeMats(ctx) {
     lampGlass: T('#f3efe2', { emissive: '#ffe9b0', emissiveIntensity: 0.3, name: 'lmFort-lampGlass' }),
   };
   M.cutouts = new Set();
+  snowGarden(ctx, M, ['lawn', 'sand'], ['gravel', 'cobble']);
   M.decals = new Set();
 
   // ---------------------------------------------------------------- house facades: one bay per u unit, v over the wall height

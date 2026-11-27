@@ -83,7 +83,8 @@ export function build(K) {
   // cut into the colour bands (centre ornamental foliage with tall stalks, red begonia / salvia, silver cineraria, pink / yellow edge); flat geometry of the flat base (no decal, no new kind)
   for (const [r, q] of BEDS) {
     const p = FK.W(r, q), n = 28, ring = Array.from({ length: n }, (_, i) => [p.x + Math.cos(i * 2 * Math.PI / n) * 3.65, p.z + Math.sin(i * 2 * Math.PI / n) * 3.65]);
-    bed(P, M, p.x, p.z, 0.06, (r + q) * 7);
+    if (ctx.season === 'winter') P.cap(M.lawnTop, ring, 0.14, true, 4);
+    else bed(P, M, p.x, p.z, 0.06, (r + q) * 7);
     ribbon(P, M.eKerb, ring, 0.16, 0.12, { closed: true, tile: 2, seg: 3 });
   }
   K.svc.beds = BEDS.map(([r, q]) => { const p = FK.W(r, q); return { x: p.x, z: p.z, r: 3.65 }; });

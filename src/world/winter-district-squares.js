@@ -5,6 +5,9 @@
 // https://www.gov.spb.ru/gov/otrasl/inspek/news/102522/
 import { VB } from './traffic/vb.js';
 import { knockInstances } from './lib/knock-inst.js';
+import { FINLYANDSKY_SQUARES, buildFinlyandskyCrystals } from './winter-finlyandsky.js';
+import { KRONVERK_SQUARES } from './winter-kronverk.js';
+import { VASILYEVSKY_SQUARES, buildVasilyevskyPlanets } from './winter-vasilyevsky.js';
 
 // World coordinates keep installations in the same places on overlapping pages.
 // x, z, fir height; arch/orb placements are independent of the fir footprint.
@@ -17,6 +20,7 @@ const squares = [
   { id: 'baltic-forecourt', tree: [-2933, 2772, 11], arches: [[-2941, 2772, 0.40]], orbs: [[-2925, 2772]] },
   { id: 'troitskaya', tree: [-1443, -2297, 12], arches: [[-1443, -2305, 0.18]], orbs: [[-1435, -2297], [-1451, -2297]], snow: [-1437, -2291] },
   { id: 'tolstoy-square', tree: [-2194, -3699, 8], orbs: [[-2188, -3693], [-2188, -3705]] },
+  ...FINLYANDSKY_SQUARES, ...KRONVERK_SQUARES, ...VASILYEVSKY_SQUARES,
 ];
 
 const gold = '#ffd483', ice = '#c6edf7', red = '#d64d47';
@@ -67,6 +71,39 @@ function clear(ctx, x, z, r, h) {
   return !ctx.physics.columnBlocked(x, z, r, 0.32, h);
 }
 
+function placeMarketHuts(ctx, glow, spots) {
+  if (!spots.length) return;
+  const wood = new VB(), bulbs = new VB();
+  const plank = '#8b5340', trim = '#a73737';
+  wood.box(3.42, 0.16, 2.38, '#584b40', [0, 0.08, 0]);
+  wood.box(3.38, 2.25, 0.12, plank, [0, 1.25, -1.10]);
+  for (const side of [-1, 1]) {
+    wood.box(0.14, 2.20, 2.25, plank, [side * 1.60, 1.20, 0]);
+    wood.box(0.14, 2.30, 0.14, trim, [side * 1.62, 1.26, 1.09]);
+    const pitch = -side * 0.46;
+    wood.box(2.02, 0.15, 2.66, trim, [side * 0.88, 2.76, 0], [0, 0, pitch]);
+    wood.box(2.05, 0.11, 2.69, '#dae2e5', [side * 0.88, 2.87, 0], [0, 0, pitch]);
+    for (let i = 0; i <= 6; i++) {
+      const x = side * i * 0.27;
+      bulbs.sph(0.065, i % 3 ? gold : red, [x, 3.10 - Math.abs(x) * 0.49, 1.35], 6);
+    }
+  }
+  wood.box(3.22, 0.92, 0.14, trim, [0, 0.59, 1.05]);
+  wood.box(3.45, 0.12, 0.50, '#cb9a73', [0, 1.10, 1.06]);
+  for (let i = 0; i < 7; i++) {
+    const x = (i - 3) * 0.43;
+    wood.box(0.28, 0.19, 0.25, i % 2 ? '#547771' : '#c66e50', [x, 1.255, 1.05]);
+    wood.box(0.04, 0.205, 0.26, '#e8cd9b', [x, 1.26, 1.05]);
+  }
+  knockInstances(ctx, {
+    name: 'festive-market-hut', spots, far: 245,
+    parts: [{ geo: wood.build(), mat: ctx.mat.toon('#ffffff', { vertexColors: true, name: 'fair-timber' }) },
+      { geo: bulbs.build(), mat: glow, shadow: false, noOutline: true }],
+    items: (_, { x, z, rotY }) => ctx.physics.addBox(x, z, 3.42, 2.38, rotY, 0, 2.40),
+    rec: { kind: 'stand', w: 3.42, d: 2.38, h: 3.35, mass: 240 },
+  });
+}
+
 function placeFixtures(ctx, glow, spots, arches) {
   if (!spots.length) return;
   const { frame, lights } = arches ? archGeometry() : baubleGeometry();
@@ -87,7 +124,7 @@ function placeFixtures(ctx, glow, spots, arches) {
 }
 
 export function buildDistrictSquares(ctx, glow, decoratedFir, snowman) {
-  const arches = [], orbs = [];
+  const arches = [], orbs = [], huts = [];
   for (const site of squares) {
     const [x, z, h] = site.tree;
     if (!ctx.L.inPlay(x, z)) continue;
@@ -98,8 +135,14 @@ export function buildDistrictSquares(ctx, glow, decoratedFir, snowman) {
     for (const [x, z] of site.orbs || []) {
       if (clear(ctx, x, z, 1.1, 2.8)) orbs.push({ x, z });
     }
+    for (const [x, z, rotY] of site.huts || []) {
+      if (clear(ctx, x, z, 2.25, 3.65)) huts.push({ x, z, rotY });
+    }
     if (site.snow && clear(ctx, ...site.snow, 0.65, 1.7)) snowman(ctx, ...site.snow, 0.8);
   }
   placeFixtures(ctx, glow, arches, true);
   placeFixtures(ctx, glow, orbs, false);
+  placeMarketHuts(ctx, glow, huts);
+  buildFinlyandskyCrystals(ctx, glow);
+  buildVasilyevskyPlanets(ctx, glow);
 }

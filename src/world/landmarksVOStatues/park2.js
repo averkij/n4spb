@@ -219,16 +219,21 @@ const sundial = () => ({
 });
 const loveFountain = () => ({
   id: 'n5808194383', key: 'loveFountain', name: 'Фонтан любви', x: -2947.6, z: -892, mount: WALL, mountOff: 0.03, h: 2.4,
-  solid: [{ w: 1.0, d: 0.8, h: 1.0, oz: 0.4 }],
+  solid: [{ w: 1.2, d: .14, h: 2.3, oz: .07 }, { r: .21, h: .55, oz: .5 }],
   build(P, M, K) {
     P.tint('#9c5a4c'); P.box(M.vc, -0.6, 0.6, 0.0, 2.3, 0.0, 0.14, 'b');                                         // the red granite slab 2.3 m
     P.tint('#8a4c40'); P.box(M.vc, -0.66, 0.66, 0.0, 0.12, 0.0, 0.2, 'b');
     P.tint('#4a4a3c'); P.cyl(M.vc, [0, 1.65, 0.14], [0, 1.65, 0.19], 0.34, 0.34, 24, true);                    // the bronze disc
     P.tint('#6a6a56'); for (let i = 0; i < 3; i++) ball(P, M.vc, [-0.1 + i * 0.1, 1.65 + (i % 2) * 0.05, 0.2], [0.06, 0.07, 0.02], { w: 6, h: 5 });
     P.tint('#8e8e88'); lathe(P, M.vc, [[0.0, 0.5], [0.2, 0.55], [0.44, 0.8], [0.46, 0.9], [0.4, 0.9], [0.0, 0.84]], 20, { z: 0.5 });  // the granite bowl
-    P.cap(M.water, Array.from({ length: 20 }, (_, i) => [Math.cos(i / 20 * Math.PI * 2) * 0.38, 0.5 + Math.sin(i / 20 * Math.PI * 2) * 0.38]), 0.84, true, 3);
+    const ring = Array.from({ length: 20 }, (_, i) => [Math.cos(i / 20 * Math.PI * 2) * .38, .5 + Math.sin(i / 20 * Math.PI * 2) * .38]);
+    P.cap(M.water, ring, .84, true, 3);
     const cs = Math.cos(K.yaw || 0), sn = Math.sin(K.yaw || 0);
-    liveFountain(K.ctx, { id: 'n5808194383', x: K.x, z: K.z, y: 0.84, r: 0.55, nozzles: [
+    const bowl = ring.map(([x, z]) => [K.x + x * cs + z * sn, K.z - x * sn + z * cs]);
+    const bed = bowl.map(([x, z]) => [x, .80, z]);
+    K.ctx.physics.addWater({ ring: bowl.flat(), level: .84 });
+    for (let i = 1; i < bed.length - 1; i++) K.ctx.physics.addWalkTriangle([bed[0], bed[i], bed[i + 1]], .08);
+    liveFountain(K.ctx, { id: 'n5808194383', x: K.x, z: K.z, y: 0.84, r: 0.55, snowRing: bowl, nozzles: [
       { x: 0.19 * sn, y: 0.81, z: 0.19 * cs, height: 0.05, width: 0.014, target: [0.5 * sn, 0, 0.5 * cs] },
     ], far: 200 });
     P.tint('#4a4a3c'); ball(P, M.vc, [-0.08, 0.98, 0.5], [0.04, 0.12, 0.04], { w: 6, h: 5 }); ball(P, M.vc, [0.08, 0.96, 0.5], [0.04, 0.11, 0.04], { w: 6, h: 5 });       // Romeo and Juliet
