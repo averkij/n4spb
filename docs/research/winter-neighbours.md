@@ -10,6 +10,12 @@ At Finland Station, a November installation photograph places the district tree 
 
 On the Spit, the lighting designer’s photographs of the Parade of Planets show spherical lanterns and inclined orbital rings. Their placement frames the Stock Exchange and the Rostral Columns. [Designer’s photo gallery](https://brkno.com/projects/strelka-vasilevskogo-ostrova)
 
+## Third group of neighbours
+
+Sampsoniyevskoye–Lanskoye is the last direct neighbour of the original three central pages (4.82 km). The next ring is two gate crossings from the centre. Its nearest area-weighted play rectangles belong to Kolomna–Yekateringofsky (4.74 km from a central page) and Moskovskaya Zastava (6.00 km). Kolomna connects through Admiralty and Semyonovsky. Moskovskaya Zastava connects through Semyonovsky. These distances rank the game territories and are independent of the walking route.
+
+The Vyborg district lists Akademika Klimova Square among its festive lighting sites. New Holland’s park plan places winter skating on the central lawn. The city’s Moskovskaya Square Christmas programme describes a troika, a sleigh and festive figures inspired by Pushkin’s fairy tales. These three settings give each district its own winter destination. [Vyborg district lighting](https://www.gov.spb.ru/gov/terr/reg_viborg/news/103750/) · [New Holland park plan](https://www.newhollandsp.ru/images/download/PROJECT_INFO_RUS.pdf) · [Moskovskaya Square fair](https://www.gov.spb.ru/gov/otrasl/inspek/news/289361/)
+
 ## Palace Square
 
 The city's holiday programme places the sledding hill beside the General Staff building and describes illuminated photo installations on the square. Keep the Alexander Column, the palace frontage and the approach through the General Staff arch legible between installations. [City holiday programme](https://www.gov.spb.ru/press/governor/310107/)
