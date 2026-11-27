@@ -5,7 +5,7 @@ export const BAKED_REVISIONS = {
   avtovo: 'ba061b75615ab9a2e647',
   dekabristov: '802f48e4217674475ab7',
   finlyandsky: '9523fb7e29c5ebdc703b',
-  gavan: '29a368bbdc523922ea3f',
+  gavan: '87b6fd39e13466324dee',
   islands: 'df49987703824bc1d327',
   kolomna: 'f88187b9a105769cd4ff',
   komendantsky: 'f8a22c5ed4d9a627c2a6',
@@ -19,7 +19,7 @@ export const BAKED_REVISIONS = {
   sampson: '94a8593601530c05d933',
   semyonovsky: '82d3fb0f72d6f9306d33',
   smolny: '6b7eb0ee00dcd23e9418',
-  vasilyevsky: '1f612fd2e8d83df2a32a',
+  vasilyevsky: '3490cfaf5ce84e2eb01f',
   vladimirsky: 'ac7cc7362435027fae87',
 };
 const AREA = typeof document !== 'undefined' ? document.documentElement?.dataset?.area : undefined;       // (Node tools stub a bare document: no documentElement there -> 'none')

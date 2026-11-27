@@ -3,6 +3,45 @@
 import assert from 'node:assert/strict';
 import { buildWorld } from './lib/headless-world.mjs';
 
+function checkGateBowls(ctx, THREE, season) {
+  const bowls = ctx.knock.list.filter(r => r.parts.some(p => p.mesh?.name.startsWith('lmKir-bowls-')));
+  assert.equal(bowls.length, 6, 'three bowls in front of each gate pavilion');
+  assert.equal(new Set(bowls.map(r => r.item)).size, 6, 'each bowl has a separate collider');
+  const matrix = new THREE.Matrix4(), point = new THREE.Vector3();
+  for (const bowl of bowls) {
+    assert.equal(bowl.kind, 'planter');
+    assert.equal(bowl.items.length, 1);
+    assert.equal(bowl.item.source.knock, bowl);
+    let top = -Infinity, red = false, snow = false;
+    for (const { mesh, index } of bowl.parts) {
+      mesh.getMatrixAt(index, matrix);
+      const { position, color } = mesh.geometry.attributes;
+      for (let i = 0; i < position.count; i++) {
+        const height = point.fromBufferAttribute(position, i).applyMatrix4(matrix).y - bowl.y;
+        const r = color.getX(i), g = color.getY(i), b = color.getZ(i);
+        top = Math.max(top, height);
+        red ||= r > 0.25 && r > 3 * Math.max(g, b);
+        // The concrete rim stops at 0.58 m. A pale top above it is the snow cap.
+        snow ||= height > 0.6 && Math.min(r, g, b) > 0.5;
+      }
+    }
+    if (season === 'winter') {
+      assert.equal(red, false, 'winter bowl still has red bedding');
+      assert(snow, 'winter bowl needs a pale snow cap above the rim');
+      assert(top <= 0.72, `winter bowl reaches ${top.toFixed(2)} m`);
+    } else {
+      assert(red, 'summer bowl needs red bedding');
+      assert(top > 0.85, `summer flower spikes reach only ${top.toFixed(2)} m`);
+    }
+  }
+  for (const bowl of bowls) {
+    assert.equal(bowl.state, 'stand', 'neighbouring bowls survive earlier hits');
+    assert.equal(ctx.knock.hit(bowl.x, bowl.z, 45, 1, 0, 'planter'), bowl);
+    assert.equal(bowl.state, 'fly');
+    assert.equal(bowl.items.length, 0);
+  }
+}
+
 for (const season of ['summer', 'winter']) {
   const { ctx, THREE, errors } = await buildWorld({
     season, modules: ['landmarksMakarova', 'landmarksSredny', 'landmarksKirova'],
@@ -42,5 +81,6 @@ for (const season of ['summer', 'winter']) {
   assert.equal(a.items.length, 0);
   assert.equal(b.state, 'stand');
   assert(b.items.length > 0);
-  console.log(season, 'PASS: landmarks use Three materials, gate and fence atlas IDs, independent gate leaves');
+  checkGateBowls(ctx, THREE, season);
+  console.log(season, 'PASS: landmark materials, gate and fence atlas IDs, independent gate leaves and six seasonal bowls');
 }

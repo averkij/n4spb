@@ -58,6 +58,12 @@ export function build(K) {
   const bowlGeo = partsGeos((Q) => {      // one bowl at the origin
     const x = 0, z = 0, du = 0;
     Q.cyl(M.bowl, [x, 0.0, z], [x, 0.1, z], 0.28, 0.4, 10, false); Q.cyl(M.bowl, [x, 0.1, z], [x, 0.5, z], 0.4, 0.58, 12, false); Q.cyl(M.bowl, [x, 0.5, z], [x, 0.58, z], 0.58, 0.52, 12, false);
+    if (ctx.season === 'winter') {
+      const snow = M.col('#e1e7ea');
+      Q.cyl(snow, [0, 0.56, 0], [0, 0.65, 0], 0.52, 0.37, 12, false);
+      Q.cyl(snow, [0, 0.65, 0], [0, 0.70, 0], 0.37, 0.13, 12, true);
+      return;
+    }
     Q.cyl(M.col('#c01c2a'), [x, 0.56, z], [x, 0.68, z], 0.52, 0.34, 12, true);
     for (let t = 0; t < 7; t++) { const a = t * 0.9 + du, rr = t ? 0.3 : 0.05; Q.cyl(M.col(t % 3 ? '#d63a3a' : '#5f8a3c'), [x + Math.cos(a) * rr, 0.62, z + Math.sin(a) * rr], [x + Math.cos(a) * rr, 0.84 + 0.06 * (t % 3), z + Math.sin(a) * rr], 0.1, 0.02, 5, false); }
   });

@@ -2,6 +2,7 @@
 
 Newest first. One line per version; rules in CLAUDE.md (Versioning).
 
+- **17.7.1** (2026-11-27, patch): Cover the six Vasileostrovets garden entrance planters with snow in winter
 - **17.7.0** (2026-11-27, minor): Bring winter to Finlyandsky, Kronverk and Vasilyevsky with local square illuminations, a fortress fair and three Blender-refined landmarks
 - **17.6.0** (2026-11-26, minor): Illuminate the Palace Square perimeter with golden feather brackets and a winter facade projection, and cover the Troitskaya garden walks with packed snow.
 - **17.5.0** (2026-11-26, minor): Bring winter to Admiralty, Semyonovsky and Aptekarsky with decorated squares, a rideable Palace Square Christmas slide, New Year post and refined landmarks.

@@ -1,5 +1,11 @@
 # Performance — what costs what, what was done, how to measure
 
+## 2026-11-27 — Vasileostrovets garden entrance planters (17.7.1)
+
+The six movable concrete bowls at the garden entrance now carry a shallow snow cap in winter. The seasonal test checks the colour and height of every bowl and strikes them individually. The two affected page bakes, Vasilyevsky and Gavan, have 236 products with identical hashes to 17.7.0. All 21 manifests pass.
+
+The Vasilyevsky Medium drive on the route below loaded in 36.0 s and covered 181 m. Frame times were 30.8 / 33.3 / 50.0 / 233.4 ms (mean / median / p95 / max), with 18 frames above 40 ms and eight above 80 ms. Mean draw count was 1,169. CDP reported 658 MiB of JS heap and 1,134 MiB of backing storage. Loading and region streaming reported zero failures.
+
 ## 2026-11-27 — Winter in Finlyandsky, Kronverk and Vasilyevsky (17.7.0)
 
 Eight seconds of full throttle in Edge at Medium, 1280 × 720 on the RTX 3090 Ti. Palace starts in winter on both versions. The other three routes compare the previous summer default with the new winter default. The control uses the source and products of `cb7c2f2d`. Each pair starts in the same position, with the same input.
